@@ -167,6 +167,16 @@
         }
 
         /* Selection indicators */
+        .cell-selected {
+            background-color: var(--vscode-list-activeSelectionBackground) !important;
+            border: 2px solid var(--vscode-focusBorder) !important;
+        }
+
+        .cell-multi-selected {
+            background-color: var(--vscode-list-inactiveSelectionBackground) !important;
+            border: 1px solid var(--vscode-list-activeSelectionForeground) !important;
+        }
+
         .column-selected {
             background-color: var(--vscode-list-activeSelectionBackground) !important;
         }
@@ -662,7 +672,7 @@
             tableData.headers.forEach((header, index) => {
                 const sortClass = sortState.column === index ? `sort-${sortState.direction}` : '';
                 const columnLetter = getColumnLetter(index);
-                html += `<th onclick="sortByColumn(${index})" 
+                html += `<th onclick="handleColumnHeaderClick(${index}, event)" 
                            onmousedown="startColumnSelect(${index})"
                            oncontextmenu="showColumnContextMenu(event, ${index})"
                            class="column-header ${sortClass}" 
@@ -685,7 +695,7 @@
                 
                 // Row number with selection capability
                 html += `<td class="row-number" 
-                           onclick="selectRow(${rowIndex})" 
+                           onclick="selectRow(${rowIndex}, event)" 
                            onmousedown="startRowSelect(${rowIndex})"
                            oncontextmenu="showRowContextMenu(event, ${rowIndex})"
                            title="Row ${rowIndex + 1}">
@@ -700,7 +710,7 @@
                     
                     html += `<td id="${cellId}"
                                class="data-cell ${cellClass}" 
-                               onclick="selectCell(${rowIndex}, ${colIndex})" 
+                               onclick="selectCell(${rowIndex}, ${colIndex}, event)" 
                                ondblclick="startCellEdit(${rowIndex}, ${colIndex})"
                                onmousedown="startCellSelect(${rowIndex}, ${colIndex})"
                                data-row="${rowIndex}" 
@@ -730,24 +740,112 @@
         let selectedCells = new Set();
         let selectionStart = null;
         let isSelecting = false;
+        let lastSelectedCell = null;
 
-        function selectCell(row, col) {
-            clearSelection();
-            selectedCells.add(`${row}-${col}`);
-            selectionStart = { row, col };
-            updateCellSelection();
-        }
-
-        function selectRow(rowIndex) {
-            clearSelection();
-            for (let col = 0; col < tableData.headers.length; col++) {
-                selectedCells.add(`${rowIndex}-${col}`);
+        function selectCell(row, col, event = null) {
+            // Handle multi-selection with Ctrl/Cmd key
+            if (event && (event.ctrlKey || event.metaKey)) {
+                const cellKey = `${row}-${col}`;
+                if (selectedCells.has(cellKey)) {
+                    selectedCells.delete(cellKey);
+                } else {
+                    selectedCells.add(cellKey);
+                }
+                lastSelectedCell = { row, col };
+            }
+            // Handle range selection with Shift key
+            else if (event && event.shiftKey && lastSelectedCell) {
+                clearSelection();
+                selectRange(lastSelectedCell.row, lastSelectedCell.col, row, col);
+            }
+            // Normal single selection
+            else {
+                clearSelection();
+                selectedCells.add(`${row}-${col}`);
+                selectionStart = { row, col };
+                lastSelectedCell = { row, col };
             }
             updateCellSelection();
         }
 
-        function selectColumn(colIndex) {
-            clearSelection();
+        function selectRange(startRow, startCol, endRow, endCol) {
+            const minRow = Math.min(startRow, endRow);
+            const maxRow = Math.max(startRow, endRow);
+            const minCol = Math.min(startCol, endCol);
+            const maxCol = Math.max(startCol, endCol);
+            
+            for (let row = minRow; row <= maxRow; row++) {
+                for (let col = minCol; col <= maxCol; col++) {
+                    selectedCells.add(`${row}-${col}`);
+                }
+            }
+        }
+
+        function selectRow(rowIndex, event = null) {
+            if (event && (event.ctrlKey || event.metaKey)) {
+                // Toggle row selection
+                const isRowSelected = isRowFullySelected(rowIndex);
+                if (isRowSelected) {
+                    // Remove this row from selection
+                    for (let col = 0; col < tableData.headers.length; col++) {
+                        selectedCells.delete(`${rowIndex}-${col}`);
+                    }
+                } else {
+                    // Add this row to selection
+                    for (let col = 0; col < tableData.headers.length; col++) {
+                        selectedCells.add(`${rowIndex}-${col}`);
+                    }
+                }
+            } else {
+                clearSelection();
+                for (let col = 0; col < tableData.headers.length; col++) {
+                    selectedCells.add(`${rowIndex}-${col}`);
+                }
+            }
+            updateCellSelection();
+        }
+
+        function selectColumn(colIndex, event = null) {
+            if (event && (event.ctrlKey || event.metaKey)) {
+                // Toggle column selection
+                const isColSelected = isColumnFullySelected(colIndex);
+                if (isColSelected) {
+                    // Remove this column from selection
+                    for (let row = 0; row < tableData.rows.length; row++) {
+                        selectedCells.delete(`${row}-${colIndex}`);
+                    }
+                } else {
+                    // Add this column to selection
+                    for (let row = 0; row < tableData.rows.length; row++) {
+                        selectedCells.add(`${row}-${colIndex}`);
+                    }
+                }
+            } else {
+                clearSelection();
+                for (let row = 0; row < tableData.rows.length; row++) {
+                    selectedCells.add(`${row}-${colIndex}`);
+                }
+            }
+            updateCellSelection();
+        }
+
+        function isRowFullySelected(rowIndex) {
+            for (let col = 0; col < tableData.headers.length; col++) {
+                if (!selectedCells.has(`${rowIndex}-${col}`)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function isColumnFullySelected(colIndex) {
+            for (let row = 0; row < tableData.rows.length; row++) {
+                if (!selectedCells.has(`${row}-${colIndex}`)) {
+                    return false;
+                }
+            }
+            return true;
+        }
             for (let row = 0; row < tableData.rows.length; row++) {
                 selectedCells.add(`${row}-${colIndex}`);
             }
@@ -772,17 +870,23 @@
         }
 
         function updateCellSelection() {
-            // Clear previous selection
-            document.querySelectorAll('.selected').forEach(el => {
-                el.classList.remove('selected');
+            // Clear previous selection classes
+            document.querySelectorAll('.selected, .cell-selected, .cell-multi-selected').forEach(el => {
+                el.classList.remove('selected', 'cell-selected', 'cell-multi-selected');
             });
 
-            // Apply new selection
+            // Apply new selection with different styles for single vs multi-selection
+            const isMultiSelection = selectedCells.size > 1;
             selectedCells.forEach(cellKey => {
                 const [row, col] = cellKey.split('-').map(Number);
                 const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`);
                 if (cell) {
                     cell.classList.add('selected');
+                    if (isMultiSelection) {
+                        cell.classList.add('cell-multi-selected');
+                    } else {
+                        cell.classList.add('cell-selected');
+                    }
                 }
             });
 
@@ -943,6 +1047,17 @@
                     event.preventDefault();
                     // Clear selected cells
                     clearSelectedCells();
+                    break;
+                case 'a':
+                case 'A':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        selectAll();
+                    }
+                    break;
+                case 'Escape':
+                    event.preventDefault();
+                    clearSelection();
                     break;
                 case 'Escape':
                     event.preventDefault();
@@ -1131,6 +1246,17 @@
                     command: 'addColumn',
                     data: { index: tableData.headers.length, header }
                 });
+            }
+        }
+
+        // Handle column header click (selection vs sorting)
+        function handleColumnHeaderClick(columnIndex, event) {
+            if (event && (event.ctrlKey || event.metaKey || event.shiftKey)) {
+                // Multi-selection mode
+                selectColumn(columnIndex, event);
+            } else {
+                // Normal sort mode
+                sortByColumn(columnIndex);
             }
         }
 

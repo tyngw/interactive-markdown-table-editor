@@ -275,35 +275,4 @@ Normal text continues here.`;
         assert.ok(readBack.includes('3'));
         assert.ok(readBack.includes('4'));
     });
-
-    test('Backup functionality workflow', async () => {
-        const backupTestFile = path.join(testDir, 'backup-test.md');
-        const originalContent = `| Original | Table |
-|----------|-------|
-| Data     | Here  |`;
-
-        fs.writeFileSync(backupTestFile, originalContent);
-
-        const fileHandler = getFileHandler();
-        
-        // Create backup
-        const backupPath = await fileHandler.createBackup(vscode.Uri.file(backupTestFile));
-        assert.ok(backupPath);
-        assert.ok(fs.existsSync(backupPath));
-        
-        // Verify backup content
-        const backupContent = fs.readFileSync(backupPath, 'utf8');
-        assert.strictEqual(backupContent, originalContent);
-
-        // Modify original file
-        const modifiedContent = originalContent.replace('Original', 'Modified');
-        await fileHandler.writeMarkdownFile(vscode.Uri.file(backupTestFile), modifiedContent);
-
-        // Verify original is modified but backup is unchanged
-        const currentContent = await fileHandler.readMarkdownFile(vscode.Uri.file(backupTestFile));
-        assert.ok(currentContent.includes('Modified'));
-        
-        const backupContentAfter = fs.readFileSync(backupPath, 'utf8');
-        assert.ok(backupContentAfter.includes('Original'));
-    });
 });

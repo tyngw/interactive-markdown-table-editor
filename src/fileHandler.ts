@@ -14,7 +14,6 @@ export interface FileHandler {
         endLine: number;
         newContent: string;
     }>): Promise<void>;
-    createBackup(uri: vscode.Uri): Promise<string>;
 }
 
 /**
@@ -156,10 +155,6 @@ export class MarkdownFileHandler implements FileHandler {
         try {
             this.outputChannel.appendLine(`Updating table ${tableIndex} in file: ${uri.fsPath}`);
             
-            // Create backup before modification
-            const backupPath = await this.createBackup(uri);
-            this.outputChannel.appendLine(`Created backup: ${backupPath}`);
-            
             // Read current file content and re-parse to get accurate table positions
             const currentContent = await this.readMarkdownFile(uri);
             
@@ -270,10 +265,6 @@ export class MarkdownFileHandler implements FileHandler {
         try {
             this.outputChannel.appendLine(`Updating table in file: ${uri.fsPath} (lines ${startLine}-${endLine})`);
             
-            // Create backup before modification
-            const backupPath = await this.createBackup(uri);
-            this.outputChannel.appendLine(`Created backup: ${backupPath}`);
-            
             // Read current file content
             const currentContent = await this.readMarkdownFile(uri);
             const lines = currentContent.split('\n');
@@ -336,10 +327,6 @@ export class MarkdownFileHandler implements FileHandler {
         try {
             this.outputChannel.appendLine(`Updating ${updates.length} tables in file: ${uri.fsPath}`);
             
-            // Create backup before any modifications
-            const backupPath = await this.createBackup(uri);
-            this.outputChannel.appendLine(`Created backup: ${backupPath}`);
-            
             // Read current file content
             const currentContent = await this.readMarkdownFile(uri);
             const lines = currentContent.split('\n');
@@ -395,32 +382,6 @@ export class MarkdownFileHandler implements FileHandler {
     /**
      * Create a backup of the file before modification
      */
-    async createBackup(uri: vscode.Uri): Promise<string> {
-        try {
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const backupPath = `${uri.fsPath}.backup-${timestamp}`;
-            
-            const content = await this.readMarkdownFile(uri);
-            await fs.promises.writeFile(backupPath, content, 'utf8');
-            
-            this.outputChannel.appendLine(`Created backup: ${backupPath}`);
-            return backupPath;
-            
-        } catch (error) {
-            const fileError = new FileSystemError(
-                `Failed to create backup for file: ${uri.fsPath}`,
-                'backup',
-                uri,
-                error as Error
-            );
-            
-            this.outputChannel.appendLine(`Error creating backup: ${fileError.message}`);
-            // Don't throw here - backup failure shouldn't prevent the main operation
-            // but we should log it
-            return '';
-        }
-    }
-
     /**
      * Notify VSCode about file changes
      */
