@@ -45,7 +45,7 @@ export class MarkdownParser {
 
         for (let i = 0; i < tokens.length; i++) {
             const token = tokens[i];
-            
+
             if (token.type === 'table_open') {
                 const tableNode = this.parseTableToken(tokens, i, ast.content);
                 if (tableNode) {
@@ -62,7 +62,7 @@ export class MarkdownParser {
      */
     findTableAtPosition(ast: MarkdownAST, position: vscode.Position): TableNode | null {
         const tables = this.findTablesInDocument(ast);
-        
+
         for (const table of tables) {
             if (position.line >= table.startLine && position.line <= table.endLine) {
                 return table;
@@ -158,7 +158,7 @@ export class MarkdownParser {
                 // Extract alignment from token attributes
                 const align = this.extractAlignment(token);
                 alignment.push(align);
-                
+
                 // Find the content of this header cell
                 const headerContent = this.extractCellContent(tokens, currentIndex);
                 headers.push(headerContent.content);
@@ -274,12 +274,12 @@ export class MarkdownParser {
         issues: string[];
     } {
         const issues: string[] = [];
-        
+
         // Check if headers exist
         if (!table.headers || table.headers.length === 0) {
             issues.push('Table has no headers');
         }
-        
+
         // Check if all rows have consistent column count
         const expectedColumns = table.headers.length;
         for (let i = 0; i < table.rows.length; i++) {
@@ -287,12 +287,12 @@ export class MarkdownParser {
                 issues.push(`Row ${i + 1} has ${table.rows[i].length} columns, expected ${expectedColumns}`);
             }
         }
-        
+
         // Check alignment array length
         if (table.alignment.length !== expectedColumns) {
             issues.push(`Alignment array length (${table.alignment.length}) doesn't match column count (${expectedColumns})`);
         }
-        
+
         return {
             isValid: issues.length === 0,
             issues
@@ -304,13 +304,13 @@ export class MarkdownParser {
      */
     findTableContainingLine(ast: MarkdownAST, lineNumber: number): TableNode | null {
         const tables = this.findTablesInDocument(ast);
-        
+
         for (const table of tables) {
             if (lineNumber >= table.startLine && lineNumber <= table.endLine) {
                 return table;
             }
         }
-        
+
         return null;
     }
 
@@ -325,7 +325,7 @@ export class MarkdownParser {
         const lines = content.split('\n');
         let actualStartLine = tableNode.startLine;
         let actualEndLine = tableNode.endLine;
-        
+
         // Find actual table start by looking for table pattern
         for (let i = Math.max(0, tableNode.startLine - 2); i < Math.min(lines.length, tableNode.startLine + 2); i++) {
             if (this.isTableLine(lines[i])) {
@@ -333,7 +333,7 @@ export class MarkdownParser {
                 break;
             }
         }
-        
+
         // Find actual table end
         for (let i = actualStartLine; i < lines.length; i++) {
             if (!this.isTableLine(lines[i]) && !this.isTableSeparatorLine(lines[i])) {
@@ -342,7 +342,7 @@ export class MarkdownParser {
             }
             actualEndLine = i;
         }
-        
+
         return {
             startLine: actualStartLine,
             endLine: actualEndLine,
@@ -366,10 +366,10 @@ export class MarkdownParser {
         if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) {
             return false;
         }
-        
+
         // Remove outer pipes and split by inner pipes
         const parts = trimmed.slice(1, -1).split('|');
-        
+
         // Each part should contain only dashes, colons, and spaces
         return parts.every(part => /^[\s\-:]+$/.test(part.trim()));
     }
@@ -385,7 +385,7 @@ export class MarkdownParser {
     } {
         const validation = this.validateTableStructure(tableNode);
         const boundaries = this.getTableBoundaries(ast.content, tableNode);
-        
+
         // Calculate column information
         const columnInfo = tableNode.headers.map((header, index) => ({
             index,
@@ -393,7 +393,7 @@ export class MarkdownParser {
             alignment: tableNode.alignment[index] || 'left',
             width: this.calculateColumnWidth(tableNode, index)
         }));
-        
+
         return {
             table: tableNode,
             validation,
@@ -407,13 +407,13 @@ export class MarkdownParser {
      */
     private calculateColumnWidth(table: TableNode, columnIndex: number): number {
         let maxWidth = table.headers[columnIndex]?.length || 0;
-        
+
         for (const row of table.rows) {
             if (row[columnIndex]) {
                 maxWidth = Math.max(maxWidth, row[columnIndex].length);
             }
         }
-        
+
         return maxWidth;
     }
 
@@ -516,10 +516,10 @@ export class TableManager {
         const validationResults = this.getTablesWithValidation();
         const validTables = validationResults.filter(result => result.validation.isValid).length;
         const invalidTables = validationResults.length - validTables;
-        
+
         const totalRows = this.tables.reduce((sum, table) => sum + table.rows.length, 0);
         const totalColumns = this.tables.reduce((sum, table) => sum + table.headers.length, 0);
-        
+
         const allIssues = validationResults
             .filter(result => !result.validation.isValid)
             .flatMap(result => result.validation.issues.map(issue => `Table ${result.index + 1}: ${issue}`));
@@ -546,7 +546,7 @@ export class TableManager {
      * Find tables within a specific line range
      */
     getTablesInRange(startLine: number, endLine: number): TableNode[] {
-        return this.tables.filter(table => 
+        return this.tables.filter(table =>
             table.startLine >= startLine && table.endLine <= endLine
         );
     }
@@ -570,7 +570,7 @@ export class TableManager {
                 Math.abs(lineNumber - table.startLine),
                 Math.abs(lineNumber - table.endLine)
             );
-            
+
             if (distance < minDistance) {
                 minDistance = distance;
                 closestTable = table;
