@@ -6,11 +6,16 @@ import { getFileHandler } from './fileHandler';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Markdown Table Editor extension is now active!');
+    
+    // Show activation message
+    vscode.window.showInformationMessage('Markdown Table Editor activated!');
 
     // Initialize managers
     const webviewManager = WebviewManager.getInstance(context);
     const markdownParser = new MarkdownParser();
     const fileHandler = getFileHandler();
+
+    console.log('Managers initialized, registering commands...');
 
     // Register commands
     const openEditorCommand = vscode.commands.registerCommand('markdownTableEditor.openEditor', async (uri?: vscode.Uri) => {
@@ -502,6 +507,9 @@ export function activate(context: vscode.ExtensionContext) {
         moveRowCommand,
         moveColumnCommand
     );
+    
+    console.log('All commands registered successfully!');
+    vscode.window.showInformationMessage('Markdown Table Editor commands registered!');
 }
 
 export function deactivate() {
