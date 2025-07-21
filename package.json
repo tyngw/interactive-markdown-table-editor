@@ -37,12 +37,12 @@
       "editor/context": [
         {
           "command": "markdownTableEditor.openEditor",
-          "when": "resourceExtname == .md",
+          "when": "editorLangId == markdown",
           "group": "navigation"
         },
         {
           "command": "markdownTableEditor.createTable",
-          "when": "resourceExtname == .md",
+          "when": "editorLangId == markdown",
           "group": "navigation"
         }
       ]
