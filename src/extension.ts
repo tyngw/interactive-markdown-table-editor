@@ -15,6 +15,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Register commands
     const openEditorCommand = vscode.commands.registerCommand('markdownTableEditor.openEditor', async (uri?: vscode.Uri) => {
         try {
+            console.log('Opening table editor...');
+            
             // Get the active editor if no URI provided
             if (!uri) {
                 const activeEditor = vscode.window.activeTextEditor;
@@ -25,10 +27,14 @@ export function activate(context: vscode.ExtensionContext) {
                 uri = activeEditor.document.uri;
             }
 
+            console.log('Reading markdown file:', uri.toString());
+
             // Read the markdown file
             const content = await fileHandler.readMarkdownFile(uri);
             const ast = markdownParser.parseDocument(content);
             const tables = markdownParser.findTablesInDocument(ast);
+
+            console.log('Found tables:', tables.length);
 
             if (tables.length === 0) {
                 vscode.window.showInformationMessage('No tables found in this Markdown file.');
@@ -38,11 +44,17 @@ export function activate(context: vscode.ExtensionContext) {
             // For now, use the first table found
             // TODO: Allow user to select which table to edit
             const tableNode = tables[0];
+            console.log('Using table:', tableNode);
+            
             const tableDataManager = new TableDataManager(tableNode, uri.toString());
             const tableData = tableDataManager.getTableData();
 
+            console.log('Creating webview panel...');
+            
             // Create and show the webview panel
             const panel = webviewManager.createTableEditorPanel(tableData, uri);
+            
+            console.log('Webview panel created successfully');
             
             vscode.window.showInformationMessage(`Table editor opened with ${tableData.rows.length} rows and ${tableData.headers.length} columns.`);
         } catch (error) {
@@ -53,6 +65,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     const createTableCommand = vscode.commands.registerCommand('markdownTableEditor.createTable', async (uri?: vscode.Uri) => {
         try {
+            console.log('Creating new table...');
+            
             // Get the active editor if no URI provided
             if (!uri) {
                 const activeEditor = vscode.window.activeTextEditor;
@@ -62,6 +76,8 @@ export function activate(context: vscode.ExtensionContext) {
                 }
                 uri = activeEditor.document.uri;
             }
+
+            console.log('Creating table for file:', uri.toString());
 
             // Create a sample table node and manager
             const sampleTableNode = {
@@ -78,8 +94,12 @@ export function activate(context: vscode.ExtensionContext) {
             const tableDataManager = new TableDataManager(sampleTableNode, uri.toString());
             const sampleTableData = tableDataManager.getTableData();
 
+            console.log('Creating webview panel for new table...');
+
             // Create and show the webview panel
             const panel = webviewManager.createTableEditorPanel(sampleTableData, uri);
+            
+            console.log('Webview panel created successfully for new table');
             
             vscode.window.showInformationMessage('New table created. Edit it and it will be inserted into your Markdown file.');
         } catch (error) {

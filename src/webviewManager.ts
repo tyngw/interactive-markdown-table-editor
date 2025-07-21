@@ -34,19 +34,24 @@ export class WebviewManager {
     public createTableEditorPanel(tableData: TableData, uri: vscode.Uri): vscode.WebviewPanel {
         const panelId = uri.toString();
         
+        console.log('Creating webview panel for:', panelId);
+        
         // If panel already exists, reveal it
         if (this.panels.has(panelId)) {
+            console.log('Panel already exists, revealing...');
             const existingPanel = this.panels.get(panelId)!;
             existingPanel.reveal();
             this.updateTableData(existingPanel, tableData);
             return existingPanel;
         }
 
+        console.log('Creating new webview panel...');
+
         // Create new panel
         const panel = vscode.window.createWebviewPanel(
             'markdownTableEditor',
             `Table Editor - ${path.basename(uri.fsPath)}`,
-            vscode.ViewColumn.Beside,
+            vscode.ViewColumn.Two,
             {
                 enableScripts: true,
                 retainContextWhenHidden: true,
@@ -56,14 +61,19 @@ export class WebviewManager {
             }
         );
 
+        console.log('Webview panel created, setting HTML content...');
+
         // Set the HTML content
         panel.webview.html = this.getWebviewContent();
+
+        console.log('HTML content set, storing panel reference...');
 
         // Store panel reference
         this.panels.set(panelId, panel);
 
         // Handle panel disposal
         panel.onDidDispose(() => {
+            console.log('Panel disposed for:', panelId);
             this.panels.delete(panelId);
         }, null, this.context.subscriptions);
 
@@ -74,11 +84,15 @@ export class WebviewManager {
             this.context.subscriptions
         );
 
+        console.log('Setting up initial data timeout...');
+
         // Send initial data after a short delay to ensure webview is ready
         setTimeout(() => {
+            console.log('Sending initial table data to webview...');
             this.updateTableData(panel, tableData);
         }, 100);
 
+        console.log('Webview panel setup complete');
         return panel;
     }
 
@@ -396,11 +410,16 @@ export class WebviewManager {
         // Read the HTML file content
         const htmlPath = path.join(this.context.extensionPath, 'webview', 'tableEditor.html');
         
+        console.log('Reading HTML from path:', htmlPath);
+        
         try {
             const fs = require('fs');
-            return fs.readFileSync(htmlPath, 'utf8');
+            const content = fs.readFileSync(htmlPath, 'utf8');
+            console.log('Successfully read HTML file, length:', content.length);
+            return content;
         } catch (error) {
             console.error('Error reading webview HTML file:', error);
+            console.log('Using fallback HTML');
             return this.getFallbackHtml();
         }
     }
