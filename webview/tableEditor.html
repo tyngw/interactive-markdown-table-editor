@@ -499,6 +499,61 @@
         .table-editor.drag-active .column-header:not(.dragging) {
             border: 2px dashed var(--vscode-panel-border);
         }
+
+        /* Context Menu Styles */
+        .context-menu {
+            position: absolute;
+            background-color: var(--vscode-menu-background);
+            border: 1px solid var(--vscode-menu-border);
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            min-width: 180px;
+            padding: 4px 0;
+            z-index: 1000;
+            font-size: var(--vscode-font-size);
+            display: none;
+        }
+
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            color: var(--vscode-menu-foreground);
+            transition: background-color 0.15s ease;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: inherit;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+        }
+
+        .context-menu-item:hover {
+            background-color: var(--vscode-menu-selectionBackground);
+            color: var(--vscode-menu-selectionForeground);
+        }
+
+        .context-menu-item:disabled {
+            color: var(--vscode-disabledForeground);
+            cursor: not-allowed;
+        }
+
+        .context-menu-item:disabled:hover {
+            background-color: transparent;
+        }
+
+        .context-menu-separator {
+            height: 1px;
+            background-color: var(--vscode-menu-separatorBackground);
+            margin: 4px 0;
+        }
+
+        .context-menu-item-icon {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -537,8 +592,6 @@
             const app = document.getElementById('app');
             app.innerHTML = `
                 <div class="toolbar">
-                    <button class="btn" onclick="addRow()">Add Row</button>
-                    <button class="btn" onclick="addColumn()">Add Column</button>
                     <button class="btn" onclick="deleteSelectedRow()" id="deleteRowBtn" disabled>Delete Row</button>
                     <button class="btn" onclick="deleteSelectedColumn()" id="deleteColBtn" disabled>Delete Column</button>
                     <div class="toolbar-separator"></div>
@@ -550,6 +603,39 @@
                     <table class="table-editor" id="tableEditor">
                         ${renderTableContent()}
                     </table>
+                </div>
+                
+                <!-- Context Menus -->
+                <div class="context-menu" id="rowContextMenu">
+                    <button class="context-menu-item" onclick="addRowAbove()">
+                        <span class="context-menu-item-icon">⬆️</span>
+                        この上に行を追加
+                    </button>
+                    <button class="context-menu-item" onclick="addRowBelow()">
+                        <span class="context-menu-item-icon">⬇️</span>
+                        この下に行を追加
+                    </button>
+                    <div class="context-menu-separator"></div>
+                    <button class="context-menu-item" onclick="deleteRowFromContext()">
+                        <span class="context-menu-item-icon">🗑️</span>
+                        この行を削除
+                    </button>
+                </div>
+                
+                <div class="context-menu" id="columnContextMenu">
+                    <button class="context-menu-item" onclick="addColumnLeft()">
+                        <span class="context-menu-item-icon">⬅️</span>
+                        この左に列を追加
+                    </button>
+                    <button class="context-menu-item" onclick="addColumnRight()">
+                        <span class="context-menu-item-icon">➡️</span>
+                        この右に列を追加
+                    </button>
+                    <div class="context-menu-separator"></div>
+                    <button class="context-menu-item" onclick="deleteColumnFromContext()">
+                        <span class="context-menu-item-icon">🗑️</span>
+                        この列を削除
+                    </button>
                 </div>
                 
                 <div class="status-bar">
@@ -578,6 +664,7 @@
                 const columnLetter = getColumnLetter(index);
                 html += `<th onclick="sortByColumn(${index})" 
                            onmousedown="startColumnSelect(${index})"
+                           oncontextmenu="showColumnContextMenu(event, ${index})"
                            class="column-header ${sortClass}" 
                            data-col="${index}"
                            title="Column ${columnLetter}: ${escapeHtml(header)}">
@@ -600,6 +687,7 @@
                 html += `<td class="row-number" 
                            onclick="selectRow(${rowIndex})" 
                            onmousedown="startRowSelect(${rowIndex})"
+                           oncontextmenu="showRowContextMenu(event, ${rowIndex})"
                            title="Row ${rowIndex + 1}">
                     ${rowIndex + 1}
                 </td>`;
@@ -1408,6 +1496,153 @@
             }
             selectColumn(colIndex);
         }
+
+        // Context Menu Functions
+        let contextMenuState = {
+            currentRow: -1,
+            currentColumn: -1
+        };
+
+        function showRowContextMenu(event, rowIndex) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            contextMenuState.currentRow = rowIndex;
+            const menu = document.getElementById('rowContextMenu');
+            
+            // Position menu
+            menu.style.display = 'block';
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+            
+            // Hide column menu if visible
+            document.getElementById('columnContextMenu').style.display = 'none';
+            
+            // Disable delete if only one row
+            const deleteBtn = menu.querySelector('[onclick="deleteRowFromContext()"]');
+            if (tableData.rows.length <= 1) {
+                deleteBtn.disabled = true;
+            } else {
+                deleteBtn.disabled = false;
+            }
+        }
+
+        function showColumnContextMenu(event, columnIndex) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            contextMenuState.currentColumn = columnIndex;
+            const menu = document.getElementById('columnContextMenu');
+            
+            // Position menu
+            menu.style.display = 'block';
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+            
+            // Hide row menu if visible
+            document.getElementById('rowContextMenu').style.display = 'none';
+            
+            // Disable delete if only one column
+            const deleteBtn = menu.querySelector('[onclick="deleteColumnFromContext()"]');
+            if (tableData.headers.length <= 1) {
+                deleteBtn.disabled = true;
+            } else {
+                deleteBtn.disabled = false;
+            }
+        }
+
+        function hideContextMenus() {
+            document.getElementById('rowContextMenu').style.display = 'none';
+            document.getElementById('columnContextMenu').style.display = 'none';
+        }
+
+        // Row context menu actions
+        function addRowAbove() {
+            const index = contextMenuState.currentRow;
+            hideContextMenus();
+            
+            vscode.postMessage({
+                command: 'addRow',
+                data: { index: index }
+            });
+        }
+
+        function addRowBelow() {
+            const index = contextMenuState.currentRow + 1;
+            hideContextMenus();
+            
+            vscode.postMessage({
+                command: 'addRow',
+                data: { index: index }
+            });
+        }
+
+        function deleteRowFromContext() {
+            const index = contextMenuState.currentRow;
+            hideContextMenus();
+            
+            if (tableData.rows.length <= 1) {
+                showError('Cannot delete the last row');
+                return;
+            }
+            
+            vscode.postMessage({
+                command: 'deleteRow',
+                data: { index: index }
+            });
+        }
+
+        // Column context menu actions
+        function addColumnLeft() {
+            const index = contextMenuState.currentColumn;
+            hideContextMenus();
+            
+            vscode.postMessage({
+                command: 'addColumn',
+                data: { 
+                    index: index,
+                    header: `Column ${index + 1}`
+                }
+            });
+        }
+
+        function addColumnRight() {
+            const index = contextMenuState.currentColumn + 1;
+            hideContextMenus();
+            
+            vscode.postMessage({
+                command: 'addColumn',
+                data: { 
+                    index: index,
+                    header: `Column ${index + 1}`
+                }
+            });
+        }
+
+        function deleteColumnFromContext() {
+            const index = contextMenuState.currentColumn;
+            hideContextMenus();
+            
+            if (tableData.headers.length <= 1) {
+                showError('Cannot delete the last column');
+                return;
+            }
+            
+            vscode.postMessage({
+                command: 'deleteColumn',
+                data: { index: index }
+            });
+        }
+
+        // Hide context menus when clicking elsewhere
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.context-menu')) {
+                hideContextMenus();
+            }
+        });
+
+        // Hide context menus on scroll
+        document.addEventListener('scroll', hideContextMenus);
 
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', initializeTableEditor);
