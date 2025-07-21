@@ -155,15 +155,17 @@
             position: absolute;
             top: 0;
             right: -2px;
-            width: 4px;
+            width: 6px;
             height: 100%;
             cursor: col-resize;
             background-color: transparent;
-            z-index: 5;
+            z-index: 10;
+            border-radius: 2px;
         }
 
         .resize-handle:hover {
             background-color: var(--vscode-focusBorder);
+            opacity: 0.7;
         }
 
         /* Selection indicators */
@@ -679,7 +681,7 @@
                 const sortClass = sortState.column === index ? `sort-${sortState.direction}` : '';
                 const columnLetter = getColumnLetter(index);
                 html += `<th onclick="handleColumnHeaderClick(${index}, event)" 
-                           onmousedown="startColumnSelect(${index})"
+                           onmousedown="startColumnDrag(${index}, event)"
                            oncontextmenu="showColumnContextMenu(event, ${index})"
                            class="column-header ${sortClass}" 
                            data-col="${index}"
@@ -702,7 +704,7 @@
                 // Row number with selection capability
                 html += `<td class="row-number" 
                            onclick="selectRow(${rowIndex}, event)" 
-                           onmousedown="startRowSelect(${rowIndex})"
+                           onmousedown="startRowDrag(${rowIndex}, event)"
                            oncontextmenu="showRowContextMenu(event, ${rowIndex})"
                            title="Row ${rowIndex + 1}">
                     ${rowIndex + 1}
@@ -937,6 +939,7 @@
 
         function startColumnResize(event, colIndex) {
             event.stopPropagation();
+            event.preventDefault();
             isResizing = true;
             resizeColumn = colIndex;
             startX = event.clientX;
@@ -1662,11 +1665,43 @@
             selectRow(rowIndex);
         }
 
+        function startRowDrag(rowIndex, event) {
+            // Check if this is a simple click or the start of a drag
+            const isClick = !event.shiftKey && !event.ctrlKey && !event.metaKey;
+            
+            if (isClick) {
+                // Start drag operation for row movement
+                startDragOperation('row', rowIndex, event);
+            } else {
+                // Handle selection
+                startRowSelect(rowIndex);
+            }
+        }
+
         function startColumnSelect(colIndex) {
             if (event) {
                 event.preventDefault();
             }
             selectColumn(colIndex);
+        }
+
+        function startColumnDrag(colIndex, event) {
+            // Check if the click is on the resize handle
+            if (event.target.classList.contains('resize-handle')) {
+                // Don't interfere with resize operation
+                return;
+            }
+            
+            // Check if this is a simple click or the start of a drag
+            const isClick = !event.shiftKey && !event.ctrlKey && !event.metaKey;
+            
+            if (isClick) {
+                // Start drag operation for column movement
+                startDragOperation('column', colIndex, event);
+            } else {
+                // Handle selection
+                startColumnSelect(colIndex);
+            }
         }
 
         // Context Menu Functions
