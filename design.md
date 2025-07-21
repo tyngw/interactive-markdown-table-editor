@@ -12,14 +12,19 @@ VSCode拡張機能「Markdown Table Editor」は、Markdownファイル内のテ
 graph TB
     A[VSCode Extension Host] --> B[Extension Main Process]
     B --> C[Webview Panel]
-    B --> D[Markdown Parser]
-    B --> E[File System Handler]
-    C --> F[Table Editor UI]
-    F --> G[Grid Component]
-    F --> H[Context Menu]
-    F --> I[Drag & Drop Handler]
-    D --> J[AST Parser]
-    D --> K[Table Serializer]
+    B --> D[Enhanced Markdown Parser]
+    B --> E[Enhanced File System Handler]
+    B --> F[Table Selection Manager]
+    C --> G[Table Editor UI]
+    G --> H[Grid Component]
+    G --> I[Context Menu]
+    G --> J[Drag & Drop Handler]
+    D --> K[Multi-AST Parser]
+    D --> L[Table Position Tracker]
+    D --> M[Mixed Content Handler]
+    E --> N[Index-Based Updater]
+    E --> O[Backup Manager]
+    F --> P[Table Selection Dialog]
 ```
 
 ### Component Architecture
@@ -57,7 +62,25 @@ interface CommandHandler {
 - コマンドとコンテキストメニューの登録
 - Webviewパネルの管理
 
-### 2. Markdown Parser (`markdownParser.ts`)
+### 2. Enhanced Extension Main (`extension.ts`)
+
+```typescript
+interface EnhancedCommandHandler {
+  openTableEditor(uri: vscode.Uri, position?: vscode.Position): void;
+  createNewTable(uri: vscode.Uri, position: vscode.Position): void;
+  showTableSelectionDialog(tables: TableNode[]): Promise<TableNode | null>;
+}
+
+interface TableSelectionItem {
+  label: string;
+  description: string;
+  detail: string;
+  table: TableNode;
+  index: number;
+}
+```
+
+### 3. Markdown Parser (`markdownParser.ts`)
 
 ```typescript
 interface MarkdownParser {
@@ -80,7 +103,32 @@ interface TableNode {
 - テーブル要素の抽出と位置特定
 - ASTからテーブルデータへの変換
 
-### 3. Table Data Manager (`tableDataManager.ts`)
+### 4. Enhanced Markdown Parser (`markdownParser.ts`)
+
+```typescript
+interface EnhancedMarkdownParser {
+  parseDocument(content: string): MarkdownAST;
+  findTablesInDocument(ast: MarkdownAST): TableNode[];
+  findTableAtPosition(ast: MarkdownAST, position: Position): TableNode | null;
+  extractTablePositionsFromTokens(tokens: any[], content: string): TablePosition[];
+  validateMixedContent(content: string): ValidationResult;
+}
+
+interface TablePosition {
+  startLine: number;
+  endLine: number;
+  tableIndex: number;
+}
+
+interface ValidationResult {
+  isValid: boolean;
+  tables: number;
+  codeBlocks: number;
+  issues: string[];
+}
+```
+
+### 5. Table Data Manager (`tableDataManager.ts`)
 
 ```typescript
 interface TableDataManager {
@@ -109,7 +157,39 @@ interface TableData {
 - ソートと並び替え機能
 - Markdown形式への変換
 
-### 4. Webview Panel Manager (`webviewManager.ts`)
+### 6. Enhanced Table Data Manager (`tableDataManager.ts`)
+
+```typescript
+interface EnhancedTableDataManager {
+  constructor(tableNode: TableNode, sourceUri: string, tableIndex: number);
+  loadTable(tableNode: TableNode, sourceUri: string, tableIndex: number): TableData;
+  getTableIndex(): number;
+  updateCell(row: number, col: number, value: string): void;
+  // ... existing methods ...
+}
+
+interface EnhancedTableData {
+  id: string;
+  headers: string[];
+  rows: string[][];
+  alignment: ('left' | 'center' | 'right')[];
+  metadata: EnhancedTableMetadata;
+}
+
+interface EnhancedTableMetadata {
+  sourceUri: string;
+  startLine: number;
+  endLine: number;
+  tableIndex: number;  // New: Index of table in document
+  lastModified: Date;
+  columnCount: number;
+  rowCount: number;
+  isValid: boolean;
+  validationIssues: string[];
+}
+```
+
+### 7. Webview Panel Manager (`webviewManager.ts`)
 
 ```typescript
 interface WebviewManager {
@@ -129,7 +209,7 @@ interface WebviewMessage {
 - UIとの双方向通信
 - メッセージハンドリング
 
-### 5. Table Editor UI (`webview/tableEditor.html` + `webview/tableEditor.js`)
+### 8. Table Editor UI (`webview/tableEditor.html` + `webview/tableEditor.js`)
 
 ```typescript
 interface TableEditorUI {
@@ -154,7 +234,7 @@ interface CellEditor {
 - ソート機能のUI
 - コンテキストメニュー
 
-### 6. File System Handler (`fileHandler.ts`)
+### 9. File System Handler (`fileHandler.ts`)
 
 ```typescript
 interface FileHandler {
@@ -168,6 +248,43 @@ interface FileHandler {
 - ファイルの読み書き
 - テーブル部分の置換
 - ファイル変更の通知
+
+### 10. Enhanced File Handler (`fileHandler.ts`)
+
+```typescript
+interface EnhancedFileHandler {
+  readMarkdownFile(uri: vscode.Uri): Promise<string>;
+  writeMarkdownFile(uri: vscode.Uri, content: string): Promise<void>;
+  updateTableInFile(uri: vscode.Uri, startLine: number, endLine: number, newTableContent: string): Promise<void>;
+  updateTableByIndex(uri: vscode.Uri, tableIndex: number, newTableContent: string): Promise<void>;  // New
+  updateMultipleTablesInFile(uri: vscode.Uri, updates: TableUpdate[]): Promise<void>;
+  createBackup(uri: vscode.Uri): Promise<string>;
+  extractTablePositionsFromTokens(tokens: any[], content: string): TablePosition[];  // New
+}
+
+interface TableUpdate {
+  tableIndex: number;
+  startLine: number;
+  endLine: number;
+  newContent: string;
+}
+```
+
+### 11. Table Selection Manager (New Component)
+
+```typescript
+interface TableSelectionManager {
+  showSelectionDialog(tables: TableNode[]): Promise<TableSelectionResult>;
+  formatTablePreview(table: TableNode): string;
+  createSelectionItems(tables: TableNode[]): TableSelectionItem[];
+}
+
+interface TableSelectionResult {
+  selectedTable: TableNode;
+  selectedIndex: number;
+  cancelled: boolean;
+}
+```
 
 ## Data Models
 
@@ -319,3 +436,86 @@ markdown-table-editor/
 - **Large Tables**: 仮想スクロールによる最適化
 - **File Watching**: 効率的なファイル変更監視
 - **Memory Management**: Webviewの適切な破棄
+
+## Multi-Table Support
+
+### Enhanced Architecture for Multi-Table Support
+
+```mermaid
+graph TB
+    A[VSCode Extension Host] --> B[Extension Main Process]
+    B --> C[Webview Panel]
+    B --> D[Enhanced Markdown Parser]
+    B --> E[Enhanced File System Handler]
+    B --> F[Table Selection Manager]
+    C --> G[Table Editor UI]
+    G --> H[Grid Component]
+    G --> I[Context Menu]
+    G --> J[Drag & Drop Handler]
+    D --> K[Multi-AST Parser]
+    D --> L[Table Position Tracker]
+    D --> M[Mixed Content Handler]
+    E --> N[Index-Based Updater]
+    E --> O[Backup Manager]
+    F --> P[Table Selection Dialog]
+```
+
+### Multi-Table Architecture Features
+
+1. **Table Index Tracking**
+   - Each table is assigned a unique index within the document
+   - TableDataManager maintains `tableIndex` for precise identification
+   - FileHandler uses `updateTableByIndex()` for accurate updates
+
+2. **Mixed Content Support**
+   - Advanced AST parsing distinguishes between actual tables and table-like content in code blocks
+   - Preserves all non-table content during updates
+   - Accurate line range calculation prevents corruption
+
+3. **Enhanced Error Handling**
+   - Automatic backup creation before any file modification
+   - Comprehensive validation with detailed error messages
+   - Recovery options for failed operations
+
+4. **Table Selection UI**
+   - QuickPick dialog for multi-table scenarios
+   - Shows table location, headers, size, and content preview
+   - Intuitive table identification for users
+
+## Data Flow for Multi-Table Operations
+
+1. **Table Selection Flow:**
+   ```
+   User triggers "Open Table Editor" 
+   → Parse document and find all tables
+   → If multiple tables: show selection dialog
+   → User selects table → Create TableDataManager with tableIndex
+   → Open editor for selected table
+   ```
+
+2. **Table Update Flow:**
+   ```
+   User modifies table in editor
+   → TableDataManager updates internal data
+   → Extension calls FileHandler.updateTableByIndex()
+   → FileHandler re-parses document to get current positions
+   → Updates only the specified table by index
+   → Preserves all other content
+   ```
+
+3. **Error Recovery Flow:**
+   ```
+   Error occurs during update
+   → Show detailed error message to user
+   → Offer backup restoration option
+   → Log error details for debugging
+   → Provide alternative save options
+   ```
+
+## Implementation Benefits
+
+1. **Accuracy**: Index-based tracking prevents table mix-ups
+2. **Safety**: Automatic backups protect against data loss
+3. **Robustness**: Handles complex document structures gracefully
+4. **User Experience**: Intuitive table selection for multi-table documents
+5. **Maintainability**: Clear separation of concerns and error handling

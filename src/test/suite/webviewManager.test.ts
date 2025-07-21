@@ -202,6 +202,7 @@ suite('WebviewManager Test Suite', () => {
                 sourceUri: testUri.toString(),
                 startLine: 0,
                 endLine: 3,
+                tableIndex: 0,
                 lastModified: new Date(),
                 columnCount: 2,
                 rowCount: 2,

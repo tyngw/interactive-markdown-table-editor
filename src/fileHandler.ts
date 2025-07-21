@@ -146,8 +146,114 @@ export class MarkdownFileHandler implements FileHandler {
     }
 
     /**
-     * Update a specific table section in a Markdown file
+     * Update a specific table section in a Markdown file by table index
      */
+    async updateTableByIndex(
+        uri: vscode.Uri, 
+        tableIndex: number,
+        newTableContent: string
+    ): Promise<void> {
+        try {
+            this.outputChannel.appendLine(`Updating table ${tableIndex} in file: ${uri.fsPath}`);
+            
+            // Create backup before modification
+            const backupPath = await this.createBackup(uri);
+            this.outputChannel.appendLine(`Created backup: ${backupPath}`);
+            
+            // Read current file content and re-parse to get accurate table positions
+            const currentContent = await this.readMarkdownFile(uri);
+            
+            // Parse the content to get current table positions
+            const MarkdownIt = require('markdown-it');
+            const md = new MarkdownIt({
+                html: true,
+                linkify: true,
+                typographer: true
+            });
+            
+            const tokens = md.parse(currentContent, {});
+            const currentTables = this.extractTablePositionsFromTokens(tokens, currentContent);
+            
+            if (tableIndex < 0 || tableIndex >= currentTables.length) {
+                throw new FileSystemError(
+                    `Table index ${tableIndex} is out of range (found ${currentTables.length} tables)`,
+                    'update',
+                    uri
+                );
+            }
+            
+            const targetTable = currentTables[tableIndex];
+            this.outputChannel.appendLine(`Target table found at lines ${targetTable.startLine}-${targetTable.endLine}`);
+            
+            // Update using the accurate line numbers
+            await this.updateTableInFile(uri, targetTable.startLine, targetTable.endLine, newTableContent);
+            
+            this.outputChannel.appendLine(`Successfully updated table ${tableIndex} in file: ${uri.fsPath}`);
+            
+        } catch (error) {
+            if (error instanceof FileSystemError) {
+                throw error;
+            }
+            
+            const fileError = new FileSystemError(
+                `Failed to update table ${tableIndex} in file: ${uri.fsPath}`,
+                'update',
+                uri,
+                error as Error
+            );
+            
+            this.outputChannel.appendLine(`Error updating table by index: ${fileError.message}`);
+            this.showErrorNotification(fileError);
+            throw fileError;
+        }
+    }
+
+    /**
+     * Extract table positions from markdown tokens
+     */
+    private extractTablePositionsFromTokens(tokens: any[], content: string): Array<{
+        startLine: number;
+        endLine: number;
+        tableIndex: number;
+    }> {
+        const tables: Array<{
+            startLine: number;
+            endLine: number;
+            tableIndex: number;
+        }> = [];
+
+        let tableIndex = 0;
+        
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+            
+            if (token?.type === 'table_open' && token?.map) {
+                const startLine = token.map[0];
+                let endLine = token.map[1];
+                
+                // Find the corresponding table_close token for more accurate end line
+                for (let j = i + 1; j < tokens.length; j++) {
+                    const closeToken = tokens[j];
+                    if (closeToken?.type === 'table_close') {
+                        if (closeToken?.map) {
+                            endLine = closeToken.map[1];
+                        }
+                        break;
+                    }
+                }
+                
+                tables.push({
+                    startLine,
+                    endLine,
+                    tableIndex
+                });
+                
+                tableIndex++;
+            }
+        }
+        
+        return tables;
+    }
     async updateTableInFile(
         uri: vscode.Uri, 
         startLine: number, 

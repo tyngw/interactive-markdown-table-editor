@@ -1153,4 +1153,88 @@ suite('TableDataManager Test Suite', () => {
         finalCells.sort();
         assert.deepStrictEqual(finalCells, originalCells);
     });
+
+    test('should create manager with table index', () => {
+        const tableNode: TableNode = {
+            startLine: 10,
+            endLine: 15,
+            headers: ['Product', 'Price'],
+            rows: [
+                ['Laptop', '$999'],
+                ['Phone', '$599']
+            ],
+            alignment: ['left', 'right']
+        };
+        
+        const managerWithIndex = new TableDataManager(tableNode, 'multi-table.md', 2);
+        const tableData = managerWithIndex.getTableData();
+        
+        assert.strictEqual(tableData.metadata.tableIndex, 2);
+        assert.strictEqual(tableData.metadata.sourceUri, 'multi-table.md');
+        assert.strictEqual(tableData.metadata.startLine, 10);
+        assert.strictEqual(tableData.metadata.endLine, 15);
+    });
+
+    test('should default table index to 0 when not specified', () => {
+        const tableData = manager.getTableData();
+        assert.strictEqual(tableData.metadata.tableIndex, 0);
+    });
+
+    test('should preserve table index through operations', () => {
+        const tableNode: TableNode = {
+            startLine: 5,
+            endLine: 10,
+            headers: ['A', 'B'],
+            rows: [['1', '2']],
+            alignment: ['left', 'left']
+        };
+        
+        const indexedManager = new TableDataManager(tableNode, 'test.md', 3);
+        
+        // Perform various operations
+        indexedManager.updateCell(0, 0, 'Updated');
+        indexedManager.addRow();
+        indexedManager.addColumn(undefined, 'New Column');
+        
+        const tableData = indexedManager.getTableData();
+        assert.strictEqual(tableData.metadata.tableIndex, 3); // Should remain unchanged
+    });
+
+    test('should handle multi-table scenario metadata', () => {
+        // First table
+        const firstTable = new TableDataManager({
+            startLine: 0,
+            endLine: 5,
+            headers: ['Name', 'Age'],
+            rows: [['John', '25']],
+            alignment: ['left', 'left']
+        }, 'multi.md', 0);
+
+        // Second table
+        const secondTable = new TableDataManager({
+            startLine: 10,
+            endLine: 15,
+            headers: ['Product', 'Price'],
+            rows: [['Laptop', '$999']],
+            alignment: ['left', 'right']
+        }, 'multi.md', 1);
+
+        // Third table
+        const thirdTable = new TableDataManager({
+            startLine: 20,
+            endLine: 25,
+            headers: ['ID', 'Status'],
+            rows: [['001', 'Active']],
+            alignment: ['left', 'center']
+        }, 'multi.md', 2);
+
+        assert.strictEqual(firstTable.getTableData().metadata.tableIndex, 0);
+        assert.strictEqual(secondTable.getTableData().metadata.tableIndex, 1);
+        assert.strictEqual(thirdTable.getTableData().metadata.tableIndex, 2);
+
+        // All should point to the same file
+        assert.strictEqual(firstTable.getTableData().metadata.sourceUri, 'multi.md');
+        assert.strictEqual(secondTable.getTableData().metadata.sourceUri, 'multi.md');
+        assert.strictEqual(thirdTable.getTableData().metadata.sourceUri, 'multi.md');
+    });
 });

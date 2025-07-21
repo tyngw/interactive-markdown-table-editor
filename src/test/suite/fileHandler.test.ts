@@ -295,4 +295,167 @@ suite('FileHandler Test Suite', () => {
             assert.strictEqual(error.name, 'FileSystemError');
         });
     });
+
+    suite('updateTableByIndex', () => {
+        test('should update specific table by index in multi-table document', async () => {
+            const originalContent = `# Multi-Table Document
+
+First table:
+| Name | Age |
+|------|-----|
+| John | 25 |
+| Jane | 30 |
+
+Text between tables.
+
+Second table:
+| Product | Price |
+|---------|-------|
+| Laptop | $999 |
+| Book | $15 |
+
+Final content.`;
+
+            fs.writeFileSync(testFile.fsPath, originalContent, 'utf8');
+
+            const newTableContent = `| Product | Price |
+|---------|-------|
+| Desktop | $1299 |
+| Tablet | $599 |
+| Phone | $799 |`;
+
+            await fileHandler.updateTableByIndex(testFile, 1, newTableContent);
+
+            const updatedContent = await fileHandler.readMarkdownFile(testFile);
+            
+            // Should contain the updated second table
+            assert.ok(updatedContent.includes('Desktop'));
+            assert.ok(updatedContent.includes('$1299'));
+            assert.ok(updatedContent.includes('Tablet'));
+            
+            // Should preserve the first table
+            assert.ok(updatedContent.includes('Name'));
+            assert.ok(updatedContent.includes('John'));
+            
+            // Should preserve non-table content
+            assert.ok(updatedContent.includes('Multi-Table Document'));
+            assert.ok(updatedContent.includes('Text between tables'));
+            assert.ok(updatedContent.includes('Final content'));
+        });
+
+        test('should handle invalid table index', async () => {
+            const content = `# Single Table Document
+
+| Header 1 | Header 2 |
+|----------|----------|
+| Cell 1   | Cell 2   |`;
+
+            fs.writeFileSync(testFile.fsPath, content, 'utf8');
+
+            const newTableContent = `| Header 1 | Header 2 |
+|----------|----------|
+| New 1    | New 2    |`;
+
+            try {
+                await fileHandler.updateTableByIndex(testFile, 5, newTableContent);
+                assert.fail('Expected FileSystemError to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof FileSystemError);
+                assert.ok(error.message.includes('out of range'));
+            }
+        });
+
+        test('should update first table in multi-table document', async () => {
+            const originalContent = `# Document with Multiple Tables
+
+| A | B |
+|---|---|
+| 1 | 2 |
+
+Some text.
+
+| X | Y | Z |
+|---|---|---|
+| 7 | 8 | 9 |`;
+
+            fs.writeFileSync(testFile.fsPath, originalContent, 'utf8');
+
+            const newTableContent = `| A | B |
+|---|---|
+| Updated | Values |
+| New | Row |`;
+
+            await fileHandler.updateTableByIndex(testFile, 0, newTableContent);
+
+            const updatedContent = await fileHandler.readMarkdownFile(testFile);
+            
+            // Should contain the updated first table
+            assert.ok(updatedContent.includes('Updated'));
+            assert.ok(updatedContent.includes('Values'));
+            assert.ok(updatedContent.includes('New'));
+            
+            // Should preserve the second table
+            assert.ok(updatedContent.includes('X'));
+            assert.ok(updatedContent.includes('Y'));
+            assert.ok(updatedContent.includes('Z'));
+            assert.ok(updatedContent.includes('7'));
+            
+            // Should preserve non-table content
+            assert.ok(updatedContent.includes('Some text'));
+        });
+
+        test('should handle document with mixed content', async () => {
+            const originalContent = `# Mixed Content Document
+
+## Introduction
+Some introductory text.
+
+\`\`\`javascript
+const code = "example";
+\`\`\`
+
+### Table Section
+| Column | Value |
+|--------|-------|
+| A      | 1     |
+| B      | 2     |
+
+- List item 1
+- List item 2
+
+> Block quote
+
+Another table:
+| X | Y |
+|---|---|
+| 3 | 4 |
+
+Final paragraph.`;
+
+            fs.writeFileSync(testFile.fsPath, originalContent, 'utf8');
+
+            const newTableContent = `| Column | Value |
+|--------|-------|
+| Updated | 999 |
+| Column  | 888 |`;
+
+            await fileHandler.updateTableByIndex(testFile, 0, newTableContent);
+
+            const updatedContent = await fileHandler.readMarkdownFile(testFile);
+            
+            // Should contain the updated first table
+            assert.ok(updatedContent.includes('Updated'));
+            assert.ok(updatedContent.includes('999'));
+            
+            // Should preserve all other content
+            assert.ok(updatedContent.includes('Introduction'));
+            assert.ok(updatedContent.includes('const code'));
+            assert.ok(updatedContent.includes('List item 1'));
+            assert.ok(updatedContent.includes('Block quote'));
+            assert.ok(updatedContent.includes('Final paragraph'));
+            
+            // Should preserve the second table
+            assert.ok(updatedContent.includes('3') && updatedContent.includes('4'));
+        });
+    });
 });

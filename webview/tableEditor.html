@@ -392,6 +392,46 @@
             color: var(--vscode-statusBar-foreground);
             font-size: 12px;
             border-radius: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .save-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .save-indicator {
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .save-indicator.saved {
+            background-color: var(--vscode-statusBarItem-prominentBackground);
+            color: var(--vscode-statusBarItem-prominentForeground);
+        }
+
+        .save-indicator.saving {
+            background-color: var(--vscode-statusBarItem-warningBackground);
+            color: var(--vscode-statusBarItem-warningForeground);
+        }
+
+        .save-indicator.error {
+            background-color: var(--vscode-statusBarItem-errorBackground);
+            color: var(--vscode-statusBarItem-errorForeground);
+        }
+
+        .btn.save-btn {
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+        }
+
+        .btn.save-btn:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground);
         }
 
         .loading {
@@ -501,6 +541,9 @@
                     <button class="btn" onclick="addColumn()">Add Column</button>
                     <button class="btn" onclick="deleteSelectedRow()" id="deleteRowBtn" disabled>Delete Row</button>
                     <button class="btn" onclick="deleteSelectedColumn()" id="deleteColBtn" disabled>Delete Column</button>
+                    <div class="toolbar-separator"></div>
+                    <button class="btn save-btn" onclick="saveTable()" id="saveBtn">💾 Save</button>
+                    <button class="btn" onclick="exportTable()">📤 Export</button>
                 </div>
                 
                 <div class="table-container">
@@ -510,7 +553,10 @@
                 </div>
                 
                 <div class="status-bar">
-                    Rows: ${data.rows.length} | Columns: ${data.headers.length}
+                    <span>Rows: ${data.rows.length} | Columns: ${data.headers.length}</span>
+                    <div class="save-status">
+                        <span class="save-indicator saved" id="saveIndicator">✓ Auto-saved</span>
+                    </div>
                 </div>
             `;
 

@@ -18,6 +18,7 @@ export interface TableMetadata {
     sourceUri: string;
     startLine: number;
     endLine: number;
+    tableIndex: number;  // Index of this table in the document (0-based)
     lastModified: Date;
     columnCount: number;
     rowCount: number;
@@ -41,14 +42,14 @@ export class TableDataManager {
     private tableData: TableData;
     private changeListeners: Array<(data: TableData) => void> = [];
 
-    constructor(tableNode: TableNode, sourceUri: string = '') {
-        this.tableData = this.loadTable(tableNode, sourceUri);
+    constructor(tableNode: TableNode, sourceUri: string = '', tableIndex: number = 0) {
+        this.tableData = this.loadTable(tableNode, sourceUri, tableIndex);
     }
 
     /**
      * Load table from TableNode
      */
-    loadTable(tableNode: TableNode, sourceUri: string = ''): TableData {
+    loadTable(tableNode: TableNode, sourceUri: string = '', tableIndex: number = 0): TableData {
         const id = this.generateTableId();
         const validation = this.validateTableStructure(tableNode);
         
@@ -61,6 +62,7 @@ export class TableDataManager {
                 sourceUri,
                 startLine: tableNode.startLine,
                 endLine: tableNode.endLine,
+                tableIndex,
                 lastModified: new Date(),
                 columnCount: tableNode.headers.length,
                 rowCount: tableNode.rows.length,

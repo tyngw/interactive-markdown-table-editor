@@ -40,17 +40,42 @@ All commit messages must use one of the following prefixes:
 ## Project Structure
 ```
 src/
-├── extension.ts          # Main extension entry point
-├── markdownParser.ts     # Markdown parsing functionality
-├── tableDataManager.ts   # Table data management
+├── extension.ts          # Main extension entry point with multi-table support
+├── markdownParser.ts     # Markdown parsing with table extraction
+├── tableDataManager.ts   # Table data management with index tracking
 ├── webviewManager.ts     # Webview panel management
-├── fileHandler.ts        # File system operations
+├── fileHandler.ts        # File system operations with multi-table updates
 └── test/
     ├── runTest.ts        # Test runner
     └── suite/
         ├── index.ts      # Test suite setup
-        └── *.test.ts     # Individual test files
+        ├── markdownParser.test.ts     # Parser tests including multi-table
+        ├── tableDataManager.test.ts   # Table management tests
+        ├── fileHandler.test.ts        # File operations tests
+        └── webviewManager.test.ts     # Webview tests
 ```
+
+## Multi-Table Architecture
+
+### Key Components
+
+1. **TableDataManager**: Now includes `tableIndex` to track which table in a document is being edited
+2. **FileHandler**: Enhanced with `updateTableByIndex()` for precise table updates
+3. **Extension**: Updated to support table selection dialog for multiple tables
+4. **Parser**: Robust handling of mixed content (tables, code blocks, lists, etc.)
+
+### Error Handling
+- Automatic backup creation before file modifications
+- Comprehensive validation of table structure and file content
+- Clear error messages with recovery options
+- Graceful handling of malformed tables and mixed content
+
+### Test Coverage
+- Multi-table scenarios
+- Mixed content documents (tables + code blocks + lists)
+- Error conditions and edge cases
+- File system operations with backup/recovery
+- Table selection and indexing accuracy
 
 ## Commands
 - `npm run compile` - Compile TypeScript

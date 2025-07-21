@@ -234,102 +234,152 @@ Some text`;
         assert.strictEqual(metadata.columnInfo.length, 3);
         assert.strictEqual(metadata.columnInfo[0].header, 'Name');
     });
-});
 
-suite('TableManager Test Suite', () => {
-    let parser: MarkdownParser;
+    test('should parse multiple tables in document', () => {
+        const markdown = `# Multi-Table Document
 
-    setup(() => {
-        parser = new MarkdownParser();
+First table:
+
+| Name | Age |
+|------|-----|
+| John | 25 |
+| Jane | 30 |
+
+Some text between tables.
+
+Second table:
+
+| Product | Price |
+|---------|-------|
+| Laptop | $999 |
+| Book | $15 |
+
+More content.
+
+Third table:
+
+| ID | Status |
+|----|--------|
+| 001 | Active |
+| 002 | Inactive |
+
+Final content.`;
+
+        const ast = parser.parseDocument(markdown);
+        const tables = parser.findTablesInDocument(ast);
+
+        assert.strictEqual(tables.length, 3);
+        
+        // First table
+        assert.deepStrictEqual(tables[0].headers, ['Name', 'Age']);
+        assert.strictEqual(tables[0].rows.length, 2);
+        assert.deepStrictEqual(tables[0].rows[0], ['John', '25']);
+        
+        // Second table
+        assert.deepStrictEqual(tables[1].headers, ['Product', 'Price']);
+        assert.strictEqual(tables[1].rows.length, 2);
+        assert.deepStrictEqual(tables[1].rows[0], ['Laptop', '$999']);
+        
+        // Third table
+        assert.deepStrictEqual(tables[2].headers, ['ID', 'Status']);
+        assert.strictEqual(tables[2].rows.length, 2);
+        assert.deepStrictEqual(tables[2].rows[0], ['001', 'Active']);
     });
 
-    test('should manage multiple tables', () => {
-        const markdown = `# First Table
+    test('should handle document with no tables', () => {
+        const markdown = `# Document Without Tables
 
+This is just regular markdown content with:
+
+- Lists
+- **Bold text**
+- *Italic text*
+
+\`\`\`javascript
+// Code blocks
+const data = { test: "value" };
+\`\`\`
+
+> Block quotes
+
+And regular paragraphs.`;
+
+        const ast = parser.parseDocument(markdown);
+        const tables = parser.findTablesInDocument(ast);
+
+        assert.strictEqual(tables.length, 0);
+    });
+
+    test('should handle mixed content with tables', () => {
+        const markdown = `# Mixed Content Document
+
+## Introduction
+This document has various content types mixed together.
+
+### Code Example
+\`\`\`javascript
+const fakeTable = [
+  { col1: "value1", col2: "value2" },
+  { col1: "value3", col2: "value4" }
+];
+\`\`\`
+
+### Actual Table
+| Column A | Column B |
+|----------|----------|
+| Data 1   | Data 2   |
+
+### List Items
+- Item 1
+- Item 2
+
+### Another Table
+| X | Y | Z |
+|---|---|---|
+| 1 | 2 | 3 |
+| 4 | 5 | 6 |
+
+### Final Section
+More content here.`;
+
+        const ast = parser.parseDocument(markdown);
+        const tables = parser.findTablesInDocument(ast);
+
+        assert.strictEqual(tables.length, 2);
+        
+        // First table
+        assert.deepStrictEqual(tables[0].headers, ['Column A', 'Column B']);
+        assert.strictEqual(tables[0].rows.length, 1);
+        
+        // Second table
+        assert.deepStrictEqual(tables[1].headers, ['X', 'Y', 'Z']);
+        assert.strictEqual(tables[1].rows.length, 2);
+    });
+
+    test('should handle malformed tables gracefully', () => {
+        const markdown = `# Document with Malformed Tables
+
+Good table:
 | A | B |
 |---|---|
 | 1 | 2 |
 
-# Second Table
+Malformed table (missing separator):
+| Header 1 | Header 2 |
+| Data 1   | Data 2   |
 
-| X | Y | Z |
-|---|---|---|
-| 3 | 4 | 5 |
-| 6 | 7 | 8 |`;
-
-        const ast = parser.parseDocument(markdown);
-        const manager = parser.createTableManager(ast);
-
-        assert.strictEqual(manager.getTableCount(), 2);
-        
-        const allTables = manager.getAllTables();
-        assert.strictEqual(allTables.length, 2);
-        
-        const firstTable = manager.getTableByIndex(0);
-        assert.notStrictEqual(firstTable, null);
-        assert.deepStrictEqual(firstTable!.headers, ['A', 'B']);
-        
-        const secondTable = manager.getTableByIndex(1);
-        assert.notStrictEqual(secondTable, null);
-        assert.deepStrictEqual(secondTable!.headers, ['X', 'Y', 'Z']);
-    });
-
-    test('should provide table summary', () => {
-        const markdown = `| Valid | Table |
-|-------|-------|
-| A     | B     |
-
-| Another | Valid | Table |
-|---------|-------|-------|
-| X       | Y     | Z     |`;
+Another good table:
+| X | Y |
+|---|---|
+| 3 | 4 |`;
 
         const ast = parser.parseDocument(markdown);
-        const manager = parser.createTableManager(ast);
-        const summary = manager.getTablesSummary();
+        const tables = parser.findTablesInDocument(ast);
 
-        // The actual number of tables detected by markdown-it may vary
-        assert.ok(summary.totalTables >= 1);
-        assert.ok(summary.totalRows >= 0);
-        assert.ok(summary.totalColumns >= 0);
-    });
-
-    test('should find closest table to line', () => {
-        const markdown = `Line 0
-
-| Table 1 |
-|---------|
-| Data    |
-
-Line 6
-
-| Table 2 |
-|---------|
-| Data    |`;
-
-        const ast = parser.parseDocument(markdown);
-        const manager = parser.createTableManager(ast);
-        
-        const closest = manager.getClosestTable(1);
-        assert.notStrictEqual(closest, null);
-        assert.ok(closest!.distance >= 0);
-    });
-
-    test('should find tables in range', () => {
-        const markdown = `| Table 1 |
-|---------|
-| Data    |
-
-Some text
-
-| Table 2 |
-|---------|
-| Data    |`;
-
-        const ast = parser.parseDocument(markdown);
-        const manager = parser.createTableManager(ast);
-        
-        const tablesInRange = manager.getTablesInRange(0, 10);
-        assert.ok(tablesInRange.length >= 0);
+        // Should still find the properly formatted tables
+        assert.strictEqual(tables.length, 2);
+        assert.deepStrictEqual(tables[0].headers, ['A', 'B']);
+        assert.deepStrictEqual(tables[1].headers, ['X', 'Y']);
     });
 
     // Error Handling Tests

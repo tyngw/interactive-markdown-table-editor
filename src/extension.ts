@@ -46,12 +46,43 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            // For now, use the first table found
-            // TODO: Allow user to select which table to edit
-            const tableNode = tables[0];
-            console.log('Using table:', tableNode);
+            let selectedTableNode;
+            let selectedTableIndex = 0;
             
-            const tableDataManager = new TableDataManager(tableNode, uri.toString());
+            if (tables.length === 1) {
+                // Only one table, use it directly
+                selectedTableNode = tables[0];
+                selectedTableIndex = 0;
+            } else {
+                // Multiple tables, let user choose
+                const tableChoices = tables.map((table, index) => {
+                    const firstRow = table.rows.length > 0 ? table.rows[0].join(' | ') : 'Empty table';
+                    const preview = firstRow.length > 50 ? firstRow.substring(0, 50) + '...' : firstRow;
+                    return {
+                        label: `Table ${index + 1} (Lines ${table.startLine}-${table.endLine})`,
+                        description: `${table.headers.join(' | ')}`,
+                        detail: `Rows: ${table.rows.length}, Columns: ${table.headers.length} - ${preview}`,
+                        table: table,
+                        index: index
+                    };
+                });
+
+                const selectedChoice = await vscode.window.showQuickPick(tableChoices, {
+                    placeHolder: 'Select a table to edit',
+                    title: 'Multiple Tables Found'
+                });
+
+                if (!selectedChoice) {
+                    return; // User cancelled
+                }
+
+                selectedTableNode = selectedChoice.table;
+                selectedTableIndex = selectedChoice.index;
+            }
+
+            console.log('Using table:', selectedTableNode);
+            
+            const tableDataManager = new TableDataManager(selectedTableNode, uri.toString(), selectedTableIndex);
             const tableData = tableDataManager.getTableData();
 
             console.log('Creating webview panel...');
@@ -137,8 +168,29 @@ export function activate(context: vscode.ExtensionContext) {
                 const tables = markdownParser.findTablesInDocument(ast);
                 
                 if (tables.length > 0) {
-                    tableDataManager = new TableDataManager(tables[0], uri.toString());
+                    // Use the first table by default
+                    tableDataManager = new TableDataManager(tables[0], uri.toString(), 0);
                     activeTableManagers.set(uri.toString(), tableDataManager);
+                }
+            } else {
+                // Re-read file to get current state
+                const content = await fileHandler.readMarkdownFile(uri);
+                const ast = markdownParser.parseDocument(content);
+                const tables = markdownParser.findTablesInDocument(ast);
+                
+                if (tables.length > 0) {
+                    // For existing manager, try to find the matching table by index
+                    const currentTableIndex = tableDataManager.getTableData().metadata.tableIndex;
+                    if (currentTableIndex < tables.length) {
+                        // Update manager with the current table data from file
+                        const updatedTableNode = tables[currentTableIndex];
+                        tableDataManager = new TableDataManager(updatedTableNode, uri.toString(), currentTableIndex);
+                        activeTableManagers.set(uri.toString(), tableDataManager);
+                    } else {
+                        // Use the first table if original index is not available
+                        tableDataManager = new TableDataManager(tables[0], uri.toString(), 0);
+                        activeTableManagers.set(uri.toString(), tableDataManager);
+                    }
                 }
             }
 
@@ -178,13 +230,12 @@ export function activate(context: vscode.ExtensionContext) {
             // Update the cell
             tableDataManager.updateCell(row, col, value);
             
-            // Update the file
+            // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableInFile(
+            await fileHandler.updateTableByIndex(
                 uri, 
-                tableData.metadata.startLine, 
-                tableData.metadata.endLine, 
+                tableData.metadata.tableIndex,
                 updatedMarkdown
             );
 
@@ -220,13 +271,12 @@ export function activate(context: vscode.ExtensionContext) {
             // Add the row
             tableDataManager.addRow(index);
             
-            // Update the file
+            // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableInFile(
+            await fileHandler.updateTableByIndex(
                 uri, 
-                tableData.metadata.startLine, 
-                tableData.metadata.endLine, 
+                tableData.metadata.tableIndex,
                 updatedMarkdown
             );
 
@@ -262,13 +312,12 @@ export function activate(context: vscode.ExtensionContext) {
             // Delete the row
             tableDataManager.deleteRow(index);
             
-            // Update the file
+            // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableInFile(
+            await fileHandler.updateTableByIndex(
                 uri, 
-                tableData.metadata.startLine, 
-                tableData.metadata.endLine, 
+                tableData.metadata.tableIndex,
                 updatedMarkdown
             );
 
@@ -304,13 +353,12 @@ export function activate(context: vscode.ExtensionContext) {
             // Add the column
             tableDataManager.addColumn(index, header);
             
-            // Update the file
+            // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableInFile(
+            await fileHandler.updateTableByIndex(
                 uri, 
-                tableData.metadata.startLine, 
-                tableData.metadata.endLine, 
+                tableData.metadata.tableIndex,
                 updatedMarkdown
             );
 
@@ -346,13 +394,12 @@ export function activate(context: vscode.ExtensionContext) {
             // Delete the column
             tableDataManager.deleteColumn(index);
             
-            // Update the file
+            // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableInFile(
+            await fileHandler.updateTableByIndex(
                 uri, 
-                tableData.metadata.startLine, 
-                tableData.metadata.endLine, 
+                tableData.metadata.tableIndex,
                 updatedMarkdown
             );
 
@@ -388,13 +435,12 @@ export function activate(context: vscode.ExtensionContext) {
             // Sort the table
             tableDataManager.sortByColumn(column, direction);
             
-            // Update the file
+            // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableInFile(
+            await fileHandler.updateTableByIndex(
                 uri, 
-                tableData.metadata.startLine, 
-                tableData.metadata.endLine, 
+                tableData.metadata.tableIndex,
                 updatedMarkdown
             );
 
@@ -430,13 +476,12 @@ export function activate(context: vscode.ExtensionContext) {
             // Move the row
             tableDataManager.moveRow(from, to);
             
-            // Update the file
+            // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableInFile(
+            await fileHandler.updateTableByIndex(
                 uri, 
-                tableData.metadata.startLine, 
-                tableData.metadata.endLine, 
+                tableData.metadata.tableIndex,
                 updatedMarkdown
             );
 
@@ -472,13 +517,12 @@ export function activate(context: vscode.ExtensionContext) {
             // Move the column
             tableDataManager.moveColumn(from, to);
             
-            // Update the file
+            // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableInFile(
+            await fileHandler.updateTableByIndex(
                 uri, 
-                tableData.metadata.startLine, 
-                tableData.metadata.endLine, 
+                tableData.metadata.tableIndex,
                 updatedMarkdown
             );
 

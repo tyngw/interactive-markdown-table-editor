@@ -10,16 +10,23 @@ A VS Code extension that provides a spreadsheet-like interface for editing Markd
 - **Sorting**: Click column headers to sort table data
 - **Drag & Drop**: Reorder rows and columns by dragging
 - **Auto-save**: Changes are automatically saved back to your Markdown file
-- **Multiple Tables**: Handle multiple tables in a single document
-- **Error Handling**: Robust error handling with backup creation
+- **Multiple Tables Support**: Handle multiple tables in a single document with table selection
+- **Mixed Content Support**: Safely edit tables in documents with mixed content (code blocks, lists, etc.)
+- **Robust Error Handling**: Comprehensive error handling with automatic backup creation
+- **Table Index Tracking**: Accurately track and update specific tables in multi-table documents
 
 ## Usage
 
 ### Opening the Table Editor
 
-1. Open a Markdown file containing a table
-2. Place your cursor inside the table
+1. Open a Markdown file containing one or more tables
+2. Place your cursor inside a table or anywhere in the document
 3. Right-click and select "Open Table Editor" or use the command palette (Ctrl+Shift+P) and search for "Markdown Table Editor: Open Table Editor"
+4. **For Multiple Tables**: If your document contains multiple tables, you'll be presented with a selection dialog showing:
+   - Table location (line numbers)
+   - Column headers preview
+   - Row and column counts
+   - Content preview
 
 ### Creating a New Table
 
@@ -35,6 +42,26 @@ A VS Code extension that provides a spreadsheet-like interface for editing Markd
 - **Delete Row/Column**: Right-click on row/column headers for delete options
 - **Sorting**: Click column headers to sort (click again to reverse order)
 - **Drag & Drop**: Drag row/column headers to reorder
+
+## Multi-Table Support
+
+This extension now robustly handles documents containing multiple tables and mixed content:
+
+### Multiple Tables
+- **Table Selection**: When opening the editor on a document with multiple tables, choose which table to edit from an intuitive selection dialog
+- **Accurate Positioning**: Each table is tracked by its index in the document, ensuring precise updates
+- **Safe Updates**: Changes to one table won't affect other tables or content in the document
+
+### Mixed Content Compatibility
+- **Code Blocks**: Tables within code blocks are ignored (not parsed as actual tables)
+- **Lists and Quotes**: Seamlessly handles documents with lists, block quotes, and other Markdown elements
+- **Headers and Text**: Preserves all non-table content during table updates
+- **Line Range Accuracy**: Uses advanced parsing to determine exact table boundaries
+
+### Error Prevention
+- **Backup Creation**: Automatic backup before any file modification
+- **Validation**: Comprehensive validation of table structure and file content
+- **Recovery**: Clear error messages and recovery options if something goes wrong
 
 ## Keyboard Shortcuts
 
