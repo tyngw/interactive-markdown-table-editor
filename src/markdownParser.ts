@@ -1,6 +1,33 @@
 const MarkdownIt = require('markdown-it');
 import * as vscode from 'vscode';
 
+/**
+ * Error types for markdown parsing operations
+ */
+export class MarkdownParsingError extends Error {
+    constructor(
+        message: string,
+        public readonly operation: string,
+        public readonly position?: { line: number; column: number },
+        public readonly originalError?: Error
+    ) {
+        super(message);
+        this.name = 'MarkdownParsingError';
+    }
+}
+
+export class TableValidationError extends Error {
+    constructor(
+        message: string,
+        public readonly tableIndex: number,
+        public readonly issues: string[],
+        public readonly position?: { startLine: number; endLine: number }
+    ) {
+        super(message);
+        this.name = 'TableValidationError';
+    }
+}
+
 export interface TableNode {
     startLine: number;
     endLine: number;
@@ -29,32 +56,91 @@ export class MarkdownParser {
      * Parse markdown document and return AST
      */
     parseDocument(content: string): MarkdownAST {
-        const tokens = this.md.parse(content, {});
-        return {
-            tokens,
-            content
-        };
+        try {
+            if (!content || typeof content !== 'string') {
+                throw new MarkdownParsingError(
+                    'Invalid content provided for parsing',
+                    'parseDocument'
+                );
+            }
+
+            const tokens = this.md.parse(content, {});
+            
+            // Validate tokens
+            if (!tokens || !Array.isArray(tokens)) {
+                throw new MarkdownParsingError(
+                    'Failed to parse document tokens',
+                    'parseDocument'
+                );
+            }
+
+            return {
+                tokens,
+                content
+            };
+        } catch (error) {
+            if (error instanceof MarkdownParsingError) {
+                throw error;
+            }
+            throw new MarkdownParsingError(
+                `Failed to parse markdown document: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                'parseDocument',
+                undefined,
+                error instanceof Error ? error : undefined
+            );
+        }
     }
 
     /**
      * Find all tables in the document
      */
     findTablesInDocument(ast: MarkdownAST): TableNode[] {
-        const tables: TableNode[] = [];
-        const tokens = ast.tokens;
+        try {
+            if (!ast || !ast.tokens || !Array.isArray(ast.tokens)) {
+                throw new MarkdownParsingError(
+                    'Invalid AST provided for table extraction',
+                    'findTablesInDocument'
+                );
+            }
 
-        for (let i = 0; i < tokens.length; i++) {
-            const token = tokens[i];
+            const tables: TableNode[] = [];
+            const tokens = ast.tokens;
 
-            if (token.type === 'table_open') {
-                const tableNode = this.parseTableToken(tokens, i, ast.content);
-                if (tableNode) {
-                    tables.push(tableNode);
+            for (let i = 0; i < tokens.length; i++) {
+                try {
+                    const token = tokens[i];
+
+                    if (token?.type === 'table_open') {
+                        const tableNode = this.parseTableToken(tokens, i, ast.content);
+                        if (tableNode) {
+                            // Validate the parsed table
+                            const validation = this.validateTableStructure(tableNode);
+                            if (!validation.isValid) {
+                                console.warn(`Table at line ${tableNode.startLine} has validation issues:`, validation.issues);
+                                // Still include the table but log warnings
+                            }
+                            tables.push(tableNode);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error parsing table at token ${i}:`, error);
+                    // Continue parsing other tables even if one fails
+                    continue;
                 }
             }
-        }
 
-        return tables;
+            return tables;
+        } catch (error) {
+            if (error instanceof MarkdownParsingError) {
+                throw error;
+            }
+            throw new MarkdownParsingError(
+                `Failed to find tables in document: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                'findTablesInDocument',
+                undefined,
+                error instanceof Error ? error : undefined
+            );
+        }
     }
 
     /**
@@ -76,57 +162,103 @@ export class MarkdownParser {
      * Parse table token and extract table data
      */
     private parseTableToken(tokens: any[], startIndex: number, content: string): TableNode | null {
-        let currentIndex = startIndex;
-        let headers: string[] = [];
-        let rows: string[][] = [];
-        let alignment: ('left' | 'center' | 'right')[] = [];
-        let startLine = 0;
-        let endLine = 0;
-
-        // Find table boundaries
-        if (tokens[startIndex].map) {
-            startLine = tokens[startIndex].map[0];
-            endLine = tokens[startIndex].map[1];
-        }
-
-        // Parse table structure
-        while (currentIndex < tokens.length) {
-            const token = tokens[currentIndex];
-
-            if (token.type === 'table_close') {
-                break;
+        try {
+            if (!tokens || !Array.isArray(tokens) || startIndex < 0 || startIndex >= tokens.length) {
+                throw new MarkdownParsingError(
+                    'Invalid tokens or start index for table parsing',
+                    'parseTableToken',
+                    { line: startIndex, column: 0 }
+                );
             }
 
-            if (token.type === 'thead_open') {
-                const headerData = this.parseTableHead(tokens, currentIndex);
-                headers = headerData.headers;
-                alignment = headerData.alignment;
-                currentIndex = headerData.nextIndex;
-                continue;
+            let currentIndex = startIndex;
+            let headers: string[] = [];
+            let rows: string[][] = [];
+            let alignment: ('left' | 'center' | 'right')[] = [];
+            let startLine = 0;
+            let endLine = 0;
+
+            // Find table boundaries
+            if (tokens[startIndex]?.map) {
+                startLine = tokens[startIndex].map[0];
+                endLine = tokens[startIndex].map[1];
             }
 
-            if (token.type === 'tbody_open') {
-                const bodyData = this.parseTableBody(tokens, currentIndex);
-                rows = bodyData.rows;
-                currentIndex = bodyData.nextIndex;
-                continue;
+            // Parse table structure
+            const maxIterations = tokens.length; // Prevent infinite loops
+            let iterations = 0;
+            
+            while (currentIndex < tokens.length && iterations < maxIterations) {
+                iterations++;
+                const token = tokens[currentIndex];
+
+                if (!token) {
+                    console.warn(`Encountered null token at index ${currentIndex}`);
+                    currentIndex++;
+                    continue;
+                }
+
+                if (token.type === 'table_close') {
+                    break;
+                }
+
+                if (token.type === 'thead_open') {
+                    try {
+                        const headerData = this.parseTableHead(tokens, currentIndex);
+                        headers = headerData.headers;
+                        alignment = headerData.alignment;
+                        currentIndex = headerData.nextIndex;
+                        continue;
+                    } catch (error) {
+                        console.error('Error parsing table head:', error);
+                        currentIndex++;
+                        continue;
+                    }
+                }
+
+                if (token.type === 'tbody_open') {
+                    try {
+                        const bodyData = this.parseTableBody(tokens, currentIndex);
+                        rows = bodyData.rows;
+                        currentIndex = bodyData.nextIndex;
+                        continue;
+                    } catch (error) {
+                        console.error('Error parsing table body:', error);
+                        currentIndex++;
+                        continue;
+                    }
+                }
+
+                currentIndex++;
             }
 
-            currentIndex++;
-        }
+            // Update end line if we have better information
+            if (tokens[currentIndex]?.map) {
+                endLine = tokens[currentIndex].map[1];
+            }
 
-        // Update end line if we have better information
-        if (tokens[currentIndex] && tokens[currentIndex].map) {
-            endLine = tokens[currentIndex].map[1];
-        }
+            // Validate minimum table structure
+            if (headers.length === 0) {
+                console.warn('Table has no headers, skipping');
+                return null;
+            }
 
-        return {
-            startLine,
-            endLine,
-            headers,
-            rows,
-            alignment
-        };
+            const tableNode: TableNode = {
+                startLine,
+                endLine,
+                headers,
+                rows,
+                alignment
+            };
+
+            return tableNode;
+        } catch (error) {
+            if (error instanceof MarkdownParsingError) {
+                throw error;
+            }
+            console.error(`Failed to parse table token at index ${startIndex}:`, error);
+            return null; // Return null instead of throwing to allow parsing of other tables
+        }
     }
 
     /**

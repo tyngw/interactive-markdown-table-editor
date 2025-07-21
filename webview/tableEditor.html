@@ -1042,6 +1042,14 @@
                 case 'validationError':
                     showValidationError(message.field, message.message);
                     break;
+                case 'ping':
+                    // Respond to health check ping
+                    vscode.postMessage({
+                        command: 'pong',
+                        timestamp: message.timestamp,
+                        responseTime: Date.now()
+                    });
+                    break;
             }
         });
 

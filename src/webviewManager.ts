@@ -3,17 +3,22 @@ import * as path from 'path';
 import { TableData } from './tableDataManager';
 
 export interface WebviewMessage {
-    command: 'requestTableData' | 'updateCell' | 'addRow' | 'deleteRow' | 'addColumn' | 'deleteColumn' | 'sort' | 'moveRow' | 'moveColumn';
+    command: 'requestTableData' | 'updateCell' | 'addRow' | 'deleteRow' | 'addColumn' | 'deleteColumn' | 'sort' | 'moveRow' | 'moveColumn' | 'pong';
     data?: any;
+    timestamp?: number;
+    responseTime?: number;
 }
 
 export class WebviewManager {
     private static instance: WebviewManager;
     private panels: Map<string, vscode.WebviewPanel> = new Map();
     private context: vscode.ExtensionContext;
+    private connectionHealthMap: Map<string, { lastActivity: number; isHealthy: boolean }> = new Map();
+    private healthCheckInterval: NodeJS.Timeout | null = null;
 
     private constructor(context: vscode.ExtensionContext) {
         this.context = context;
+        this.startHealthMonitoring();
     }
 
     public static getInstance(context?: vscode.ExtensionContext): WebviewManager {
@@ -102,6 +107,9 @@ export class WebviewManager {
      */
     private async handleMessage(message: WebviewMessage, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         try {
+            // Mark connection as healthy when we receive a message
+            this.markConnectionHealthy(this.getPanelId(uri));
+
             // Validate message structure
             if (!this.validateMessage(message)) {
                 this.sendError(panel, 'Invalid message format received from webview');
@@ -147,6 +155,12 @@ export class WebviewManager {
                     await this.handleMoveColumn(message.data, panel, uri);
                     break;
 
+                case 'pong':
+                    // Handle pong response from webview
+                    console.log(`Received pong from webview, response time: ${message.responseTime ? message.responseTime - (message.timestamp || 0) : 'unknown'}ms`);
+                    this.markConnectionHealthy(this.getPanelId(uri));
+                    break;
+
                 default:
                     console.warn('Unknown message command:', message.command);
                     this.sendError(panel, `Unknown command: ${message.command}`);
@@ -171,7 +185,7 @@ export class WebviewManager {
 
         const validCommands = [
             'requestTableData', 'updateCell', 'addRow', 'deleteRow', 
-            'addColumn', 'deleteColumn', 'sort', 'moveRow', 'moveColumn'
+            'addColumn', 'deleteColumn', 'sort', 'moveRow', 'moveColumn', 'pong'
         ];
 
         if (!validCommands.includes(message.command)) {
@@ -204,6 +218,9 @@ export class WebviewManager {
             case 'moveRow':
             case 'moveColumn':
                 return this.validateMoveData(message.data);
+
+            case 'pong':
+                return true; // Pong messages don't require data validation
 
             default:
                 return false;
@@ -525,5 +542,129 @@ export class WebviewManager {
      */
     public getPanelCount(): number {
         return this.panels.size;
+    }
+
+    /**
+     * Start monitoring webview health
+     */
+    private startHealthMonitoring(): void {
+        this.healthCheckInterval = setInterval(() => {
+            this.performHealthCheck();
+        }, 30000); // Check every 30 seconds
+    }
+
+    /**
+     * Stop health monitoring
+     */
+    private stopHealthMonitoring(): void {
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval);
+            this.healthCheckInterval = null;
+        }
+    }
+
+    /**
+     * Perform health check on all active panels
+     */
+    private performHealthCheck(): void {
+        const now = Date.now();
+        const healthTimeout = 60000; // 1 minute
+
+        for (const [panelId, panel] of this.panels.entries()) {
+            const health = this.connectionHealthMap.get(panelId);
+            
+            if (!health || (now - health.lastActivity) > healthTimeout) {
+                // Connection may be unhealthy
+                this.connectionHealthMap.set(panelId, {
+                    lastActivity: health?.lastActivity || now,
+                    isHealthy: false
+                });
+
+                // Try to ping the webview
+                this.pingWebview(panel, panelId);
+            }
+        }
+    }
+
+    /**
+     * Ping webview to check if it's responsive
+     */
+    private pingWebview(panel: vscode.WebviewPanel, panelId: string): void {
+        try {
+            panel.webview.postMessage({
+                command: 'ping',
+                timestamp: Date.now()
+            });
+        } catch (error) {
+            console.error(`Failed to ping webview ${panelId}:`, error);
+            this.markConnectionUnhealthy(panelId);
+        }
+    }
+
+    /**
+     * Mark connection as healthy
+     */
+    private markConnectionHealthy(panelId: string): void {
+        this.connectionHealthMap.set(panelId, {
+            lastActivity: Date.now(),
+            isHealthy: true
+        });
+    }
+
+    /**
+     * Mark connection as unhealthy
+     */
+    private markConnectionUnhealthy(panelId: string): void {
+        const health = this.connectionHealthMap.get(panelId);
+        this.connectionHealthMap.set(panelId, {
+            lastActivity: health?.lastActivity || Date.now(),
+            isHealthy: false
+        });
+    }
+
+    /**
+     * Send message with retry logic
+     */
+    public sendMessageWithRetry(panel: vscode.WebviewPanel, message: any, maxRetries: number = 3): Promise<void> {
+        return new Promise((resolve, reject) => {
+            let retries = 0;
+
+            const attemptSend = () => {
+                try {
+                    panel.webview.postMessage(message);
+                    resolve();
+                } catch (error) {
+                    retries++;
+                    if (retries < maxRetries) {
+                        console.warn(`Failed to send message, retrying (${retries}/${maxRetries}):`, error);
+                        setTimeout(attemptSend, 1000 * retries); // Exponential backoff
+                    } else {
+                        console.error(`Failed to send message after ${maxRetries} retries:`, error);
+                        reject(error);
+                    }
+                }
+            };
+
+            attemptSend();
+        });
+    }
+
+    /**
+     * Enhanced update table data with retry logic
+     */
+    public async updateTableDataWithRetry(panel: vscode.WebviewPanel, tableData: TableData): Promise<void> {
+        return this.sendMessageWithRetry(panel, {
+            command: 'updateTableData',
+            data: tableData
+        });
+    }
+
+    /**
+     * Cleanup resources
+     */
+    public dispose(): void {
+        this.stopHealthMonitoring();
+        this.closeAllPanels();
+        this.connectionHealthMap.clear();
     }
 }
