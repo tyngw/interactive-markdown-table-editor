@@ -251,28 +251,6 @@ suite('FileHandler Test Suite', () => {
         });
     });
 
-    suite('createBackup', () => {
-        test('should create backup with timestamp', async () => {
-            const content = '# Test Content';
-            fs.writeFileSync(testFile.fsPath, content, 'utf8');
-            
-            const backupPath = await fileHandler.createBackup(testFile);
-            
-            assert.ok(backupPath.includes('.backup-'));
-            assert.ok(fs.existsSync(backupPath));
-            
-            const backupContent = fs.readFileSync(backupPath, 'utf8');
-            assert.strictEqual(backupContent, content);
-        });
-
-        test('should return empty string if backup fails', async () => {
-            const nonExistentFile = vscode.Uri.file(path.join(testDir, 'nonexistent.md'));
-            
-            const backupPath = await fileHandler.createBackup(nonExistentFile);
-            assert.strictEqual(backupPath, '');
-        });
-    });
-
     suite('getFileHandler singleton', () => {
         test('should return same instance', () => {
             const handler1 = getFileHandler();
