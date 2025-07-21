@@ -691,7 +691,9 @@
                         <span class="header-text">${escapeHtml(header)}</span>
                         <span class="sort-indicator"></span>
                     </div>
-                    <div class="resize-handle" onmousedown="startColumnResize(event, ${index})"></div>
+                    <div class="resize-handle" 
+                         onclick="event.stopPropagation()" 
+                         onmousedown="startColumnResize(event, ${index})"></div>
                 </th>`;
             });
             
