@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>Markdown Table Editor</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            font-size: var(--vscode-font-size);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .table-container {
+            overflow: auto;
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+        }
+
+        .table-editor {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 600px;
+        }
+
+        .table-editor th,
+        .table-editor td {
+            border: 1px solid var(--vscode-panel-border);
+            padding: 8px 12px;
+            text-align: left;
+            position: relative;
+            min-width: 100px;
+        }
+
+        .table-editor th {
+            background-color: var(--vscode-editor-lineHighlightBackground);
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .table-editor th:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        .table-editor td {
+            background-color: var(--vscode-editor-background);
+        }
+
+        .table-editor td:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        .table-editor td.editing {
+            padding: 0;
+        }
+
+        .cell-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            padding: 8px 12px;
+            font-family: inherit;
+            font-size: inherit;
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-input-background);
+            outline: 2px solid var(--vscode-focusBorder);
+        }
+
+        .row-number {
+            background-color: var(--vscode-editor-lineHighlightBackground);
+            font-weight: bold;
+            text-align: center;
+            width: 50px;
+            user-select: none;
+        }
+
+        .sort-indicator {
+            margin-left: 8px;
+            font-size: 12px;
+        }
+
+        .sort-asc::after {
+            content: "▲";
+        }
+
+        .sort-desc::after {
+            content: "▼";
+        }
+
+        .toolbar {
+            margin-bottom: 16px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-bar {
+            margin-top: 16px;
+            padding: 8px;
+            background-color: var(--vscode-statusBar-background);
+            color: var(--vscode-statusBar-foreground);
+            font-size: 12px;
+            border-radius: 2px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .error {
+            color: var(--vscode-errorForeground);
+            background-color: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading">Loading table data...</div>
+    </div>
+
+    <script>
+        // Global state
+        let tableData = null;
+        let currentEditingCell = null;
+        let sortState = { column: -1, direction: 'none' };
+
+        // VSCode API
+        const vscode = acquireVsCodeApi();
+
+        // Initialize the table editor
+        function initializeTableEditor() {
+            console.log('Table editor initialized');
+            
+            // Request initial table data
+            vscode.postMessage({
+                command: 'requestTableData'
+            });
+        }
+
+        // Render the table
+        function renderTable(data) {
+            if (!data) {
+                document.getElementById('app').innerHTML = '<div class="error">No table data available</div>';
+                return;
+            }
+
+            tableData = data;
+            
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="toolbar">
+                    <button class="btn" onclick="addRow()">Add Row</button>
+                    <button class="btn" onclick="addColumn()">Add Column</button>
+                    <button class="btn" onclick="deleteSelectedRow()" id="deleteRowBtn" disabled>Delete Row</button>
+                    <button class="btn" onclick="deleteSelectedColumn()" id="deleteColBtn" disabled>Delete Column</button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="table-editor" id="tableEditor">
+                        ${renderTableContent()}
+                    </table>
+                </div>
+                
+                <div class="status-bar">
+                    Rows: ${data.rows.length} | Columns: ${data.headers.length}
+                </div>
+            `;
+
+            setupTableEvents();
+        }
+
+        // Render table content
+        function renderTableContent() {
+            if (!tableData) return '';
+
+            let html = '<thead><tr><th class="row-number">#</th>';
+            
+            // Headers
+            tableData.headers.forEach((header, index) => {
+                const sortClass = sortState.column === index ? `sort-${sortState.direction}` : '';
+                html += `<th onclick="sortByColumn(${index})" class="${sortClass}">
+                    ${escapeHtml(header)}
+                    <span class="sort-indicator"></span>
+                </th>`;
+            });
+            
+            html += '</tr></thead><tbody>';
+            
+            // Rows
+            tableData.rows.forEach((row, rowIndex) => {
+                html += `<tr><td class="row-number">${rowIndex + 1}</td>`;
+                row.forEach((cell, colIndex) => {
+                    html += `<td onclick="startCellEdit(${rowIndex}, ${colIndex})" data-row="${rowIndex}" data-col="${colIndex}">
+                        ${escapeHtml(cell)}
+                    </td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody>';
+            return html;
+        }
+
+        // Setup table event listeners
+        function setupTableEvents() {
+            // Keyboard navigation
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        // Handle keyboard navigation
+        function handleKeyDown(event) {
+            if (currentEditingCell) {
+                if (event.key === 'Escape') {
+                    cancelCellEdit();
+                } else if (event.key === 'Enter') {
+                    commitCellEdit();
+                }
+                return;
+            }
+
+            // Add keyboard navigation logic here
+        }
+
+        // Start editing a cell
+        function startCellEdit(row, col) {
+            if (currentEditingCell) {
+                commitCellEdit();
+            }
+
+            const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`);
+            if (!cell) return;
+
+            currentEditingCell = { row, col, element: cell, originalValue: cell.textContent.trim() };
+            
+            cell.classList.add('editing');
+            cell.innerHTML = `<input type="text" class="cell-input" value="${escapeHtml(currentEditingCell.originalValue)}" />`;
+            
+            const input = cell.querySelector('.cell-input');
+            input.focus();
+            input.select();
+
+            input.addEventListener('blur', commitCellEdit);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    commitCellEdit();
+                } else if (e.key === 'Escape') {
+                    cancelCellEdit();
+                }
+            });
+        }
+
+        // Commit cell edit
+        function commitCellEdit() {
+            if (!currentEditingCell) return;
+
+            const input = currentEditingCell.element.querySelector('.cell-input');
+            const newValue = input ? input.value : currentEditingCell.originalValue;
+
+            // Update local data
+            tableData.rows[currentEditingCell.row][currentEditingCell.col] = newValue;
+
+            // Update UI
+            currentEditingCell.element.classList.remove('editing');
+            currentEditingCell.element.textContent = newValue;
+
+            // Send update to extension
+            vscode.postMessage({
+                command: 'updateCell',
+                data: {
+                    row: currentEditingCell.row,
+                    col: currentEditingCell.col,
+                    value: newValue
+                }
+            });
+
+            currentEditingCell = null;
+        }
+
+        // Cancel cell edit
+        function cancelCellEdit() {
+            if (!currentEditingCell) return;
+
+            currentEditingCell.element.classList.remove('editing');
+            currentEditingCell.element.textContent = currentEditingCell.originalValue;
+            currentEditingCell = null;
+        }
+
+        // Add row
+        function addRow() {
+            vscode.postMessage({
+                command: 'addRow',
+                data: { index: tableData.rows.length }
+            });
+        }
+
+        // Add column
+        function addColumn() {
+            const header = prompt('Enter column header:', 'New Column');
+            if (header !== null) {
+                vscode.postMessage({
+                    command: 'addColumn',
+                    data: { index: tableData.headers.length, header }
+                });
+            }
+        }
+
+        // Sort by column
+        function sortByColumn(columnIndex) {
+            let direction = 'asc';
+            if (sortState.column === columnIndex) {
+                direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+            }
+
+            sortState = { column: columnIndex, direction };
+
+            vscode.postMessage({
+                command: 'sort',
+                data: { column: columnIndex, direction }
+            });
+        }
+
+        // Utility function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Handle messages from extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            
+            switch (message.command) {
+                case 'updateTableData':
+                    renderTable(message.data);
+                    break;
+                case 'error':
+                    showError(message.message);
+                    break;
+                case 'success':
+                    showSuccess(message.message);
+                    break;
+                case 'status':
+                    showStatus(message.status, message.data);
+                    break;
+                case 'validationError':
+                    showValidationError(message.field, message.message);
+                    break;
+            }
+        });
+
+        // Show error message
+        function showError(message) {
+            const app = document.getElementById('app');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.innerHTML = escapeHtml(message);
+            
+            // Remove existing error messages
+            const existingErrors = app.querySelectorAll('.error');
+            existingErrors.forEach(error => error.remove());
+            
+            app.insertBefore(errorDiv, app.firstChild);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (errorDiv.parentNode) {
+                    errorDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const app = document.getElementById('app');
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.innerHTML = escapeHtml(message);
+            successDiv.style.cssText = `
+                color: var(--vscode-notificationsInfoIcon-foreground);
+                background-color: var(--vscode-inputValidation-infoBackground);
+                border: 1px solid var(--vscode-inputValidation-infoBorder);
+                padding: 12px;
+                border-radius: 4px;
+                margin-bottom: 16px;
+            `;
+            
+            // Remove existing success messages
+            const existingSuccess = app.querySelectorAll('.success');
+            existingSuccess.forEach(success => success.remove());
+            
+            app.insertBefore(successDiv, app.firstChild);
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.remove();
+                }
+            }, 3000);
+        }
+
+        // Show status message
+        function showStatus(status, data) {
+            const statusBar = document.querySelector('.status-bar');
+            if (statusBar) {
+                statusBar.textContent = status;
+                if (data && tableData) {
+                    statusBar.textContent += ` | Rows: ${tableData.rows.length} | Columns: ${tableData.headers.length}`;
+                }
+            }
+        }
+
+        // Show validation error
+        function showValidationError(field, message) {
+            console.warn(`Validation error for ${field}: ${message}`);
+            showError(`Validation error: ${message}`);
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeTableEditor);
+    </script>
+</body>
+</html>
