@@ -1302,6 +1302,11 @@
 
         // Handle column header click (selection vs sorting)
         function handleColumnHeaderClick(columnIndex, event) {
+            // Check if the click is on a resize handle - if so, don't handle the click
+            if (event.target.classList.contains('resize-handle')) {
+                return;
+            }
+            
             if (event && (event.ctrlKey || event.metaKey || event.shiftKey)) {
                 // Multi-selection mode
                 selectColumn(columnIndex, event);

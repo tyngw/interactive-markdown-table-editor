@@ -97,6 +97,35 @@ This extension contributes the following settings:
 
 ## Release Notes
 
+### 0.1.7
+
+**Enhanced Precision & User Experience**
+
+- **Fixed Resize vs Sort Conflict**: リサイズハンドルクリック時にソートが発火する問題を修正
+- **Separated Operations**: ヘッダードラッグで移動、リサイズハンドルで幅変更の完全分離
+- **Improved Cell Editing**: 入力フィールド内クリック時の編集継続（他セルクリック時のみ終了）
+- **Enhanced Event Handling**: より精密なイベント処理で操作の誤発火を防止
+
+### 0.1.6
+
+**UI/UX Improvements & Bug Fixes**
+
+- **Status Bar at Bottom**: エラーメッセージと保存状況を下部に表示
+- **Simplified Toolbar**: 不要なボタンを削除し、右クリックメニューに集約
+- **Enhanced Focus Management**: セル編集時のフォーカス改善
+- **Bug Fix**: "Loading table data..." ハング問題を修正（JSyntaxエラー）
+- **Multi-Cell Selection**: Ctrl/Cmd + クリックでの複数セル選択機能
+
+### 0.1.5
+
+**Multi-Table Support & Robustness**
+
+- **Multiple Tables**: 単一文書内の複数テーブル対応
+- **Table Selection Dialog**: 複数テーブル時の選択インターフェース
+- **Mixed Content Support**: コードブロック、リスト等との共存
+- **Index-Based Updates**: テーブルインデックスによる正確な更新
+- **Enhanced Error Handling**: 堅牢なエラー処理とバックアップ機能
+
 ### 0.1.0
 
 Initial release of Markdown Table Editor

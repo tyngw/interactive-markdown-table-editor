@@ -4,6 +4,15 @@
 
 VSCode拡張機能「Markdown Table Editor」は、Markdownファイル内のテーブルをSpreadsheetライクなUIで編集できる機能を提供します。この拡張機能は、VSCodeのWebview APIを使用してカスタムエディタを実装し、Markdownファイルの解析・更新を行います。
 
+## Key Features (v0.1.7)
+
+- **Spreadsheet-like Interface**: Excel風のグリッドエディタでテーブル編集
+- **Advanced Cell Editing**: 改善されたフォーカス管理、入力フィールドクリック時の編集継続
+- **Precise Row/Column Operations**: ヘッダードラッグで移動、リサイズハンドルで幅変更の分離
+- **Multi-Table Support**: 複数テーブル文書での正確なテーブル選択・更新
+- **Mixed Content Compatibility**: コードブロック、リスト等と共存する堅牢性
+- **Enhanced UI/UX**: 下部ステータスバー、簡素化されたツールバー、直感的な操作
+
 ## Architecture
 
 ### High-Level Architecture
@@ -19,12 +28,13 @@ graph TB
     G --> H[Grid Component]
     G --> I[Context Menu]
     G --> J[Drag & Drop Handler]
-    D --> K[Multi-AST Parser]
-    D --> L[Table Position Tracker]
-    D --> M[Mixed Content Handler]
-    E --> N[Index-Based Updater]
-    E --> O[Backup Manager]
-    F --> P[Table Selection Dialog]
+    G --> K[Focus Management System]
+    D --> L[Multi-AST Parser]
+    D --> M[Table Position Tracker]
+    D --> N[Mixed Content Handler]
+    E --> O[Index-Based Updater]
+    E --> P[Auto-Save Manager]
+    F --> Q[Table Selection Dialog]
 ```
 
 ### Component Architecture
@@ -42,10 +52,11 @@ graph TB
    - Spreadsheetライクなインタラクション
    - 改善されたUI/UX（ステータスバー、簡素化されたツールバー）
 
-4. **Enhanced UI/UX Layer (v0.1.6)**
+4. **Enhanced UI/UX Layer (v0.1.7)**
    - 下部ステータスバーでのメッセージ表示
-   - ツールバーの簡素化（削除されたボタン）
-   - 改善された編集フォーカス管理
+   - 分離された行列操作（移動 vs リサイズ）
+   - 改善された編集フォーカス管理（入力フィールドクリック継続）
+   - 精密なイベントハンドリング
 
 ## Components and Interfaces
 

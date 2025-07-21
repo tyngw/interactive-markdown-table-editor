@@ -4,9 +4,16 @@
 
 VSCode拡張機能として、Markdownファイル内のテーブルをプレビュー表示時に直接編集できる機能を提供します。この機能により、ユーザーはSpreadsheetライクなUIでテーブルの値を編集し、列や行の追加・削除、ソート、ドラッグ&ドロップによる並び替えを行うことができます。編集内容は元のMarkdownファイルに自動的に反映されます。
 
+## Enhanced Features (v0.1.7)
+
+- **Improved Cell Editing**: 入力フィールドクリック時の編集継続
+- **Separated Operations**: ヘッダードラッグで移動、リサイズハンドルで幅変更
+- **Multi-Table Support**: 複数テーブル文書の堅牢な処理
+- **Enhanced UI/UX**: 下部ステータスバー、改善されたフォーカス管理
+
 ## Requirements
 
-### Requirement 1
+### Requirement 1: Basic Cell Editing
 
 **User Story:** VSCodeユーザーとして、Markdownファイル内のテーブルをプレビューで表示した際に、テーブルの内容を直接編集できるようにしたい。これにより、Markdownの構文を意識せずに効率的にテーブルを編集できる。
 
@@ -16,8 +23,9 @@ VSCode拡張機能として、Markdownファイル内のテーブルをプレビ
 2. WHEN ユーザーがテーブルのセルをクリックする THEN システムは そのセルを編集モードに切り替える SHALL
 3. WHEN ユーザーがセルの値を変更して確定する THEN システムは 元のMarkdownファイルの対応する箇所を更新する SHALL
 4. WHEN ユーザーがセル編集中にEscキーを押す THEN システムは 編集をキャンセルして元の値に戻す SHALL
+5. WHEN ユーザーが入力フィールド内をクリックする THEN システムは 編集モードを継続する SHALL (v0.1.7)
 
-### Requirement 2
+### Requirement 2: Table Structure Manipulation
 
 **User Story:** VSCodeユーザーとして、テーブルに新しい行や列を追加できるようにしたい。これにより、テーブルの構造を動的に拡張できる。
 
@@ -28,7 +36,7 @@ VSCode拡張機能として、Markdownファイル内のテーブルをプレビ
 3. WHEN ユーザーが行を削除する THEN システムは 対応する行をテーブルから削除し、Markdownファイルを更新する SHALL
 4. WHEN ユーザーが列を削除する THEN システムは 対応する列をテーブルから削除し、Markdownファイルを更新する SHALL
 
-### Requirement 3
+### Requirement 3: Column Sorting
 
 **User Story:** VSCodeユーザーとして、テーブルの列をクリックしてソートできるようにしたい。これにより、データを整理して表示できる。
 
@@ -38,8 +46,9 @@ VSCode拡張機能として、Markdownファイル内のテーブルをプレビ
 2. WHEN ユーザーが同じ列ヘッダーを再度クリックする THEN システムは その列で降順ソートを実行する SHALL
 3. WHEN ソートが実行される THEN システムは ソート結果をMarkdownファイルに反映する SHALL
 4. WHEN ソート中の列がある THEN システムは ソート方向を視覚的に表示する SHALL
+5. WHEN ユーザーがリサイズハンドルをクリックする THEN システムは ソートを実行しない SHALL (v0.1.7)
 
-### Requirement 4
+### Requirement 4: Drag and Drop Operations
 
 **User Story:** VSCodeユーザーとして、行や列をドラッグ&ドロップで並び替えできるようにしたい。これにより、テーブルの構造を直感的に調整できる。
 
