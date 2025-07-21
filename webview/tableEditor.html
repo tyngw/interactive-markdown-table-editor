@@ -1385,6 +1385,30 @@
             showError(`Validation error: ${message}`);
         }
 
+        // Cell selection functions
+        function startCellSelect(row, col) {
+            if (event) {
+                event.preventDefault();
+            }
+            isSelecting = true;
+            selectionStart = { row, col };
+            selectCell(row, col);
+        }
+
+        function startRowSelect(rowIndex) {
+            if (event) {
+                event.preventDefault();
+            }
+            selectRow(rowIndex);
+        }
+
+        function startColumnSelect(colIndex) {
+            if (event) {
+                event.preventDefault();
+            }
+            selectColumn(colIndex);
+        }
+
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', initializeTableEditor);
     </script>

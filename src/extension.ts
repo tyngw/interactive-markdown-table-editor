@@ -127,7 +127,7 @@ export function activate(context: vscode.ExtensionContext) {
                 alignment: ['left' as const, 'left' as const, 'left' as const]
             };
             
-            const tableDataManager = new TableDataManager(sampleTableNode, uri.toString());
+            const tableDataManager = new TableDataManager(sampleTableNode, uri.toString(), 0);
             const sampleTableData = tableDataManager.getTableData();
 
             console.log('Creating webview panel for new table...');
@@ -233,6 +233,9 @@ export function activate(context: vscode.ExtensionContext) {
             // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
+            
+            console.log(`Updating table at index ${tableData.metadata.tableIndex}, lines ${tableData.metadata.startLine}-${tableData.metadata.endLine}`);
+            
             await fileHandler.updateTableByIndex(
                 uri, 
                 tableData.metadata.tableIndex,
