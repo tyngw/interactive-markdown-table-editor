@@ -25,6 +25,19 @@ All commit messages must use one of the following prefixes:
 4. **Git commit** - Commit changes with appropriate prefix
 5. **Update task status** - Mark task as completed in tasks.md
 
+### VSIX Package Creation
+**IMPORTANT**: Before creating a new VSIX package, always increment the version number in `package.json`:
+- For bug fixes: increment patch version (e.g., 0.1.2 → 0.1.3)
+- For new features: increment minor version (e.g., 0.1.3 → 0.2.0)
+- For breaking changes: increment major version (e.g., 0.2.0 → 1.0.0)
+
+Steps to create a new package:
+1. Update version in `package.json`
+2. Run `npm run compile` to compile latest changes
+3. Run `npx vsce package` to create VSIX file
+4. Install the new VSIX in VS Code
+5. Test functionality to ensure it works correctly
+
 ### Testing Requirements
 - All new functionality must have corresponding unit tests
 - Tests must pass before any git commit
@@ -83,3 +96,4 @@ src/
 - `npm test` - Run all tests
 - `npm run lint` - Run ESLint
 - `npm run vscode:prepublish` - Prepare for publishing
+- `npx vsce package` - Create VSIX package (remember to increment version first!)

@@ -231,20 +231,27 @@ export class MarkdownFileHandler implements FileHandler {
                 const startLine = token.map[0];
                 let endLine = token.map[1];
                 
+                this.outputChannel.appendLine(`Found table_open token: startLine=${startLine}, initial endLine=${endLine}`);
+                
                 // Find the corresponding table_close token for more accurate end line
                 for (let j = i + 1; j < tokens.length; j++) {
                     const closeToken = tokens[j];
                     if (closeToken?.type === 'table_close') {
                         if (closeToken?.map) {
+                            this.outputChannel.appendLine(`Found table_close token: endLine=${closeToken.map[1]}`);
                             endLine = closeToken.map[1];
                         }
                         break;
                     }
                 }
                 
+                // Adjust endLine to be inclusive (subtract 1 for 0-based indexing)
+                const adjustedEndLine = Math.max(0, endLine - 1);
+                this.outputChannel.appendLine(`Table ${tableIndex}: lines ${startLine}-${adjustedEndLine} (adjusted from ${endLine})`);
+                
                 tables.push({
                     startLine,
-                    endLine,
+                    endLine: adjustedEndLine,
                     tableIndex
                 });
                 
@@ -271,10 +278,14 @@ export class MarkdownFileHandler implements FileHandler {
             const currentContent = await this.readMarkdownFile(uri);
             const lines = currentContent.split('\n');
             
-            // Validate line numbers
+            this.outputChannel.appendLine(`File has ${lines.length} lines (0-${lines.length - 1})`);
+            this.outputChannel.appendLine(`Requested range: ${startLine}-${endLine}`);
+            
+            // Validate line numbers - endLine should be less than lines.length for 0-based indexing
             if (startLine < 0 || endLine >= lines.length || startLine > endLine) {
+                this.outputChannel.appendLine(`Line validation failed: startLine=${startLine}, endLine=${endLine}, lines.length=${lines.length}`);
                 throw new FileSystemError(
-                    `Invalid line range: ${startLine}-${endLine} (file has ${lines.length} lines)`,
+                    `Invalid line range: ${startLine}-${endLine} (file has ${lines.length} lines, valid range: 0-${lines.length - 1})`,
                     'update',
                     uri
                 );
