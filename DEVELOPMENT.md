@@ -76,12 +76,32 @@ src/
 2. **FileHandler**: Enhanced with `updateTableByIndex()` for precise table updates
 3. **Extension**: Updated to support table selection dialog for multiple tables
 4. **Parser**: Robust handling of mixed content (tables, code blocks, lists, etc.)
+5. **WebviewManager**: Enhanced with UI/UX improvements for better user experience
+
+### UI/UX Enhancements
+
+#### Status Bar and Messaging
+- **Bottom Status Bar**: Error and save messages now appear at the bottom of the interface
+- **Non-intrusive Feedback**: Status messages provide feedback without blocking the editing workflow
+- **VSCode Theme Integration**: All messages use proper VSCode theme colors and styling
+
+#### Simplified Interface
+- **Toolbar Simplification**: Removed Save, Export, Delete Row, and Delete Column buttons from the top toolbar
+- **Context Menu Focus**: All operations accessible through intuitive right-click context menus
+- **Clean Workspace**: Minimized UI clutter for better focus on table content
+
+#### Enhanced Editing Experience
+- **Smart Focus Management**: Editing automatically commits when selecting another cell
+- **Improved Input Handling**: Text input boxes properly handle clicks and prevent focus issues
+- **Event Propagation Control**: Better handling of keyboard and mouse events during editing
+- **Seamless Cell Navigation**: Enhanced keyboard navigation and cell selection behavior
 
 ### Error Handling
 - Automatic backup creation before file modifications
 - Comprehensive validation of table structure and file content
 - Clear error messages with recovery options
 - Graceful handling of malformed tables and mixed content
+- Status bar error display for non-disruptive user experience
 
 ### Test Coverage
 - Multi-table scenarios
@@ -89,6 +109,7 @@ src/
 - Error conditions and edge cases
 - File system operations with backup/recovery
 - Table selection and indexing accuracy
+- UI/UX enhancements and user interaction patterns (146+ tests total)
 
 ## Commands
 - `npm run compile` - Compile TypeScript

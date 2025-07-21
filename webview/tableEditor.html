@@ -334,18 +334,6 @@
         }
 
         /* Status bar enhancements */
-        .status-bar {
-            margin-top: 16px;
-            padding: 8px 12px;
-            background-color: var(--vscode-statusBar-background);
-            color: var(--vscode-statusBar-foreground);
-            font-size: 12px;
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
         .status-info {
             display: flex;
             gap: 16px;
@@ -396,15 +384,39 @@
         }
 
         .status-bar {
-            margin-top: 16px;
-            padding: 8px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 12px;
             background-color: var(--vscode-statusBar-background);
             color: var(--vscode-statusBar-foreground);
             font-size: 12px;
-            border-radius: 2px;
+            border-top: 1px solid var(--vscode-panel-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            z-index: 100;
+        }
+
+        .error-message {
+            background-color: var(--vscode-inputValidation-errorBackground);
+            color: var(--vscode-inputValidation-errorForeground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 8px 0;
+            display: none;
+        }
+
+        .save-message {
+            background-color: var(--vscode-notifications-background);
+            color: var(--vscode-notifications-foreground);
+            border: 1px solid var(--vscode-notifications-border);
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 8px 0;
+            display: none;
         }
 
         .save-status {
@@ -601,14 +613,6 @@
             
             const app = document.getElementById('app');
             app.innerHTML = `
-                <div class="toolbar">
-                    <button class="btn" onclick="deleteSelectedRow()" id="deleteRowBtn" disabled>Delete Row</button>
-                    <button class="btn" onclick="deleteSelectedColumn()" id="deleteColBtn" disabled>Delete Column</button>
-                    <div class="toolbar-separator"></div>
-                    <button class="btn save-btn" onclick="saveTable()" id="saveBtn">💾 Save</button>
-                    <button class="btn" onclick="exportTable()">📤 Export</button>
-                </div>
-                
                 <div class="table-container">
                     <table class="table-editor" id="tableEditor">
                         ${renderTableContent()}
@@ -649,8 +653,10 @@
                 </div>
                 
                 <div class="status-bar">
-                    <span>Rows: ${data.rows.length} | Columns: ${data.headers.length}</span>
-                    <div class="save-status">
+                    <div class="status-info">
+                        <span>Rows: ${data.rows.length} | Columns: ${data.headers.length}</span>
+                    </div>
+                    <div class="status-messages" id="statusMessages">
                         <span class="save-indicator saved" id="saveIndicator">✓ Auto-saved</span>
                     </div>
                 </div>
@@ -743,6 +749,11 @@
         let lastSelectedCell = null;
 
         function selectCell(row, col, event = null) {
+            // If currently editing a cell, commit the edit first
+            if (currentEditingCell) {
+                commitCellEdit();
+            }
+            
             // Handle multi-selection with Ctrl/Cmd key
             if (event && (event.ctrlKey || event.metaKey)) {
                 const cellKey = `${row}-${col}`;
@@ -1184,6 +1195,11 @@
             input.focus();
             input.select();
 
+            // Prevent the cell input from losing focus when clicked
+            input.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
             input.addEventListener('blur', commitCellEdit);
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -1191,6 +1207,8 @@
                 } else if (e.key === 'Escape') {
                     cancelCellEdit();
                 }
+                // Stop propagation to prevent other keyboard handlers
+                e.stopPropagation();
             });
         }
 
@@ -1313,52 +1331,50 @@
             }
         });
 
-        // Show error message
+        // Show error message in status bar
         function showError(message) {
-            const app = document.getElementById('app');
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error';
-            errorDiv.innerHTML = escapeHtml(message);
+            const statusBar = document.querySelector('.status-bar');
+            if (!statusBar) return;
             
-            // Remove existing error messages
-            const existingErrors = app.querySelectorAll('.error');
-            existingErrors.forEach(error => error.remove());
+            // Create or update error message element
+            let errorElement = statusBar.querySelector('.error-message');
+            if (!errorElement) {
+                errorElement = document.createElement('div');
+                errorElement.className = 'error-message';
+                statusBar.appendChild(errorElement);
+            }
             
-            app.insertBefore(errorDiv, app.firstChild);
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
             
             // Auto-hide after 5 seconds
             setTimeout(() => {
-                if (errorDiv.parentNode) {
-                    errorDiv.remove();
+                if (errorElement) {
+                    errorElement.style.display = 'none';
                 }
             }, 5000);
         }
 
-        // Show success message
+        // Show success message in status bar
         function showSuccess(message) {
-            const app = document.getElementById('app');
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success';
-            successDiv.innerHTML = escapeHtml(message);
-            successDiv.style.cssText = `
-                color: var(--vscode-notificationsInfoIcon-foreground);
-                background-color: var(--vscode-inputValidation-infoBackground);
-                border: 1px solid var(--vscode-inputValidation-infoBorder);
-                padding: 12px;
-                border-radius: 4px;
-                margin-bottom: 16px;
-            `;
+            const statusBar = document.querySelector('.status-bar');
+            if (!statusBar) return;
             
-            // Remove existing success messages
-            const existingSuccess = app.querySelectorAll('.success');
-            existingSuccess.forEach(success => success.remove());
+            // Create or update save message element
+            let saveElement = statusBar.querySelector('.save-message');
+            if (!saveElement) {
+                saveElement = document.createElement('div');
+                saveElement.className = 'save-message';
+                statusBar.appendChild(saveElement);
+            }
             
-            app.insertBefore(successDiv, app.firstChild);
+            saveElement.textContent = message;
+            saveElement.style.display = 'block';
             
             // Auto-hide after 3 seconds
             setTimeout(() => {
-                if (successDiv.parentNode) {
-                    successDiv.remove();
+                if (saveElement) {
+                    saveElement.style.display = 'none';
                 }
             }, 3000);
         }

@@ -8,12 +8,14 @@ A VS Code extension that provides a spreadsheet-like interface for editing Markd
 - **Cell Navigation**: Use arrow keys, Tab, and Enter to navigate between cells
 - **Table Manipulation**: Add/delete rows and columns with intuitive context menus
 - **Context Menu Operations**: Right-click on row/column headers for precise insertion and deletion
+- **Clean Interface**: Simplified toolbar with status messages at the bottom for focused editing
+- **Enhanced Editing**: Improved cell editing with better focus management and input handling
 - **Sorting**: Click column headers to sort table data
 - **Drag & Drop**: Reorder rows and columns by dragging
 - **Auto-save**: Changes are automatically saved back to your Markdown file
 - **Multiple Tables Support**: Handle multiple tables in a single document with table selection
 - **Mixed Content Support**: Safely edit tables in documents with mixed content (code blocks, lists, etc.)
-- **Robust Error Handling**: Comprehensive error handling with automatic backup creation
+- **Robust Error Handling**: Comprehensive error handling with status messages at the bottom
 - **Table Index Tracking**: Accurately track and update specific tables in multi-table documents
 
 ## Usage
@@ -37,6 +39,8 @@ A VS Code extension that provides a spreadsheet-like interface for editing Markd
 ### Editing Tables
 
 - **Cell Editing**: Click any cell to start editing, press Enter or Tab to confirm
+- **Smart Focus**: Editing automatically commits when selecting another cell, preventing data loss
+- **Improved Input**: Text input boxes respond properly to clicks and prevent focus issues
 - **Navigation**: Use arrow keys to move between cells
 - **Row Operations**: Right-click on row numbers for context menu with:
   - Add row above/below current position
@@ -46,6 +50,7 @@ A VS Code extension that provides a spreadsheet-like interface for editing Markd
   - Delete current column (if not the last column)
 - **Sorting**: Click column headers to sort (click again to reverse order)
 - **Drag & Drop**: Drag row/column headers to reorder
+- **Status Messages**: Error and save messages appear at the bottom for less intrusive feedback
 
 ## Multi-Table Support
 
