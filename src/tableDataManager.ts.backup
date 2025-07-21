@@ -1584,4 +1584,448 @@ export class TableDataManager {
         }
     }
 
+    /**
+     * Validate row move operation
+     */
+    private validateRowMove(fromIndex: number, toIndex: number): {
+        isValid: boolean;
+        error?: string;
+    } {
+        if (!this.isValidRowIndex(fromIndex)) {
+            return { isValid: false, error: `Invalid source row index: ${fromIndex}` };
+        }
+
+        if (toIndex < 0 || toIndex > this.tableData.rows.length) {
+            return { isValid: false, error: `Invalid target row index: ${toIndex}` };
+        }
+
+        return { isValid: true };
+    }
+
+    /**
+     * Validate column move operation
+     */
+    private validateColumnMove(fromIndex: number, toIndex: number): {
+        isValid: boolean;
+        error?: string;
+    } {
+        if (!this.isValidColumnIndex(fromIndex)) {
+            return { isValid: false, error: `Invalid source column index: ${fromIndex}` };
+        }
+
+        if (toIndex < 0 || toIndex > this.tableData.headers.length) {
+            return { isValid: false, error: `Invalid target column index: ${toIndex}` };
+        }
+
+        return { isValid: true };
+    }
+
+    /**
+     * Safe row move with validation
+     */
+    private moveRowSafe(fromIndex: number, toIndex: number): {
+        success: boolean;
+        error?: string;
+    } {
+        try {
+            const validation = this.validateRowMove(fromIndex, toIndex);
+            if (!validation.isValid) {
+                return { success: false, error: validation.error };
+            }
+
+            this.moveRow(fromIndex, toIndex);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    }
+
+    /**
+     * Safe column move with validation
+     */
+    private moveColumnSafe(fromIndex: number, toIndex: number): {
+        success: boolean;
+        error?: string;
+    } {
+        try {
+            const validation = this.validateColumnMove(fromIndex, toIndex);
+            if (!validation.isValid) {
+                return { success: false, error: validation.error };
+            }
+
+            this.moveColumn(fromIndex, toIndex);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    }
+
+    /**
+     * Get preview of row move operation (without actually moving)
+     */
+    previewRowMove(fromIndex: number, toIndex: number): {
+        isValid: boolean;
+        previewRows?: string[][];
+        error?: string;
+    } {
+        const validation = this.validateRowMove(fromIndex, toIndex);
+        if (!validation.isValid) {
+            return { isValid: false, error: validation.error };
+        }
+
+        const previewRows = [...this.tableData.rows];
+        const row = previewRows.splice(fromIndex, 1)[0];
+        previewRows.splice(toIndex, 0, row);
+
+        return { isValid: true, previewRows };
+    }
+
+    /**
+     * Get preview of column move operation (without actually moving)
+     */
+    previewColumnMove(fromIndex: number, toIndex: number): {
+        isValid: boolean;
+        previewHeaders?: string[];
+        previewRows?: string[][];
+        previewAlignment?: ('left' | 'center' | 'right')[];
+        error?: string;
+    } {
+        const validation = this.validateColumnMove(fromIndex, toIndex);
+        if (!validation.isValid) {
+            return { isValid: false, error: validation.error };
+        }
+
+        // Preview headers
+        const previewHeaders = [...this.tableData.headers];
+        const header = previewHeaders.splice(fromIndex, 1)[0];
+        previewHeaders.splice(toIndex, 0, header);
+
+        // Preview alignment
+        const previewAlignment = [...this.tableData.alignment];
+        const alignment = previewAlignment.splice(fromIndex, 1)[0];
+        previewAlignment.splice(toIndex, 0, alignment);
+
+        // Preview rows
+        const previewRows = this.tableData.rows.map(row => {
+            const newRow = [...row];
+            const cell = newRow.splice(fromIndex, 1)[0];
+            newRow.splice(toIndex, 0, cell);
+            return newRow;
+        });
+
+        return { 
+            isValid: true, 
+            previewHeaders, 
+            previewRows, 
+            previewAlignment 
+        };
+    }
+
+    /**
+     * Batch move multiple rows
+     */
+    batchMoveRows(moves: Array<{ fromIndex: number; toIndex: number }>): {
+        success: boolean;
+        errors: string[];
+        successCount: number;
+    } {
+        const errors: string[] = [];
+        let successCount = 0;
+
+        // Sort moves by fromIndex in descending order to avoid index shifting issues
+        const sortedMoves = [...moves].sort((a, b) => b.fromIndex - a.fromIndex);
+
+        for (const move of sortedMoves) {
+            const result = this.moveRowSafe(move.fromIndex, move.toIndex);
+            if (result.success) {
+                successCount++;
+            } else {
+                errors.push(result.error || 'Unknown error');
+            }
+        }
+
+        return {
+            success: errors.length === 0,
+            errors,
+            successCount
+        };
+    }
+
+    /**
+     * Batch move multiple columns
+     */
+    batchMoveColumns(moves: Array<{ fromIndex: number; toIndex: number }>): {
+        success: boolean;
+        errors: string[];
+        successCount: number;
+    } {
+        const errors: string[] = [];
+        let successCount = 0;
+
+        // Sort moves by fromIndex in descending order to avoid index shifting issues
+        const sortedMoves = [...moves].sort((a, b) => b.fromIndex - a.fromIndex);
+
+        for (const move of sortedMoves) {
+            const result = this.moveColumnSafe(move.fromIndex, move.toIndex);
+            if (result.success) {
+                successCount++;
+            } else {
+                errors.push(result.error || 'Unknown error');
+            }
+        }
+
+        return {
+            success: errors.length === 0,
+            errors,
+            successCount
+        };
+    }
+
+    /**
+     * Reverse current row order
+     */
+    reverseRows(): void {
+        this.tableData.rows.reverse();
+        
+        // Update sort state if exists
+        if (this.sortState) {
+            this.sortState.direction = this.sortState.direction === 'asc' ? 'desc' : 'asc';
+        }
+        
+        this.updateMetadata();
+        this.notifyChange();
+    }
+
+    /**
+     * Get current sort state
+     */
+    getSortState(): {
+        columnIndex: number;
+        direction: 'asc' | 'desc';
+        dataType: 'string' | 'number' | 'date' | 'auto';
+        columnName: string;
+    } | null {
+        if (!this.sortState) {
+            return null;
+        }
+
+        return {
+            ...this.sortState,
+            columnName: this.tableData.headers[this.sortState.columnIndex]
+        };
+    }
+
+    /**
+     * Clear sort state
+     */
+    clearSortState(): void {
+        this.sortState = null;
+    }
+
+    /**
+     * Check if table is currently sorted
+     */
+    isSorted(): boolean {
+        return this.sortState !== null;
+    }
+
+    /**
+     * Get sort indicators for UI
+     */
+    getSortIndicators(): Array<{
+        columnIndex: number;
+        direction: 'asc' | 'desc' | null;
+        isPrimary: boolean;
+    }> {
+        const indicators = this.tableData.headers.map((_, index) => ({
+            columnIndex: index,
+            direction: null as 'asc' | 'desc' | null,
+            isPrimary: false
+        }));
+
+        if (this.sortState) {
+            indicators[this.sortState.columnIndex] = {
+                columnIndex: this.sortState.columnIndex,
+                direction: this.sortState.direction,
+                isPrimary: true
+            };
+        }
+
+        return indicators;
+    }
+
+    /**
+     * Detect column data type based on content
+     */
+    private detectColumnDataType(columnIndex: number): 'string' | 'number' | 'date' {
+        const values = this.tableData.rows.map(row => row[columnIndex]).filter(val => val.trim());
+        
+        if (values.length === 0) {
+            return 'string';
+        }
+
+        let numberCount = 0;
+        let dateCount = 0;
+
+        for (const value of values) {
+            // Check if it's a number
+            if (!isNaN(parseFloat(value)) && isFinite(parseFloat(value))) {
+                numberCount++;
+            }
+            
+            // Check if it's a date
+            const dateValue = new Date(value);
+            if (!isNaN(dateValue.getTime()) && value.length > 4) {
+                dateCount++;
+            }
+        }
+
+        const total = values.length;
+        const numberRatio = numberCount / total;
+        const dateRatio = dateCount / total;
+
+        // If more than 70% are numbers, treat as number
+        if (numberRatio > 0.7) {
+            return 'number';
+        }
+        
+        // If more than 70% are dates, treat as date
+        if (dateRatio > 0.7) {
+            return 'date';
+        }
+
+        return 'string';
+    }
+
+    /**
+     * Compare two values based on data type
+     */
+    private compareValues(
+        a: string, 
+        b: string, 
+        dataType: 'string' | 'number' | 'date',
+        options: { caseSensitive: boolean; locale: string }
+    ): number {
+        switch (dataType) {
+            case 'number':
+                const numA = parseFloat(a) || 0;
+                const numB = parseFloat(b) || 0;
+                return numA - numB;
+
+            case 'date':
+                const dateA = new Date(a);
+                const dateB = new Date(b);
+                
+                // If either date is invalid, fall back to string comparison
+                if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+                    return options.caseSensitive 
+                        ? a.localeCompare(b, options.locale)
+                        : a.toLowerCase().localeCompare(b.toLowerCase(), options.locale);
+                }
+                
+                return dateA.getTime() - dateB.getTime();
+
+            case 'string':
+            default:
+                return options.caseSensitive 
+                    ? a.localeCompare(b, options.locale)
+                    : a.toLowerCase().localeCompare(b.toLowerCase(), options.locale);
+        }
+    }
+
+    /**
+     * Sort with natural ordering (handles numbers in strings)
+     */
+    sortNatural(columnIndex: number, direction: 'asc' | 'desc'): void {
+        if (columnIndex < 0 || columnIndex >= this.tableData.headers.length) {
+            throw new Error(`Invalid column index: ${columnIndex}`);
+        }
+
+        this.tableData.rows.sort((a, b) => {
+            const valueA = a[columnIndex] || '';
+            const valueB = b[columnIndex] || '';
+            
+            const comparison = this.naturalCompare(valueA, valueB);
+            return direction === 'asc' ? comparison : -comparison;
+        });
+
+        this.sortState = {
+            columnIndex,
+            direction,
+            dataType: 'string'
+        };
+
+        this.updateMetadata();
+        this.notifyChange();
+    }
+
+    /**
+     * Natural comparison (handles numbers within strings)
+     */
+    private naturalCompare(a: string, b: string): number {
+        const ax: Array<[number, string]> = [];
+        const bx: Array<[number, string]> = [];
+
+        a.replace(/(\d+)|(\D+)/g, (_, $1, $2) => {
+            ax.push([$1 ? parseInt($1, 10) : Infinity, $2 || ""]);
+            return "";
+        });
+
+        b.replace(/(\d+)|(\D+)/g, (_, $1, $2) => {
+            bx.push([$1 ? parseInt($1, 10) : Infinity, $2 || ""]);
+            return "";
+        });
+
+        while (ax.length && bx.length) {
+            const an = ax.shift();
+            const bn = bx.shift();
+            
+            if (!an || !bn) {
+                break;
+            }
+            
+            const nn = an[0] - bn[0] || an[1].localeCompare(bn[1]);
+            if (nn) {
+                return nn;
+            }
+        }
+
+        return ax.length - bx.length;
+    }
+
+    /**
+     * Get sorted column statistics
+     */
+    getSortedColumnStats(columnIndex: number): {
+        dataType: 'string' | 'number' | 'date';
+        uniqueValues: number;
+        nullValues: number;
+        minValue: string;
+        maxValue: string;
+        sampleValues: string[];
+    } {
+        if (columnIndex < 0 || columnIndex >= this.tableData.headers.length) {
+            throw new Error(`Invalid column index: ${columnIndex}`);
+        }
+
+        const values = this.tableData.rows.map(row => row[columnIndex]);
+        const nonEmptyValues = values.filter(val => val.trim());
+        const uniqueValues = new Set(nonEmptyValues);
+        
+        const dataType = this.detectColumnDataType(columnIndex);
+        
+        // Sort values to find min/max
+        const sortedValues = [...nonEmptyValues].sort((a, b) => 
+            this.compareValues(a, b, dataType, { caseSensitive: true, locale: 'en-US' })
+        );
+
+        return {
+            dataType,
+            uniqueValues: uniqueValues.size,
+            nullValues: values.length - nonEmptyValues.length,
+            minValue: sortedValues[0] || '',
+            maxValue: sortedValues[sortedValues.length - 1] || '',
+            sampleValues: sortedValues.slice(0, 5)
+        };
+    }
 }

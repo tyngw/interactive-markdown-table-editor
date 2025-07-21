@@ -659,4 +659,498 @@ suite('TableDataManager Test Suite', () => {
         assert.strictEqual(tableData.rows[1][0], '2023-06-30');
         assert.strictEqual(tableData.rows[2][0], '2023-12-01');
     });
+
+    // Drag & Drop Functionality Tests (Requirements 4.1, 4.2, 4.4)
+
+    test('should move row via drag and drop - forward movement', () => {
+        // Test moving first row to last position (drag & drop simulation)
+        const originalFirstRow = manager.getTableData().rows[0];
+        const originalSecondRow = manager.getTableData().rows[1];
+        const originalThirdRow = manager.getTableData().rows[2];
+        
+        manager.moveRow(0, 2); // Drag first row to third position
+        
+        const tableData = manager.getTableData();
+        assert.strictEqual(tableData.rows.length, 3);
+        assert.deepStrictEqual(tableData.rows[0], originalSecondRow);
+        assert.deepStrictEqual(tableData.rows[1], originalThirdRow);
+        assert.deepStrictEqual(tableData.rows[2], originalFirstRow);
+        
+        // Verify Markdown serialization reflects the change
+        const markdown = manager.serializeToMarkdown();
+        const lines = markdown.split('\n').filter(line => line.trim());
+        assert.ok(lines[2].includes('Jane')); // Second row became first
+        assert.ok(lines[3].includes('Bob'));  // Third row became second
+        assert.ok(lines[4].includes('John')); // First row became third
+    });
+
+    test('should move row via drag and drop - backward movement', () => {
+        // Test moving last row to first position
+        const originalRows = manager.getTableData().rows.map(row => [...row]);
+        
+        manager.moveRow(2, 0); // Drag last row to first position
+        
+        const tableData = manager.getTableData();
+        assert.deepStrictEqual(tableData.rows[0], originalRows[2]);
+        assert.deepStrictEqual(tableData.rows[1], originalRows[0]);
+        assert.deepStrictEqual(tableData.rows[2], originalRows[1]);
+    });
+
+    test('should move row to middle position', () => {
+        // Test moving first row to middle position
+        const originalRows = manager.getTableData().rows.map(row => [...row]);
+        
+        manager.moveRow(0, 1); // Drag first row to second position
+        
+        const tableData = manager.getTableData();
+        assert.deepStrictEqual(tableData.rows[0], originalRows[1]);
+        assert.deepStrictEqual(tableData.rows[1], originalRows[0]);
+        assert.deepStrictEqual(tableData.rows[2], originalRows[2]);
+    });
+
+    test('should move column via drag and drop - forward movement', () => {
+        // Test moving first column to last position
+        const originalHeaders = [...manager.getTableData().headers];
+        const originalAlignment = [...manager.getTableData().alignment];
+        const originalRows = manager.getTableData().rows.map(row => [...row]);
+        
+        manager.moveColumn(0, 2); // Drag Name column to third position
+        
+        const tableData = manager.getTableData();
+        
+        // Check headers reordering
+        assert.deepStrictEqual(tableData.headers, [originalHeaders[1], originalHeaders[2], originalHeaders[0]]);
+        
+        // Check alignment reordering
+        assert.deepStrictEqual(tableData.alignment, [originalAlignment[1], originalAlignment[2], originalAlignment[0]]);
+        
+        // Check data reordering
+        assert.deepStrictEqual(tableData.rows[0], [originalRows[0][1], originalRows[0][2], originalRows[0][0]]);
+        assert.deepStrictEqual(tableData.rows[1], [originalRows[1][1], originalRows[1][2], originalRows[1][0]]);
+        assert.deepStrictEqual(tableData.rows[2], [originalRows[2][1], originalRows[2][2], originalRows[2][0]]);
+        
+        // Verify Markdown serialization reflects the change
+        const markdown = manager.serializeToMarkdown();
+        const lines = markdown.split('\n').filter(line => line.trim());
+        assert.ok(lines[0].includes('Age | City | Name')); // Headers reordered
+        assert.ok(lines[2].includes('25 | NYC | John'));   // Data reordered
+    });
+
+    test('should move column via drag and drop - backward movement', () => {
+        // Test moving last column to first position
+        const originalHeaders = [...manager.getTableData().headers];
+        const originalAlignment = [...manager.getTableData().alignment];
+        const originalRows = manager.getTableData().rows.map(row => [...row]);
+        
+        manager.moveColumn(2, 0); // Drag City column to first position
+        
+        const tableData = manager.getTableData();
+        
+        // Check headers reordering
+        assert.deepStrictEqual(tableData.headers, [originalHeaders[2], originalHeaders[0], originalHeaders[1]]);
+        
+        // Check alignment reordering  
+        assert.deepStrictEqual(tableData.alignment, [originalAlignment[2], originalAlignment[0], originalAlignment[1]]);
+        
+        // Check data reordering
+        assert.deepStrictEqual(tableData.rows[0], [originalRows[0][2], originalRows[0][0], originalRows[0][1]]);
+    });
+
+    test('should move column to middle position', () => {
+        // Test moving first column to middle position
+        const originalHeaders = [...manager.getTableData().headers];
+        const originalAlignment = [...manager.getTableData().alignment];
+        const originalRows = manager.getTableData().rows.map(row => [...row]);
+        
+        manager.moveColumn(0, 1); // Drag Name column to second position
+        
+        const tableData = manager.getTableData();
+        
+        // Check headers reordering
+        assert.deepStrictEqual(tableData.headers, [originalHeaders[1], originalHeaders[0], originalHeaders[2]]);
+        
+        // Check alignment reordering
+        assert.deepStrictEqual(tableData.alignment, [originalAlignment[1], originalAlignment[0], originalAlignment[2]]);
+        
+        // Check data reordering
+        assert.deepStrictEqual(tableData.rows[0], [originalRows[0][1], originalRows[0][0], originalRows[0][2]]);
+    });
+
+    test('should handle invalid row move indices', () => {
+        assert.throws(() => {
+            manager.moveRow(-1, 0);
+        }, /Invalid row indices/);
+        
+        assert.throws(() => {
+            manager.moveRow(0, 10);
+        }, /Invalid row indices/);
+        
+        assert.throws(() => {
+            manager.moveRow(10, 0);
+        }, /Invalid row indices/);
+    });
+
+    test('should handle invalid column move indices', () => {
+        assert.throws(() => {
+            manager.moveColumn(-1, 0);
+        }, /Invalid column indices/);
+        
+        assert.throws(() => {
+            manager.moveColumn(0, 10);
+        }, /Invalid column indices/);
+        
+        assert.throws(() => {
+            manager.moveColumn(10, 0);
+        }, /Invalid column indices/);
+    });
+
+    test('should handle same position moves (no-op)', () => {
+        const originalData = manager.getTableData();
+        
+        // Move row to same position
+        manager.moveRow(1, 1);
+        
+        const afterRowMove = manager.getTableData();
+        assert.deepStrictEqual(afterRowMove.rows, originalData.rows);
+        
+        // Move column to same position
+        manager.moveColumn(1, 1);
+        
+        const afterColumnMove = manager.getTableData();
+        assert.deepStrictEqual(afterColumnMove.headers, originalData.headers);
+        assert.deepStrictEqual(afterColumnMove.alignment, originalData.alignment);
+        assert.deepStrictEqual(afterColumnMove.rows, originalData.rows);
+    });
+
+    test('should preserve data integrity during multiple drag operations', () => {
+        const originalData = manager.getTableData();
+        const originalCellCount = originalData.rows.length * originalData.headers.length;
+        
+        // Perform multiple drag operations
+        manager.moveRow(0, 2);
+        manager.moveColumn(1, 0);
+        manager.moveRow(2, 0);
+        manager.moveColumn(0, 2);
+        
+        const finalData = manager.getTableData();
+        const finalCellCount = finalData.rows.length * finalData.headers.length;
+        
+        // Verify structure integrity
+        assert.strictEqual(finalData.rows.length, originalData.rows.length);
+        assert.strictEqual(finalData.headers.length, originalData.headers.length);
+        assert.strictEqual(finalCellCount, originalCellCount);
+        
+        // Verify all original data is still present (just reordered)
+        const originalCells = new Set();
+        const finalCells = new Set();
+        
+        for (let i = 0; i < originalData.rows.length; i++) {
+            for (let j = 0; j < originalData.rows[i].length; j++) {
+                originalCells.add(originalData.rows[i][j]);
+                finalCells.add(finalData.rows[i][j]);
+            }
+        }
+        
+        assert.deepStrictEqual(originalCells, finalCells);
+    });
+
+    test('should trigger change listeners during drag operations', () => {
+        let changeCount = 0;
+        let lastChangeData: TableData | null = null;
+        
+        const listener = (data: TableData) => {
+            changeCount++;
+            lastChangeData = data;
+        };
+        
+        manager.addChangeListener(listener);
+        
+        // Test row move triggers change
+        manager.moveRow(0, 1);
+        assert.strictEqual(changeCount, 1);
+        assert.notStrictEqual(lastChangeData, null);
+        
+        // Test column move triggers change
+        manager.moveColumn(0, 1);
+        assert.strictEqual(changeCount, 2);
+        
+        manager.removeChangeListener(listener);
+    });
+
+    test('should update metadata during drag operations', () => {
+        const originalMetadata = manager.getTableData().metadata;
+        const originalModified = originalMetadata.lastModified;
+        
+        // Wait a bit to ensure timestamp difference
+        setTimeout(() => {
+            manager.moveRow(0, 1);
+            
+            const newMetadata = manager.getTableData().metadata;
+            assert.ok(newMetadata.lastModified > originalModified);
+            assert.strictEqual(newMetadata.rowCount, originalMetadata.rowCount);
+            assert.strictEqual(newMetadata.columnCount, originalMetadata.columnCount);
+        }, 10);
+    });
+
+    test('should serialize correctly after complex drag operations', () => {
+        // Perform complex reordering
+        manager.moveRow(0, 2);    // John moves to end
+        manager.moveColumn(2, 0); // City moves to front
+        
+        const markdown = manager.serializeToMarkdown();
+        const lines = markdown.split('\n').filter(line => line.trim());
+        
+        // Verify header order
+        assert.ok(lines[0].includes('City | Name | Age'));
+        
+        // Verify separator alignment (City was right-aligned, now first)
+        assert.ok(lines[1].includes('---: | :--- | :---:'));
+        
+        // Verify data order (Jane should be first row, John last)
+        assert.ok(lines[2].includes('LA | Jane | 30'));
+        assert.ok(lines[3].includes('Chicago | Bob | 35'));
+        assert.ok(lines[4].includes('NYC | John | 25'));
+    });
+
+    test('should handle drag operations on single row table', () => {
+        // Create single row table
+        const singleRowNode: TableNode = {
+            startLine: 0,
+            endLine: 2,
+            headers: ['A', 'B'],
+            rows: [['1', '2']],
+            alignment: ['left', 'left']
+        };
+        
+        const singleRowManager = new TableDataManager(singleRowNode);
+        
+        // Moving single row to same position should work
+        singleRowManager.moveRow(0, 0);
+        
+        const tableData = singleRowManager.getTableData();
+        assert.strictEqual(tableData.rows.length, 1);
+        assert.deepStrictEqual(tableData.rows[0], ['1', '2']);
+    });
+
+    test('should handle drag operations on single column table', () => {
+        // Create single column table
+        const singleColNode: TableNode = {
+            startLine: 0,
+            endLine: 3,
+            headers: ['A'],
+            rows: [['1'], ['2'], ['3']],
+            alignment: ['left']
+        };
+        
+        const singleColManager = new TableDataManager(singleColNode);
+        
+        // Moving single column to same position should work
+        singleColManager.moveColumn(0, 0);
+        
+        const tableData = singleColManager.getTableData();
+        assert.strictEqual(tableData.headers.length, 1);
+        assert.strictEqual(tableData.headers[0], 'A');
+    });
+
+    // Enhanced Drag & Drop Functionality Tests (Requirements 4.1, 4.2, 4.4)
+
+    test('should start row drag operation - Requirement 4.1', () => {
+        // Test requirement 4.1: ユーザーが行ヘッダーをドラッグする
+        manager.startRowDrag(0);
+        
+        const dragState = manager.getDragDropState();
+        assert.strictEqual(dragState.isDragging, true);
+        assert.strictEqual(dragState.dragType, 'row');
+        assert.strictEqual(dragState.dragIndex, 0);
+        assert.ok(dragState.dropZones.length > 0);
+        assert.notStrictEqual(dragState.previewData, undefined);
+    });
+
+    test('should start column drag operation - Requirement 4.2', () => {
+        // Test requirement 4.2: ユーザーが列ヘッダーをドラッグする
+        manager.startColumnDrag(1);
+        
+        const dragState = manager.getDragDropState();
+        assert.strictEqual(dragState.isDragging, true);
+        assert.strictEqual(dragState.dragType, 'column');
+        assert.strictEqual(dragState.dragIndex, 1);
+        assert.ok(dragState.dropZones.length > 0);
+        assert.notStrictEqual(dragState.previewData, undefined);
+    });
+
+    test('should provide visual feedback during drag - Requirement 4.3', () => {
+        // Test requirement 4.3: ドラッグ中である THEN システムは ドロップ可能な位置を視覚的に示す
+        let dragOverCalled = false;
+        let dragOverIndex = -1;
+        let dragOverValid = false;
+
+        manager.addDragDropListener({
+            onDragOver: (index: number, isValid: boolean) => {
+                dragOverCalled = true;
+                dragOverIndex = index;
+                dragOverValid = isValid;
+            }
+        });
+
+        manager.startRowDrag(0);
+        
+        // Test valid drop zone
+        const validResult = manager.updateDragPosition(2);
+        assert.strictEqual(validResult, true);
+        assert.strictEqual(dragOverCalled, true);
+        assert.strictEqual(dragOverIndex, 2);
+        assert.strictEqual(dragOverValid, true);
+
+        // Test invalid drop zone (adjacent position)
+        dragOverCalled = false;
+        const invalidResult = manager.updateDragPosition(1);
+        assert.strictEqual(invalidResult, false);
+        assert.strictEqual(dragOverCalled, true);
+        assert.strictEqual(dragOverValid, false);
+    });
+
+    test('should complete drag and drop and update Markdown - Requirement 4.4', () => {
+        // Test requirement 4.4: ドラッグ&ドロップが完了する THEN システムは 新しい順序をMarkdownファイルに反映する
+        let dragCompleteCalled = false;
+        let dragCompleteType: 'row' | 'column' | null = null;
+        let dragCompleteFrom = -1;
+        let dragCompleteTo = -1;
+
+        manager.addDragDropListener({
+            onDragComplete: (type: 'row' | 'column', fromIndex: number, toIndex: number) => {
+                dragCompleteCalled = true;
+                dragCompleteType = type;
+                dragCompleteFrom = fromIndex;
+                dragCompleteTo = toIndex;
+            }
+        });
+
+        const originalMarkdown = manager.serializeToMarkdown();
+        
+        // Start drag operation
+        manager.startRowDrag(0);
+        
+        // Complete drag operation
+        const result = manager.completeDragDrop(2);
+        assert.strictEqual(result, true);
+        
+        // Verify drag complete event was fired
+        assert.strictEqual(dragCompleteCalled, true);
+        assert.strictEqual(dragCompleteType, 'row');
+        assert.strictEqual(dragCompleteFrom, 0);
+        assert.strictEqual(dragCompleteTo, 2);
+        
+        // Verify Markdown was updated
+        const newMarkdown = manager.serializeToMarkdown();
+        assert.notStrictEqual(newMarkdown, originalMarkdown);
+        
+        // Verify the row was actually moved
+        const tableData = manager.getTableData();
+        assert.deepStrictEqual(tableData.rows[2], ['John', '25', 'NYC']); // Original first row is now third
+        
+        // Verify drag state is reset
+        const dragState = manager.getDragDropState();
+        assert.strictEqual(dragState.isDragging, false);
+        assert.strictEqual(dragState.dragType, null);
+    });
+
+    test('should cancel drag operation', () => {
+        let dragCancelCalled = false;
+
+        manager.addDragDropListener({
+            onDragCancel: () => {
+                dragCancelCalled = true;
+            }
+        });
+
+        manager.startRowDrag(0);
+        assert.strictEqual(manager.getDragDropState().isDragging, true);
+        
+        manager.cancelDragDrop();
+        
+        assert.strictEqual(dragCancelCalled, true);
+        assert.strictEqual(manager.getDragDropState().isDragging, false);
+    });
+
+    test('should validate drop zones correctly', () => {
+        manager.startRowDrag(1); // Start dragging middle row
+        
+        const dragState = manager.getDragDropState();
+        
+        // Valid drop zones should exclude adjacent positions
+        assert.strictEqual(manager.isValidDropZone(0), true);  // Before dragged row
+        assert.strictEqual(manager.isValidDropZone(1), false); // Same position
+        assert.strictEqual(manager.isValidDropZone(2), false); // Adjacent position
+        assert.strictEqual(manager.isValidDropZone(3), true);  // After all rows
+    });
+
+    test('should create drag preview correctly', () => {
+        let previewData: TableData | null = null;
+
+        manager.addDragDropListener({
+            onDragPreview: (data: TableData) => {
+                previewData = data;
+            }
+        });
+
+        manager.startRowDrag(0);
+        manager.updateDragPosition(2);
+        
+        assert.notStrictEqual(previewData, null);
+        assert.deepStrictEqual(previewData!.rows[2], ['John', '25', 'NYC']); // Preview shows moved row
+    });
+
+    test('should handle invalid drag operations gracefully', () => {
+        // Test invalid row index
+        assert.throws(() => {
+            manager.startRowDrag(10);
+        }, /Invalid row index for drag/);
+
+        // Test invalid column index
+        assert.throws(() => {
+            manager.startColumnDrag(10);
+        }, /Invalid column index for drag/);
+
+        // Test completing drag without starting
+        const result = manager.completeDragDrop(1);
+        assert.strictEqual(result, false);
+    });
+
+    test('should handle drag to invalid drop zone', () => {
+        manager.startRowDrag(0);
+        
+        // Try to drop at invalid position
+        const result = manager.completeDragDrop(1); // Adjacent position is invalid
+        assert.strictEqual(result, false);
+        
+        // Drag state should be reset after failed drop
+        assert.strictEqual(manager.getDragDropState().isDragging, false);
+    });
+
+    test('should maintain data integrity during complex drag operations', () => {
+        const originalData = manager.getTableData();
+        
+        // Perform multiple drag operations
+        manager.startRowDrag(0);
+        manager.updateDragPosition(2);
+        manager.completeDragDrop(2);
+        
+        manager.startColumnDrag(0);
+        manager.updateDragPosition(2);
+        manager.completeDragDrop(2);
+        
+        const finalData = manager.getTableData();
+        
+        // Verify data integrity
+        assert.strictEqual(finalData.headers.length, originalData.headers.length);
+        assert.strictEqual(finalData.rows.length, originalData.rows.length);
+        assert.strictEqual(finalData.alignment.length, originalData.alignment.length);
+        
+        // Verify all original data is still present (just reordered)
+        const originalCells = originalData.rows.flat();
+        const finalCells = finalData.rows.flat();
+        originalCells.sort();
+        finalCells.sort();
+        assert.deepStrictEqual(finalCells, originalCells);
+    });
 });
