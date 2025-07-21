@@ -1,0 +1,13 @@
+{
+    "files.exclude": {
+        "out": false,
+        "dist": false,
+        "**/*.vsix": true
+    },
+    "search.exclude": {
+        "out": true,
+        "dist": true,
+        "**/*.vsix": true
+    },
+    "typescript.tsc.autoDetect": "off"
+}
