@@ -18,8 +18,7 @@
   ],
   "activationEvents": [
     "onLanguage:markdown",
-    "onCommand:markdownTableEditor.openEditor",
-    "onCommand:markdownTableEditor.createTable"
+    "onCommand:markdownTableEditor.openEditor"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -28,22 +27,12 @@
         "command": "markdownTableEditor.openEditor",
         "title": "Open Table Editor",
         "category": "Markdown Table Editor"
-      },
-      {
-        "command": "markdownTableEditor.createTable",
-        "title": "Create New Table",
-        "category": "Markdown Table Editor"
       }
     ],
     "menus": {
       "editor/context": [
         {
           "command": "markdownTableEditor.openEditor",
-          "when": "editorLangId == markdown",
-          "group": "navigation"
-        },
-        {
-          "command": "markdownTableEditor.createTable",
           "when": "editorLangId == markdown",
           "group": "navigation"
         }

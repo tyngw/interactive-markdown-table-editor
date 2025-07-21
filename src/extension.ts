@@ -99,51 +99,6 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    const createTableCommand = vscode.commands.registerCommand('markdownTableEditor.createTable', async (uri?: vscode.Uri) => {
-        try {
-            console.log('Creating new table...');
-            
-            // Get the active editor if no URI provided
-            if (!uri) {
-                const activeEditor = vscode.window.activeTextEditor;
-                if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
-                    vscode.window.showErrorMessage('Please open a Markdown file first.');
-                    return;
-                }
-                uri = activeEditor.document.uri;
-            }
-
-            console.log('Creating table for file:', uri.toString());
-
-            // Create a sample table node and manager
-            const sampleTableNode = {
-                startLine: 0,
-                endLine: 3,
-                headers: ['Column 1', 'Column 2', 'Column 3'],
-                rows: [
-                    ['Row 1 Col 1', 'Row 1 Col 2', 'Row 1 Col 3'],
-                    ['Row 2 Col 1', 'Row 2 Col 2', 'Row 2 Col 3']
-                ],
-                alignment: ['left' as const, 'left' as const, 'left' as const]
-            };
-            
-            const tableDataManager = new TableDataManager(sampleTableNode, uri.toString(), 0);
-            const sampleTableData = tableDataManager.getTableData();
-
-            console.log('Creating webview panel for new table...');
-
-            // Create and show the webview panel
-            const panel = webviewManager.createTableEditorPanel(sampleTableData, uri);
-            
-            console.log('Webview panel created successfully for new table');
-            
-            vscode.window.showInformationMessage('New table created. Edit it and it will be inserted into your Markdown file.');
-        } catch (error) {
-            console.error('Error creating table:', error);
-            vscode.window.showErrorMessage(`Failed to create table: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    });
-
     // Store active table data managers by URI
     const activeTableManagers = new Map<string, TableDataManager>();
 
@@ -543,7 +498,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         openEditorCommand,
-        createTableCommand,
         requestTableDataCommand,
         updateCellCommand,
         addRowCommand,
