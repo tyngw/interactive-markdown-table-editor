@@ -265,4 +265,318 @@ export class MarkdownParser {
         }
         return 'left';
     }
+
+    /**
+     * Validate table structure and detect issues
+     */
+    validateTableStructure(table: TableNode): {
+        isValid: boolean;
+        issues: string[];
+    } {
+        const issues: string[] = [];
+        
+        // Check if headers exist
+        if (!table.headers || table.headers.length === 0) {
+            issues.push('Table has no headers');
+        }
+        
+        // Check if all rows have consistent column count
+        const expectedColumns = table.headers.length;
+        for (let i = 0; i < table.rows.length; i++) {
+            if (table.rows[i].length !== expectedColumns) {
+                issues.push(`Row ${i + 1} has ${table.rows[i].length} columns, expected ${expectedColumns}`);
+            }
+        }
+        
+        // Check alignment array length
+        if (table.alignment.length !== expectedColumns) {
+            issues.push(`Alignment array length (${table.alignment.length}) doesn't match column count (${expectedColumns})`);
+        }
+        
+        return {
+            isValid: issues.length === 0,
+            issues
+        };
+    }
+
+    /**
+     * Find table that contains the specified line
+     */
+    findTableContainingLine(ast: MarkdownAST, lineNumber: number): TableNode | null {
+        const tables = this.findTablesInDocument(ast);
+        
+        for (const table of tables) {
+            if (lineNumber >= table.startLine && lineNumber <= table.endLine) {
+                return table;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get table boundaries more accurately by analyzing content
+     */
+    getTableBoundaries(content: string, tableNode: TableNode): {
+        startLine: number;
+        endLine: number;
+        actualContent: string[];
+    } {
+        const lines = content.split('\n');
+        let actualStartLine = tableNode.startLine;
+        let actualEndLine = tableNode.endLine;
+        
+        // Find actual table start by looking for table pattern
+        for (let i = Math.max(0, tableNode.startLine - 2); i < Math.min(lines.length, tableNode.startLine + 2); i++) {
+            if (this.isTableLine(lines[i])) {
+                actualStartLine = i;
+                break;
+            }
+        }
+        
+        // Find actual table end
+        for (let i = actualStartLine; i < lines.length; i++) {
+            if (!this.isTableLine(lines[i]) && !this.isTableSeparatorLine(lines[i])) {
+                actualEndLine = i - 1;
+                break;
+            }
+            actualEndLine = i;
+        }
+        
+        return {
+            startLine: actualStartLine,
+            endLine: actualEndLine,
+            actualContent: lines.slice(actualStartLine, actualEndLine + 1)
+        };
+    }
+
+    /**
+     * Check if a line looks like a table row
+     */
+    private isTableLine(line: string): boolean {
+        const trimmed = line.trim();
+        return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.includes('|');
+    }
+
+    /**
+     * Check if a line looks like a table separator (e.g., |---|---|)
+     */
+    private isTableSeparatorLine(line: string): boolean {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) {
+            return false;
+        }
+        
+        // Remove outer pipes and split by inner pipes
+        const parts = trimmed.slice(1, -1).split('|');
+        
+        // Each part should contain only dashes, colons, and spaces
+        return parts.every(part => /^[\s\-:]+$/.test(part.trim()));
+    }
+
+    /**
+     * Get detailed table information including metadata
+     */
+    getTableMetadata(ast: MarkdownAST, tableNode: TableNode): {
+        table: TableNode;
+        validation: { isValid: boolean; issues: string[] };
+        boundaries: { startLine: number; endLine: number; actualContent: string[] };
+        columnInfo: { index: number; header: string; alignment: string; width: number }[];
+    } {
+        const validation = this.validateTableStructure(tableNode);
+        const boundaries = this.getTableBoundaries(ast.content, tableNode);
+        
+        // Calculate column information
+        const columnInfo = tableNode.headers.map((header, index) => ({
+            index,
+            header,
+            alignment: tableNode.alignment[index] || 'left',
+            width: this.calculateColumnWidth(tableNode, index)
+        }));
+        
+        return {
+            table: tableNode,
+            validation,
+            boundaries,
+            columnInfo
+        };
+    }
+
+    /**
+     * Calculate the maximum width of content in a column
+     */
+    private calculateColumnWidth(table: TableNode, columnIndex: number): number {
+        let maxWidth = table.headers[columnIndex]?.length || 0;
+        
+        for (const row of table.rows) {
+            if (row[columnIndex]) {
+                maxWidth = Math.max(maxWidth, row[columnIndex].length);
+            }
+        }
+        
+        return maxWidth;
+    }
+
+    /**
+     * Find all tables and return them with enhanced metadata
+     */
+    findTablesWithMetadata(ast: MarkdownAST): Array<{
+        table: TableNode;
+        validation: { isValid: boolean; issues: string[] };
+        boundaries: { startLine: number; endLine: number; actualContent: string[] };
+        columnInfo: { index: number; header: string; alignment: string; width: number }[];
+    }> {
+        const tables = this.findTablesInDocument(ast);
+        return tables.map(table => this.getTableMetadata(ast, table));
+    }
+
+    /**
+     * Table manager for handling multiple tables in a document
+     */
+    createTableManager(ast: MarkdownAST): TableManager {
+        return new TableManager(ast, this);
+    }
+}
+
+/**
+ * Manager class for handling multiple tables in a document
+ */
+export class TableManager {
+    private tables: TableNode[];
+    private ast: MarkdownAST;
+    private parser: MarkdownParser;
+
+    constructor(ast: MarkdownAST, parser: MarkdownParser) {
+        this.ast = ast;
+        this.parser = parser;
+        this.tables = parser.findTablesInDocument(ast);
+    }
+
+    /**
+     * Get all tables in the document
+     */
+    getAllTables(): TableNode[] {
+        return [...this.tables];
+    }
+
+    /**
+     * Get table by index
+     */
+    getTableByIndex(index: number): TableNode | null {
+        return this.tables[index] || null;
+    }
+
+    /**
+     * Find table at specific position
+     */
+    getTableAtPosition(position: vscode.Position): TableNode | null {
+        return this.parser.findTableAtPosition(this.ast, position);
+    }
+
+    /**
+     * Find table containing specific line
+     */
+    getTableAtLine(lineNumber: number): TableNode | null {
+        return this.parser.findTableContainingLine(this.ast, lineNumber);
+    }
+
+    /**
+     * Get table count
+     */
+    getTableCount(): number {
+        return this.tables.length;
+    }
+
+    /**
+     * Get tables with validation results
+     */
+    getTablesWithValidation(): Array<{
+        index: number;
+        table: TableNode;
+        validation: { isValid: boolean; issues: string[] };
+    }> {
+        return this.tables.map((table, index) => ({
+            index,
+            table,
+            validation: this.parser.validateTableStructure(table)
+        }));
+    }
+
+    /**
+     * Get summary of all tables
+     */
+    getTablesSummary(): {
+        totalTables: number;
+        validTables: number;
+        invalidTables: number;
+        totalRows: number;
+        totalColumns: number;
+        issues: string[];
+    } {
+        const validationResults = this.getTablesWithValidation();
+        const validTables = validationResults.filter(result => result.validation.isValid).length;
+        const invalidTables = validationResults.length - validTables;
+        
+        const totalRows = this.tables.reduce((sum, table) => sum + table.rows.length, 0);
+        const totalColumns = this.tables.reduce((sum, table) => sum + table.headers.length, 0);
+        
+        const allIssues = validationResults
+            .filter(result => !result.validation.isValid)
+            .flatMap(result => result.validation.issues.map(issue => `Table ${result.index + 1}: ${issue}`));
+
+        return {
+            totalTables: this.tables.length,
+            validTables,
+            invalidTables,
+            totalRows,
+            totalColumns,
+            issues: allIssues
+        };
+    }
+
+    /**
+     * Refresh tables after document changes
+     */
+    refresh(newAst: MarkdownAST): void {
+        this.ast = newAst;
+        this.tables = this.parser.findTablesInDocument(newAst);
+    }
+
+    /**
+     * Find tables within a specific line range
+     */
+    getTablesInRange(startLine: number, endLine: number): TableNode[] {
+        return this.tables.filter(table => 
+            table.startLine >= startLine && table.endLine <= endLine
+        );
+    }
+
+    /**
+     * Get the closest table to a given line
+     */
+    getClosestTable(lineNumber: number): { table: TableNode; distance: number } | null {
+        if (this.tables.length === 0) {
+            return null;
+        }
+
+        let closestTable = this.tables[0];
+        let minDistance = Math.min(
+            Math.abs(lineNumber - closestTable.startLine),
+            Math.abs(lineNumber - closestTable.endLine)
+        );
+
+        for (const table of this.tables) {
+            const distance = Math.min(
+                Math.abs(lineNumber - table.startLine),
+                Math.abs(lineNumber - table.endLine)
+            );
+            
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestTable = table;
+            }
+        }
+
+        return { table: closestTable, distance: minDistance };
+    }
 }
