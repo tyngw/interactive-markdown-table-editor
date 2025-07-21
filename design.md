@@ -40,6 +40,12 @@ graph TB
 3. **UI Layer**
    - Webviewベースのテーブルエディタ
    - Spreadsheetライクなインタラクション
+   - 改善されたUI/UX（ステータスバー、簡素化されたツールバー）
+
+4. **Enhanced UI/UX Layer (v0.1.6)**
+   - 下部ステータスバーでのメッセージ表示
+   - ツールバーの簡素化（削除されたボタン）
+   - 改善された編集フォーカス管理
 
 ## Components and Interfaces
 
@@ -209,30 +215,47 @@ interface WebviewMessage {
 - UIとの双方向通信
 - メッセージハンドリング
 
-### 8. Table Editor UI (`webview/tableEditor.html` + `webview/tableEditor.js`)
+### 8. Enhanced Table Editor UI (`webview/tableEditor.html` + `webview/tableEditor.js`)
 
 ```typescript
-interface TableEditorUI {
+interface EnhancedTableEditorUI {
   renderTable(tableData: TableData): void;
   enableCellEditing(): void;
   setupDragAndDrop(): void;
   setupSorting(): void;
   setupContextMenu(): void;
+  // Enhanced UI/UX features (v0.1.6)
+  setupStatusBar(): void;
+  showStatusMessage(message: string, type: 'error' | 'success'): void;
+  hideStatusMessage(): void;
+  handleSmartFocus(): void;
 }
 
-interface CellEditor {
+interface EnhancedCellEditor {
   startEdit(cell: HTMLElement): void;
   commitEdit(): void;
   cancelEdit(): void;
+  // Enhanced editing features
+  handleFocusLoss(): void;
+  preventEventPropagation(): void;
+}
+
+interface StatusBarManager {
+  showError(message: string): void;
+  showSuccess(message: string): void;
+  hide(): void;
+  isVisible(): boolean;
 }
 ```
 
 **責任:**
 - テーブルのレンダリング
-- セル編集機能
+- セル編集機能（改善されたフォーカス管理）
 - ドラッグ&ドロップ操作
 - ソート機能のUI
 - コンテキストメニュー
+- ステータスバーでのメッセージ表示（v0.1.6）
+- 簡素化されたツールバー（v0.1.6）
 
 ### 9. File System Handler (`fileHandler.ts`)
 
@@ -519,3 +542,62 @@ graph TB
 3. **Robustness**: Handles complex document structures gracefully
 4. **User Experience**: Intuitive table selection for multi-table documents
 5. **Maintainability**: Clear separation of concerns and error handling
+6. **Enhanced UI/UX (v0.1.6)**: Improved user interface with better usability
+
+## UI/UX Enhancements (v0.1.6)
+
+### Status Bar and Message System
+
+- **Bottom Status Bar**: Error and save messages displayed at the bottom for non-intrusive feedback
+- **VSCode Theme Integration**: All messages use proper VSCode theme colors and styling
+- **Auto-Hide Messages**: Temporary display with automatic hiding after a few seconds
+- **Message Types**: Support for error, success, and informational messages
+
+### Simplified Interface
+
+- **Toolbar Simplification**: Removed Save, Export, Delete Row, and Delete Column buttons
+- **Context Menu Focus**: All operations accessible through right-click context menus
+- **Clean Workspace**: Minimized UI clutter for better focus on table content
+- **Streamlined Commands**: Removed "Create New Table" command for focused editing experience
+
+### Enhanced Editing Experience
+
+- **Smart Focus Management**: Editing automatically commits when selecting another cell
+- **Improved Input Handling**: Text input boxes properly handle clicks and prevent focus issues
+- **Event Propagation Control**: Better handling of keyboard and mouse events during editing
+- **Seamless Navigation**: Enhanced keyboard navigation and cell selection behavior
+
+### Technical Implementation
+
+```typescript
+// Status Bar Message System
+interface StatusBarMessage {
+  type: 'error' | 'success' | 'info';
+  message: string;
+  duration: number;
+  autoHide: boolean;
+}
+
+// Enhanced Cell Editor
+interface EnhancedCellEditor {
+  handleFocusLoss(): void;
+  preventEventPropagation(event: Event): void;
+  commitOnCellChange(): void;
+}
+
+// UI State Management
+interface UIState {
+  isEditing: boolean;
+  activeCell: { row: number; col: number } | null;
+  statusMessage: StatusBarMessage | null;
+  toolbarVisible: boolean;
+}
+```
+
+### User Experience Improvements
+
+1. **Non-intrusive Feedback**: Status messages don't interfere with editing workflow
+2. **Intuitive Operations**: Right-click context menus provide discoverability
+3. **Focus Management**: Smart editing behavior prevents data loss
+4. **Visual Clarity**: Clean interface promotes concentration on content
+5. **Responsive Design**: Improved interaction patterns for better usability
