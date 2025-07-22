@@ -132,8 +132,6 @@
 
         /* Cell input */
         .cell-input {
-            width: 100%;
-            height: 100%;
             border: none;
             padding: 8px 12px;
             font-family: inherit;
@@ -143,11 +141,41 @@
             outline: none;
             resize: none;
             box-sizing: border-box;
+            margin: 0;
+            min-height: 100%;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow: hidden;
+            line-height: 1.4;
+            vertical-align: top;
         }
 
         .cell-input:focus {
             background-color: var(--vscode-input-background);
             box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
+        }
+
+        /* Ensure editing cell takes full dimensions */
+        .table-editor td.editing {
+            padding: 0;
+            position: relative;
+            vertical-align: top;
+        }
+
+        .table-editor td.editing .cell-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+        }
+
+        /* Textarea specific styling */
+        .cell-input[data-multiline="true"] {
+            overflow-y: auto;
+            max-height: 200px;
+            min-height: 24px;
         }
 
         /* Column resize handle */
@@ -1317,10 +1345,55 @@
 
             currentEditingCell = { row, col, element: cell, originalValue: cell.textContent.trim() };
             
+            // Get cell dimensions before modifying content
+            const cellRect = cell.getBoundingClientRect();
+            const cellStyles = window.getComputedStyle(cell);
+            const cellPaddingLeft = parseInt(cellStyles.paddingLeft, 10);
+            const cellPaddingRight = parseInt(cellStyles.paddingRight, 10);
+            const cellPaddingTop = parseInt(cellStyles.paddingTop, 10);
+            const cellPaddingBottom = parseInt(cellStyles.paddingBottom, 10);
+            
             cell.classList.add('editing');
-            cell.innerHTML = `<input type="text" class="cell-input" value="${escapeHtml(currentEditingCell.originalValue)}" />`;
+            
+            // Create a textarea instead of input for better multi-line support
+            const isMultiLine = currentEditingCell.originalValue.includes('\n') || currentEditingCell.originalValue.length > 50;
+            const inputElement = isMultiLine ? 'textarea' : 'input';
+            const inputAttrs = isMultiLine 
+                ? `class="cell-input" data-multiline="true"` 
+                : `type="text" class="cell-input" value="${escapeHtml(currentEditingCell.originalValue)}"`;
+            const inputContent = isMultiLine ? escapeHtml(currentEditingCell.originalValue) : '';
+            
+            cell.innerHTML = `<${inputElement} ${inputAttrs}>${inputContent}</${inputElement}>`;
             
             const input = cell.querySelector('.cell-input');
+            
+            // Set initial dimensions to match cell size
+            if (isMultiLine) {
+                // For textarea, calculate appropriate height
+                const minHeight = Math.max(cellRect.height - cellPaddingTop - cellPaddingBottom, 24);
+                input.style.minHeight = minHeight + 'px';
+                input.style.width = '100%';
+                
+                // Auto-resize height based on content
+                const adjustHeight = () => {
+                    input.style.height = 'auto';
+                    const newHeight = Math.max(input.scrollHeight, minHeight);
+                    input.style.height = newHeight + 'px';
+                    
+                    // Also adjust the cell height to accommodate content
+                    cell.style.height = (newHeight + cellPaddingTop + cellPaddingBottom) + 'px';
+                };
+                
+                input.addEventListener('input', adjustHeight);
+                
+                // Set initial height
+                setTimeout(adjustHeight, 0);
+            } else {
+                // For single-line input, ensure it fills the cell properly
+                input.style.width = '100%';
+                input.style.height = '100%';
+            }
+            
             input.focus();
             input.select();
 
@@ -1345,11 +1418,26 @@
                     }
                 }, 10);
             });
+            
             input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !e.shiftKey && !isMultiLine) {
+                    e.preventDefault();
                     commitCellEdit();
+                } else if (e.key === 'Enter' && e.shiftKey && isMultiLine) {
+                    // Allow Shift+Enter for new lines in textarea
+                    e.stopPropagation();
                 } else if (e.key === 'Escape') {
+                    e.preventDefault();
                     cancelCellEdit();
+                } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    commitCellEdit();
+                    // Move to next cell
+                    const nextCol = (col + 1) % tableData.headers.length;
+                    const nextRow = nextCol === 0 ? row + 1 : row;
+                    if (nextRow < tableData.rows.length) {
+                        setTimeout(() => startCellEdit(nextRow, nextCol), 10);
+                    }
                 }
                 // Stop propagation to prevent other keyboard handlers
                 e.stopPropagation();
@@ -1369,6 +1457,9 @@
             // Update UI
             currentEditingCell.element.classList.remove('editing');
             currentEditingCell.element.textContent = newValue;
+            
+            // Reset any inline styles that were applied during editing
+            currentEditingCell.element.style.height = '';
 
             // Send update to extension
             vscode.postMessage({
@@ -1389,6 +1480,10 @@
 
             currentEditingCell.element.classList.remove('editing');
             currentEditingCell.element.textContent = currentEditingCell.originalValue;
+            
+            // Reset any inline styles that were applied during editing
+            currentEditingCell.element.style.height = '';
+            
             currentEditingCell = null;
         }
 

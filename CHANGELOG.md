@@ -5,6 +5,23 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# Changelog
+
+## [0.1.9] - 2025-07-22
+
+### Enhanced
+- **Adaptive Cell Editing**: Text input fields now automatically adjust to cell size and content
+- **Multi-line Support**: Automatic detection and handling of multi-line content with textarea
+- **Dynamic Input Sizing**: Input fields resize dynamically based on content and cell dimensions
+- **Natural Editing Experience**: Seamless transition between single-line inputs and multi-line textareas
+- **Improved Keyboard Navigation**: Enhanced Tab navigation and Enter key handling for different input types
+
+### Technical Improvements
+- Input field positioning and sizing calculations for better visual alignment
+- Auto-resize functionality for textareas based on content
+- Improved CSS styling for both input and textarea elements
+- Enhanced event handling for different input types
+
 ## [0.1.8] - 2025-07-22
 
 ### Added

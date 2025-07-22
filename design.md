@@ -4,10 +4,11 @@
 
 VSCode拡張機能「Markdown Table Editor」は、Markdownファイル内のテーブルをSpreadsheetライクなUIで編集できる機能を提供します。この拡張機能は、VSCodeのWebview APIを使用してカスタムエディタを実装し、Markdownファイルの解析・更新を行います。
 
-## Key Features (v0.1.8)
+## Key Features (v0.1.9)
 
 - **Spreadsheet-like Interface**: Excel風のグリッドエディタでテーブル編集
-- **Advanced Cell Editing**: 改善されたフォーカス管理、入力フィールドクリック時の編集継続
+- **Enhanced Cell Editing**: セルサイズに適応する自然なテキスト編集体験、multi-line対応
+- **Adaptive Input Fields**: セルの内容に応じて単行・複数行を自動選択、動的リサイズ
 - **Precise Row/Column Operations**: ヘッダードラッグで移動、リサイズハンドルで幅変更の分離
 - **View-Only Sorting**: デフォルトでファイル変更せず、表示のみをソート（明示的保存も可能）
 - **Multi-Table Support**: 複数テーブル文書での正確なテーブル選択・更新
@@ -53,9 +54,10 @@ graph TB
    - Spreadsheetライクなインタラクション
    - 改善されたUI/UX（ステータスバー、簡素化されたツールバー）
 
-4. **Enhanced UI/UX Layer (v0.1.8)**
+4. **Enhanced UI/UX Layer (v0.1.9)**
    - 下部ステータスバーでのメッセージ表示
    - 分離された行列操作（移動 vs リサイズ）
+   - 適応的セル編集（セルサイズ対応、multi-line自動判定）
    - 改善された編集フォーカス管理（入力フィールドクリック継続）
    - 精密なイベントハンドリング
    - ビューオンリーソート機能とファイル保護
@@ -251,6 +253,10 @@ interface EnhancedCellEditor {
   // Enhanced editing features
   handleFocusLoss(): void;
   preventEventPropagation(): void;
+  // Adaptive input features (v0.1.9)
+  determineInputType(content: string): 'single-line' | 'multi-line';
+  adjustInputSize(input: HTMLElement, cell: HTMLElement): void;
+  autoResizeTextarea(textarea: HTMLTextAreaElement): void;
 }
 
 interface StatusBarManager {
@@ -614,6 +620,8 @@ interface UIState {
 3. **Focus Management**: Smart editing behavior prevents data loss
 4. **Visual Clarity**: Clean interface promotes concentration on content
 5. **Responsive Design**: Improved interaction patterns for better usability
+6. **Adaptive Cell Editing (v0.1.9)**: Input fields automatically adjust to cell size and content type
+7. **Natural Multi-line Support**: Seamless transition between single-line and multi-line editing
 
 ## Sort Functionality Enhancement (v0.1.8)
 

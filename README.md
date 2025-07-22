@@ -38,10 +38,12 @@ A VS Code extension that provides a spreadsheet-like interface for editing Markd
 
 ### Editing Tables
 
-- **Cell Editing**: Click any cell to start editing, press Enter or Tab to confirm
+- **Adaptive Cell Editing**: Input fields automatically adjust to cell size and content type
+- **Multi-line Support**: Cells with longer content or line breaks automatically use textarea for natural editing
+- **Dynamic Sizing**: Text input areas resize based on content and maintain proper cell alignment
 - **Smart Focus**: Editing automatically commits when selecting another cell, preventing data loss
 - **Improved Input**: Text input boxes respond properly to clicks and prevent focus issues
-- **Navigation**: Use arrow keys to move between cells
+- **Navigation**: Use arrow keys to move between cells, Tab for next cell, Shift+Tab for previous
 - **Row Operations**: Right-click on row numbers for context menu with:
   - Add row above/below current position
   - Delete current row (if not the last row)
