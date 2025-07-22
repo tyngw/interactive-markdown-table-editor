@@ -1554,7 +1554,9 @@
             }, 0);
             
             input.focus();
-            input.select();
+            // カーソルを末尾に移動（テキストを選択しない）
+            const textLength = input.value.length;
+            input.setSelectionRange(textLength, textLength);
 
             // Prevent the cell input from losing focus when clicked
             input.addEventListener('click', (e) => {
