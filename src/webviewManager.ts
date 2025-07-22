@@ -63,8 +63,16 @@ export class WebviewManager {
 
         console.log('Webview panel created, setting HTML content...');
 
-        // Set the HTML content
-        panel.webview.html = this.getWebviewContent();
+
+        // style.cssのvscode-resource URIを生成
+        const cssPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'style.css');
+        const cssUri = panel.webview.asWebviewUri(cssPath);
+
+        // HTMLを取得し、window.cssUriとして注入
+        let html = this.getWebviewContent();
+        // <head>直後にwindow.cssUriを埋め込む
+        html = html.replace(/<head>/i, `<head>\n<script>window.cssUri = '${cssUri}';</script>`);
+        panel.webview.html = html;
 
         console.log('HTML content set, storing panel reference...');
 
