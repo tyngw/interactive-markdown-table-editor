@@ -30,6 +30,8 @@
             min-width: 600px;
             font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
             font-size: var(--vscode-editor-font-size, 14px);
+            /* 行の高さを統一 */
+            table-layout: fixed;
         }
 
         /* Column headers */
@@ -48,6 +50,8 @@
             user-select: none;
             color: var(--vscode-foreground);
             transition: background-color 0.15s ease;
+            /* 枠線をセル内側に描画してサイズ変更を防ぐ */
+            box-sizing: border-box;
         }
 
         .table-editor th:hover {
@@ -83,6 +87,8 @@
             position: sticky;
             left: 0;
             z-index: 10;
+            /* 枠線をセル内側に描画してサイズ変更を防ぐ */
+            box-sizing: border-box;
         }
 
         .row-number:hover {
@@ -101,8 +107,13 @@
             position: relative;
             min-width: 120px;
             cursor: cell;
-            transition: all 0.15s ease;
+            transition: background-color 0.15s ease;
             vertical-align: top;
+            /* 枠線をセル内側に描画してサイズ変更を防ぐ */
+            box-sizing: border-box;
+            /* 最小高さを設定（内容に応じて拡張可能） */
+            min-height: 32px;
+            height: auto;
         }
 
         .table-editor td:hover {
@@ -111,14 +122,23 @@
 
         .table-editor td.selected {
             background-color: var(--vscode-list-activeSelectionBackground);
-            border: 2px solid var(--vscode-focusBorder);
-            box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
+            /* outlineを使用してセルの内部サイズを変更しない */
+            outline: 2px solid var(--vscode-focusBorder);
+            outline-offset: -1px;
+            /* パディングは変更しない */
+            /* 高さを維持 */
+            min-height: 32px;
+            height: auto;
         }
 
         .table-editor td.editing {
             padding: 0;
             background-color: var(--vscode-input-background);
-            border: 2px solid var(--vscode-inputOption-activeBorder);
+            /* outlineを使用してセルの内部サイズを変更しない */
+            outline: 2px solid var(--vscode-inputOption-activeBorder);
+            outline-offset: -1px;
+            /* セルサイズを維持 */
+            box-sizing: border-box;
         }
 
         /* Grid lines enhancement */
@@ -130,8 +150,8 @@
             background-color: var(--vscode-list-hoverBackground);
         }
 
-        /* Cell input */
-        .cell-input {
+        /* Cell input - textarea統一 */
+        textarea.cell-input {
             border: none;
             padding: 8px 12px;
             font-family: inherit;
@@ -139,15 +159,19 @@
             color: var(--vscode-foreground);
             background-color: var(--vscode-input-background);
             outline: none;
-            resize: none;
+            resize: vertical;
             box-sizing: border-box;
             margin: 0;
+            /* 自動改行を有効にする */
             white-space: pre-wrap;
             word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
             overflow: auto;
             line-height: 1.4;
-            vertical-align: top;
-            text-align: left;
+            /* テキストを上揃えにする */
+            vertical-align: top !important;
+            text-align: left !important;
         }
 
         .cell-input:focus {
@@ -157,26 +181,42 @@
 
         /* Ensure editing cell takes full dimensions */
         .table-editor td.editing {
-            padding: 0;
+            padding: 0 !important;
             position: relative;
-            vertical-align: top;
+            vertical-align: top !important;
             box-sizing: border-box;
+            /* 子要素のテキストを上揃えにする */
+            text-align: left !important;
+            /* 編集中のセルの高さを独立して管理 */
+            height: auto !important;
+            min-height: auto !important;
         }
 
-        .table-editor td.editing .cell-input {
-            position: absolute;
+        .table-editor td.editing textarea.cell-input {
+            position: relative;
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+            min-height: 32px;
             z-index: 5;
             box-sizing: border-box;
-            padding-top: 0;
-            padding-bottom: 0;
+            padding: 8px 12px;
+            line-height: 1.4 !important;
+            /* 自動改行を有効にする */
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            /* テキストを上揃えにする */
+            vertical-align: top !important;
+            text-align: left !important;
+            /* 高さを内容に応じて自動調整 */
+            height: auto;
+            resize: vertical;
         }
 
         /* Textarea specific styling */
-        .cell-input[data-multiline="true"] {
+        textarea.cell-input[data-multiline="true"] {
             overflow-y: auto;
             max-height: 200px;
             resize: vertical;
@@ -203,12 +243,24 @@
         /* Selection indicators */
         .cell-selected {
             background-color: var(--vscode-list-activeSelectionBackground) !important;
-            border: 2px solid var(--vscode-focusBorder) !important;
+            /* outlineを使用してセルの内部サイズを変更しない */
+            outline: 2px solid var(--vscode-focusBorder) !important;
+            outline-offset: -1px !important;
+            box-sizing: border-box !important;
+            /* 高さを維持 */
+            min-height: 32px !important;
+            height: auto !important;
         }
 
         .cell-multi-selected {
             background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-            border: 1px solid var(--vscode-list-activeSelectionForeground) !important;
+            /* outlineを使用（薄い選択表示） */
+            outline: 1px solid var(--vscode-list-activeSelectionForeground) !important;
+            outline-offset: -1px !important;
+            box-sizing: border-box !important;
+            /* 高さを維持 */
+            min-height: 32px !important;
+            height: auto !important;
         }
 
         .column-selected {
@@ -279,12 +331,16 @@
         /* Enhanced data cells */
         .data-cell {
             position: relative;
+            box-sizing: border-box;
         }
 
         .cell-content {
             min-height: 20px;
             word-wrap: break-word;
             white-space: pre-wrap;
+            /* 高さの安定化 */
+            line-height: 1.4;
+            display: block;
         }
 
         .empty-cell {
@@ -301,14 +357,21 @@
         .data-cell.selected {
             background-color: var(--vscode-list-activeSelectionBackground) !important;
             color: var(--vscode-list-activeSelectionForeground);
-            border: 2px solid var(--vscode-focusBorder) !important;
-            box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
+            /* outlineを使用してセルの内部サイズを変更しない */
+            outline: 2px solid var(--vscode-focusBorder) !important;
+            outline-offset: -1px !important;
+            box-sizing: border-box !important;
+            /* 高さを維持 */
+            min-height: 32px !important;
+            height: auto !important;
         }
 
         .row-number.selected,
         .column-header.selected {
             background: var(--vscode-list-activeSelectionBackground) !important;
             color: var(--vscode-list-activeSelectionForeground);
+            /* セルサイズを維持 */
+            box-sizing: border-box !important;
         }
 
         /* Grid enhancements */
@@ -686,6 +749,9 @@
             isViewOnly: false,
             originalData: null
         };
+        
+        // Store column widths to persist across edits
+        let columnWidths = {};
 
         // Enhanced sorting state management
         let displayData = null;  // Data currently shown in UI
@@ -797,11 +863,14 @@
                 const sortClass = sortState.column === index ? `sort-${sortState.direction}` : '';
                 const sortIndicatorClass = sortState.isViewOnly ? 'view-only' : 'committed';
                 const columnLetter = getColumnLetter(index);
+                const storedWidth = columnWidths[index];
+                const widthStyle = storedWidth ? `style="width: ${storedWidth}px; min-width: ${storedWidth}px;"` : '';
                 html += `<th onclick="handleColumnHeaderClick(${index}, event)" 
                            onmousedown="startColumnDrag(${index}, event)"
                            oncontextmenu="showColumnContextMenu(event, ${index})"
                            class="column-header ${sortClass}" 
                            data-col="${index}"
+                           ${widthStyle}
                            title="Column ${columnLetter}: ${escapeHtml(header)}">
                     <div class="header-content">
                         <span class="column-letter">${columnLetter}</span>
@@ -834,6 +903,8 @@
                     const cellId = `cell-${rowIndex}-${colIndex}`;
                     const isEmpty = !cell || cell.trim() === '';
                     const cellClass = isEmpty ? 'empty-cell' : '';
+                    const storedWidth = columnWidths[colIndex];
+                    const widthStyle = storedWidth ? `style="width: ${storedWidth}px; min-width: ${storedWidth}px;"` : '';
                     
                     html += `<td id="${cellId}"
                                class="data-cell ${cellClass}" 
@@ -842,6 +913,7 @@
                                onmousedown="startCellSelect(${rowIndex}, ${colIndex})"
                                data-row="${rowIndex}" 
                                data-col="${colIndex}"
+                               ${widthStyle}
                                title="Cell ${getColumnLetter(colIndex)}${rowIndex + 1}">
                         <div class="cell-content">${processCellContent(cell)}</div>
                     </td>`;
@@ -1083,6 +1155,9 @@
             
             const deltaX = event.clientX - startX;
             const newWidth = Math.max(60, startWidth + deltaX);
+            
+            // Store the new width in our global state
+            columnWidths[resizeColumn] = newWidth;
             
             // Apply new width to all cells in the column
             const colCells = document.querySelectorAll(`th[data-col="${resizeColumn}"], td[data-col="${resizeColumn}"]`);
@@ -1354,7 +1429,7 @@
             // Store original cell dimensions for restoration
             const cellRect = cell.getBoundingClientRect();
             const cellStyles = window.getComputedStyle(cell);
-            const originalCellHeight = cellRect.height;
+            const originalCellHeight = Math.max(cellRect.height, 32); // 最小32px
             const originalCellWidth = cellRect.width;
             
             currentEditingCell = { 
@@ -1368,72 +1443,83 @@
             
             cell.classList.add('editing');
             
-            // Create a textarea instead of input for better multi-line support
+            // 常にtextareaを使用（統一）
             const isMultiLine = currentEditingCell.originalValue.includes('\n') || currentEditingCell.originalValue.length > 50;
-            const inputElement = isMultiLine ? 'textarea' : 'input';
-            const inputAttrs = isMultiLine 
-                ? `class="cell-input" data-multiline="true"` 
-                : `type="text" class="cell-input" value="${escapeHtml(currentEditingCell.originalValue)}"`;
-            const inputContent = isMultiLine ? escapeHtml(currentEditingCell.originalValue) : '';
+            const inputAttrs = isMultiLine ? `class="cell-input" data-multiline="true"` : `class="cell-input"`;
+            const inputContent = escapeHtml(currentEditingCell.originalValue);
             
-            cell.innerHTML = `<${inputElement} ${inputAttrs}>${inputContent}</${inputElement}>`;
+            cell.innerHTML = `<textarea ${inputAttrs}>${inputContent}</textarea>`;
             
-            const input = cell.querySelector('.cell-input');
+            const input = cell.querySelector('textarea.cell-input');
             
-            // Set cell dimensions to maintain current size
-            cell.style.height = originalCellHeight + 'px';
+            // Set cell dimensions to maintain current size - 幅のみ固定、高さは自動
             cell.style.width = originalCellWidth + 'px';
+            cell.style.height = 'auto';
+            cell.style.minHeight = originalCellHeight + 'px';
             
-            // Set input dimensions and alignment
+            // Set textarea dimensions and alignment
+            input.style.width = '100%';
+            input.style.minHeight = Math.max(originalCellHeight - 16, 24) + 'px'; // パディング分を考慮
+            input.style.height = 'auto';
+            input.style.padding = '8px 12px';
+            input.style.margin = '0';
+            input.style.lineHeight = '1.4';
+            input.style.border = 'none';
+            input.style.outline = 'none';
+            
+            // 常に自動改行を有効にする
+            input.style.whiteSpace = 'pre-wrap';
+            input.style.wordWrap = 'break-word';
+            input.style.overflow = 'auto';
+            
             if (isMultiLine) {
-                // For textarea, configure for proper top alignment and wrapping
-                input.style.width = '100%';
-                input.style.height = originalCellHeight + 'px';
-                input.style.minHeight = Math.max(originalCellHeight, 24) + 'px';
-                input.style.verticalAlign = 'top';
-                input.style.textAlign = 'left';
-                input.style.whiteSpace = 'pre-wrap';
-                input.style.wordWrap = 'break-word';
-                input.style.overflow = 'auto';
-                input.style.paddingTop = '8px';
-                input.style.paddingLeft = '12px';
-                input.style.paddingRight = '12px';
-                input.style.paddingBottom = '8px';
-                input.style.margin = '0';
-                input.style.lineHeight = '1.4';
-                
-                // Auto-resize height based on content while maintaining width
-                const adjustHeight = () => {
-                    // Reset height to calculate scrollHeight accurately
-                    input.style.height = 'auto';
-                    const contentHeight = input.scrollHeight;
-                    const newHeight = Math.max(contentHeight, originalCellHeight);
-                    
-                    // Update both input and cell heights, maintain width
-                    input.style.height = newHeight + 'px';
-                    cell.style.height = newHeight + 'px';
-                    cell.style.width = originalCellWidth + 'px';
-                };
-                
-                input.addEventListener('input', adjustHeight);
-                
-                // Set initial height
-                setTimeout(adjustHeight, 0);
+                // For multi-line content, allow vertical resizing
+                input.style.resize = 'vertical';
             } else {
-                // For single-line input, maintain dimensions and alignment
-                input.style.width = '100%';
-                input.style.height = originalCellHeight + 'px';
-                input.style.verticalAlign = 'top';
-                input.style.textAlign = 'left';
-                input.style.whiteSpace = 'nowrap';
-                input.style.overflow = 'hidden';
-                input.style.paddingTop = '8px';
-                input.style.paddingLeft = '12px';
-                input.style.paddingRight = '12px';
-                input.style.paddingBottom = '8px';
-                input.style.margin = '0';
-                input.style.lineHeight = '1.4';
+                // For single-line content, disable manual resizing but allow auto-wrapping
+                input.style.resize = 'none';
             }
+            
+            // Auto-resize height based on content while maintaining width
+            const adjustHeight = () => {
+                // Reset height to calculate scrollHeight accurately
+                input.style.height = 'auto';
+                const contentHeight = input.scrollHeight;
+                const minInputHeight = Math.max(originalCellHeight - 16, 24); // パディング分を考慮した最小高さ
+                const newInputHeight = Math.max(contentHeight, minInputHeight);
+                
+                // Update textarea height
+                input.style.height = newInputHeight + 'px';
+                
+                // セルの高さは自動で調整される（textareaの高さに追従）
+                cell.style.height = 'auto';
+                cell.style.minHeight = originalCellHeight + 'px';
+                
+                // 幅は絶対に変更しない
+                if (originalCellWidth) {
+                    cell.style.width = originalCellWidth + 'px';
+                }
+            };
+            
+            input.addEventListener('input', adjustHeight);
+            
+            // Set initial height
+            setTimeout(adjustHeight, 0);
+            
+            // 強制的に上揃えにする
+            input.style.verticalAlign = 'top';
+            input.style.textAlign = 'left';
+            
+            // 強制的に上揃えスタイルを再適用
+            setTimeout(() => {
+                input.style.setProperty('vertical-align', 'top', 'important');
+                input.style.setProperty('text-align', 'left', 'important');
+                if (isMultiLine) {
+                    // textareaの場合、カーソルを先頭に移動
+                    input.setSelectionRange(0, 0);
+                    input.scrollTop = 0;
+                }
+            }, 0);
             
             input.focus();
             input.select();
@@ -1462,10 +1548,14 @@
             
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey && !isMultiLine) {
+                    // 単一行モードでは Enter で編集完了
                     e.preventDefault();
                     commitCellEdit();
-                } else if (e.key === 'Enter' && e.shiftKey && isMultiLine) {
-                    // Allow Shift+Enter for new lines in textarea
+                } else if (e.key === 'Enter' && e.shiftKey) {
+                    // Shift+Enter は常に改行を許可（マルチライン・シングルライン問わず）
+                    e.stopPropagation();
+                } else if (e.key === 'Enter' && isMultiLine && !e.shiftKey) {
+                    // マルチラインモードでは Enter で改行
                     e.stopPropagation();
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
@@ -1489,7 +1579,7 @@
         function commitCellEdit() {
             if (!currentEditingCell) return;
 
-            const input = currentEditingCell.element.querySelector('.cell-input');
+            const input = currentEditingCell.element.querySelector('textarea.cell-input');
             const rawValue = input ? input.value : currentEditingCell.originalValue;
             
             // Convert newlines to <br/> tags for storage in Markdown
@@ -1499,20 +1589,19 @@
             tableData.rows[currentEditingCell.row][currentEditingCell.col] = storageValue;
 
             // Store current cell dimensions before resetting classes
-            const currentHeight = currentEditingCell.element.style.height;
             const currentWidth = currentEditingCell.element.style.width;
 
             // Update UI with display format
             currentEditingCell.element.classList.remove('editing');
             currentEditingCell.element.innerHTML = `<div class="cell-content">${processCellContent(storageValue)}</div>`;
             
-            // Restore the dimensions that were set during editing
-            if (currentHeight) {
-                currentEditingCell.element.style.height = currentHeight;
-            }
+            // 幅のみ復元、高さは内容に応じて自動調整
             if (currentWidth) {
                 currentEditingCell.element.style.width = currentWidth;
             }
+            // 高さは自動に戻す
+            currentEditingCell.element.style.height = 'auto';
+            currentEditingCell.element.style.minHeight = '32px';
             
             // Also apply the width to the corresponding header for column consistency
             const colIndex = currentEditingCell.col;
@@ -1543,19 +1632,18 @@
             const originalStorageValue = (displayData || tableData).rows[currentEditingCell.row][currentEditingCell.col] || '';
 
             // Store current cell dimensions before resetting classes
-            const currentHeight = currentEditingCell.element.style.height;
             const currentWidth = currentEditingCell.element.style.width;
 
             currentEditingCell.element.classList.remove('editing');
             currentEditingCell.element.innerHTML = `<div class="cell-content">${processCellContent(originalStorageValue)}</div>`;
             
-            // Restore the dimensions that were set during editing
-            if (currentHeight) {
-                currentEditingCell.element.style.height = currentHeight;
-            }
+            // 幅のみ復元、高さは内容に応じて自動調整
             if (currentWidth) {
                 currentEditingCell.element.style.width = currentWidth;
             }
+            // 高さは自動に戻す
+            currentEditingCell.element.style.height = 'auto';
+            currentEditingCell.element.style.minHeight = '32px';
             
             // Also apply the width to the corresponding header for column consistency
             const colIndex = currentEditingCell.col;
