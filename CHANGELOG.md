@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.10] - 2025-07-22
+
+### Enhanced
+- **HTML Break Tag Support**: Automatic detection and conversion of `<br/>` tags to line breaks
+- **Bidirectional Tag Processing**: Seamless conversion between HTML tags and newlines for editing and storage
+- **Improved Cell Content Processing**: Enhanced display, editing, and storage format handling
+- **Better Multi-line Editing**: Natural editing experience with proper HTML tag support
+- **Enhanced Sorting**: Improved sorting behavior with HTML tag-aware comparison
+
+### Technical Improvements
+- Added `processCellContent()` for display format conversion
+- Added `processCellContentForEditing()` for edit format conversion
+- Added `processCellContentForStorage()` for storage format conversion
+- Improved sorting algorithm to handle HTML break tags
+- Enhanced cell rendering with proper tag-to-newline conversion
+
 ## [0.1.9] - 2025-07-22
 
 ### Enhanced

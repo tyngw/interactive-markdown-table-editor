@@ -839,7 +839,7 @@
                                data-row="${rowIndex}" 
                                data-col="${colIndex}"
                                title="Cell ${getColumnLetter(colIndex)}${rowIndex + 1}">
-                        <div class="cell-content">${escapeHtml(cell)}</div>
+                        <div class="cell-content">${processCellContent(cell)}</div>
                     </td>`;
                 });
                 html += '</tr>';
@@ -1343,7 +1343,11 @@
             const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`);
             if (!cell) return;
 
-            currentEditingCell = { row, col, element: cell, originalValue: cell.textContent.trim() };
+            // Get the original cell value from the data, processing any <br/> tags
+            const originalValue = (displayData || tableData).rows[row][col] || '';
+            const editableValue = processCellContentForEditing(originalValue);
+            
+            currentEditingCell = { row, col, element: cell, originalValue: editableValue };
             
             // Get cell dimensions before modifying content
             const cellRect = cell.getBoundingClientRect();
@@ -1449,25 +1453,28 @@
             if (!currentEditingCell) return;
 
             const input = currentEditingCell.element.querySelector('.cell-input');
-            const newValue = input ? input.value : currentEditingCell.originalValue;
+            const rawValue = input ? input.value : currentEditingCell.originalValue;
+            
+            // Convert newlines to <br/> tags for storage in Markdown
+            const storageValue = processCellContentForStorage(rawValue);
 
-            // Update local data
-            tableData.rows[currentEditingCell.row][currentEditingCell.col] = newValue;
+            // Update local data with storage format
+            tableData.rows[currentEditingCell.row][currentEditingCell.col] = storageValue;
 
-            // Update UI
+            // Update UI with display format
             currentEditingCell.element.classList.remove('editing');
-            currentEditingCell.element.textContent = newValue;
+            currentEditingCell.element.innerHTML = `<div class="cell-content">${processCellContent(storageValue)}</div>`;
             
             // Reset any inline styles that were applied during editing
             currentEditingCell.element.style.height = '';
 
-            // Send update to extension
+            // Send update to extension with storage format
             vscode.postMessage({
                 command: 'updateCell',
                 data: {
                     row: currentEditingCell.row,
                     col: currentEditingCell.col,
-                    value: newValue
+                    value: storageValue
                 }
             });
 
@@ -1478,8 +1485,11 @@
         function cancelCellEdit() {
             if (!currentEditingCell) return;
 
+            // Get the original storage value and convert to display format
+            const originalStorageValue = (displayData || tableData).rows[currentEditingCell.row][currentEditingCell.col] || '';
+
             currentEditingCell.element.classList.remove('editing');
-            currentEditingCell.element.textContent = currentEditingCell.originalValue;
+            currentEditingCell.element.innerHTML = `<div class="cell-content">${processCellContent(originalStorageValue)}</div>`;
             
             // Reset any inline styles that were applied during editing
             currentEditingCell.element.style.height = '';
@@ -1572,8 +1582,9 @@
             }));
 
             sortedIndices.sort((a, b) => {
-                const aVal = a.value.toString().toLowerCase();
-                const bVal = b.value.toString().toLowerCase();
+                // Convert <br/> tags to spaces for sorting comparison
+                const aVal = a.value.toString().replace(/<br\s*\/?>/gi, ' ').toLowerCase().trim();
+                const bVal = b.value.toString().replace(/<br\s*\/?>/gi, ' ').toLowerCase().trim();
                 
                 // Try numeric comparison first
                 const aNum = parseFloat(aVal);
@@ -1687,6 +1698,48 @@
         function sortByColumn(columnIndex) {
             // Redirect to view-only sort
             applySortView(columnIndex);
+        }
+
+        // Convert HTML break tags to newlines and properly escape content for display
+        function processCellContent(content) {
+            if (!content) return '';
+            
+            // First convert <br> and <br/> tags to newlines
+            let processedContent = content
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<BR\s*\/?>/gi, '\n');
+            
+            // Then escape HTML to prevent XSS and preserve line breaks
+            return escapeHtmlWithLineBreaks(processedContent);
+        }
+
+        // Convert HTML break tags to newlines for editing (reverse process)
+        function processCellContentForEditing(content) {
+            if (!content) return '';
+            
+            // Convert <br> and <br/> tags to newlines for text editing
+            return content
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<BR\s*\/?>/gi, '\n');
+        }
+
+        // Convert newlines back to <br/> tags for storage
+        function processCellContentForStorage(content) {
+            if (!content) return '';
+            
+            // Convert newlines to <br/> tags for Markdown storage
+            return content.replace(/\n/g, '<br/>');
+        }
+
+        // Enhanced HTML escaping that preserves line breaks as <br> tags
+        function escapeHtmlWithLineBreaks(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            // First escape the text
+            div.textContent = text;
+            let escaped = div.innerHTML;
+            // Then convert newlines to <br> tags for display
+            return escaped.replace(/\n/g, '<br>');
         }
 
         // Utility function to escape HTML

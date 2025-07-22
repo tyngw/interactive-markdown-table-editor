@@ -5,11 +5,12 @@ A VS Code extension that provides a spreadsheet-like interface for editing Markd
 ## Features
 
 - **Spreadsheet-like Interface**: Edit Markdown tables in a familiar grid view
+- **Enhanced Cell Editing**: Adaptive text input with automatic single-line/multi-line detection and cell-size fitting
+- **HTML Break Tag Support**: Automatic conversion of `<br/>` tags to line breaks for natural editing experience
 - **Cell Navigation**: Use arrow keys, Tab, and Enter to navigate between cells
 - **Table Manipulation**: Add/delete rows and columns with intuitive context menus
 - **Context Menu Operations**: Right-click on row/column headers for precise insertion and deletion
 - **Clean Interface**: Simplified toolbar with status messages at the bottom for focused editing
-- **Enhanced Editing**: Improved cell editing with better focus management and input handling
 - **View-Only Sorting**: Click column headers to sort table data without modifying the file (with option to save)
 - **Drag & Drop**: Reorder rows and columns by dragging
 - **Auto-save**: Changes are automatically saved back to your Markdown file
@@ -40,6 +41,7 @@ A VS Code extension that provides a spreadsheet-like interface for editing Markd
 
 - **Adaptive Cell Editing**: Input fields automatically adjust to cell size and content type
 - **Multi-line Support**: Cells with longer content or line breaks automatically use textarea for natural editing
+- **HTML Break Tag Processing**: Automatic conversion of `<br/>` tags to line breaks during editing, and back to tags when saving
 - **Dynamic Sizing**: Text input areas resize based on content and maintain proper cell alignment
 - **Smart Focus**: Editing automatically commits when selecting another cell, preventing data loss
 - **Improved Input**: Text input boxes respond properly to clicks and prevent focus issues
