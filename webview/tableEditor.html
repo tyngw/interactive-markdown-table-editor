@@ -1444,8 +1444,8 @@
             cell.classList.add('editing');
             
             // 常にtextareaを使用（統一）
-            const isMultiLine = currentEditingCell.originalValue.includes('\n') || currentEditingCell.originalValue.length > 50;
-            const inputAttrs = isMultiLine ? `class="cell-input" data-multiline="true"` : `class="cell-input"`;
+            const hasLineBreaks = currentEditingCell.originalValue.includes('\n');
+            const inputAttrs = hasLineBreaks ? `class="cell-input" data-multiline="true"` : `class="cell-input"`;
             const inputContent = escapeHtml(currentEditingCell.originalValue);
             
             cell.innerHTML = `<textarea ${inputAttrs}>${inputContent}</textarea>`;
@@ -1459,7 +1459,8 @@
             
             // Set textarea dimensions and alignment
             input.style.width = '100%';
-            input.style.minHeight = Math.max(originalCellHeight - 16, 24) + 'px'; // パディング分を考慮
+            // 未編集時のセルの高さと同じになるように調整（セルのパディング分も考慮）
+            input.style.minHeight = Math.max(originalCellHeight, 32) + 'px';
             input.style.height = 'auto';
             input.style.padding = '8px 12px';
             input.style.margin = '0';
@@ -1472,11 +1473,11 @@
             input.style.wordWrap = 'break-word';
             input.style.overflow = 'auto';
             
-            if (isMultiLine) {
-                // For multi-line content, allow vertical resizing
+            if (hasLineBreaks) {
+                // 既に改行が含まれている場合は、手動リサイズを許可
                 input.style.resize = 'vertical';
             } else {
-                // For single-line content, disable manual resizing but allow auto-wrapping
+                // 改行がない場合は、手動リサイズを無効にしつつ自動改行は有効
                 input.style.resize = 'none';
             }
             
@@ -1485,11 +1486,11 @@
                 // Reset height to calculate scrollHeight accurately
                 input.style.height = 'auto';
                 const contentHeight = input.scrollHeight;
-                const minInputHeight = Math.max(originalCellHeight - 16, 24); // パディング分を考慮した最小高さ
-                const newInputHeight = Math.max(contentHeight, minInputHeight);
+                // 未編集時のセルの高さと同等以上になるように調整
+                const minInputHeight = Math.max(contentHeight, originalCellHeight, 32);
                 
                 // Update textarea height
-                input.style.height = newInputHeight + 'px';
+                input.style.height = minInputHeight + 'px';
                 
                 // セルの高さは自動で調整される（textareaの高さに追従）
                 cell.style.height = 'auto';
@@ -1514,8 +1515,8 @@
             setTimeout(() => {
                 input.style.setProperty('vertical-align', 'top', 'important');
                 input.style.setProperty('text-align', 'left', 'important');
-                if (isMultiLine) {
-                    // textareaの場合、カーソルを先頭に移動
+                if (hasLineBreaks) {
+                    // 既に改行がある場合、カーソルを先頭に移動
                     input.setSelectionRange(0, 0);
                     input.scrollTop = 0;
                 }
@@ -1547,16 +1548,15 @@
             });
             
             input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey && !isMultiLine) {
-                    // 単一行モードでは Enter で編集完了
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    // Ctrl+Enter / Cmd+Enter で編集確定
                     e.preventDefault();
                     commitCellEdit();
-                } else if (e.key === 'Enter' && e.shiftKey) {
-                    // Shift+Enter は常に改行を許可（マルチライン・シングルライン問わず）
+                } else if (e.key === 'Enter') {
+                    // Enter は常に改行（統一された動作）
                     e.stopPropagation();
-                } else if (e.key === 'Enter' && isMultiLine && !e.shiftKey) {
-                    // マルチラインモードでは Enter で改行
-                    e.stopPropagation();
+                    // 改行後に高さを調整
+                    setTimeout(adjustHeight, 0);
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
                     cancelCellEdit();
