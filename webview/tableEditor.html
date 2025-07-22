@@ -16,17 +16,13 @@
         }
 
         .table-container {
-            overflow: auto;
             border: 2px solid var(--vscode-panel-border);
             border-radius: 6px;
             background-color: var(--vscode-editor-background);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            /* スプレッドシート風のスクロール */
-            max-height: 80vh;
+            max-height: calc(100vh - 200px);
             position: relative;
-            /* スクロール時のヘッダー固定を確実にする */
-            overflow-x: auto;
-            overflow-y: auto;
+            overflow: auto;
         }
 
         .table-editor {
@@ -36,24 +32,20 @@
             min-width: 600px;
             font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
             font-size: var(--vscode-editor-font-size, 14px);
-            /* 行の高さを統一 */
             table-layout: fixed;
-            /* スティッキーヘッダーの基準となる */
-            position: relative;
         }
 
-        /* テーブルヘッダー全体のスティッキー設定 */
+        /* テーブルヘッダー - 完全に不透過で固定 */
         .table-editor thead {
             position: sticky;
             top: 0;
-            z-index: 50;
+            z-index: 100;
+            background-color: var(--vscode-editor-background);
         }
 
-        /* Column headers */
+        /* Column headers - 完全に不透過 */
         .table-editor th {
-            background: linear-gradient(180deg, 
-                var(--vscode-editor-lineHighlightBackground) 0%, 
-                var(--vscode-list-hoverBackground) 100%);
+            background-color: var(--vscode-editor-lineHighlightBackground);
             border: 1px solid var(--vscode-panel-border);
             border-top: 2px solid var(--vscode-focusBorder);
             padding: 10px 12px;
@@ -66,19 +58,17 @@
             user-select: none;
             color: var(--vscode-foreground);
             transition: background-color 0.15s ease;
-            /* 枠線をセル内側に描画してサイズ変更を防ぐ */
             box-sizing: border-box;
             z-index: 100;
-            /* スティッキーヘッダーを確実に表示 */
+            opacity: 1;
+            /* 完全に不透過な背景を保証 */
             background-clip: padding-box;
         }
 
         .table-editor th:hover {
-            background: linear-gradient(180deg, 
-                var(--vscode-list-hoverBackground) 0%, 
-                var(--vscode-list-activeSelectionBackground) 100%);
-            /* ホバー時もスティッキーヘッダーを確実に表示 */
-            background-clip: padding-box;
+            background-color: var(--vscode-list-hoverBackground);
+            /* ホバー時も完全に不透過 */
+            opacity: 1;
         }
 
         .table-editor th:first-child {
@@ -89,11 +79,9 @@
             border-right: 2px solid var(--vscode-focusBorder);
         }
 
-        /* Row numbers */
+        /* Row numbers - 完全に不透過で固定 */
         .row-number {
-            background: linear-gradient(90deg, 
-                var(--vscode-editor-lineHighlightBackground) 0%, 
-                var(--vscode-list-hoverBackground) 100%);
+            background-color: var(--vscode-editor-lineHighlightBackground);
             border: 1px solid var(--vscode-panel-border);
             border-left: 2px solid var(--vscode-focusBorder);
             font-weight: 600;
@@ -108,19 +96,17 @@
             position: sticky;
             left: 0;
             z-index: 90;
-            /* 枠線をセル内側に描画してサイズ変更を防ぐ */
             box-sizing: border-box;
-            /* スティッキー要素を確実に表示 */
+            opacity: 1;
+            /* 完全に不透過な背景を保証 */
             background-clip: padding-box;
         }
 
         .row-number:hover {
-            background: linear-gradient(90deg, 
-                var(--vscode-list-hoverBackground) 0%, 
-                var(--vscode-list-activeSelectionBackground) 100%);
+            background-color: var(--vscode-list-hoverBackground);
             color: var(--vscode-foreground);
-            /* ホバー時もスティッキー要素を確実に表示 */
-            background-clip: padding-box;
+            /* ホバー時も完全に不透過 */
+            opacity: 1;
         }
 
         /* Data cells */
