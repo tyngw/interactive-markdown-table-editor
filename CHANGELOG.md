@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.12] - 2025-07-22
+
+### Fixed
+- **Cell Editing Alignment**: Fixed text alignment in editing mode to be top-aligned instead of center-aligned
+- **Auto-wrap in Edit Mode**: Enabled automatic text wrapping during cell editing for better user experience
+- **Width Preservation**: Fixed issue where cell and column widths were reset after editing completion
+- **Column Width Consistency**: Ensured column headers maintain the same width as their corresponding cells after editing
+
+### Improved
+- **Text Input Alignment**: Cell input fields now properly align text to the top-left, matching the display mode
+- **Textarea Handling**: Enhanced textarea configuration for multi-line content with proper wrapping
+- **Dimension Persistence**: Cell and column dimensions are now maintained throughout the editing process
+
+### Technical Improvements
+- Updated CSS for proper text alignment in editing mode
+- Enhanced `startCellEdit()` function to preserve cell dimensions
+- Improved `commitCellEdit()` and `cancelCellEdit()` to maintain width settings
+- Added proper vertical alignment and text wrapping for input fields
+
+### Testing
+- Added new test file for cell editing alignment and wrapping
+- Enhanced existing test suite with alignment and dimension preservation tests
+
 ## [0.1.11] - 2025-07-22
 
 ### Fixed

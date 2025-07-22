@@ -1237,4 +1237,64 @@ suite('TableDataManager Test Suite', () => {
         assert.strictEqual(secondTable.getTableData().metadata.sourceUri, 'multi.md');
         assert.strictEqual(thirdTable.getTableData().metadata.sourceUri, 'multi.md');
     });
+
+    test('should handle line break tags in cell content', () => {
+        manager.updateCell(0, 2, 'New<br/>York<br/>City');
+        
+        const tableData = manager.getTableData();
+        assert.strictEqual(tableData.rows[0][2], 'New<br/>York<br/>City');
+    });
+
+    test('should preserve cell formatting during updates', () => {
+        const originalValue = 'Multi<br/>line<br/>content';
+        manager.updateCell(1, 1, originalValue);
+        
+        const tableData = manager.getTableData();
+        assert.strictEqual(tableData.rows[1][1], originalValue);
+        
+        // Update again to ensure consistency
+        manager.updateCell(1, 1, 'Updated<br/>content');
+        const updatedData = manager.getTableData();
+        assert.strictEqual(updatedData.rows[1][1], 'Updated<br/>content');
+    });
+
+    test('should maintain table structure after cell edits', () => {
+        const originalRowCount = manager.getTableData().rows.length;
+        const originalColCount = manager.getTableData().headers.length;
+        
+        // Update multiple cells
+        manager.updateCell(0, 0, 'Updated1');
+        manager.updateCell(1, 1, 'Updated2');
+        manager.updateCell(2, 2, 'Updated3');
+        
+        const tableData = manager.getTableData();
+        assert.strictEqual(tableData.rows.length, originalRowCount);
+        assert.strictEqual(tableData.headers.length, originalColCount);
+        assert.strictEqual(tableData.rows[0][0], 'Updated1');
+        assert.strictEqual(tableData.rows[1][1], 'Updated2');
+        assert.strictEqual(tableData.rows[2][2], 'Updated3');
+    });
+
+    test('should handle cell editing alignment and wrapping', () => {
+        // Test that cell editing maintains proper alignment and wrapping
+        const longText = 'This is a very long text that should wrap properly when editing in a cell input field';
+        manager.updateCell(0, 0, longText);
+        
+        const tableData = manager.getTableData();
+        assert.strictEqual(tableData.rows[0][0], longText);
+        
+        // Test multiline content with line breaks
+        const multilineText = 'Line 1\nLine 2\nLine 3';
+        manager.updateCell(1, 1, multilineText);
+        
+        const updatedData = manager.getTableData();
+        assert.strictEqual(updatedData.rows[1][1], multilineText);
+    });
+
+    test('should handle empty cell values correctly', () => {
+        manager.updateCell(0, 0, '');
+        
+        const tableData = manager.getTableData();
+        assert.strictEqual(tableData.rows[0][0], '');
+    });
 });

@@ -144,9 +144,10 @@
             margin: 0;
             white-space: pre-wrap;
             word-wrap: break-word;
-            overflow: hidden;
+            overflow: auto;
             line-height: 1.4;
             vertical-align: top;
+            text-align: left;
         }
 
         .cell-input:focus {
@@ -170,6 +171,9 @@
             height: 100%;
             z-index: 5;
             box-sizing: border-box;
+            display: flex;
+            align-items: flex-start;
+            text-align: left;
         }
 
         /* Textarea specific styling */
@@ -1348,14 +1352,20 @@
             const originalValue = (displayData || tableData).rows[row][col] || '';
             const editableValue = processCellContentForEditing(originalValue);
             
-            currentEditingCell = { row, col, element: cell, originalValue: editableValue };
-            
-            // Get cell dimensions before modifying content
+            // Store original cell dimensions for restoration
             const cellRect = cell.getBoundingClientRect();
             const cellStyles = window.getComputedStyle(cell);
-            
-            // Store original cell height to maintain consistency
             const originalCellHeight = cellRect.height;
+            const originalCellWidth = cellRect.width;
+            
+            currentEditingCell = { 
+                row, 
+                col, 
+                element: cell, 
+                originalValue: editableValue,
+                originalHeight: originalCellHeight,
+                originalWidth: originalCellWidth
+            };
             
             cell.classList.add('editing');
             
@@ -1371,26 +1381,33 @@
             
             const input = cell.querySelector('.cell-input');
             
-            // Set cell height to maintain original height initially
+            // Set cell dimensions to maintain current size
             cell.style.height = originalCellHeight + 'px';
+            cell.style.width = originalCellWidth + 'px';
             
-            // Set input dimensions
+            // Set input dimensions and alignment
             if (isMultiLine) {
-                // For textarea, start with the original cell height
+                // For textarea, configure for proper top alignment and wrapping
                 input.style.width = '100%';
                 input.style.height = originalCellHeight + 'px';
                 input.style.minHeight = Math.max(originalCellHeight, 24) + 'px';
+                input.style.verticalAlign = 'top';
+                input.style.textAlign = 'left';
+                input.style.whiteSpace = 'pre-wrap';
+                input.style.wordWrap = 'break-word';
+                input.style.overflow = 'auto';
                 
-                // Auto-resize height based on content
+                // Auto-resize height based on content while maintaining width
                 const adjustHeight = () => {
                     // Reset height to calculate scrollHeight accurately
                     input.style.height = 'auto';
                     const contentHeight = input.scrollHeight;
                     const newHeight = Math.max(contentHeight, originalCellHeight);
                     
-                    // Update both input and cell heights
+                    // Update both input and cell heights, maintain width
                     input.style.height = newHeight + 'px';
                     cell.style.height = newHeight + 'px';
+                    cell.style.width = originalCellWidth + 'px';
                 };
                 
                 input.addEventListener('input', adjustHeight);
@@ -1398,9 +1415,13 @@
                 // Set initial height
                 setTimeout(adjustHeight, 0);
             } else {
-                // For single-line input, maintain original cell height
+                // For single-line input, maintain dimensions and alignment
                 input.style.width = '100%';
                 input.style.height = originalCellHeight + 'px';
+                input.style.verticalAlign = 'top';
+                input.style.textAlign = 'left';
+                input.style.whiteSpace = 'nowrap';
+                input.style.overflow = 'hidden';
             }
             
             input.focus();
@@ -1466,13 +1487,29 @@
             // Update local data with storage format
             tableData.rows[currentEditingCell.row][currentEditingCell.col] = storageValue;
 
+            // Store current cell dimensions before resetting classes
+            const currentHeight = currentEditingCell.element.style.height;
+            const currentWidth = currentEditingCell.element.style.width;
+
             // Update UI with display format
             currentEditingCell.element.classList.remove('editing');
             currentEditingCell.element.innerHTML = `<div class="cell-content">${processCellContent(storageValue)}</div>`;
             
-            // Reset any inline styles that were applied during editing
-            currentEditingCell.element.style.height = '';
-            currentEditingCell.element.style.minHeight = '';
+            // Restore the dimensions that were set during editing
+            if (currentHeight) {
+                currentEditingCell.element.style.height = currentHeight;
+            }
+            if (currentWidth) {
+                currentEditingCell.element.style.width = currentWidth;
+            }
+            
+            // Also apply the width to the corresponding header for column consistency
+            const colIndex = currentEditingCell.col;
+            const header = document.querySelector(`th[data-col="${colIndex}"]`);
+            if (header && currentWidth) {
+                header.style.width = currentWidth;
+                header.style.minWidth = currentWidth;
+            }
 
             // Send update to extension with storage format
             vscode.postMessage({
@@ -1494,12 +1531,28 @@
             // Get the original storage value and convert to display format
             const originalStorageValue = (displayData || tableData).rows[currentEditingCell.row][currentEditingCell.col] || '';
 
+            // Store current cell dimensions before resetting classes
+            const currentHeight = currentEditingCell.element.style.height;
+            const currentWidth = currentEditingCell.element.style.width;
+
             currentEditingCell.element.classList.remove('editing');
             currentEditingCell.element.innerHTML = `<div class="cell-content">${processCellContent(originalStorageValue)}</div>`;
             
-            // Reset any inline styles that were applied during editing
-            currentEditingCell.element.style.height = '';
-            currentEditingCell.element.style.minHeight = '';
+            // Restore the dimensions that were set during editing
+            if (currentHeight) {
+                currentEditingCell.element.style.height = currentHeight;
+            }
+            if (currentWidth) {
+                currentEditingCell.element.style.width = currentWidth;
+            }
+            
+            // Also apply the width to the corresponding header for column consistency
+            const colIndex = currentEditingCell.col;
+            const header = document.querySelector(`th[data-col="${colIndex}"]`);
+            if (header && currentWidth) {
+                header.style.width = currentWidth;
+                header.style.minWidth = currentWidth;
+            }
             
             currentEditingCell = null;
         }
