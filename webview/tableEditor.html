@@ -185,6 +185,7 @@
                     </div>
                     <div class="resize-handle" 
                          onclick="event.stopPropagation()" 
+                         ondblclick="event.stopPropagation(); autoFitColumn(${index})"
                          onmousedown="event.stopPropagation(); startColumnResize(event, ${index})"></div>
                 </th>`;
             });
@@ -493,6 +494,72 @@
                 isResizing = false;
                 resizeColumn = -1;
             }, 10);
+        }
+
+        // Auto-fit column width to content (Excel-like double-click behavior)
+        function autoFitColumn(colIndex) {
+            console.log(`Auto-fitting column ${colIndex}`);
+            
+            // Get all cells in the column (header + data cells)
+            const colCells = document.querySelectorAll(`th[data-col="${colIndex}"], td[data-col="${colIndex}"]`);
+            let maxWidth = 80; // Minimum width
+            
+            // Create a temporary element to measure text width
+            const measureElement = document.createElement('div');
+            measureElement.style.position = 'absolute';
+            measureElement.style.visibility = 'hidden';
+            measureElement.style.whiteSpace = 'nowrap';
+            measureElement.style.fontSize = 'var(--vscode-editor-font-size, 14px)';
+            measureElement.style.fontFamily = 'var(--vscode-editor-font-family, "Consolas", "Monaco", "Courier New", monospace)';
+            measureElement.style.padding = '8px 12px'; // Same as cell padding
+            document.body.appendChild(measureElement);
+            
+            colCells.forEach(cell => {
+                let textContent = '';
+                
+                if (cell.tagName === 'TH') {
+                    // For header cells, get the header text
+                    const headerText = cell.querySelector('.header-text');
+                    if (headerText) {
+                        textContent = headerText.textContent || '';
+                    }
+                } else {
+                    // For data cells, get the cell content
+                    const cellContent = cell.querySelector('.cell-content');
+                    if (cellContent) {
+                        textContent = cellContent.textContent || '';
+                    }
+                }
+                
+                if (textContent.trim()) {
+                    measureElement.textContent = textContent;
+                    const textWidth = measureElement.offsetWidth;
+                    maxWidth = Math.max(maxWidth, textWidth + 20); // Add some padding
+                }
+            });
+            
+            // Clean up the temporary element
+            document.body.removeChild(measureElement);
+            
+            // Cap the maximum width to prevent extremely wide columns
+            const finalWidth = Math.min(maxWidth, 400);
+            
+            console.log(`Auto-fit column ${colIndex}: calculated width = ${finalWidth}px`);
+            
+            // Store the new width
+            columnWidths[colIndex] = finalWidth;
+            
+            // Apply the new width to all cells in the column
+            colCells.forEach(cell => {
+                cell.style.width = finalWidth + 'px';
+                cell.style.minWidth = finalWidth + 'px';
+                cell.style.maxWidth = finalWidth + 'px';
+                
+                // Add user-resized class
+                if (!cell.classList.contains('user-resized')) {
+                    cell.classList.add('user-resized');
+                }
+            });
         }
 
         // Setup table event listeners
@@ -884,11 +951,25 @@
                     // Ctrl+Enter / Cmd+Enter で編集確定
                     e.preventDefault();
                     commitCellEdit();
-                } else if (e.key === 'Enter') {
-                    // Enter は常に改行（統一された動作）
+                } else if (e.key === 'Enter' && e.shiftKey) {
+                    // Shift+Enter で改行
                     e.stopPropagation();
                     // 改行後に高さを調整
                     setTimeout(adjustHeight, 0);
+                } else if (e.key === 'Enter') {
+                    // Enter で編集確定し、下の行に移動
+                    e.preventDefault();
+                    commitCellEdit();
+                    // Clear selection of the current cell before moving
+                    clearSelection();
+                    // Move to next row, same column
+                    const nextRow = row + 1;
+                    if (nextRow < tableData.rows.length) {
+                        setTimeout(() => {
+                            selectCell(nextRow, col);
+                            startCellEdit(nextRow, col);
+                        }, 10);
+                    }
                 } else if (e.key === 'Escape') {
                     // Escで変更を反映（確定）
                     e.preventDefault();
@@ -896,11 +977,16 @@
                 } else if (e.key === 'Tab') {
                     e.preventDefault();
                     commitCellEdit();
+                    // Clear selection of the current cell before moving
+                    clearSelection();
                     // Move to next cell
                     const nextCol = (col + 1) % tableData.headers.length;
                     const nextRow = nextCol === 0 ? row + 1 : row;
                     if (nextRow < tableData.rows.length) {
-                        setTimeout(() => startCellEdit(nextRow, nextCol), 10);
+                        setTimeout(() => {
+                            selectCell(nextRow, nextCol);
+                            startCellEdit(nextRow, nextCol);
+                        }, 10);
                     }
                 } else if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x', 'a', 'z', 'y'].includes(e.key.toLowerCase())) {
                     // コピー・ペースト・切り取り・全選択・アンドゥ・リドゥは通す

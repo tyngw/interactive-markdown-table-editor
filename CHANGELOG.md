@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.17] - 2025-01-27
+
+### Enhanced
+- **Tab Navigation Improvement**: Fixed cell selection state clearing when exiting edit mode via Tab key
+- **Enter Key Behavior**: Changed Enter key to confirm edit and move to next row (Excel-like behavior)
+- **Shift+Enter for Line Breaks**: Shift+Enter now inserts line breaks while continuing edit mode
+- **Auto-Fit Column Width**: Added double-click on resize handle to auto-fit column width to content (Excel-like)
+
+### Improved
+- **Keyboard Interactions**: More intuitive and Excel-like keyboard navigation in edit mode
+- **Cell Selection Management**: Proper selection state cleanup during navigation transitions
+- **Column Width Intelligence**: Smart auto-sizing based on actual content width with min/max limits
+- **User Experience**: Consistent behavior patterns matching spreadsheet applications
+
+### Technical Improvements
+- Enhanced Tab key handler to clear previous cell selection before navigation
+- Separated Enter (confirm + move down) from Shift+Enter (line break) functionality
+- Implemented content-based width calculation with temporary DOM measurement
+- Added auto-fit functionality with 80px minimum and 400px maximum width constraints
+- Improved edit mode transitions with proper selection state management
+
+### Testing
+- Added test-keyboard-interactions.md for comprehensive interaction testing
+- Enhanced test coverage for keyboard navigation and column auto-sizing scenarios
+
 ## [0.1.16] - 2025-01-27
 
 ### Fixed
