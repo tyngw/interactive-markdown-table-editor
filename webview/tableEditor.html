@@ -138,10 +138,25 @@
             updateSortActionsVisibility();
         }
 
+        // Initialize default column widths if not set
+        function initializeColumnWidths(data) {
+            if (!data) return;
+            
+            data.headers.forEach((header, index) => {
+                if (!columnWidths[index]) {
+                    // Set default width for columns that haven't been resized
+                    columnWidths[index] = 150;
+                }
+            });
+        }
+
         // Render table content
         function renderTableContent() {
             const dataToRender = displayData || tableData;
             if (!dataToRender) return '';
+            
+            // Initialize column widths with defaults
+            initializeColumnWidths(dataToRender);
 
             let html = '<thead><tr>';
             
@@ -153,9 +168,9 @@
                 const sortClass = sortState.column === index ? `sort-${sortState.direction}` : '';
                 const sortIndicatorClass = sortState.isViewOnly ? 'view-only' : 'committed';
                 const columnLetter = getColumnLetter(index);
-                const storedWidth = columnWidths[index];
-                const widthStyle = storedWidth ? `style="width: ${storedWidth}px; min-width: ${storedWidth}px;"` : '';
-                const userResizedClass = storedWidth ? 'user-resized' : '';
+                const storedWidth = columnWidths[index] || 150;
+                const widthStyle = `style="width: ${storedWidth}px; min-width: ${storedWidth}px;"`;
+                const userResizedClass = columnWidths[index] && columnWidths[index] !== 150 ? 'user-resized' : '';
                 html += `<th onclick="handleColumnHeaderClick(${index}, event)" 
                            onmousedown="startColumnDrag(${index}, event)"
                            oncontextmenu="showColumnContextMenu(event, ${index})"
@@ -194,9 +209,9 @@
                     const cellId = `cell-${rowIndex}-${colIndex}`;
                     const isEmpty = !cell || cell.trim() === '';
                     const cellClass = isEmpty ? 'empty-cell' : '';
-                    const storedWidth = columnWidths[colIndex];
-                    const widthStyle = storedWidth ? `style="width: ${storedWidth}px; min-width: ${storedWidth}px;"` : '';
-                    const userResizedClass = storedWidth ? 'user-resized' : '';
+                    const storedWidth = columnWidths[colIndex] || 150;
+                    const widthStyle = `style="width: ${storedWidth}px; min-width: ${storedWidth}px;"`;
+                    const userResizedClass = columnWidths[colIndex] && columnWidths[colIndex] !== 150 ? 'user-resized' : '';
                     
                     html += `<td id="${cellId}"
                                class="data-cell ${cellClass} ${userResizedClass}" 
@@ -1871,16 +1886,15 @@
 
         // ウィンドウリサイズ時の処理を追加
         window.addEventListener('resize', function() {
-            // ウィンドウリサイズ時は、既存のセル幅を維持する（最小幅制限を緩和しない）
-            // 既にuser-resizedクラスが付いているセルのみ、現在の幅を維持
-            const resizedCells = document.querySelectorAll('th.user-resized, td.user-resized');
-            resizedCells.forEach(cell => {
-                // 既にリサイズされたセルは、現在の幅を維持
-                const currentWidth = cell.offsetWidth;
-                if (currentWidth > 0) {
-                    cell.style.width = currentWidth + 'px';
-                    cell.style.minWidth = currentWidth + 'px';
-                }
+            // ウィンドウリサイズ時は、全てのセル幅を維持する
+            // columnWidthsの値を使って幅を再設定
+            Object.keys(columnWidths).forEach(colIndex => {
+                const width = columnWidths[colIndex];
+                const colCells = document.querySelectorAll(`th[data-col="${colIndex}"], td[data-col="${colIndex}"]`);
+                colCells.forEach(cell => {
+                    cell.style.width = width + 'px';
+                    cell.style.minWidth = width + 'px';
+                });
             });
         });
 

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.15] - 2025-01-27
+
+### Fixed
+- **Critical Width Control Issue**: Fixed cell width changing during VSCode window resize by implementing fixed-width table layout
+- **Table Layout Optimization**: Changed from `table-layout: fixed` to `table-layout: auto` with explicit cell widths to prevent automatic resizing
+- **Width Persistence**: All cell widths now remain constant regardless of window size changes
+- **Default Width Management**: Improved default column width initialization and management
+
+### Changed
+- **Table Width Behavior**: Changed table width from 100% to auto-calculated based on cell widths
+- **Cell Width Strategy**: All cells now have explicit width values instead of relying on CSS min-width only
+- **Resize Logic**: Enhanced window resize handling to preserve all column widths consistently
+
+### Improved
+- **Stable Layout**: Table layout no longer responds to window size changes unless explicitly resized by user
+- **Better Width Control**: More predictable and stable column width behavior across all scenarios
+- **Performance**: Reduced unnecessary layout recalculations during window resize events
+
+### Technical Improvements
+- Modified table CSS from `width: 100%` and `table-layout: fixed` to `width: auto` and `table-layout: auto`
+- Added explicit width initialization for all columns with 150px default
+- Enhanced columnWidths state management to always contain width values
+- Improved window resize event handler to maintain all column widths
+
 ## [0.1.14] - 2025-01-27
 
 ### Changed

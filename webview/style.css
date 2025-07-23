@@ -22,10 +22,12 @@ body {
 .table-editor {
     border-collapse: separate;
     border-spacing: 0;
-    width: 100%;
+    /* 幅を自動計算にして、セル幅の固定値を優先 */
+    width: auto;
     font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
     font-size: var(--vscode-editor-font-size, 14px);
-    table-layout: fixed;
+    /* セル幅の固定制御を有効にする */
+    table-layout: auto;
 }
 
 /* テーブルヘッダー - 完全に不透過で固定 */
@@ -45,7 +47,8 @@ body {
     text-align: left;
     position: sticky;
     top: 0;
-    /* デフォルトの列最小幅を設定 - 初期表示時の最小幅 */
+    /* デフォルトの列幅を固定値で設定 */
+    width: 150px;
     min-width: 150px;
     font-weight: 600;
     cursor: pointer;
@@ -115,7 +118,8 @@ body {
     padding: 8px 12px;
     text-align: left;
     position: relative;
-    /* デフォルトの列最小幅を設定 - 初期表示時の最小幅 */
+    /* デフォルトの列幅を固定値で設定 */
+    width: 150px;
     min-width: 150px;
     cursor: cell;
     transition: background-color 0.15s ease;
