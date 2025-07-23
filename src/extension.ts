@@ -106,7 +106,7 @@ export function activate(context: vscode.ExtensionContext) {
     const requestTableDataCommand = vscode.commands.registerCommand('markdownTableEditor.internal.requestTableData', async (data: any) => {
         try {
             console.log('Internal command: requestTableData', data);
-            const { uri, panelId } = data;
+            const { uri, panelId, forceRefresh } = data;
             const panel = webviewManager.getPanel(uri);
             
             if (!panel) {
@@ -116,19 +116,40 @@ export function activate(context: vscode.ExtensionContext) {
 
             // Get or create table data manager
             let tableDataManager = activeTableManagers.get(uri.toString());
-            if (!tableDataManager) {
+            
+            // Always re-read file if forceRefresh is true or no manager exists
+            if (!tableDataManager || forceRefresh) {
+                console.log('Reading fresh data from file for:', uri.toString(), forceRefresh ? '(forced refresh)' : '(new manager)');
+                
                 // Read and parse the file
                 const content = await fileHandler.readMarkdownFile(uri);
                 const ast = markdownParser.parseDocument(content);
                 const tables = markdownParser.findTablesInDocument(ast);
                 
                 if (tables.length > 0) {
-                    // Use the first table by default
-                    tableDataManager = new TableDataManager(tables[0], uri.toString(), 0);
+                    // Determine which table to use
+                    let tableIndex = 0;
+                    if (tableDataManager && forceRefresh) {
+                        // If refreshing existing manager, try to use the same table index
+                        const currentTableIndex = tableDataManager.getTableData().metadata.tableIndex;
+                        if (currentTableIndex < tables.length) {
+                            tableIndex = currentTableIndex;
+                        }
+                    }
+                    
+                    // Create new manager with fresh data
+                    tableDataManager = new TableDataManager(tables[tableIndex], uri.toString(), tableIndex);
                     activeTableManagers.set(uri.toString(), tableDataManager);
+                    
+                    if (forceRefresh) {
+                        console.log('Table data refreshed from file for:', uri.toString());
+                    }
+                } else {
+                    webviewManager.sendError(panel, 'No tables found in the file');
+                    return;
                 }
             } else {
-                // Re-read file to get current state
+                // For existing manager without force refresh, still check for file changes
                 const content = await fileHandler.readMarkdownFile(uri);
                 const ast = markdownParser.parseDocument(content);
                 const tables = markdownParser.findTablesInDocument(ast);
@@ -152,7 +173,11 @@ export function activate(context: vscode.ExtensionContext) {
             if (tableDataManager) {
                 const tableData = tableDataManager.getTableData();
                 webviewManager.updateTableData(panel, tableData);
-                webviewManager.sendSuccess(panel, 'Table data loaded successfully');
+                
+                // Don't send success message for refreshes to avoid spam
+                if (!forceRefresh) {
+                    webviewManager.sendSuccess(panel, 'Table data loaded successfully');
+                }
             } else {
                 webviewManager.sendError(panel, 'No table data found');
             }

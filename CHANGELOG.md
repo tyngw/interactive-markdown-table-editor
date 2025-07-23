@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.20] - 2025-01-27
+
+### Fixed
+- **Data Synchronization**: Fixed issue where VSCode editor changes weren't reflected in Table Editor when using cached panels
+- **Tab Activation Refresh**: Table Editor now automatically refreshes data when its tab becomes active
+- **Cache Invalidation**: Implemented force refresh mechanism to ensure data consistency between editor and Table Editor
+
+### Enhanced
+- **Real-time Sync**: Table Editor panels now stay synchronized with file changes made in VSCode editor
+- **Panel State Management**: Added `onDidChangeViewState` event listener to detect when panels become active
+- **Data Freshness**: Automatic data refresh when switching back to Table Editor tab ensures latest content is always displayed
+
+### Technical Improvements
+- Added `refreshPanelData()` method to WebviewManager for forced data refresh
+- Enhanced `requestTableData` command with `forceRefresh` flag for cache invalidation  
+- Improved table data manager lifecycle to handle file content changes
+- Added panel activation detection with automatic data synchronization
+- Reduced success message spam during automatic refreshes
+
+### User Experience
+- **Seamless Editing**: Users can now edit in VSCode editor and see changes immediately when switching to Table Editor
+- **No Manual Refresh**: Eliminates need for manual refresh or reopening Table Editor after external changes
+- **Consistent State**: Table Editor always shows the current state of the file, regardless of edit source
+
 ## [0.1.19] - 2025-01-27
 
 ### Enhanced
