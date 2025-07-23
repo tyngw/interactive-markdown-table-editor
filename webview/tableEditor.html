@@ -90,6 +90,11 @@
                     <button class="sort-action-btn" onclick="commitSortToFile()">💾 Save Sort to File</button>
                 </div>
                 
+                <!-- Export Actions Panel -->
+                <div class="export-actions">
+                    <button class="export-btn" onclick="exportToCSV()">📄 Export CSV</button>
+                </div>
+                
                 <!-- Context Menus -->
                 <div class="context-menu" id="rowContextMenu">
                     <button class="context-menu-item" onclick="addRowAbove()">
@@ -698,6 +703,27 @@
                     // Clear selected cells
                     clearSelectedCells();
                     break;
+                case 'c':
+                case 'C':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        copySelectedCells();
+                    }
+                    break;
+                case 'v':
+                case 'V':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        pasteToSelectedCells();
+                    }
+                    break;
+                case 'x':
+                case 'X':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        cutSelectedCells();
+                    }
+                    break;
                 case 'a':
                 case 'A':
                     if (event.ctrlKey || event.metaKey) {
@@ -976,6 +1002,277 @@
                     });
                 });
             }
+        }
+
+        // Copy selected cells to clipboard
+        function copySelectedCells() {
+            if (selectedCells.size === 0) {
+                return;
+            }
+
+            const currentData = displayData || tableData;
+            const cellArray = Array.from(selectedCells).map(cellKey => {
+                const [row, col] = cellKey.split('-').map(Number);
+                return { row, col, value: currentData.rows[row][col] || '' };
+            });
+
+            // Sort by row then column
+            cellArray.sort((a, b) => {
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            });
+
+            // Convert to tab-delimited format
+            let clipboardText = '';
+            let currentRow = -1;
+            let rowData = [];
+
+            cellArray.forEach(cell => {
+                if (cell.row !== currentRow) {
+                    if (rowData.length > 0) {
+                        clipboardText += rowData.join('\t') + '\n';
+                    }
+                    currentRow = cell.row;
+                    rowData = [];
+                }
+                // Convert <br/> tags to newlines for clipboard
+                const cellValue = processCellContentForEditing(cell.value);
+                rowData.push(cellValue);
+            });
+
+            if (rowData.length > 0) {
+                clipboardText += rowData.join('\t');
+            }
+
+            // Copy to clipboard using modern API or fallback
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(clipboardText).then(() => {
+                    console.log('Copied to clipboard:', clipboardText);
+                }).catch(err => {
+                    console.error('Failed to copy to clipboard:', err);
+                    fallbackCopyToClipboard(clipboardText);
+                });
+            } else {
+                fallbackCopyToClipboard(clipboardText);
+            }
+        }
+
+        // Paste from clipboard to selected cells
+        function pasteToSelectedCells() {
+            if (selectedCells.size === 0) {
+                return;
+            }
+
+            // Get clipboard content using modern API or fallback
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                navigator.clipboard.readText().then(clipboardText => {
+                    processPasteData(clipboardText);
+                }).catch(err => {
+                    console.error('Failed to read from clipboard:', err);
+                    // Fallback: show prompt for manual paste
+                    const pasteData = prompt('Paste your data here:');
+                    if (pasteData !== null) {
+                        processPasteData(pasteData);
+                    }
+                });
+            } else {
+                // Fallback: show prompt for manual paste
+                const pasteData = prompt('Paste your data here:');
+                if (pasteData !== null) {
+                    processPasteData(pasteData);
+                }
+            }
+        }
+
+        // Cut selected cells to clipboard
+        function cutSelectedCells() {
+            if (selectedCells.size === 0) {
+                return;
+            }
+
+            // First copy the cells
+            copySelectedCells();
+            
+            // Then clear the cells
+            clearSelectedCells();
+        }
+
+        // Process paste data and update cells
+        function processPasteData(clipboardText) {
+            if (!clipboardText) return;
+
+            const currentData = displayData || tableData;
+            const lines = clipboardText.split('\n');
+            const pasteData = lines.map(line => line.split('\t'));
+
+            // Get the starting position (top-left of selection)
+            const cellArray = Array.from(selectedCells).map(cellKey => {
+                const [row, col] = cellKey.split('-').map(Number);
+                return { row, col };
+            });
+            cellArray.sort((a, b) => {
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            });
+
+            if (cellArray.length === 0) return;
+
+            const startRow = cellArray[0].row;
+            const startCol = cellArray[0].col;
+            const updates = [];
+
+            // Paste data starting from the top-left selected cell
+            pasteData.forEach((rowData, rowIndex) => {
+                rowData.forEach((cellValue, colIndex) => {
+                    const targetRow = startRow + rowIndex;
+                    const targetCol = startCol + colIndex;
+
+                    // Check bounds
+                    if (targetRow < currentData.rows.length && targetCol < currentData.headers.length) {
+                        // Convert newlines back to <br/> tags for storage
+                        const storageValue = processCellContentForStorage(cellValue);
+                        
+                        currentData.rows[targetRow][targetCol] = storageValue;
+                        
+                        // Also update base table data if not in view-only mode
+                        if (!sortState.isViewOnly && tableData.rows[targetRow]) {
+                            tableData.rows[targetRow][targetCol] = storageValue;
+                        }
+                        
+                        updates.push({ row: targetRow, col: targetCol, value: storageValue });
+                    }
+                });
+            });
+
+            // Update UI
+            updates.forEach(update => {
+                const cell = document.querySelector(`td[data-row="${update.row}"][data-col="${update.col}"]`);
+                if (cell) {
+                    const content = cell.querySelector('.cell-content');
+                    if (content) {
+                        content.innerHTML = processCellContent(update.value);
+                    }
+                    
+                    // Update empty cell class
+                    const isEmpty = !update.value || update.value.trim() === '';
+                    if (isEmpty) {
+                        cell.classList.add('empty-cell');
+                    } else {
+                        cell.classList.remove('empty-cell');
+                    }
+                }
+            });
+
+            // Send updates to extension only if not in view-only mode
+            if (!sortState.isViewOnly) {
+                updates.forEach(update => {
+                    vscode.postMessage({
+                        command: 'updateCell',
+                        data: update
+                    });
+                });
+            }
+
+            console.log('Pasted data to cells:', updates.length, 'cells updated');
+        }
+
+        // Fallback copy to clipboard for older browsers
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    console.log('Copied to clipboard (fallback):', text);
+                } else {
+                    console.error('Failed to copy to clipboard (fallback)');
+                }
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        // Export table data to CSV
+        function exportToCSV() {
+            const currentData = displayData || tableData;
+            if (!currentData) {
+                showError('No table data to export');
+                return;
+            }
+
+            try {
+                // Generate CSV content
+                const csvContent = generateCSVContent(currentData);
+                
+                // Send export request to extension
+                vscode.postMessage({
+                    command: 'exportCSV',
+                    data: {
+                        csvContent: csvContent,
+                        filename: getDefaultCSVFilename()
+                    }
+                });
+                
+                console.log('CSV export requested');
+            } catch (error) {
+                console.error('Failed to export CSV:', error);
+                showError('Failed to export CSV: ' + error.message);
+            }
+        }
+
+        // Generate CSV content from table data
+        function generateCSVContent(data) {
+            const lines = [];
+            
+            // Add headers
+            const headerLine = data.headers.map(header => escapeCSVField(header)).join(',');
+            lines.push(headerLine);
+            
+            // Add data rows
+            data.rows.forEach(row => {
+                const csvRow = row.map(cell => {
+                    // Convert <br/> tags to newlines for CSV
+                    const cellValue = processCellContentForEditing(cell || '');
+                    return escapeCSVField(cellValue);
+                }).join(',');
+                lines.push(csvRow);
+            });
+            
+            return lines.join('\n');
+        }
+
+        // Escape CSV field (handle commas, quotes, newlines)
+        function escapeCSVField(field) {
+            if (field === null || field === undefined) {
+                return '';
+            }
+            
+            const stringField = String(field);
+            
+            // If field contains comma, quote, or newline, wrap in quotes and escape quotes
+            if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
+                // Escape existing quotes by doubling them
+                const escapedField = stringField.replace(/"/g, '""');
+                return `"${escapedField}"`;
+            }
+            
+            return stringField;
+        }
+
+        // Get default CSV filename based on current context
+        function getDefaultCSVFilename() {
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 19).replace(/[:.]/g, '-');
+            return `table-export-${timestamp}.csv`;
         }
 
         // IME composition state tracking

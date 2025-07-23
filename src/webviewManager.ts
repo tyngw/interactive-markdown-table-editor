@@ -3,7 +3,7 @@ import * as path from 'path';
 import { TableData } from './tableDataManager';
 
 export interface WebviewMessage {
-    command: 'requestTableData' | 'updateCell' | 'addRow' | 'deleteRow' | 'addColumn' | 'deleteColumn' | 'sort' | 'moveRow' | 'moveColumn' | 'pong';
+    command: 'requestTableData' | 'updateCell' | 'addRow' | 'deleteRow' | 'addColumn' | 'deleteColumn' | 'sort' | 'moveRow' | 'moveColumn' | 'exportCSV' | 'pong';
     data?: any;
     timestamp?: number;
     responseTime?: number;
@@ -198,6 +198,10 @@ export class WebviewManager {
 
                 case 'moveColumn':
                     await this.handleMoveColumn(message.data, panel, uri);
+                    break;
+
+                case 'exportCSV':
+                    await this.handleExportCSV(message.data, panel, uri);
                     break;
 
                 case 'pong':
@@ -431,6 +435,20 @@ export class WebviewManager {
             panelId: this.getPanelId(uri),
             from: data.from,
             to: data.to
+        });
+    }
+
+    /**
+     * Handle CSV export
+     */
+    private async handleExportCSV(data: { csvContent: string; filename: string }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('Export CSV:', data.filename, 'for file:', uri.toString());
+        
+        vscode.commands.executeCommand('markdownTableEditor.internal.exportCSV', {
+            uri,
+            panelId: this.getPanelId(uri),
+            csvContent: data.csvContent,
+            filename: data.filename
         });
     }
 
