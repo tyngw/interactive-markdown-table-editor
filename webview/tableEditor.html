@@ -1587,6 +1587,8 @@
             switch (message.command) {
                 case 'updateTableData':
                     renderTableWithScrollPreservation(message.data);
+                    // Show auto-saved status when table data is updated from server
+                    showAutoSavedStatus();
                     break;
                 case 'error':
                     showError(message.message);
@@ -1656,7 +1658,7 @@
         // Show success message in status bar (removed Cell update successfully message)
         function showSuccess(message) {
             // Don't show "Cell update successfully" messages anymore
-            if (message && message.includes('Cell update successfully')) {
+            if (message && (message.includes('Cell update successfully') || message.includes('Cell updated successfully'))) {
                 // Instead, show auto-saved status
                 showAutoSavedStatus();
                 return;

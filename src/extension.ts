@@ -199,7 +199,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             // Send updated data back to webview
             webviewManager.updateTableData(panel, tableDataManager.getTableData());
-            webviewManager.sendSuccess(panel, 'Cell updated successfully');
+            // Don't send success message - webview will handle auto-saved status
         } catch (error) {
             console.error('Error in updateCell:', error);
             const panel = webviewManager.getPanel(data.uri);
