@@ -13,8 +13,6 @@
     <script>
         // VSCode拡張のwebviewで外部CSSを安全に読み込むためのvscode-resourceスキーマを使う
         // 拡張側で `webview.asWebviewUri` でCSSのパスを渡す必要がある
-        // ここでは仮に window.cssUri で渡されると仮定
-        // 例: window.cssUri = 'vscode-resource://.../style.css';
         if (window.cssUri) {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
