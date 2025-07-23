@@ -967,7 +967,6 @@
                     if (nextRow < tableData.rows.length) {
                         setTimeout(() => {
                             selectCell(nextRow, col);
-                            startCellEdit(nextRow, col);
                         }, 10);
                     }
                 } else if (e.key === 'Escape') {
@@ -985,7 +984,6 @@
                     if (nextRow < tableData.rows.length) {
                         setTimeout(() => {
                             selectCell(nextRow, nextCol);
-                            startCellEdit(nextRow, nextCol);
                         }, 10);
                     }
                 } else if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x', 'a', 'z', 'y'].includes(e.key.toLowerCase())) {
