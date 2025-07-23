@@ -17,16 +17,28 @@ body {
     max-height: calc(100vh - 200px);
     position: relative;
     overflow: auto;
+    /* デフォルトの最小横幅を設定 - 初期表示時の最小幅 */
+    min-width: 800px;
 }
 
 .table-editor {
     border-collapse: separate;
     border-spacing: 0;
     width: 100%;
-    min-width: 600px;
+    /* デフォルトの最小テーブル幅を設定 */
+    min-width: 800px;
     font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
     font-size: var(--vscode-editor-font-size, 14px);
     table-layout: fixed;
+}
+
+/* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
+.table-container.user-resized {
+    min-width: 400px;
+}
+
+.table-editor.user-resized {
+    min-width: 400px;
 }
 
 /* テーブルヘッダー - 完全に不透過で固定 */

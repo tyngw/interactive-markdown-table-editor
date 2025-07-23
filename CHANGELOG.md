@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.13] - 2025-01-27
+
+### Fixed
+- **Scroll Position Preservation**: Fixed critical issue where scroll position was reset to top after cell editing completion
+- **Table Re-rendering Optimization**: Implemented intelligent partial updates to avoid unnecessary full DOM reconstruction
+- **Sort View Scroll Maintenance**: Fixed scroll position reset when applying or restoring sort views
+- **Editing Position Visibility**: Added automatic scroll to edited cell position after completion to maintain user context
+
+### Improved
+- **Performance Optimization**: Reduced DOM manipulation by implementing content-only updates for unchanged table structure
+- **User Experience**: Enhanced editing workflow by maintaining visual context throughout the editing process
+- **Smart Rendering**: Introduced conditional rendering logic to distinguish between structural and content-only changes
+
+### Technical Improvements
+- Added `renderTableWithScrollPreservation()` function for scroll-aware table updates
+- Implemented `updateTableContentOnly()` for efficient partial content updates
+- Enhanced sort functions with scroll position preservation
+- Added automatic scroll-to-cell functionality after editing completion
+
+### Testing
+- Enhanced test coverage for scroll position preservation scenarios
+- Added test cases for sort operations with scroll maintenance
+
 ## [0.1.12] - 2025-07-22
 
 ### Fixed

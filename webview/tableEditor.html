@@ -455,6 +455,16 @@
                 cell.style.width = newWidth + 'px';
                 cell.style.minWidth = newWidth + 'px';
             });
+            
+            // ユーザーがリサイズを行った場合、より小さな最小幅を許可
+            const tableContainer = document.querySelector('.table-container');
+            const tableEditor = document.querySelector('.table-editor');
+            if (tableContainer && !tableContainer.classList.contains('user-resized')) {
+                tableContainer.classList.add('user-resized');
+            }
+            if (tableEditor && !tableEditor.classList.contains('user-resized')) {
+                tableEditor.classList.add('user-resized');
+            }
         }
 
         function stopColumnResize() {
@@ -932,7 +942,18 @@
                 }
             });
 
+            // Store edited cell position for potential scroll restoration
+            const editedCellPosition = {
+                row: currentEditingCell.row,
+                col: currentEditingCell.col
+            };
+
             currentEditingCell = null;
+            
+            // Ensure the edited cell remains visible after any potential re-render
+            setTimeout(() => {
+                scrollToCell(editedCellPosition.row, editedCellPosition.col);
+            }, 50);
         }
 
         // Cancel cell edit
@@ -1025,14 +1046,23 @@
             sortState.column = columnIndex;
             sortState.direction = direction;
 
-            // Re-render table with sorted data
+            // Re-render table with sorted data while preserving scroll position
             const tableContainer = document.querySelector('.table-container');
             if (tableContainer) {
+                const scrollTop = tableContainer.scrollTop;
+                const scrollLeft = tableContainer.scrollLeft;
+                
                 tableContainer.innerHTML = `
                     <table class="table-editor" id="tableEditor">
                         ${renderTableContent()}
                     </table>
                 `;
+                
+                // Restore scroll position
+                setTimeout(() => {
+                    tableContainer.scrollTop = scrollTop;
+                    tableContainer.scrollLeft = scrollLeft;
+                }, 0);
             }
 
             // Update UI indicators
@@ -1089,14 +1119,23 @@
                     originalData: null
                 };
 
-                // Re-render table
+                // Re-render table while preserving scroll position
                 const tableContainer = document.querySelector('.table-container');
                 if (tableContainer) {
+                    const scrollTop = tableContainer.scrollTop;
+                    const scrollLeft = tableContainer.scrollLeft;
+                    
                     tableContainer.innerHTML = `
                         <table class="table-editor" id="tableEditor">
                             ${renderTableContent()}
                         </table>
                     `;
+                    
+                    // Restore scroll position
+                    setTimeout(() => {
+                        tableContainer.scrollTop = scrollTop;
+                        tableContainer.scrollLeft = scrollLeft;
+                    }, 0);
                 }
 
                 updateSortActionsVisibility();
@@ -1239,7 +1278,7 @@
             
             switch (message.command) {
                 case 'updateTableData':
-                    renderTable(message.data);
+                    renderTableWithScrollPreservation(message.data);
                     break;
                 case 'error':
                     showError(message.message);
@@ -1531,6 +1570,81 @@
             }, 100);
         }
 
+        // Render table while preserving scroll position
+        function renderTableWithScrollPreservation(data) {
+            // Store current scroll position
+            const tableContainer = document.querySelector('.table-container');
+            let scrollTop = 0;
+            let scrollLeft = 0;
+            
+            if (tableContainer) {
+                scrollTop = tableContainer.scrollTop;
+                scrollLeft = tableContainer.scrollLeft;
+            }
+
+            // Check if we have existing table structure to avoid full re-render
+            const existingTable = document.querySelector('.table-editor');
+            if (existingTable && tableData && data && 
+                data.headers.length === tableData.headers.length && 
+                data.rows.length === tableData.rows.length) {
+                // Partial update - only update content without changing structure
+                updateTableContentOnly(data);
+            } else {
+                // Full render for structural changes
+                renderTable(data);
+            }
+            
+            // Restore scroll position
+            setTimeout(() => {
+                const newTableContainer = document.querySelector('.table-container');
+                if (newTableContainer) {
+                    newTableContainer.scrollTop = scrollTop;
+                    newTableContainer.scrollLeft = scrollLeft;
+                }
+            }, 0);
+        }
+
+        // Update only table content without changing structure
+        function updateTableContentOnly(data) {
+            tableData = data;
+            displayData = data;
+
+            // Update each cell content
+            data.rows.forEach((row, rowIndex) => {
+                row.forEach((cellContent, colIndex) => {
+                    const cell = document.querySelector(`td[data-row="${rowIndex}"][data-col="${colIndex}"]`);
+                    if (cell && !cell.classList.contains('editing')) {
+                        const contentDiv = cell.querySelector('.cell-content');
+                        if (contentDiv) {
+                            contentDiv.innerHTML = processCellContent(cellContent);
+                        }
+                        
+                        // Update empty cell class
+                        const isEmpty = !cellContent || cellContent.trim() === '';
+                        if (isEmpty) {
+                            cell.classList.add('empty-cell');
+                        } else {
+                            cell.classList.remove('empty-cell');
+                        }
+                    }
+                });
+            });
+
+            // Update headers if needed (though they rarely change)
+            data.headers.forEach((header, index) => {
+                const headerElement = document.querySelector(`th[data-col="${index}"] .header-text`);
+                if (headerElement) {
+                    headerElement.textContent = header;
+                }
+            });
+
+            // Update status bar
+            const statusInfo = document.querySelector('.status-info span');
+            if (statusInfo) {
+                statusInfo.textContent = `Rows: ${data.rows.length} | Columns: ${data.headers.length}`;
+            }
+        }
+
         // Show status message
         function showStatus(status, data) {
             const statusBar = document.querySelector('.status-bar');
@@ -1755,6 +1869,19 @@
 
         // Hide context menus on scroll
         document.addEventListener('scroll', hideContextMenus);
+
+        // ウィンドウリサイズ時の処理を追加
+        window.addEventListener('resize', function() {
+            // ユーザーがウィンドウサイズを変更した場合も、より小さな最小幅を許可
+            const tableContainer = document.querySelector('.table-container');
+            const tableEditor = document.querySelector('.table-editor');
+            if (tableContainer && !tableContainer.classList.contains('user-resized')) {
+                tableContainer.classList.add('user-resized');
+            }
+            if (tableEditor && !tableEditor.classList.contains('user-resized')) {
+                tableEditor.classList.add('user-resized');
+            }
+        });
 
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', initializeTableEditor);
