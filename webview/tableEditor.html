@@ -129,12 +129,15 @@
                 </div>
                 
                 <div class="status-bar">
-                    <div class="status-info">
-                        <span>Rows: ${data.rows.length} | Columns: ${data.headers.length}</span>
-                        <span id="sortStatusInfo" style="display: none;"></span>
-                    </div>
-                    <div class="status-messages" id="statusMessages">
+                    <div class="status-left">
                         <span class="save-indicator saved" id="saveIndicator">✓ Auto-saved</span>
+                    </div>
+                    <div class="status-center" id="statusMessages">
+                        <!-- Central status messages appear here -->
+                    </div>
+                    <div class="status-right">
+                        <span class="table-info">Rows: ${data.rows.length} | Columns: ${data.headers.length}</span>
+                        <span id="sortStatusInfo" style="display: none;"></span>
                     </div>
                 </div>
             `;
@@ -1910,26 +1913,24 @@
             }
         });
 
-        // Show error message in status bar
+        // Show error message in status bar center
         function showError(message) {
-            const statusBar = document.querySelector('.status-bar');
-            if (!statusBar) return;
+            const statusCenter = document.getElementById('statusMessages');
+            if (!statusCenter) return;
             
-            // Create or update error message element
-            let errorElement = statusBar.querySelector('.error-message');
-            if (!errorElement) {
-                errorElement = document.createElement('div');
-                errorElement.className = 'error-message';
-                statusBar.appendChild(errorElement);
-            }
+            // Clear any existing messages
+            statusCenter.innerHTML = '';
             
+            // Create error message element
+            const errorElement = document.createElement('div');
+            errorElement.className = 'status-message error-message';
             errorElement.textContent = message;
-            errorElement.style.display = 'block';
+            statusCenter.appendChild(errorElement);
             
             // Auto-hide after 5 seconds
             setTimeout(() => {
-                if (errorElement) {
-                    errorElement.style.display = 'none';
+                if (statusCenter.contains(errorElement)) {
+                    statusCenter.removeChild(errorElement);
                 }
             }, 5000);
         }
@@ -1952,7 +1953,7 @@
             }
         }
 
-        // Show success message in status bar (removed Cell update successfully message)
+        // Show success message in status bar center (removed Cell update successfully message)
         function showSuccess(message) {
             // Don't show "Cell update successfully" messages anymore
             if (message && (message.includes('Cell update successfully') || message.includes('Cell updated successfully'))) {
@@ -1961,24 +1962,22 @@
                 return;
             }
             
-            const statusBar = document.querySelector('.status-bar');
-            if (!statusBar) return;
+            const statusCenter = document.getElementById('statusMessages');
+            if (!statusCenter) return;
             
-            // Create or update save message element
-            let saveElement = statusBar.querySelector('.save-message');
-            if (!saveElement) {
-                saveElement = document.createElement('div');
-                saveElement.className = 'save-message';
-                statusBar.appendChild(saveElement);
-            }
+            // Clear any existing messages
+            statusCenter.innerHTML = '';
             
-            saveElement.textContent = message;
-            saveElement.style.display = 'block';
+            // Create success message element
+            const successElement = document.createElement('div');
+            successElement.className = 'status-message success-message';
+            successElement.textContent = message;
+            statusCenter.appendChild(successElement);
             
             // Auto-hide after 3 seconds
             setTimeout(() => {
-                if (saveElement) {
-                    saveElement.style.display = 'none';
+                if (statusCenter.contains(successElement)) {
+                    statusCenter.removeChild(successElement);
                 }
             }, 3000);
         }

@@ -523,34 +523,74 @@ textarea.cell-input[data-multiline="true"] {
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 8px 12px;
+    height: 32px; /* Fixed height to prevent layout shifts */
+    padding: 0 12px;
     background-color: var(--vscode-statusBar-background);
     color: var(--vscode-statusBar-foreground);
     font-size: 12px;
     border-top: 1px solid var(--vscode-panel-border);
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr; /* Left, Center (wider), Right */
     align-items: center;
     z-index: 100;
 }
 
-.error-message {
+.status-left {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.status-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 20px; /* Ensure consistent height even when empty */
+}
+
+.status-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.table-info {
+    color: var(--vscode-statusBar-foreground);
+    opacity: 0.8;
+}
+
+/* Central status messages */
+.status-message {
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    max-width: 300px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-message.error-message {
     background-color: var(--vscode-inputValidation-errorBackground);
     color: var(--vscode-inputValidation-errorForeground);
     border: 1px solid var(--vscode-inputValidation-errorBorder);
-    padding: 8px 12px;
-    border-radius: 4px;
-    margin: 8px 0;
-    display: none;
 }
 
-.save-message {
+.status-message.success-message {
     background-color: var(--vscode-notifications-background);
     color: var(--vscode-notifications-foreground);
     border: 1px solid var(--vscode-notifications-border);
-    padding: 8px 12px;
-    border-radius: 4px;
-    margin: 8px 0;
+}
+
+/* Legacy styles - kept for backward compatibility but hidden by default */
+.error-message:not(.status-message) {
+    display: none;
+}
+
+.save-message:not(.status-message) {
     display: none;
 }
 

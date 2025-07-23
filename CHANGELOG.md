@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.22] - 2025-01-27
+
+### Fixed
+- **CSV Export Error**: Fixed "Invalid message format received from webview" error by adding proper message validation for exportCSV command
+- **Status Bar Layout**: Redesigned status bar with fixed height to prevent layout shifts when messages appear/disappear
+- **Message Positioning**: Status messages now appear in the center of the status bar for better visibility and organization
+
+### Improved
+- **Status Bar Structure**: 
+  - Left: Auto-saved/Saving indicator in fixed position
+  - Center: Error and success messages with proper styling
+  - Right: Table information (rows/columns count)
+- **Layout Stability**: Status bar maintains consistent 32px height regardless of message content
+- **Visual Hierarchy**: Clear separation of permanent status indicators and temporary messages
+- **Message Styling**: Improved styling for status messages with proper theming and text overflow handling
+
+### Technical Improvements
+- Added `validateExportCSVData()` method to properly validate CSV export messages
+- Updated `validCommands` array to include 'exportCSV' command
+- Implemented grid-based status bar layout with three distinct sections
+- Enhanced CSS with fixed height and proper alignment for all status elements
+- Improved message lifecycle management with proper DOM manipulation
+
+### User Experience
+- **Consistent Layout**: Status bar no longer shifts when messages appear
+- **Clear Information Hierarchy**: Permanent indicators stay in fixed positions
+- **Better Message Visibility**: Central positioning makes status messages more noticeable
+- **Professional Appearance**: Clean, organized status bar matching VSCode's design language
+
 ## [0.1.21] - 2025-01-27
 
 ### Enhanced

@@ -234,7 +234,7 @@ export class WebviewManager {
 
         const validCommands = [
             'requestTableData', 'updateCell', 'addRow', 'deleteRow', 
-            'addColumn', 'deleteColumn', 'sort', 'moveRow', 'moveColumn', 'pong'
+            'addColumn', 'deleteColumn', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'pong'
         ];
 
         if (!validCommands.includes(message.command)) {
@@ -267,6 +267,9 @@ export class WebviewManager {
             case 'moveRow':
             case 'moveColumn':
                 return this.validateMoveData(message.data);
+
+            case 'exportCSV':
+                return this.validateExportCSVData(message.data);
 
             case 'pong':
                 return true; // Pong messages don't require data validation
@@ -312,6 +315,12 @@ export class WebviewManager {
         return data && 
                typeof data.from === 'number' && data.from >= 0 &&
                typeof data.to === 'number' && data.to >= 0;
+    }
+
+    private validateExportCSVData(data: any): boolean {
+        return data && 
+               typeof data.csvContent === 'string' &&
+               typeof data.filename === 'string' && data.filename.length > 0;
     }
 
     /**
