@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.21] - 2025-01-27
+
+### Enhanced
+- **Excel-like Copy/Paste Operations**: Added Ctrl+C/Ctrl+V for copying and pasting cell content in non-editing mode
+- **Cut and Paste Functionality**: Added Ctrl+X/Ctrl+V for cutting and pasting cell content
+- **Multi-cell Selection Support**: Copy/paste operations work with multiple selected cells using tab-delimited format
+- **CSV Export Feature**: Export table data to CSV format with proper escaping for commas, quotes, and newlines
+
+### Improved
+- **Clipboard Integration**: Modern clipboard API with fallback support for older browsers
+- **Data Format Handling**: Automatic conversion between Markdown <br/> tags and newlines for clipboard operations
+- **File Export Dialog**: Native file save dialog with CSV filter for easy file management
+- **Error Handling**: Comprehensive error handling for clipboard and export operations
+
+### Technical Improvements
+- Added `copySelectedCells()`, `pasteToSelectedCells()`, and `cutSelectedCells()` functions
+- Implemented `generateCSVContent()` with proper CSV field escaping
+- Enhanced keyboard event handling for Ctrl+C, Ctrl+V, and Ctrl+X in non-editing mode
+- Added `exportCSV` command with VSCode file system integration
+- Modern clipboard API with graceful degradation to legacy methods
+
+### User Experience
+- **Familiar Shortcuts**: Standard Ctrl+C/V/X shortcuts work as expected outside of edit mode
+- **Multi-format Support**: Seamless data exchange between Table Editor and external applications
+- **Export Convenience**: One-click CSV export with timestamp-based default filenames
+- **Visual Feedback**: Clear success/error messages for all clipboard and export operations
+
+### Documentation Updates
+- Updated requirements.md with new Excel-like operation requirements
+- Enhanced README.md with comprehensive feature descriptions and keyboard shortcuts
+- Added detailed release notes covering all new functionality
+
 ## [0.1.20] - 2025-01-27
 
 ### Fixed

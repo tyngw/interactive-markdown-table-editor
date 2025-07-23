@@ -4,17 +4,21 @@
 
 VSCode拡張機能「Markdown Table Editor」は、Markdownファイル内のテーブルをSpreadsheetライクなUIで編集できる機能を提供します。この拡張機能は、VSCodeのWebview APIを使用してカスタムエディタを実装し、Markdownファイルの解析・更新を行います。
 
-## Key Features (v0.1.10)
+## Key Features (v0.1.21)
 
-- **Spreadsheet-like Interface**: Excel風のグリッドエディタでテーブル編集
-- **Enhanced Cell Editing**: セルサイズに適応する自然なテキスト編集体験、multi-line対応
-- **HTML Break Tag Support**: `<br/>`タグの自動検出と改行コードへの変換、編集・表示の両対応
-- **Adaptive Input Fields**: セルの内容に応じて単行・複数行を自動選択、動的リサイズ
-- **Precise Row/Column Operations**: ヘッダードラッグで移動、リサイズハンドルで幅変更の分離
-- **View-Only Sorting**: デフォルトでファイル変更せず、表示のみをソート（明示的保存も可能）
-- **Multi-Table Support**: 複数テーブル文書での正確なテーブル選択・更新
-- **Mixed Content Compatibility**: コードブロック、リスト等と共存する堅牢性
-- **Enhanced UI/UX**: 下部ステータスバー、簡素化されたツールバー、直感的な操作
+- **Excel-like Interface**: Excel風のグリッドエディタでテーブル編集
+- **Advanced Copy/Paste Operations**: Ctrl+C/V/X for clipboard operations with multi-cell support
+- **Smart Navigation**: Ctrl+Arrow keys for intelligent data boundary navigation
+- **IME Support**: Full Japanese and multi-language input method compatibility
+- **Column Width Management**: Auto-fit functionality with double-click resize handles
+- **CSV Export**: One-click export to CSV format with proper field escaping
+- **Data Synchronization**: Real-time sync between VSCode editor and Table Editor
+- **Enhanced Cell Editing**: Adaptive text input with automatic single-line/multi-line detection
+- **HTML Break Tag Support**: Automatic conversion of `<br/>` tags to line breaks
+- **View-Only Sorting**: Safe sorting with explicit save option
+- **Multi-Table Support**: Robust handling of multiple tables in single document
+- **Mixed Content Compatibility**: Safe editing in documents with code blocks, lists, etc.
+- **Enhanced UI/UX**: Clean interface with seamless save status transitions
 
 ## Architecture
 
@@ -263,6 +267,25 @@ interface EnhancedCellEditor {
   processCellContent(content: string): string;
   processCellContentForEditing(content: string): string;
   processCellContentForStorage(content: string): string;
+  // Excel-like operations (v0.1.21)
+  copySelectedCells(): void;
+  pasteToSelectedCells(): void;
+  cutSelectedCells(): void;
+  processPasteData(clipboardText: string): void;
+}
+
+interface ClipboardManager {
+  copyToClipboard(text: string): Promise<void>;
+  readFromClipboard(): Promise<string>;
+  fallbackCopyToClipboard(text: string): void;
+  formatCellsForClipboard(cells: Array<{row: number, col: number, value: string}>): string;
+}
+
+interface CSVExporter {
+  exportToCSV(): void;
+  generateCSVContent(data: TableData): string;
+  escapeCSVField(field: string): string;
+  getDefaultCSVFilename(): string;
 }
 
 interface StatusBarManager {

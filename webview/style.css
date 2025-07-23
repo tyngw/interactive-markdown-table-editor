@@ -618,6 +618,32 @@ textarea.cell-input[data-multiline="true"] {
     border: 2px solid var(--vscode-focusBorder) !important;
 }
 
+/* Export Actions Panel */
+.export-actions {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+}
+
+.export-btn {
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none;
+    padding: 8px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.export-btn:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
 .drop-indicator {
     position: absolute;
     background-color: var(--vscode-focusBorder);

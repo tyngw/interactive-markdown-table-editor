@@ -4,12 +4,16 @@
 
 VSCode拡張機能として、Markdownファイル内のテーブルをプレビュー表示時に直接編集できる機能を提供します。この機能により、ユーザーはSpreadsheetライクなUIでテーブルの値を編集し、列や行の追加・削除、ソート、ドラッグ&ドロップによる並び替えを行うことができます。編集内容は元のMarkdownファイルに自動的に反映されます。
 
-## Enhanced Features (v0.1.7)
+## Enhanced Features (v0.1.20)
 
-- **Improved Cell Editing**: 入力フィールドクリック時の編集継続
-- **Separated Operations**: ヘッダードラッグで移動、リサイズハンドルで幅変更
-- **Multi-Table Support**: 複数テーブル文書の堅牢な処理
-- **Enhanced UI/UX**: 下部ステータスバー、改善されたフォーカス管理
+- **Data Synchronization**: VSCode editor and Table Editor are fully synchronized
+- **Smart Navigation**: Excel-like Ctrl+Arrow key navigation for efficient cell movement
+- **IME Support**: Full Japanese and multi-language input method support
+- **Auto-saved Status**: Seamless save status transitions (Saving... → Auto-saved)
+- **Column Width Management**: Intelligent column width control with auto-fit functionality
+- **Scroll Preservation**: Edit position maintained during operations
+- **Multi-Table Support**: Robust handling of multiple tables in single document
+- **Enhanced UI/UX**: Bottom status bar, improved focus management, Excel-like interactions
 
 ## Requirements
 
@@ -138,6 +142,30 @@ VSCode拡張機能として、Markdownファイル内のテーブルをプレビ
 2. WHEN テーブルエディタが表示される THEN システムは 不要なツールバーボタンを削除し、シンプルなUIを提供する SHALL
 3. WHEN ユーザーがセルを編集中である THEN 他のセルが選択された場合 編集モードを自動的に終了する SHALL
 4. WHEN ユーザーがセル編集中にテキストボックス内をクリックする THEN システムは 適切にカーソル位置を変更し、選択状態を解除する SHALL
+
+### Requirement 12: Excel-like Copy/Paste Operations
+
+**User Story:** VSCodeユーザーとして、Excelと同様のコピー・ペースト操作でセルデータを効率的に編集したい。これにより、馴染みのある操作でテーブルを素早く編集できる。
+
+#### Acceptance Criteria
+
+1. WHEN ユーザーが未編集時にCtrl+Cを押す THEN システムは 選択されたセルの内容をクリップボードにコピーする SHALL
+2. WHEN ユーザーが未編集時にCtrl+Vを押す THEN システムは クリップボードの内容を選択されたセルにペーストする SHALL
+3. WHEN ユーザーが未編集時にCtrl+Xを押す THEN システムは 選択されたセルの内容を切り取りクリップボードにコピーする SHALL
+4. WHEN ユーザーが複数セルを選択してコピーする THEN システムは 選択範囲全体をタブ区切りでクリップボードにコピーする SHALL
+5. WHEN ユーザーが複数セルデータをペーストする THEN システムは タブ区切りデータを適切な範囲にペーストする SHALL
+
+### Requirement 13: CSV Export Functionality
+
+**User Story:** VSCodeユーザーとして、テーブルデータをCSV形式でエクスポートして他のアプリケーションで利用したい。これにより、データの再利用性と互換性を向上できる。
+
+#### Acceptance Criteria
+
+1. WHEN ユーザーがCSVエクスポート機能を選択する THEN システムは 現在のテーブルデータをCSV形式で保存する SHALL
+2. WHEN CSVエクスポートが実行される THEN システムは ファイル保存ダイアログを表示する SHALL
+3. WHEN CSVファイルが保存される THEN システムは ヘッダー行を含む完全なテーブルデータを出力する SHALL
+4. WHEN セル内に改行やカンマがある THEN システムは 適切にエスケープ処理を行う SHALL
+5. WHEN エクスポートが完了する THEN システムは 成功メッセージと保存場所を表示する SHALL
 
 ## Implementation Requirements
 

@@ -521,6 +521,44 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    const exportCSVCommand = vscode.commands.registerCommand('markdownTableEditor.internal.exportCSV', async (data: any) => {
+        try {
+            console.log('Internal command: exportCSV', data);
+            const { uri, panelId, csvContent, filename } = data;
+            const panel = webviewManager.getPanel(uri);
+            
+            if (!panel) {
+                console.error('Panel not found for URI:', uri.toString());
+                return;
+            }
+
+            // Show save dialog
+            const saveUri = await vscode.window.showSaveDialog({
+                defaultUri: vscode.Uri.joinPath(vscode.Uri.file(vscode.workspace.rootPath || ''), filename),
+                filters: {
+                    'CSV Files': ['csv'],
+                    'All Files': ['*']
+                }
+            });
+
+            if (saveUri) {
+                // Write CSV content to file
+                await vscode.workspace.fs.writeFile(saveUri, Buffer.from(csvContent, 'utf8'));
+                
+                webviewManager.sendSuccess(panel, `CSV exported successfully to ${saveUri.fsPath}`);
+                console.log('CSV exported to:', saveUri.fsPath);
+            } else {
+                console.log('CSV export cancelled by user');
+            }
+        } catch (error) {
+            console.error('Error in exportCSV:', error);
+            const panel = webviewManager.getPanel(data.uri);
+            if (panel) {
+                webviewManager.sendError(panel, `Failed to export CSV: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+        }
+    });
+
     context.subscriptions.push(
         openEditorCommand,
         requestTableDataCommand,
@@ -531,7 +569,8 @@ export function activate(context: vscode.ExtensionContext) {
         deleteColumnCommand,
         sortCommand,
         moveRowCommand,
-        moveColumnCommand
+        moveColumnCommand,
+        exportCSVCommand
     );
     
     console.log('All commands registered successfully!');

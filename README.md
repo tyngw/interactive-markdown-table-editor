@@ -7,18 +7,30 @@ A VS Code extension that provides a spreadsheet-like interface for editing Markd
 - **Spreadsheet-like Interface**: Edit Markdown tables in a familiar grid view with sticky headers and row numbers
 - **Enhanced Cell Editing**: Adaptive text input with automatic single-line/multi-line detection and cell-size fitting
 - **HTML Break Tag Support**: Automatic conversion of `<br/>` tags to line breaks for natural editing experience
-- **Intuitive Navigation**: 
+- **Excel-like Navigation**: 
   - Use arrow keys to navigate between cells
-  - **Enter** to start editing a cell
-  - **Esc** to confirm changes and exit editing
+  - **Ctrl+Arrow keys** for smart navigation (jump to data boundaries)
+  - **Enter** to start editing a cell or move to next row
+  - **Shift+Enter** for line breaks during editing
   - **Tab** to move to next cell
-- **Standard Copy/Paste Support**: Full support for Ctrl+C, Ctrl+V, Ctrl+X, and other standard shortcuts during editing
-- **Always-Visible Headers**: Row numbers and column headers remain visible when scrolling for easy navigation
+- **Advanced Copy/Paste Operations**: 
+  - **Ctrl+C/Ctrl+V** for copying and pasting cell content (non-editing mode)
+  - **Ctrl+X/Ctrl+V** for cutting and pasting cell content (non-editing mode)
+  - Multi-cell selection support with tab-delimited data handling
+  - Standard editing shortcuts (Ctrl+C, Ctrl+V, Ctrl+X) during cell editing
+- **Column Width Management**: 
+  - Manual resizing with drag handles
+  - **Double-click** on resize handles for auto-fit to content
+  - Persistent column widths across sessions
+- **Data Synchronization**: Real-time sync between VSCode editor and Table Editor
+- **IME Support**: Full support for Japanese and other input methods
+- **Always-Visible Headers**: Row numbers and column headers remain visible when scrolling
 - **Table Manipulation**: Add/delete rows and columns with intuitive context menus
 - **Context Menu Operations**: Right-click on row/column headers for precise insertion and deletion
-- **Clean Interface**: Simplified toolbar with status messages at the bottom for focused editing
+- **Clean Interface**: Simplified toolbar with seamless save status transitions (Saving... → Auto-saved)
 - **View-Only Sorting**: Click column headers to sort table data without modifying the file (with option to save)
 - **Drag & Drop**: Reorder rows and columns by dragging
+- **CSV Export**: Export table data to CSV format for external use
 - **Auto-save**: Changes are automatically saved back to your Markdown file
 - **Multiple Tables Support**: Handle multiple tables in a single document with table selection
 - **Mixed Content Support**: Safely edit tables in documents with mixed content (code blocks, lists, etc.)
@@ -91,21 +103,30 @@ This extension now robustly handles documents containing multiple tables and mix
 
 ### Navigation (Non-editing mode)
 - **Arrow Keys**: Navigate between cells
+- **Ctrl+Arrow Keys**: Smart navigation (jump to data boundaries, Excel-like)
 - **Enter**: Start editing the selected cell
 - **Tab**: Move to next cell (or next row if at end)
 - **Shift+Tab**: Move to previous cell
+- **Ctrl+C / Cmd+C**: Copy selected cell(s) content to clipboard
+- **Ctrl+V / Cmd+V**: Paste clipboard content to selected cell(s)
+- **Ctrl+X / Cmd+X**: Cut selected cell(s) content to clipboard
+- **Delete/Backspace**: Clear selected cell(s) content
 
 ### Editing mode
-- **Enter**: Insert line break
+- **Enter**: Confirm edit and move to next row (same column)
+- **Shift+Enter**: Insert line break (continue editing)
 - **Ctrl+Enter / Cmd+Enter**: Confirm edit and exit editing mode
 - **Escape**: Confirm changes and exit editing mode
 - **Tab**: Confirm edit and move to next cell
-- **Ctrl+C / Cmd+C**: Copy selected text
-- **Ctrl+V / Cmd+V**: Paste text
-- **Ctrl+X / Cmd+X**: Cut selected text
-- **Ctrl+A / Cmd+A**: Select all text
-- **Ctrl+Z / Cmd+Z**: Undo
-- **Ctrl+Y / Cmd+Y**: Redo
+- **Ctrl+C / Cmd+C**: Copy selected text within cell
+- **Ctrl+V / Cmd+V**: Paste text within cell
+- **Ctrl+X / Cmd+X**: Cut selected text within cell
+- **Ctrl+A / Cmd+A**: Select all text within cell
+- **Ctrl+Z / Cmd+Z**: Undo within cell
+- **Ctrl+Y / Cmd+Y**: Redo within cell
+
+### Column Operations
+- **Double-click** on column resize handle: Auto-fit column width to content
 
 ## Requirements
 
@@ -123,6 +144,42 @@ This extension contributes the following settings:
 - Complex table formatting may be simplified during editing
 
 ## Release Notes
+
+### 0.1.20
+
+**Data Synchronization & Excel-like Enhancements**
+
+- **Real-time Data Sync**: Table Editor now automatically refreshes when switching tabs, ensuring VSCode editor changes are always reflected
+- **Smart Navigation**: Excel-like Ctrl+Arrow key navigation for efficient movement through data regions
+- **Japanese IME Support**: Full support for Japanese input with proper Enter key handling during text conversion
+- **Enhanced Save Status**: Seamless status transitions (Saving... → Auto-saved) without layout shifts
+- **Column Width Intelligence**: Auto-fit functionality with double-click on resize handles
+- **Scroll Position Preservation**: Edit position maintained during cell operations
+
+### 0.1.19
+
+**Smart Navigation & Save Status Improvements**
+
+- **Excel-like Navigation**: Ctrl+Arrow keys for intelligent data boundary detection and movement
+- **Improved Save Feedback**: Clean status indicator transitions without disruptive success messages
+- **Enhanced User Experience**: More intuitive navigation patterns matching spreadsheet applications
+
+### 0.1.18
+
+**Japanese Input Method Support**
+
+- **IME Compatibility**: Full support for Japanese and other input method editors
+- **Smart Enter Key**: Distinguishes between IME text confirmation and edit completion
+- **Multi-language Support**: Enhanced keyboard handling for international users
+
+### 0.1.17
+
+**Keyboard Interaction Enhancements**
+
+- **Excel-like Enter Behavior**: Enter key confirms edit and moves to next row
+- **Shift+Enter for Line Breaks**: More intuitive text input with proper line break handling
+- **Tab Navigation Improvements**: Clean selection state management during cell transitions
+- **Auto-fit Column Width**: Double-click resize handles to automatically fit content
 
 ### 0.1.13
 
