@@ -760,9 +760,22 @@
             
             switch (direction) {
                 case 'up':
-                    if (hasContent(currentRow, currentCol)) {
-                        // Current cell has content - move to the edge of the data region
-                        for (let row = currentRow - 1; row >= 0; row--) {
+                    // Check if next cell (one step up) is empty
+                    const nextRowUp = currentRow - 1;
+                    if (nextRowUp >= 0 && !hasContent(nextRowUp, currentCol)) {
+                        // Next cell is empty - move to the next cell with content
+                        for (let row = nextRowUp; row >= 0; row--) {
+                            if (hasContent(row, currentCol)) {
+                                targetRow = row;
+                                break;
+                            }
+                            if (row === 0) {
+                                targetRow = 0;
+                            }
+                        }
+                    } else if (nextRowUp >= 0) {
+                        // Next cell has content - move to the edge of the data region
+                        for (let row = nextRowUp; row >= 0; row--) {
                             if (!hasContent(row, currentCol)) {
                                 targetRow = row + 1;
                                 break;
@@ -772,23 +785,28 @@
                             }
                         }
                     } else {
-                        // Current cell is empty - move to the next cell with content
-                        for (let row = currentRow - 1; row >= 0; row--) {
-                            if (hasContent(row, currentCol)) {
-                                targetRow = row;
-                                break;
-                            }
-                            if (row === 0) {
-                                targetRow = 0;
-                            }
-                        }
+                        // Already at the top
+                        targetRow = 0;
                     }
                     break;
                     
                 case 'down':
-                    if (hasContent(currentRow, currentCol)) {
-                        // Current cell has content - move to the edge of the data region
-                        for (let row = currentRow + 1; row < totalRows; row++) {
+                    // Check if next cell (one step down) is empty
+                    const nextRowDown = currentRow + 1;
+                    if (nextRowDown < totalRows && !hasContent(nextRowDown, currentCol)) {
+                        // Next cell is empty - move to the next cell with content
+                        for (let row = nextRowDown; row < totalRows; row++) {
+                            if (hasContent(row, currentCol)) {
+                                targetRow = row;
+                                break;
+                            }
+                            if (row === totalRows - 1) {
+                                targetRow = totalRows - 1;
+                            }
+                        }
+                    } else if (nextRowDown < totalRows) {
+                        // Next cell has content - move to the edge of the data region
+                        for (let row = nextRowDown; row < totalRows; row++) {
                             if (!hasContent(row, currentCol)) {
                                 targetRow = row - 1;
                                 break;
@@ -798,23 +816,28 @@
                             }
                         }
                     } else {
-                        // Current cell is empty - move to the next cell with content
-                        for (let row = currentRow + 1; row < totalRows; row++) {
-                            if (hasContent(row, currentCol)) {
-                                targetRow = row;
-                                break;
-                            }
-                            if (row === totalRows - 1) {
-                                targetRow = totalRows - 1;
-                            }
-                        }
+                        // Already at the bottom
+                        targetRow = totalRows - 1;
                     }
                     break;
                     
                 case 'left':
-                    if (hasContent(currentRow, currentCol)) {
-                        // Current cell has content - move to the edge of the data region
-                        for (let col = currentCol - 1; col >= 0; col--) {
+                    // Check if next cell (one step left) is empty
+                    const nextColLeft = currentCol - 1;
+                    if (nextColLeft >= 0 && !hasContent(currentRow, nextColLeft)) {
+                        // Next cell is empty - move to the next cell with content
+                        for (let col = nextColLeft; col >= 0; col--) {
+                            if (hasContent(currentRow, col)) {
+                                targetCol = col;
+                                break;
+                            }
+                            if (col === 0) {
+                                targetCol = 0;
+                            }
+                        }
+                    } else if (nextColLeft >= 0) {
+                        // Next cell has content - move to the edge of the data region
+                        for (let col = nextColLeft; col >= 0; col--) {
                             if (!hasContent(currentRow, col)) {
                                 targetCol = col + 1;
                                 break;
@@ -824,23 +847,28 @@
                             }
                         }
                     } else {
-                        // Current cell is empty - move to the next cell with content
-                        for (let col = currentCol - 1; col >= 0; col--) {
-                            if (hasContent(currentRow, col)) {
-                                targetCol = col;
-                                break;
-                            }
-                            if (col === 0) {
-                                targetCol = 0;
-                            }
-                        }
+                        // Already at the leftmost
+                        targetCol = 0;
                     }
                     break;
                     
                 case 'right':
-                    if (hasContent(currentRow, currentCol)) {
-                        // Current cell has content - move to the edge of the data region
-                        for (let col = currentCol + 1; col < totalCols; col++) {
+                    // Check if next cell (one step right) is empty
+                    const nextColRight = currentCol + 1;
+                    if (nextColRight < totalCols && !hasContent(currentRow, nextColRight)) {
+                        // Next cell is empty - move to the next cell with content
+                        for (let col = nextColRight; col < totalCols; col++) {
+                            if (hasContent(currentRow, col)) {
+                                targetCol = col;
+                                break;
+                            }
+                            if (col === totalCols - 1) {
+                                targetCol = totalCols - 1;
+                            }
+                        }
+                    } else if (nextColRight < totalCols) {
+                        // Next cell has content - move to the edge of the data region
+                        for (let col = nextColRight; col < totalCols; col++) {
                             if (!hasContent(currentRow, col)) {
                                 targetCol = col - 1;
                                 break;
@@ -850,16 +878,8 @@
                             }
                         }
                     } else {
-                        // Current cell is empty - move to the next cell with content
-                        for (let col = currentCol + 1; col < totalCols; col++) {
-                            if (hasContent(currentRow, col)) {
-                                targetCol = col;
-                                break;
-                            }
-                            if (col === totalCols - 1) {
-                                targetCol = totalCols - 1;
-                            }
-                        }
+                        // Already at the rightmost
+                        targetCol = totalCols - 1;
                     }
                     break;
             }
