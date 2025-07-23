@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.19] - 2025-01-27
+
+### Enhanced
+- **Save Status Improvement**: Fixed Auto-saved label positioning and replaced success messages with status transitions
+- **Smart Navigation**: Added Excel-like Ctrl+Arrow key navigation for intelligent cell movement
+- **Status Display**: Saving... → Auto-saved status transitions without layout shifts
+- **Cell Navigation**: Ctrl+Arrow keys now move to data boundaries like Excel
+
+### Improved
+- **Save Indicator**: Replaced "Cell update successfully" messages with seamless status label updates
+- **Navigation Logic**: Smart movement based on cell content - jumps to data edges or next data regions
+- **User Experience**: More intuitive navigation patterns matching spreadsheet applications
+- **Visual Feedback**: Consistent save status display without position changes
+
+### Technical Improvements
+- Added `showSavingStatus()` and `showAutoSavedStatus()` functions for seamless status updates
+- Implemented `navigateCellSmart()` with Excel-compatible navigation logic
+- Enhanced `showSuccess()` to filter out cell update messages and show auto-saved status instead
+- Added `hasContent()` helper for intelligent data boundary detection
+- Ctrl+Arrow key handlers now call smart navigation functions with direction parameters
+
+### Navigation Features
+- **Ctrl+Up/Down**: Move to data region boundaries or jump to next data cell
+- **Ctrl+Left/Right**: Navigate horizontally through data regions intelligently
+- **Data-aware**: Distinguishes between cells with content and empty cells
+- **Boundary Detection**: Stops at appropriate data boundaries like Excel
+
+### Testing
+- Added test-smart-navigation.md with comprehensive test scenarios
+- Enhanced test coverage for both save status and navigation features
+
 ## [0.1.18] - 2025-01-27
 
 ### Fixed

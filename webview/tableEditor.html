@@ -617,19 +617,39 @@
             switch (event.key) {
                 case 'ArrowUp':
                     event.preventDefault();
-                    navigateCell(selectionStart.row - 1, selectionStart.col);
+                    if (event.ctrlKey || event.metaKey) {
+                        // Ctrl+Up: Smart navigation up
+                        navigateCellSmart(selectionStart.row, selectionStart.col, 'up');
+                    } else {
+                        navigateCell(selectionStart.row - 1, selectionStart.col);
+                    }
                     break;
                 case 'ArrowDown':
                     event.preventDefault();
-                    navigateCell(selectionStart.row + 1, selectionStart.col);
+                    if (event.ctrlKey || event.metaKey) {
+                        // Ctrl+Down: Smart navigation down
+                        navigateCellSmart(selectionStart.row, selectionStart.col, 'down');
+                    } else {
+                        navigateCell(selectionStart.row + 1, selectionStart.col);
+                    }
                     break;
                 case 'ArrowLeft':
                     event.preventDefault();
-                    navigateCell(selectionStart.row, selectionStart.col - 1);
+                    if (event.ctrlKey || event.metaKey) {
+                        // Ctrl+Left: Smart navigation left
+                        navigateCellSmart(selectionStart.row, selectionStart.col, 'left');
+                    } else {
+                        navigateCell(selectionStart.row, selectionStart.col - 1);
+                    }
                     break;
                 case 'ArrowRight':
                     event.preventDefault();
-                    navigateCell(selectionStart.row, selectionStart.col + 1);
+                    if (event.ctrlKey || event.metaKey) {
+                        // Ctrl+Right: Smart navigation right
+                        navigateCellSmart(selectionStart.row, selectionStart.col, 'right');
+                    } else {
+                        navigateCell(selectionStart.row, selectionStart.col + 1);
+                    }
                     break;
                 case 'Tab':
                     event.preventDefault();
@@ -718,6 +738,134 @@
             
             selectCell(row, col);
             scrollToCell(row, col);
+        }
+
+        // Smart navigation (Excel-like Ctrl+Arrow behavior)
+        function navigateCellSmart(currentRow, currentCol, direction) {
+            const currentData = displayData || tableData;
+            const totalRows = currentData.rows.length;
+            const totalCols = currentData.headers.length;
+            
+            // Helper function to check if a cell has content
+            function hasContent(row, col) {
+                if (row < 0 || row >= totalRows || col < 0 || col >= totalCols) {
+                    return false;
+                }
+                const cellValue = currentData.rows[row][col] || '';
+                return cellValue.trim() !== '';
+            }
+            
+            let targetRow = currentRow;
+            let targetCol = currentCol;
+            
+            switch (direction) {
+                case 'up':
+                    if (hasContent(currentRow, currentCol)) {
+                        // Current cell has content - move to the edge of the data region
+                        for (let row = currentRow - 1; row >= 0; row--) {
+                            if (!hasContent(row, currentCol)) {
+                                targetRow = row + 1;
+                                break;
+                            }
+                            if (row === 0) {
+                                targetRow = 0;
+                            }
+                        }
+                    } else {
+                        // Current cell is empty - move to the next cell with content
+                        for (let row = currentRow - 1; row >= 0; row--) {
+                            if (hasContent(row, currentCol)) {
+                                targetRow = row;
+                                break;
+                            }
+                            if (row === 0) {
+                                targetRow = 0;
+                            }
+                        }
+                    }
+                    break;
+                    
+                case 'down':
+                    if (hasContent(currentRow, currentCol)) {
+                        // Current cell has content - move to the edge of the data region
+                        for (let row = currentRow + 1; row < totalRows; row++) {
+                            if (!hasContent(row, currentCol)) {
+                                targetRow = row - 1;
+                                break;
+                            }
+                            if (row === totalRows - 1) {
+                                targetRow = totalRows - 1;
+                            }
+                        }
+                    } else {
+                        // Current cell is empty - move to the next cell with content
+                        for (let row = currentRow + 1; row < totalRows; row++) {
+                            if (hasContent(row, currentCol)) {
+                                targetRow = row;
+                                break;
+                            }
+                            if (row === totalRows - 1) {
+                                targetRow = totalRows - 1;
+                            }
+                        }
+                    }
+                    break;
+                    
+                case 'left':
+                    if (hasContent(currentRow, currentCol)) {
+                        // Current cell has content - move to the edge of the data region
+                        for (let col = currentCol - 1; col >= 0; col--) {
+                            if (!hasContent(currentRow, col)) {
+                                targetCol = col + 1;
+                                break;
+                            }
+                            if (col === 0) {
+                                targetCol = 0;
+                            }
+                        }
+                    } else {
+                        // Current cell is empty - move to the next cell with content
+                        for (let col = currentCol - 1; col >= 0; col--) {
+                            if (hasContent(currentRow, col)) {
+                                targetCol = col;
+                                break;
+                            }
+                            if (col === 0) {
+                                targetCol = 0;
+                            }
+                        }
+                    }
+                    break;
+                    
+                case 'right':
+                    if (hasContent(currentRow, currentCol)) {
+                        // Current cell has content - move to the edge of the data region
+                        for (let col = currentCol + 1; col < totalCols; col++) {
+                            if (!hasContent(currentRow, col)) {
+                                targetCol = col - 1;
+                                break;
+                            }
+                            if (col === totalCols - 1) {
+                                targetCol = totalCols - 1;
+                            }
+                        }
+                    } else {
+                        // Current cell is empty - move to the next cell with content
+                        for (let col = currentCol + 1; col < totalCols; col++) {
+                            if (hasContent(currentRow, col)) {
+                                targetCol = col;
+                                break;
+                            }
+                            if (col === totalCols - 1) {
+                                targetCol = totalCols - 1;
+                            }
+                        }
+                    }
+                    break;
+            }
+            
+            console.log(`Smart navigation ${direction}: (${currentRow},${currentCol}) -> (${targetRow},${targetCol})`);
+            navigateCell(targetRow, targetCol);
         }
 
         // Navigate to next/previous cell (for Tab navigation)
@@ -1069,6 +1217,9 @@
                 header.style.minWidth = currentWidth;
             }
 
+            // Show saving status
+            showSavingStatus();
+            
             // Send update to extension with storage format
             vscode.postMessage({
                 command: 'updateCell',
@@ -1464,8 +1615,33 @@
             }, 5000);
         }
 
-        // Show success message in status bar
+        // Show saving status (replaces save indicator)
+        function showSavingStatus() {
+            const saveIndicator = document.getElementById('saveIndicator');
+            if (saveIndicator) {
+                saveIndicator.textContent = '💾 Saving...';
+                saveIndicator.className = 'save-indicator saving';
+            }
+        }
+
+        // Show auto-saved status
+        function showAutoSavedStatus() {
+            const saveIndicator = document.getElementById('saveIndicator');
+            if (saveIndicator) {
+                saveIndicator.textContent = '✓ Auto-saved';
+                saveIndicator.className = 'save-indicator saved';
+            }
+        }
+
+        // Show success message in status bar (removed Cell update successfully message)
         function showSuccess(message) {
+            // Don't show "Cell update successfully" messages anymore
+            if (message && message.includes('Cell update successfully')) {
+                // Instead, show auto-saved status
+                showAutoSavedStatus();
+                return;
+            }
+            
             const statusBar = document.querySelector('.status-bar');
             if (!statusBar) return;
             
