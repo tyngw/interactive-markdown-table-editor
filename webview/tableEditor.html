@@ -169,7 +169,7 @@
                 const sortIndicatorClass = sortState.isViewOnly ? 'view-only' : 'committed';
                 const columnLetter = getColumnLetter(index);
                 const storedWidth = columnWidths[index] || 150;
-                const widthStyle = `style="width: ${storedWidth}px; min-width: ${storedWidth}px;"`;
+                const widthStyle = `style="width: ${storedWidth}px; min-width: ${storedWidth}px; max-width: ${storedWidth}px;"`;
                 const userResizedClass = columnWidths[index] && columnWidths[index] !== 150 ? 'user-resized' : '';
                 html += `<th onclick="handleColumnHeaderClick(${index}, event)" 
                            onmousedown="startColumnDrag(${index}, event)"
@@ -210,7 +210,7 @@
                     const isEmpty = !cell || cell.trim() === '';
                     const cellClass = isEmpty ? 'empty-cell' : '';
                     const storedWidth = columnWidths[colIndex] || 150;
-                    const widthStyle = `style="width: ${storedWidth}px; min-width: ${storedWidth}px;"`;
+                    const widthStyle = `style="width: ${storedWidth}px; min-width: ${storedWidth}px; max-width: ${storedWidth}px;"`;
                     const userResizedClass = columnWidths[colIndex] && columnWidths[colIndex] !== 150 ? 'user-resized' : '';
                     
                     html += `<td id="${cellId}"
@@ -471,6 +471,7 @@
             colCells.forEach(cell => {
                 cell.style.width = newWidth + 'px';
                 cell.style.minWidth = newWidth + 'px';
+                cell.style.maxWidth = newWidth + 'px';
             });
             
             // ユーザーがリサイズを行った場合、該当列により小さな最小幅を許可
@@ -1894,6 +1895,7 @@
                 colCells.forEach(cell => {
                     cell.style.width = width + 'px';
                     cell.style.minWidth = width + 'px';
+                    cell.style.maxWidth = width + 'px';
                 });
             });
         });

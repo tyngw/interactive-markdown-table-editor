@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.16] - 2025-01-27
+
+### Fixed
+- **Long URL Content Width Issue**: Fixed critical issue where long URLs and non-breaking strings would expand cell width beyond set limits
+- **Cell Width Enforcement**: Added max-width constraints to prevent content overflow from breaking column width settings
+- **Text Wrapping for Long Content**: Enhanced text wrapping with word-break:break-all to handle URLs and long strings properly
+- **Column Resize Functionality**: Fixed column resizing to work correctly even with long content present
+
+### Improved
+- **Content Overflow Handling**: Long URLs and non-breaking strings now wrap properly within cell boundaries
+- **Width Stability**: Cell widths remain stable regardless of content length or type
+- **User Experience**: Column resizing works consistently with all content types
+- **Layout Integrity**: Table layout maintains structure even with challenging content
+
+### Technical Improvements
+- Added max-width CSS property to both th and td elements to enforce width limits
+- Enhanced .cell-content with word-break:break-all and overflow:hidden for content containment
+- Updated JavaScript width setting to include max-width in all resize operations
+- Added comprehensive width constraints (width, min-width, max-width) throughout rendering pipeline
+
+### Testing
+- Added test-long-url.md with various long URL and string scenarios
+- Enhanced test coverage for edge cases with non-breaking content
+
 ## [0.1.15] - 2025-01-27
 
 ### Fixed

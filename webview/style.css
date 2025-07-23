@@ -50,6 +50,7 @@ body {
     /* デフォルトの列幅を固定値で設定 */
     width: 150px;
     min-width: 150px;
+    max-width: 150px;
     font-weight: 600;
     cursor: pointer;
     user-select: none;
@@ -60,6 +61,8 @@ body {
     opacity: 1;
     /* 完全に不透過な背景を保証 */
     background-clip: padding-box;
+    /* 長いヘッダーテキストでも幅を維持 */
+    overflow: hidden;
 }
 
 /* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
@@ -121,6 +124,7 @@ body {
     /* デフォルトの列幅を固定値で設定 */
     width: 150px;
     min-width: 150px;
+    max-width: 150px;
     cursor: cell;
     transition: background-color 0.15s ease;
     vertical-align: top;
@@ -129,6 +133,8 @@ body {
     /* 最小高さを設定（内容に応じて拡張可能） */
     min-height: 32px;
     height: auto;
+    /* 長いコンテンツでも幅を維持 */
+    overflow: hidden;
 }
 
 /* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
@@ -361,11 +367,18 @@ textarea.cell-input[data-multiline="true"] {
 
 .cell-content {
     min-height: 20px;
+    /* 長いURLなどでも幅を維持するための強制折り返し設定 */
     word-wrap: break-word;
+    word-break: break-all;
+    overflow-wrap: break-word;
     white-space: pre-wrap;
+    overflow: hidden;
     /* 高さの安定化 */
     line-height: 1.4;
     display: block;
+    /* セル幅を絶対に超えないように制限 */
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .empty-cell {
