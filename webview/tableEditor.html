@@ -810,6 +810,9 @@
             }
         }
 
+        // IME composition state tracking
+        let isComposing = false;
+
         // Start editing a cell
         function startCellEdit(row, col) {
             if (currentEditingCell) {
@@ -837,6 +840,9 @@
                 originalHeight: originalCellHeight,
                 originalWidth: originalCellWidth
             };
+
+            // Reset IME composition state
+            isComposing = false;
             
             cell.classList.add('editing');
             
@@ -899,7 +905,15 @@
                 }
             };
             
-            input.addEventListener('input', adjustHeight);
+            input.addEventListener('input', (e) => {
+                // 高さ調整を実行
+                adjustHeight();
+                
+                // IME入力中でない場合のみログ出力（デバッグ用）
+                if (!isComposing) {
+                    console.log('Input event (not during IME):', e.inputType);
+                }
+            });
             
             // Set initial height
             setTimeout(adjustHeight, 0);
@@ -945,6 +959,22 @@
                     }
                 }, 10);
             });
+
+            // IME composition event handlers
+            input.addEventListener('compositionstart', (e) => {
+                console.log('IME composition started');
+                isComposing = true;
+            });
+
+            input.addEventListener('compositionupdate', (e) => {
+                console.log('IME composition updating:', e.data);
+                isComposing = true;
+            });
+
+            input.addEventListener('compositionend', (e) => {
+                console.log('IME composition ended:', e.data);
+                isComposing = false;
+            });
             
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -956,8 +986,9 @@
                     e.stopPropagation();
                     // 改行後に高さを調整
                     setTimeout(adjustHeight, 0);
-                } else if (e.key === 'Enter') {
-                    // Enter で編集確定し、下の行に移動
+                } else if (e.key === 'Enter' && !isComposing) {
+                    // Enter で編集確定し、下の行に移動（IME入力中でない場合のみ）
+                    console.log('Enter pressed, isComposing:', isComposing);
                     e.preventDefault();
                     commitCellEdit();
                     // Clear selection of the current cell before moving
@@ -969,6 +1000,13 @@
                             selectCell(nextRow, col);
                         }, 10);
                     }
+                } else if (e.key === 'Enter' && isComposing) {
+                    // IME入力中のEnterは確定として処理し、編集は継続
+                    console.log('Enter pressed during IME composition - allowing IME to handle');
+                    // イベントをIMEに委ねる（preventDefault しない）
+                    e.stopPropagation();
+                    // 高さ調整は念のため実行
+                    setTimeout(adjustHeight, 0);
                 } else if (e.key === 'Escape') {
                     // Escで変更を反映（確定）
                     e.preventDefault();

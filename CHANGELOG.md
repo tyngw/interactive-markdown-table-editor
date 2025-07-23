@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.18] - 2025-01-27
+
+### Fixed
+- **Japanese IME Input Support**: Fixed critical issue where Japanese IME confirmation Enter would exit edit mode
+- **IME Composition Detection**: Added proper IME state tracking to distinguish between text confirmation and edit completion
+- **Enter Key Behavior**: Enter key during IME composition now only confirms text input without exiting edit mode
+- **Multi-language Input**: Enhanced support for all IME-based input methods (Japanese, Chinese, Korean, etc.)
+
+### Improved
+- **Input Method Compatibility**: Better handling of complex text input scenarios with proper event separation
+- **User Experience**: Japanese and other IME users can now input text naturally without unexpected edit mode exits
+- **Event Handling**: More sophisticated keyboard event processing with IME state awareness
+
+### Technical Improvements
+- Added `compositionstart`, `compositionupdate`, and `compositionend` event listeners for IME tracking
+- Implemented `isComposing` state variable to track IME input status
+- Enhanced Enter key handler to check IME state before triggering edit completion
+- Added comprehensive logging for IME state debugging
+- Improved input event handling with IME-aware processing
+
+### Testing
+- Added test-ime-input.md with comprehensive Japanese IME testing scenarios
+- Enhanced test coverage for multi-language input methods and edge cases
+
 ## [0.1.17] - 2025-01-27
 
 ### Enhanced
