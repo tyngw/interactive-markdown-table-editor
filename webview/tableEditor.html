@@ -155,10 +155,11 @@
                 const columnLetter = getColumnLetter(index);
                 const storedWidth = columnWidths[index];
                 const widthStyle = storedWidth ? `style="width: ${storedWidth}px; min-width: ${storedWidth}px;"` : '';
+                const userResizedClass = storedWidth ? 'user-resized' : '';
                 html += `<th onclick="handleColumnHeaderClick(${index}, event)" 
                            onmousedown="startColumnDrag(${index}, event)"
                            oncontextmenu="showColumnContextMenu(event, ${index})"
-                           class="column-header ${sortClass}" 
+                           class="column-header ${sortClass} ${userResizedClass}" 
                            data-col="${index}"
                            ${widthStyle}
                            title="Column ${columnLetter}: ${escapeHtml(header)}">
@@ -195,9 +196,10 @@
                     const cellClass = isEmpty ? 'empty-cell' : '';
                     const storedWidth = columnWidths[colIndex];
                     const widthStyle = storedWidth ? `style="width: ${storedWidth}px; min-width: ${storedWidth}px;"` : '';
+                    const userResizedClass = storedWidth ? 'user-resized' : '';
                     
                     html += `<td id="${cellId}"
-                               class="data-cell ${cellClass}" 
+                               class="data-cell ${cellClass} ${userResizedClass}" 
                                onclick="handleCellClick(${rowIndex}, ${colIndex}, event)" 
                                ondblclick="startCellEdit(${rowIndex}, ${colIndex})"
                                onmousedown="startCellSelect(${rowIndex}, ${colIndex})"
@@ -456,15 +458,12 @@
                 cell.style.minWidth = newWidth + 'px';
             });
             
-            // ユーザーがリサイズを行った場合、より小さな最小幅を許可
-            const tableContainer = document.querySelector('.table-container');
-            const tableEditor = document.querySelector('.table-editor');
-            if (tableContainer && !tableContainer.classList.contains('user-resized')) {
-                tableContainer.classList.add('user-resized');
-            }
-            if (tableEditor && !tableEditor.classList.contains('user-resized')) {
-                tableEditor.classList.add('user-resized');
-            }
+            // ユーザーがリサイズを行った場合、該当列により小さな最小幅を許可
+            colCells.forEach(cell => {
+                if (!cell.classList.contains('user-resized')) {
+                    cell.classList.add('user-resized');
+                }
+            });
         }
 
         function stopColumnResize() {
@@ -1872,15 +1871,17 @@
 
         // ウィンドウリサイズ時の処理を追加
         window.addEventListener('resize', function() {
-            // ユーザーがウィンドウサイズを変更した場合も、より小さな最小幅を許可
-            const tableContainer = document.querySelector('.table-container');
-            const tableEditor = document.querySelector('.table-editor');
-            if (tableContainer && !tableContainer.classList.contains('user-resized')) {
-                tableContainer.classList.add('user-resized');
-            }
-            if (tableEditor && !tableEditor.classList.contains('user-resized')) {
-                tableEditor.classList.add('user-resized');
-            }
+            // ウィンドウリサイズ時は、既存のセル幅を維持する（最小幅制限を緩和しない）
+            // 既にuser-resizedクラスが付いているセルのみ、現在の幅を維持
+            const resizedCells = document.querySelectorAll('th.user-resized, td.user-resized');
+            resizedCells.forEach(cell => {
+                // 既にリサイズされたセルは、現在の幅を維持
+                const currentWidth = cell.offsetWidth;
+                if (currentWidth > 0) {
+                    cell.style.width = currentWidth + 'px';
+                    cell.style.minWidth = currentWidth + 'px';
+                }
+            });
         });
 
         // Initialize when DOM is loaded

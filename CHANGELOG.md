@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Changelog
 
+## [0.1.14] - 2025-01-27
+
+### Changed
+- **Column-Based Width Control**: Modified default minimum width control from table-level to column-level for more granular control
+- **Enhanced Column Minimum Width**: Increased default column minimum width from 120px to 150px for better readability
+- **Improved Width Management**: Individual columns can now be resized below default minimum width after user interaction
+- **Window Resize Behavior**: VSCode window resizing now preserves existing cell widths instead of resetting them
+
+### Improved
+- **Better Default Layout**: Wider default column widths provide better initial viewing experience
+- **Flexible Resizing**: Users can resize columns to smaller widths (80px minimum) after initial interaction
+- **Width Persistence**: Column widths are maintained during window resize operations
+- **Per-Column Control**: Each column can have different minimum width constraints based on user interaction
+
+### Technical Improvements
+- Replaced table-level min-width with column-level min-width controls
+- Added `user-resized` class management for individual columns
+- Enhanced window resize event handling to preserve cell dimensions
+- Improved column width state management in rendering functions
+
 ## [0.1.13] - 2025-01-27
 
 ### Fixed

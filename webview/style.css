@@ -17,28 +17,15 @@ body {
     max-height: calc(100vh - 200px);
     position: relative;
     overflow: auto;
-    /* デフォルトの最小横幅を設定 - 初期表示時の最小幅 */
-    min-width: 800px;
 }
 
 .table-editor {
     border-collapse: separate;
     border-spacing: 0;
     width: 100%;
-    /* デフォルトの最小テーブル幅を設定 */
-    min-width: 800px;
     font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
     font-size: var(--vscode-editor-font-size, 14px);
     table-layout: fixed;
-}
-
-/* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
-.table-container.user-resized {
-    min-width: 400px;
-}
-
-.table-editor.user-resized {
-    min-width: 400px;
 }
 
 /* テーブルヘッダー - 完全に不透過で固定 */
@@ -58,7 +45,8 @@ body {
     text-align: left;
     position: sticky;
     top: 0;
-    min-width: 120px;
+    /* デフォルトの列最小幅を設定 - 初期表示時の最小幅 */
+    min-width: 150px;
     font-weight: 600;
     cursor: pointer;
     user-select: none;
@@ -69,6 +57,11 @@ body {
     opacity: 1;
     /* 完全に不透過な背景を保証 */
     background-clip: padding-box;
+}
+
+/* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
+.table-editor th.user-resized {
+    min-width: 80px;
 }
 
 .table-editor th:hover {
@@ -122,7 +115,8 @@ body {
     padding: 8px 12px;
     text-align: left;
     position: relative;
-    min-width: 120px;
+    /* デフォルトの列最小幅を設定 - 初期表示時の最小幅 */
+    min-width: 150px;
     cursor: cell;
     transition: background-color 0.15s ease;
     vertical-align: top;
@@ -131,6 +125,11 @@ body {
     /* 最小高さを設定（内容に応じて拡張可能） */
     min-height: 32px;
     height: auto;
+}
+
+/* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
+.table-editor td.user-resized {
+    min-width: 80px;
 }
 
 .table-editor td:hover {
