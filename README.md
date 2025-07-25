@@ -2,6 +2,18 @@
 
 A VS Code extension that provides a spreadsheet-like interface for editing Markdown tables.
 
+## 🚀 Quick Development Setup
+
+**Developing this extension?** Skip the `vsce package` cycle for HTML/CSS/JS changes:
+
+```bash
+npm run dev
+# Open http://localhost:3000/dev/ in your browser
+# Edit webview files and refresh to see changes instantly!
+```
+
+> 💡 Use `npm run dev:watch` for file change monitoring
+
 ## Features
 
 - **Spreadsheet-like Interface**: Edit Markdown tables in a familiar grid view with sticky headers and row numbers
@@ -230,6 +242,54 @@ Initial release of Markdown Table Editor
 - Row/column manipulation
 - Sorting and drag & drop
 - Auto-save and backup
+
+## Development Mode
+
+For developers working on this extension, a development mode is available that allows you to test HTML, CSS, and JavaScript changes without rebuilding the VSCode extension each time.
+
+### Quick Start
+
+1. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+
+2. **Open your browser to:**
+   ```
+   http://localhost:3000/dev/
+   ```
+
+3. **Edit files and refresh:** Make changes to files in the `webview/` folder and simply refresh your browser to see the changes immediately.
+
+### Features
+
+- **🔄 Live Development**: Edit HTML, CSS, and JS files without rebuilding the extension
+- **🎯 Sample Data**: Pre-loaded test tables for quick testing
+- **🐛 Debug Tools**: Built-in debugging utilities and state inspection
+- **🎨 VSCode Theming**: Accurate VSCode theme simulation for consistent development
+- **📱 Mock API**: Complete VSCode API simulation for testing table operations
+
+### Development Workflow
+
+1. Start the development server with `npm run dev`
+2. Open `http://localhost:3000/dev/` in your browser
+3. Use the development controls:
+   - **Sample Data Dropdown**: Choose from Simple, Complex, or Empty table templates
+   - **Load Sample**: Load the selected sample data
+   - **Clear**: Clear the current table
+   - **Debug State**: Log the current TableEditor state to console
+4. Edit files in the `webview/` folder (CSS, JS, HTML)
+5. Refresh the browser to see changes immediately
+6. No need to run `vsce package` during development!
+
+### Debugging
+
+- Open browser developer tools to see console logs
+- Use the "Debug State" button to inspect the table editor state
+- All table operations (add/delete rows/columns, sorting, etc.) are logged to console
+- Test CSV export functionality directly in the browser
+
+This development mode significantly speeds up the development cycle for UI and functionality changes.
 
 ## Contributing
 

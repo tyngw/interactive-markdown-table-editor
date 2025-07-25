@@ -49,7 +49,7 @@
     "test:integration": "npm run compile && node ./out/test/runIntegrationTests.js",
     "test:all": "npm run test && npm run test:integration",
     "dev": "node dev/start-dev-server.js",
-    "dev:watch": "npm run dev"
+    "dev:watch": "node dev/start-dev-server.js --watch"
   },
   "devDependencies": {
     "@types/vscode": "^1.74.0",
