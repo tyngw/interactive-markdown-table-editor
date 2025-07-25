@@ -24,11 +24,6 @@ const ColumnResizeManager = {
         
         console.log('ColumnResizeManager: Initializing column resize manager module...');
         
-        // Register with the main TableEditor
-        if (window.TableEditor) {
-            window.TableEditor.registerModule('ColumnResizeManager', this);
-        }
-        
         // Set up window resize handler to maintain column widths
         this.setupWindowResizeHandler();
         
