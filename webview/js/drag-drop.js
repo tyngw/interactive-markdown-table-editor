@@ -317,18 +317,29 @@ const DragDropManager = {
     },
     
     /**
-     * Handle mouse up for drag selection
+     * Handle mouse up for drag selection and cleanup
      */
     handleMouseUp: function(event) {
         const state = window.TableEditor.state;
-        if (!state.dragSelection) return;
         
-        // Finalize selection
-        if (state.dragSelection.isSelecting) {
-            this.finalizeDragSelection();
+        // Handle drag selection cleanup
+        if (state.dragSelection) {
+            // Finalize selection
+            if (state.dragSelection.isSelecting) {
+                this.finalizeDragSelection();
+            }
+            state.dragSelection = null;
         }
         
-        state.dragSelection = null;
+        // Always clear drag visuals on mouse up to prevent stuck styles
+        if (this.dragState.isDragging || state.dragOperation) {
+            console.log('DragDropManager: Mouse up - clearing drag styles');
+            this.clearDragVisuals();
+            
+            // Clear drag state
+            this.dragState.isDragging = false;
+            state.dragOperation = null;
+        }
     },
     
     /**
@@ -437,18 +448,38 @@ const DragDropManager = {
         const mouseX = event.clientX;
         const mouseY = event.clientY;
         
-        // Add some tolerance for edge detection (10px)
-        const tolerance = 10;
+        // Add some tolerance for edge detection (50px for better usability)
+        const tolerance = 50;
         
         if (dragType === 'column') {
             // Check if mouse is near the right edge of the last column
-            const lastColumn = table.querySelector('th[data-col]:last-of-type');
+            const allColumnHeaders = table.querySelectorAll('th[data-col]');
+            let lastColumn = null;
+            let maxColIndex = -1;
+            
+            // Find the column with the highest data-col index
+            allColumnHeaders.forEach(header => {
+                const colIndex = parseInt(header.getAttribute('data-col') || '-1');
+                if (colIndex > maxColIndex) {
+                    maxColIndex = colIndex;
+                    lastColumn = header;
+                }
+            });
+            
             if (lastColumn) {
                 const lastColRect = lastColumn.getBoundingClientRect();
                 const isNearRightEdge = mouseX >= lastColRect.right && 
                                       mouseX <= lastColRect.right + tolerance &&
                                       mouseY >= tableRect.top && 
                                       mouseY <= tableRect.bottom;
+                
+                console.log('DragDropManager: Column edge detection', {
+                    mouseX, mouseY,
+                    lastColRight: lastColRect.right,
+                    tolerance,
+                    rightEdgeRange: [lastColRect.right, lastColRect.right + tolerance],
+                    isNearRightEdge
+                });
                 
                 if (isNearRightEdge) {
                     const lastColIndex = parseInt(lastColumn.getAttribute('data-col') || '-1');
@@ -462,7 +493,18 @@ const DragDropManager = {
             }
         } else if (dragType === 'row') {
             // Check if mouse is near the bottom edge of the last row
-            const lastRow = table.querySelector('tr[data-row]:last-of-type, tr:has(td[data-row]):last-of-type');
+            const allDataRows = table.querySelectorAll('tr');
+            let lastRow = null;
+            
+            // Find the last row that contains data cells
+            for (let i = allDataRows.length - 1; i >= 0; i--) {
+                const row = allDataRows[i];
+                if (row.querySelector('td[data-row]')) {
+                    lastRow = row;
+                    break;
+                }
+            }
+            
             if (lastRow) {
                 const lastRowRect = lastRow.getBoundingClientRect();
                 const isNearBottomEdge = mouseY >= lastRowRect.bottom && 
