@@ -209,9 +209,11 @@ const TableRenderer = {
                      <div class="column-letter">${columnLetter}</div>
                      <div class="column-title">${this.escapeHtml(header)}</div>
                      <div class="sort-indicator">${sortIcon}</div>
+                     <!-- Resize handle with double-click auto-fit functionality -->
                      <div class="resize-handle" 
                           onmousedown="TableEditor.callModule('ColumnResizeManager', 'startColumnResize', event, ${index}); event.stopPropagation();"
-                          ondblclick="event.stopPropagation(); event.preventDefault(); TableEditor.callModule('ColumnResizeManager', 'autoFitColumn', ${index});"></div>
+                          ondblclick="event.stopPropagation(); event.preventDefault(); TableEditor.callModule('ColumnResizeManager', 'autoFitColumn', ${index});"
+                          title="Drag to resize column, double-click to auto-fit"></div>
                   </th>`;
         });
         html += '</tr></thead>';

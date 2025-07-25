@@ -2,10 +2,17 @@
  * Column Resize Manager Module for Markdown Table Editor
  * 
  * This module handles all column resizing operations, including:
- * - Manual column resizing
- * - Auto-fit functionality
- * - Column width persistence
- * - Visual feedback during resize
+ * - Manual column resizing via mouse drag
+ * - Auto-fit functionality triggered by double-clicking resize handles
+ * - Column width persistence across table updates
+ * - Visual feedback during resize operations
+ * 
+ * Auto-fit Feature:
+ * - Double-click on any column's resize handle to auto-fit that column
+ * - Calculates optimal width based on content in all cells of the column
+ * - Handles multi-line content by measuring the longest line
+ * - Enforces minimum width (80px) and maximum width (400px) constraints
+ * - Provides visual feedback with user-resized styling
  */
 
 const ColumnResizeManager = {
@@ -146,12 +153,27 @@ const ColumnResizeManager = {
                 cellText = cell.textContent || '';
             }
             
-            // Set the text and measure width
-            measureElement.textContent = cellText;
-            const textWidth = measureElement.offsetWidth;
+            // Handle multi-line content by measuring the longest line
+            let maxLineWidth = 0;
+            if (cellText.includes('\n') || cellText.includes('<br')) {
+                // Split by various line break formats
+                const lines = cellText.split(/\n|<br\s*\/?>|<BR\s*\/?>/gi);
+                lines.forEach(line => {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine) {
+                        measureElement.textContent = trimmedLine;
+                        const lineWidth = measureElement.offsetWidth;
+                        maxLineWidth = Math.max(maxLineWidth, lineWidth);
+                    }
+                });
+            } else {
+                // Single line content
+                measureElement.textContent = cellText;
+                maxLineWidth = measureElement.offsetWidth;
+            }
             
             // Add padding and margin
-            const cellWidth = textWidth + 24; // 12px padding on each side
+            const cellWidth = maxLineWidth + 24; // 12px padding on each side
             maxWidth = Math.max(maxWidth, cellWidth);
         });
         
