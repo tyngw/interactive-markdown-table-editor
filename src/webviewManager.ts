@@ -288,7 +288,9 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         ];
 
         if (!validCommands.includes(message.command)) {
-            return false;
+            // Allow unknown commands to pass validation so they can be handled 
+            // with proper error message in the switch statement
+            return true;
         }
 
         // Validate data structure based on command
