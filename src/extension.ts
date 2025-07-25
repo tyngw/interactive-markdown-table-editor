@@ -32,6 +32,10 @@ export function activate(context: vscode.ExtensionContext) {
                 uri = activeEditor.document.uri;
             }
 
+            if (!uri) {
+                throw new Error('No valid URI available');
+            }
+
             console.log('Reading markdown file:', uri.toString());
 
             // Read the markdown file
@@ -54,45 +58,39 @@ export function activate(context: vscode.ExtensionContext) {
                 selectedTableNode = tables[0];
                 selectedTableIndex = 0;
             } else {
-                // Multiple tables, let user choose
-                const tableChoices = tables.map((table, index) => {
-                    const firstRow = table.rows.length > 0 ? table.rows[0].join(' | ') : 'Empty table';
-                    const preview = firstRow.length > 50 ? firstRow.substring(0, 50) + '...' : firstRow;
-                    return {
-                        label: `Table ${index + 1} (Lines ${table.startLine}-${table.endLine})`,
-                        description: `${table.headers.join(' | ')}`,
-                        detail: `Rows: ${table.rows.length}, Columns: ${table.headers.length} - ${preview}`,
-                        table: table,
-                        index: index
-                    };
-                });
-
-                const selectedChoice = await vscode.window.showQuickPick(tableChoices, {
-                    placeHolder: 'Select a table to edit',
-                    title: 'Multiple Tables Found'
-                });
-
-                if (!selectedChoice) {
-                    return; // User cancelled
-                }
-
-                selectedTableNode = selectedChoice.table;
-                selectedTableIndex = selectedChoice.index;
+                // Multiple tables, don't prompt user - show all in webview with tabs
+                selectedTableNode = tables[0]; // Default to first table for backward compatibility
+                selectedTableIndex = 0;
             }
 
             console.log('Using table:', selectedTableNode);
             
-            const tableDataManager = new TableDataManager(selectedTableNode, uri.toString(), selectedTableIndex);
-            const tableData = tableDataManager.getTableData();
+            // Create TableDataManager instances for all tables
+            const allTableData: TableData[] = tables.map((table, index) => {
+                const manager = new TableDataManager(table, uri!.toString(), index);
+                return manager.getTableData();
+            });
+            
+            // Store managers for all tables
+            allTableData.forEach((tableData, index) => {
+                const manager = new TableDataManager(tables[index], uri!.toString(), index);
+                activeTableManagers.set(`${uri!.toString()}_table_${index}`, manager);
+            });
+            
+            // Also store the primary manager for backward compatibility
+            const primaryManager = new TableDataManager(selectedTableNode, uri!.toString(), selectedTableIndex);
+            activeTableManagers.set(uri!.toString(), primaryManager);
 
             console.log('Creating webview panel...');
             
-            // Create and show the webview panel
-            const panel = webviewManager.createTableEditorPanel(tableData, uri);
+            // Create and show the webview panel with all tables
+            const panel = webviewManager.createTableEditorPanel(allTableData, uri);
             
             console.log('Webview panel created successfully');
             
-            vscode.window.showInformationMessage(`Table editor opened with ${tableData.rows.length} rows and ${tableData.headers.length} columns.`);
+            const tableCount = allTableData.length;
+            const primaryTable = allTableData[selectedTableIndex];
+            vscode.window.showInformationMessage(`Table editor opened with ${tableCount} table${tableCount > 1 ? 's' : ''} (${primaryTable.rows.length} rows, ${primaryTable.headers.length} columns).`);
         } catch (error) {
             console.error('Error opening table editor:', error);
             vscode.window.showErrorMessage(`Failed to open table editor: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -201,14 +199,51 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            const tableDataManager = activeTableManagers.get(uri.toString());
+            let tableDataManager = activeTableManagers.get(uri.toString());
             if (!tableDataManager) {
                 webviewManager.sendError(panel, 'Table data manager not found');
                 return;
             }
 
-            // Update the cell
-            tableDataManager.updateCell(row, col, value);
+            // Try to update the cell, if it fails due to invalid position, refresh the table data
+            try {
+                tableDataManager.updateCell(row, col, value);
+            } catch (positionError) {
+                if (positionError instanceof Error && positionError.message.includes('Invalid cell position')) {
+                    console.log('Invalid position detected, attempting to refresh table data from file...');
+                    try {
+                        // Read fresh content from file and re-parse
+                        const content = await fileHandler.readMarkdownFile(uri);
+                        const ast = markdownParser.parseDocument(content);
+                        const tables = markdownParser.findTablesInDocument(ast);
+                        
+                        if (tables.length > 0) {
+                            // Find the correct table by index
+                            const currentTableData = tableDataManager.getTableData();
+                            const tableIndex = currentTableData.metadata.tableIndex;
+                            if (tableIndex < tables.length) {
+                                // Create new manager with fresh data
+                                const newManager = new TableDataManager(tables[tableIndex], uri);
+                                activeTableManagers.set(uri.toString(), newManager);
+                                tableDataManager = newManager;
+                                console.log('Table data refreshed successfully');
+                                
+                                // Try the update again with fresh data
+                                tableDataManager.updateCell(row, col, value);
+                            } else {
+                                throw new Error(`Table index ${tableIndex} not found in refreshed data`);
+                            }
+                        } else {
+                            throw new Error('No tables found in refreshed data');
+                        }
+                    } catch (refreshError) {
+                        console.error('Could not refresh table data:', refreshError);
+                        throw positionError; // Re-throw the original error
+                    }
+                } else {
+                    throw positionError; // Re-throw if it's not a position error
+                }
+            }
             
             // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
@@ -524,7 +559,7 @@ export function activate(context: vscode.ExtensionContext) {
     const exportCSVCommand = vscode.commands.registerCommand('markdownTableEditor.internal.exportCSV', async (data: any) => {
         try {
             console.log('Internal command: exportCSV', data);
-            const { uri, panelId, csvContent, filename } = data;
+            const { uri, panelId, csvContent, filename, encoding = 'utf8' } = data;
             const panel = webviewManager.getPanel(uri);
             
             if (!panel) {
@@ -532,9 +567,22 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            // Show save dialog
+            // Generate default filename based on the current markdown file
+            let defaultFilename = filename;
+            if (uri && uri.fsPath) {
+                const path = require('path');
+                const baseName = path.basename(uri.fsPath, path.extname(uri.fsPath));
+                defaultFilename = `${baseName}.csv`;
+            }
+
+            // Show save dialog with improved default path
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+            const defaultPath = workspaceFolder 
+                ? vscode.Uri.joinPath(workspaceFolder.uri, defaultFilename)
+                : vscode.Uri.joinPath(vscode.Uri.file(require('path').dirname(uri.fsPath)), defaultFilename);
+
             const saveUri = await vscode.window.showSaveDialog({
-                defaultUri: vscode.Uri.joinPath(vscode.Uri.file(vscode.workspace.rootPath || ''), filename),
+                defaultUri: defaultPath,
                 filters: {
                     'CSV Files': ['csv'],
                     'All Files': ['*']
@@ -542,11 +590,31 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
             if (saveUri) {
-                // Write CSV content to file
-                await vscode.workspace.fs.writeFile(saveUri, Buffer.from(csvContent, 'utf8'));
+                let buffer: Buffer;
                 
-                webviewManager.sendSuccess(panel, `CSV exported successfully to ${saveUri.fsPath}`);
-                console.log('CSV exported to:', saveUri.fsPath);
+                // Handle encoding
+                if (encoding === 'sjis') {
+                    try {
+                        // Convert to Shift_JIS encoding
+                        const iconv = require('iconv-lite');
+                        buffer = iconv.encode(csvContent, 'shift_jis');
+                        console.log('CSV content encoded to Shift_JIS');
+                    } catch (error) {
+                        // Fallback to UTF-8 if iconv-lite is not available
+                        console.warn('iconv-lite encoding failed, falling back to UTF-8:', error);
+                        buffer = Buffer.from(csvContent, 'utf8');
+                    }
+                } else {
+                    // UTF-8 encoding (default)
+                    buffer = Buffer.from(csvContent, 'utf8');
+                }
+
+                // Write CSV content to file
+                await vscode.workspace.fs.writeFile(saveUri, buffer);
+                
+                const encodingLabel = encoding === 'sjis' ? 'Shift_JIS' : 'UTF-8';
+                webviewManager.sendSuccess(panel, `CSV exported successfully to ${saveUri.fsPath} (${encodingLabel})`);
+                console.log('CSV exported to:', saveUri.fsPath, 'with encoding:', encodingLabel);
             } else {
                 console.log('CSV export cancelled by user');
             }

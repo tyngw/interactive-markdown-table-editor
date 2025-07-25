@@ -1,0 +1,2549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' vscode-resource: https:; style-src-elem 'self' vscode-resource: https:; script-src 'unsafe-inline';">
+    <title>Markdown Table Editor</title>
+</head>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        // VSCode拡張のwebviewで外部CSSを安全に読み込むためのvscode-resourceスキーマを使う
+        // 拡張側で `webview.asWebviewUri` でCSSのパスを渡す必要がある
+        if (window.cssUri) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.cssUri;
+            document.head.appendChild(link);
+        }
+    </script>
+</head>
+<body>
+    <div id="app">
+        <div class="loading">Loading table data...</div>
+    </div>
+
+    <script>
+        // Global state
+        let tableData = null;
+        let currentEditingCell = null;
+        let sortState = { 
+            column: -1, 
+            direction: 'none',
+            isViewOnly: false,
+            originalData: null
+        };
+        
+        // Store column widths to persist across edits
+        let columnWidths = {};
+
+        // Enhanced sorting state management
+        let displayData = null;  // Data currently shown in UI
+        let originalData = null; // Original file data (for view-only sorting)
+        
+        // File information for CSV export
+        let fileInfo = null;
+
+        // VSCode API
+        const vscode = acquireVsCodeApi();
+
+        // Initialize the table editor
+        function initializeTableEditor() {
+            console.log('Table editor initialized');
+            
+            // Request initial table data
+            vscode.postMessage({
+                command: 'requestTableData'
+            });
+        }
+
+        // Render the table
+        function renderTable(data) {
+            if (!data) {
+                document.getElementById('app').innerHTML = '<div class="error">No table data available</div>';
+                return;
+            }
+
+            // Initialize data models on first render
+            if (!originalData) {
+                originalData = JSON.parse(JSON.stringify(data)); // Deep clone
+            }
+            
+            tableData = data;
+            displayData = data; // Currently displayed data
+            
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="table-container">
+                    <table class="table-editor" id="tableEditor">
+                        ${renderTableContent()}
+                    </table>
+                </div>
+                
+                <!-- Sort Actions Panel -->
+                <div class="sort-actions" id="sortActions">
+                    <span class="sort-status-badge">📊 Viewing sorted data</span>
+                    <button class="sort-action-btn secondary" onclick="restoreOriginalView()">📄 Restore Original</button>
+                    <button class="sort-action-btn" onclick="commitSortToFile()">💾 Save Sort to File</button>
+                </div>
+                
+                <!-- Export Actions Panel -->
+                <div class="export-actions">
+                    <button class="export-btn" onclick="exportToCSV()">📄 Export CSV</button>
+                </div>
+                
+                <!-- Context Menus -->
+                <div class="context-menu" id="rowContextMenu">
+                    <button class="context-menu-item" onclick="addRowAbove()">
+                        <span class="context-menu-item-icon">⬆️</span>
+                        この上に行を追加
+                    </button>
+                    <button class="context-menu-item" onclick="addRowBelow()">
+                        <span class="context-menu-item-icon">⬇️</span>
+                        この下に行を追加
+                    </button>
+                    <div class="context-menu-separator"></div>
+                    <button class="context-menu-item" onclick="deleteRowFromContext()">
+                        <span class="context-menu-item-icon">🗑️</span>
+                        この行を削除
+                    </button>
+                </div>
+                
+                <div class="context-menu" id="columnContextMenu">
+                    <button class="context-menu-item" onclick="addColumnLeft()">
+                        <span class="context-menu-item-icon">⬅️</span>
+                        この左に列を追加
+                    </button>
+                    <button class="context-menu-item" onclick="addColumnRight()">
+                        <span class="context-menu-item-icon">➡️</span>
+                        この右に列を追加
+                    </button>
+                    <div class="context-menu-separator"></div>
+                    <button class="context-menu-item" onclick="deleteColumnFromContext()">
+                        <span class="context-menu-item-icon">🗑️</span>
+                        この列を削除
+                    </button>
+                </div>
+                
+                <div class="status-bar">
+                    <div class="status-left">
+                        <span class="save-indicator saved" id="saveIndicator">✓ Auto-saved</span>
+                    </div>
+                    <div class="status-center" id="statusMessages">
+                        <!-- Central status messages appear here -->
+                    </div>
+                    <div class="status-right">
+                        <span class="table-info">Rows: ${data.rows.length} | Columns: ${data.headers.length}</span>
+                        <span id="sortStatusInfo" style="display: none;"></span>
+                    </div>
+                </div>
+            `;
+
+            setupTableEvents();
+            updateSortActionsVisibility();
+        }
+
+        // Initialize default column widths if not set
+        function initializeColumnWidths(data) {
+            if (!data) return;
+            
+            data.headers.forEach((header, index) => {
+                if (!columnWidths[index]) {
+                    // Set default width for columns that haven't been resized
+                    columnWidths[index] = 150;
+                }
+            });
+        }
+
+        // Render table content
+        function renderTableContent() {
+            const dataToRender = displayData || tableData;
+            if (!dataToRender) return '';
+            
+            // Initialize column widths with defaults
+            initializeColumnWidths(dataToRender);
+
+            let html = '<thead><tr>';
+            
+            // Header corner cell (select all)
+            html += '<th class="header-corner" onclick="selectAll()" title="Select All">⚏</th>';
+            
+            // Column headers with enhanced styling
+            dataToRender.headers.forEach((header, index) => {
+                const sortClass = sortState.column === index ? `sort-${sortState.direction}` : '';
+                const sortIndicatorClass = sortState.isViewOnly ? 'view-only' : 'committed';
+                const columnLetter = getColumnLetter(index);
+                const storedWidth = columnWidths[index] || 150;
+                const widthStyle = `style="width: ${storedWidth}px; min-width: ${storedWidth}px; max-width: ${storedWidth}px;"`;
+                const userResizedClass = columnWidths[index] && columnWidths[index] !== 150 ? 'user-resized' : '';
+                html += `<th onclick="handleColumnHeaderClick(${index}, event)" 
+                           onmousedown="startColumnDrag(${index}, event)"
+                           oncontextmenu="showColumnContextMenu(event, ${index})"
+                           class="column-header ${sortClass} ${userResizedClass}" 
+                           data-col="${index}"
+                           ${widthStyle}
+                           title="Column ${columnLetter}: ${escapeHtml(header)}">
+                    <div class="header-content">
+                        <span class="column-letter">${columnLetter}</span>
+                        <span class="header-text">${escapeHtml(header)}</span>
+                        <span class="sort-indicator ${sortIndicatorClass}"></span>
+                    </div>
+                    <div class="resize-handle" 
+                         onclick="event.stopPropagation()" 
+                         ondblclick="event.stopPropagation(); autoFitColumn(${index})"
+                         onmousedown="event.stopPropagation(); startColumnResize(event, ${index})"></div>
+                </th>`;
+            });
+            
+            html += '</tr></thead><tbody>';
+            
+            // Data rows with enhanced styling
+            dataToRender.rows.forEach((row, rowIndex) => {
+                html += `<tr data-row="${rowIndex}">`;
+                
+                // Row number with selection capability
+                html += `<td class="row-number" 
+                           onclick="selectRow(${rowIndex}, event)" 
+                           onmousedown="startRowDrag(${rowIndex}, event)"
+                           oncontextmenu="showRowContextMenu(event, ${rowIndex})"
+                           title="Row ${rowIndex + 1}">
+                    ${rowIndex + 1}
+                </td>`;
+                
+                // Data cells with enhanced interaction
+                row.forEach((cell, colIndex) => {
+                    const cellId = `cell-${rowIndex}-${colIndex}`;
+                    const isEmpty = !cell || cell.trim() === '';
+                    const cellClass = isEmpty ? 'empty-cell' : '';
+                    const storedWidth = columnWidths[colIndex] || 150;
+                    const widthStyle = `style="width: ${storedWidth}px; min-width: ${storedWidth}px; max-width: ${storedWidth}px;"`;
+                    const userResizedClass = columnWidths[colIndex] && columnWidths[colIndex] !== 150 ? 'user-resized' : '';
+                    
+                    html += `<td id="${cellId}"
+                               class="data-cell ${cellClass} ${userResizedClass}" 
+                               onclick="handleCellClick(${rowIndex}, ${colIndex}, event)" 
+                               ondblclick="startCellEdit(${rowIndex}, ${colIndex})"
+                               onmousedown="startCellSelect(${rowIndex}, ${colIndex})"
+                               data-row="${rowIndex}" 
+                               data-col="${colIndex}"
+                               ${widthStyle}
+                               title="Cell ${getColumnLetter(colIndex)}${rowIndex + 1}">
+                        <div class="cell-content">${processCellContent(cell)}</div>
+                    </td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody>';
+            return html;
+        }
+
+        // Get Excel-style column letter (A, B, C, ..., Z, AA, AB, ...)
+        function getColumnLetter(index) {
+            let result = '';
+            while (index >= 0) {
+                result = String.fromCharCode(65 + (index % 26)) + result;
+                index = Math.floor(index / 26) - 1;
+            }
+            return result;
+        }
+
+        // Enhanced cell selection system
+        let selectedCells = new Set();
+        let selectionStart = null;
+        let isSelecting = false;
+        let lastSelectedCell = null;
+
+        // Handle cell click - check if it's clicking on an input field
+        function handleCellClick(row, col, event) {
+            // Check if the click target is a cell input field
+            if (event.target.classList.contains('cell-input')) {
+                // Clicking on input field - don't change selection, keep editing
+                return;
+            }
+            
+            // Otherwise, proceed with normal cell selection
+            selectCell(row, col, event);
+        }
+
+        function selectCell(row, col, event = null) {
+            // Check if we're clicking on the currently editing cell
+            if (currentEditingCell && 
+                currentEditingCell.row === row && 
+                currentEditingCell.col === col) {
+                // Same cell being clicked while editing - do nothing, keep editing
+                return;
+            }
+            
+            // If currently editing a different cell, commit the edit first
+            if (currentEditingCell) {
+                commitCellEdit();
+            }
+            
+            // Handle multi-selection with Ctrl/Cmd key
+            if (event && (event.ctrlKey || event.metaKey)) {
+                const cellKey = `${row}-${col}`;
+                if (selectedCells.has(cellKey)) {
+                    selectedCells.delete(cellKey);
+                } else {
+                    selectedCells.add(cellKey);
+                }
+                lastSelectedCell = { row, col };
+            }
+            // Handle range selection with Shift key
+            else if (event && event.shiftKey && lastSelectedCell) {
+                clearSelection();
+                selectRange(lastSelectedCell.row, lastSelectedCell.col, row, col);
+            }
+            // Normal single selection
+            else {
+                clearSelection();
+                selectedCells.add(`${row}-${col}`);
+                selectionStart = { row, col };
+                lastSelectedCell = { row, col };
+            }
+            updateCellSelection();
+        }
+
+        function selectRange(startRow, startCol, endRow, endCol) {
+            const minRow = Math.min(startRow, endRow);
+            const maxRow = Math.max(startRow, endRow);
+            const minCol = Math.min(startCol, endCol);
+            const maxCol = Math.max(startCol, endCol);
+            
+            for (let row = minRow; row <= maxRow; row++) {
+                for (let col = minCol; col <= maxCol; col++) {
+                    selectedCells.add(`${row}-${col}`);
+                }
+            }
+        }
+
+        function selectRow(rowIndex, event = null) {
+            const currentData = displayData || tableData;
+            if (event && (event.ctrlKey || event.metaKey)) {
+                // Toggle row selection
+                const isRowSelected = isRowFullySelected(rowIndex);
+                if (isRowSelected) {
+                    // Remove this row from selection
+                    for (let col = 0; col < currentData.headers.length; col++) {
+                        selectedCells.delete(`${rowIndex}-${col}`);
+                    }
+                } else {
+                    // Add this row to selection
+                    for (let col = 0; col < currentData.headers.length; col++) {
+                        selectedCells.add(`${rowIndex}-${col}`);
+                    }
+                }
+            } else {
+                clearSelection();
+                for (let col = 0; col < currentData.headers.length; col++) {
+                    selectedCells.add(`${rowIndex}-${col}`);
+                }
+            }
+            updateCellSelection();
+        }
+
+        function selectColumn(colIndex, event = null) {
+            const currentData = displayData || tableData;
+            if (event && (event.ctrlKey || event.metaKey)) {
+                // Toggle column selection
+                const isColSelected = isColumnFullySelected(colIndex);
+                if (isColSelected) {
+                    // Remove this column from selection
+                    for (let row = 0; row < currentData.rows.length; row++) {
+                        selectedCells.delete(`${row}-${colIndex}`);
+                    }
+                } else {
+                    // Add this column to selection
+                    for (let row = 0; row < currentData.rows.length; row++) {
+                        selectedCells.add(`${row}-${colIndex}`);
+                    }
+                }
+            } else {
+                clearSelection();
+                for (let row = 0; row < currentData.rows.length; row++) {
+                    selectedCells.add(`${row}-${colIndex}`);
+                }
+            }
+            updateCellSelection();
+        }
+
+        function isRowFullySelected(rowIndex) {
+            const currentData = displayData || tableData;
+            for (let col = 0; col < currentData.headers.length; col++) {
+                if (!selectedCells.has(`${rowIndex}-${col}`)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function isColumnFullySelected(colIndex) {
+            const currentData = displayData || tableData;
+            for (let row = 0; row < currentData.rows.length; row++) {
+                if (!selectedCells.has(`${row}-${colIndex}`)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function selectAll() {
+            clearSelection();
+            const currentData = displayData || tableData;
+            for (let row = 0; row < currentData.rows.length; row++) {
+                for (let col = 0; col < currentData.headers.length; col++) {
+                    selectedCells.add(`${row}-${col}`);
+                }
+            }
+            updateCellSelection();
+        }
+
+        function clearSelection() {
+            selectedCells.clear();
+            document.querySelectorAll('.selected, .row-selected, .column-selected').forEach(el => {
+                el.classList.remove('selected', 'row-selected', 'column-selected');
+            });
+        }
+
+        function updateCellSelection() {
+            // Clear previous selection classes
+            document.querySelectorAll('.selected, .cell-selected, .cell-multi-selected').forEach(el => {
+                el.classList.remove('selected', 'cell-selected', 'cell-multi-selected');
+            });
+
+            // Apply new selection with different styles for single vs multi-selection
+            const isMultiSelection = selectedCells.size > 1;
+            selectedCells.forEach(cellKey => {
+                const [row, col] = cellKey.split('-').map(Number);
+                const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`);
+                if (cell) {
+                    cell.classList.add('selected');
+                    if (isMultiSelection) {
+                        cell.classList.add('cell-multi-selected');
+                    } else {
+                        cell.classList.add('cell-selected');
+                    }
+                }
+            });
+
+            // Update toolbar button states
+            updateToolbarButtons();
+        }
+
+        function updateToolbarButtons() {
+            const hasSelection = selectedCells.size > 0;
+            const deleteRowBtn = document.getElementById('deleteRowBtn');
+            const deleteColBtn = document.getElementById('deleteColBtn');
+            
+            if (deleteRowBtn) deleteRowBtn.disabled = !hasSelection;
+            if (deleteColBtn) deleteColBtn.disabled = !hasSelection;
+        }
+
+        // Column resizing functionality
+        let isResizing = false;
+        let resizeColumn = -1;
+        let startX = 0;
+        let startWidth = 0;
+
+        function startColumnResize(event, colIndex) {
+            event.stopPropagation();
+            event.preventDefault();
+            isResizing = true;
+            resizeColumn = colIndex;
+            startX = event.clientX;
+            
+            const header = document.querySelector(`th[data-col="${colIndex}"]`);
+            startWidth = header.offsetWidth;
+            
+            document.addEventListener('mousemove', handleColumnResize);
+            document.addEventListener('mouseup', stopColumnResize);
+            
+            // Prevent text selection during resize
+            document.body.style.userSelect = 'none';
+        }
+
+        function handleColumnResize(event) {
+            if (!isResizing) return;
+            
+            const deltaX = event.clientX - startX;
+            const newWidth = Math.max(60, startWidth + deltaX);
+            
+            // Store the new width in our global state
+            columnWidths[resizeColumn] = newWidth;
+            
+            // Apply new width to all cells in the column
+            const colCells = document.querySelectorAll(`th[data-col="${resizeColumn}"], td[data-col="${resizeColumn}"]`);
+            colCells.forEach(cell => {
+                cell.style.width = newWidth + 'px';
+                cell.style.minWidth = newWidth + 'px';
+                cell.style.maxWidth = newWidth + 'px';
+            });
+            
+            // ユーザーがリサイズを行った場合、該当列により小さな最小幅を許可
+            colCells.forEach(cell => {
+                if (!cell.classList.contains('user-resized')) {
+                    cell.classList.add('user-resized');
+                }
+            });
+        }
+
+        function stopColumnResize() {
+            document.removeEventListener('mousemove', handleColumnResize);
+            document.removeEventListener('mouseup', stopColumnResize);
+            document.body.style.userSelect = '';
+            
+            // Add a small delay before resetting isResizing to prevent click events
+            // that might fire immediately after mouseup
+            setTimeout(() => {
+                isResizing = false;
+                resizeColumn = -1;
+            }, 10);
+        }
+
+        // Auto-fit column width to content (Excel-like double-click behavior)
+        function autoFitColumn(colIndex) {
+            console.log(`Auto-fitting column ${colIndex}`);
+            
+            // Get all cells in the column (header + data cells)
+            const colCells = document.querySelectorAll(`th[data-col="${colIndex}"], td[data-col="${colIndex}"]`);
+            let maxWidth = 80; // Minimum width
+            
+            // Create a temporary element to measure text width
+            const measureElement = document.createElement('div');
+            measureElement.style.position = 'absolute';
+            measureElement.style.visibility = 'hidden';
+            measureElement.style.whiteSpace = 'nowrap';
+            measureElement.style.fontSize = 'var(--vscode-editor-font-size, 14px)';
+            measureElement.style.fontFamily = 'var(--vscode-editor-font-family, "Consolas", "Monaco", "Courier New", monospace)';
+            measureElement.style.padding = '8px 12px'; // Same as cell padding
+            document.body.appendChild(measureElement);
+            
+            colCells.forEach(cell => {
+                let textContent = '';
+                
+                if (cell.tagName === 'TH') {
+                    // For header cells, get the header text
+                    const headerText = cell.querySelector('.header-text');
+                    if (headerText) {
+                        textContent = headerText.textContent || '';
+                    }
+                } else {
+                    // For data cells, get the cell content
+                    const cellContent = cell.querySelector('.cell-content');
+                    if (cellContent) {
+                        textContent = cellContent.textContent || '';
+                    }
+                }
+                
+                if (textContent.trim()) {
+                    measureElement.textContent = textContent;
+                    const textWidth = measureElement.offsetWidth;
+                    maxWidth = Math.max(maxWidth, textWidth + 20); // Add some padding
+                }
+            });
+            
+            // Clean up the temporary element
+            document.body.removeChild(measureElement);
+            
+            // Cap the maximum width to prevent extremely wide columns
+            const finalWidth = Math.min(maxWidth, 400);
+            
+            console.log(`Auto-fit column ${colIndex}: calculated width = ${finalWidth}px`);
+            
+            // Store the new width
+            columnWidths[colIndex] = finalWidth;
+            
+            // Apply the new width to all cells in the column
+            colCells.forEach(cell => {
+                cell.style.width = finalWidth + 'px';
+                cell.style.minWidth = finalWidth + 'px';
+                cell.style.maxWidth = finalWidth + 'px';
+                
+                // Add user-resized class
+                if (!cell.classList.contains('user-resized')) {
+                    cell.classList.add('user-resized');
+                }
+            });
+        }
+
+        // Setup table event listeners
+        function setupTableEvents() {
+            // Keyboard navigation
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // Setup drag and drop functionality
+            setupDragAndDrop();
+        }
+
+        // Handle keyboard navigation
+        function handleKeyDown(event) {
+            if (currentEditingCell) {
+                if (event.key === 'Escape') {
+                    // Escで変更を反映（確定）
+                    commitCellEdit();
+                } else if (event.key === 'Tab') {
+                    commitCellEdit();
+                    event.preventDefault();
+                    // Move to next cell after commit
+                    if (selectionStart) {
+                        navigateToNextCell(selectionStart.row, selectionStart.col, !event.shiftKey);
+                    }
+                }
+                // 編集中はコピー・ペースト・切り取りを通す
+                if (event.key === 'c' && (event.ctrlKey || event.metaKey)) {
+                    // Ctrl+C / Cmd+C - コピーを許可
+                    return;
+                } else if (event.key === 'v' && (event.ctrlKey || event.metaKey)) {
+                    // Ctrl+V / Cmd+V - ペーストを許可
+                    return;
+                } else if (event.key === 'x' && (event.ctrlKey || event.metaKey)) {
+                    // Ctrl+X / Cmd+X - 切り取りを許可
+                    return;
+                } else if (event.key === 'a' && (event.ctrlKey || event.metaKey)) {
+                    // Ctrl+A / Cmd+A - 全選択を許可
+                    return;
+                } else if (event.key === 'z' && (event.ctrlKey || event.metaKey)) {
+                    // Ctrl+Z / Cmd+Z - アンドゥを許可
+                    return;
+                } else if (event.key === 'y' && (event.ctrlKey || event.metaKey)) {
+                    // Ctrl+Y / Cmd+Y - リドゥを許可
+                    return;
+                }
+                return;
+            }
+
+            // Only handle navigation if we have a selection
+            if (!selectionStart || selectedCells.size === 0) {
+                return;
+            }
+
+            // Arrow key navigation
+            switch (event.key) {
+                case 'ArrowUp':
+                    event.preventDefault();
+                    if (event.ctrlKey || event.metaKey) {
+                        // Ctrl+Up: Smart navigation up
+                        navigateCellSmart(selectionStart.row, selectionStart.col, 'up');
+                    } else {
+                        navigateCell(selectionStart.row - 1, selectionStart.col);
+                    }
+                    break;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    if (event.ctrlKey || event.metaKey) {
+                        // Ctrl+Down: Smart navigation down
+                        navigateCellSmart(selectionStart.row, selectionStart.col, 'down');
+                    } else {
+                        navigateCell(selectionStart.row + 1, selectionStart.col);
+                    }
+                    break;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    if (event.ctrlKey || event.metaKey) {
+                        // Ctrl+Left: Smart navigation left
+                        navigateCellSmart(selectionStart.row, selectionStart.col, 'left');
+                    } else {
+                        navigateCell(selectionStart.row, selectionStart.col - 1);
+                    }
+                    break;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    if (event.ctrlKey || event.metaKey) {
+                        // Ctrl+Right: Smart navigation right
+                        navigateCellSmart(selectionStart.row, selectionStart.col, 'right');
+                    } else {
+                        navigateCell(selectionStart.row, selectionStart.col + 1);
+                    }
+                    break;
+                case 'Tab':
+                    event.preventDefault();
+                    navigateToNextCell(selectionStart.row, selectionStart.col, !event.shiftKey);
+                    break;
+                case 'Enter':
+                    event.preventDefault();
+                    // Enterで編集モードに入る
+                    startCellEdit(selectionStart.row, selectionStart.col);
+                    break;
+                case 'Home':
+                    event.preventDefault();
+                    if (event.ctrlKey || event.metaKey) {
+                        // Ctrl+Home: Go to first cell
+                        navigateCell(0, 0);
+                    } else {
+                        // Home: Go to first column of current row
+                        navigateCell(selectionStart.row, 0);
+                    }
+                    break;
+                case 'End':
+                    event.preventDefault();
+                    if (event.ctrlKey || event.metaKey) {
+                        // Ctrl+End: Go to last cell
+                        navigateCell(tableData.rows.length - 1, tableData.headers.length - 1);
+                    } else {
+                        // End: Go to last column of current row
+                        navigateCell(selectionStart.row, tableData.headers.length - 1);
+                    }
+                    break;
+                case 'PageUp':
+                    event.preventDefault();
+                    navigateCell(Math.max(0, selectionStart.row - 10), selectionStart.col);
+                    break;
+                case 'PageDown':
+                    event.preventDefault();
+                    navigateCell(Math.min(tableData.rows.length - 1, selectionStart.row + 10), selectionStart.col);
+                    break;
+                case 'F2':
+                    event.preventDefault();
+                    startCellEdit(selectionStart.row, selectionStart.col);
+                    break;
+                case 'Delete':
+                case 'Backspace':
+                    event.preventDefault();
+                    // Clear selected cells
+                    clearSelectedCells();
+                    break;
+                case 'c':
+                case 'C':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        copySelectedCells();
+                    }
+                    break;
+                case 'v':
+                case 'V':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        pasteToSelectedCells();
+                    }
+                    break;
+                case 'x':
+                case 'X':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        cutSelectedCells();
+                    }
+                    break;
+                case 'a':
+                case 'A':
+                    if (event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                        selectAll();
+                    }
+                    break;
+                case 'Escape':
+                    event.preventDefault();
+                    clearSelection();
+                    break;
+                case 'Escape':
+                    event.preventDefault();
+                    clearSelection();
+                    break;
+                default:
+                    // Check for alphanumeric keys to start editing
+                    if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                        startCellEdit(selectionStart.row, selectionStart.col);
+                        // Let the character be typed in the input
+                        setTimeout(() => {
+                            const input = document.querySelector('.cell-input');
+                            if (input) {
+                                input.value = event.key;
+                                input.setSelectionRange(1, 1);
+                            }
+                        }, 0);
+                    }
+                    break;
+            }
+        }
+
+        // Navigate to a specific cell with bounds checking
+        function navigateCell(row, col) {
+            // Bounds checking
+            row = Math.max(0, Math.min(tableData.rows.length - 1, row));
+            col = Math.max(0, Math.min(tableData.headers.length - 1, col));
+            
+            selectCell(row, col);
+            scrollToCell(row, col);
+        }
+
+        // Smart navigation (Excel-like Ctrl+Arrow behavior)
+        function navigateCellSmart(currentRow, currentCol, direction) {
+            const currentData = displayData || tableData;
+            const totalRows = currentData.rows.length;
+            const totalCols = currentData.headers.length;
+            
+            // Helper function to check if a cell has content
+            function hasContent(row, col) {
+                if (row < 0 || row >= totalRows || col < 0 || col >= totalCols) {
+                    return false;
+                }
+                const cellValue = currentData.rows[row][col] || '';
+                return cellValue.trim() !== '';
+            }
+            
+            let targetRow = currentRow;
+            let targetCol = currentCol;
+            
+            switch (direction) {
+                case 'up':
+                    // Check if next cell (one step up) is empty
+                    const nextRowUp = currentRow - 1;
+                    if (nextRowUp >= 0 && !hasContent(nextRowUp, currentCol)) {
+                        // Next cell is empty - move to the next cell with content
+                        for (let row = nextRowUp; row >= 0; row--) {
+                            if (hasContent(row, currentCol)) {
+                                targetRow = row;
+                                break;
+                            }
+                            if (row === 0) {
+                                targetRow = 0;
+                            }
+                        }
+                    } else if (nextRowUp >= 0) {
+                        // Next cell has content - move to the edge of the data region
+                        for (let row = nextRowUp; row >= 0; row--) {
+                            if (!hasContent(row, currentCol)) {
+                                targetRow = row + 1;
+                                break;
+                            }
+                            if (row === 0) {
+                                targetRow = 0;
+                            }
+                        }
+                    } else {
+                        // Already at the top
+                        targetRow = 0;
+                    }
+                    break;
+                    
+                case 'down':
+                    // Check if next cell (one step down) is empty
+                    const nextRowDown = currentRow + 1;
+                    if (nextRowDown < totalRows && !hasContent(nextRowDown, currentCol)) {
+                        // Next cell is empty - move to the next cell with content
+                        for (let row = nextRowDown; row < totalRows; row++) {
+                            if (hasContent(row, currentCol)) {
+                                targetRow = row;
+                                break;
+                            }
+                            if (row === totalRows - 1) {
+                                targetRow = totalRows - 1;
+                            }
+                        }
+                    } else if (nextRowDown < totalRows) {
+                        // Next cell has content - move to the edge of the data region
+                        for (let row = nextRowDown; row < totalRows; row++) {
+                            if (!hasContent(row, currentCol)) {
+                                targetRow = row - 1;
+                                break;
+                            }
+                            if (row === totalRows - 1) {
+                                targetRow = totalRows - 1;
+                            }
+                        }
+                    } else {
+                        // Already at the bottom
+                        targetRow = totalRows - 1;
+                    }
+                    break;
+                    
+                case 'left':
+                    // Check if next cell (one step left) is empty
+                    const nextColLeft = currentCol - 1;
+                    if (nextColLeft >= 0 && !hasContent(currentRow, nextColLeft)) {
+                        // Next cell is empty - move to the next cell with content
+                        for (let col = nextColLeft; col >= 0; col--) {
+                            if (hasContent(currentRow, col)) {
+                                targetCol = col;
+                                break;
+                            }
+                            if (col === 0) {
+                                targetCol = 0;
+                            }
+                        }
+                    } else if (nextColLeft >= 0) {
+                        // Next cell has content - move to the edge of the data region
+                        for (let col = nextColLeft; col >= 0; col--) {
+                            if (!hasContent(currentRow, col)) {
+                                targetCol = col + 1;
+                                break;
+                            }
+                            if (col === 0) {
+                                targetCol = 0;
+                            }
+                        }
+                    } else {
+                        // Already at the leftmost
+                        targetCol = 0;
+                    }
+                    break;
+                    
+                case 'right':
+                    // Check if next cell (one step right) is empty
+                    const nextColRight = currentCol + 1;
+                    if (nextColRight < totalCols && !hasContent(currentRow, nextColRight)) {
+                        // Next cell is empty - move to the next cell with content
+                        for (let col = nextColRight; col < totalCols; col++) {
+                            if (hasContent(currentRow, col)) {
+                                targetCol = col;
+                                break;
+                            }
+                            if (col === totalCols - 1) {
+                                targetCol = totalCols - 1;
+                            }
+                        }
+                    } else if (nextColRight < totalCols) {
+                        // Next cell has content - move to the edge of the data region
+                        for (let col = nextColRight; col < totalCols; col++) {
+                            if (!hasContent(currentRow, col)) {
+                                targetCol = col - 1;
+                                break;
+                            }
+                            if (col === totalCols - 1) {
+                                targetCol = totalCols - 1;
+                            }
+                        }
+                    } else {
+                        // Already at the rightmost
+                        targetCol = totalCols - 1;
+                    }
+                    break;
+            }
+            
+            console.log(`Smart navigation ${direction}: (${currentRow},${currentCol}) -> (${targetRow},${targetCol})`);
+            navigateCell(targetRow, targetCol);
+        }
+
+        // Navigate to next/previous cell (for Tab navigation)
+        function navigateToNextCell(row, col, forward) {
+            const totalCols = tableData.headers.length;
+            const totalRows = tableData.rows.length;
+
+            if (forward) {
+                // Move forward
+                col++;
+                if (col >= totalCols) {
+                    col = 0;
+                    row++;
+                    if (row >= totalRows) {
+                        row = totalRows - 1;
+                        col = totalCols - 1;
+                    }
+                }
+            } else {
+                // Move backward
+                col--;
+                if (col < 0) {
+                    col = totalCols - 1;
+                    row--;
+                    if (row < 0) {
+                        row = 0;
+                        col = 0;
+                    }
+                }
+            }
+
+            navigateCell(row, col);
+        }
+
+        // Scroll to ensure cell is visible
+        function scrollToCell(row, col) {
+            const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`);
+            if (cell) {
+                cell.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'nearest'
+                });
+            }
+        }
+
+        // Clear content of selected cells
+        function clearSelectedCells() {
+            // Warning if in view-only sort mode
+            if (sortState.isViewOnly) {
+                if (!confirm('You are viewing sorted data. Clearing cells will affect the display only. Do you want to continue?')) {
+                    return;
+                }
+            }
+
+            const currentData = displayData || tableData;
+            const updates = [];
+            selectedCells.forEach(cellKey => {
+                const [row, col] = cellKey.split('-').map(Number);
+                if (currentData.rows[row] && currentData.rows[row][col] !== undefined) {
+                    currentData.rows[row][col] = '';
+                    // Also update base table data if not in view-only mode
+                    if (!sortState.isViewOnly && tableData.rows[row]) {
+                        tableData.rows[row][col] = '';
+                    }
+                    updates.push({ row, col, value: '' });
+                }
+            });
+
+            // Update UI
+            updates.forEach(update => {
+                const cell = document.querySelector(`td[data-row="${update.row}"][data-col="${update.col}"]`);
+                if (cell) {
+                    const content = cell.querySelector('.cell-content');
+                    if (content) {
+                        content.textContent = '';
+                    }
+                    cell.classList.add('empty-cell');
+                }
+            });
+
+            // Send updates to extension only if not in view-only mode
+            if (!sortState.isViewOnly) {
+                updates.forEach(update => {
+                    vscode.postMessage({
+                        command: 'updateCell',
+                        data: update
+                    });
+                });
+            }
+        }
+
+        // Copy selected cells to clipboard
+        function copySelectedCells() {
+            if (selectedCells.size === 0) {
+                return;
+            }
+
+            const currentData = displayData || tableData;
+            const cellArray = Array.from(selectedCells).map(cellKey => {
+                const [row, col] = cellKey.split('-').map(Number);
+                return { row, col, value: currentData.rows[row][col] || '' };
+            });
+
+            // Sort by row then column
+            cellArray.sort((a, b) => {
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            });
+
+            // Convert to tab-delimited format
+            let clipboardText = '';
+            let currentRow = -1;
+            let rowData = [];
+
+            cellArray.forEach(cell => {
+                if (cell.row !== currentRow) {
+                    if (rowData.length > 0) {
+                        clipboardText += rowData.join('\t') + '\n';
+                    }
+                    currentRow = cell.row;
+                    rowData = [];
+                }
+                // Convert <br/> tags to newlines for clipboard
+                const cellValue = processCellContentForEditing(cell.value);
+                rowData.push(cellValue);
+            });
+
+            if (rowData.length > 0) {
+                clipboardText += rowData.join('\t');
+            }
+
+            // Copy to clipboard using modern API or fallback
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(clipboardText).then(() => {
+                    console.log('Copied to clipboard:', clipboardText);
+                }).catch(err => {
+                    console.error('Failed to copy to clipboard:', err);
+                    fallbackCopyToClipboard(clipboardText);
+                });
+            } else {
+                fallbackCopyToClipboard(clipboardText);
+            }
+        }
+
+        // Paste from clipboard to selected cells
+        function pasteToSelectedCells() {
+            if (selectedCells.size === 0) {
+                return;
+            }
+
+            // Get clipboard content using modern API or fallback
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                navigator.clipboard.readText().then(clipboardText => {
+                    processPasteData(clipboardText);
+                }).catch(err => {
+                    console.error('Failed to read from clipboard:', err);
+                    // Fallback: show prompt for manual paste
+                    const pasteData = prompt('Paste your data here:');
+                    if (pasteData !== null) {
+                        processPasteData(pasteData);
+                    }
+                });
+            } else {
+                // Fallback: show prompt for manual paste
+                const pasteData = prompt('Paste your data here:');
+                if (pasteData !== null) {
+                    processPasteData(pasteData);
+                }
+            }
+        }
+
+        // Cut selected cells to clipboard
+        function cutSelectedCells() {
+            if (selectedCells.size === 0) {
+                return;
+            }
+
+            // First copy the cells
+            copySelectedCells();
+            
+            // Then clear the cells
+            clearSelectedCells();
+        }
+
+        // Process paste data and update cells
+        function processPasteData(clipboardText) {
+            if (!clipboardText) return;
+
+            const currentData = displayData || tableData;
+            const lines = clipboardText.split('\n');
+            const pasteData = lines.map(line => line.split('\t'));
+
+            // Get the starting position (top-left of selection)
+            const cellArray = Array.from(selectedCells).map(cellKey => {
+                const [row, col] = cellKey.split('-').map(Number);
+                return { row, col };
+            });
+            cellArray.sort((a, b) => {
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            });
+
+            if (cellArray.length === 0) return;
+
+            const startRow = cellArray[0].row;
+            const startCol = cellArray[0].col;
+            const updates = [];
+
+            // Paste data starting from the top-left selected cell
+            pasteData.forEach((rowData, rowIndex) => {
+                rowData.forEach((cellValue, colIndex) => {
+                    const targetRow = startRow + rowIndex;
+                    const targetCol = startCol + colIndex;
+
+                    // Check bounds
+                    if (targetRow < currentData.rows.length && targetCol < currentData.headers.length) {
+                        // Convert newlines back to <br/> tags for storage
+                        const storageValue = processCellContentForStorage(cellValue);
+                        
+                        currentData.rows[targetRow][targetCol] = storageValue;
+                        
+                        // Also update base table data if not in view-only mode
+                        if (!sortState.isViewOnly && tableData.rows[targetRow]) {
+                            tableData.rows[targetRow][targetCol] = storageValue;
+                        }
+                        
+                        updates.push({ row: targetRow, col: targetCol, value: storageValue });
+                    }
+                });
+            });
+
+            // Update UI
+            updates.forEach(update => {
+                const cell = document.querySelector(`td[data-row="${update.row}"][data-col="${update.col}"]`);
+                if (cell) {
+                    const content = cell.querySelector('.cell-content');
+                    if (content) {
+                        content.innerHTML = processCellContent(update.value);
+                    }
+                    
+                    // Update empty cell class
+                    const isEmpty = !update.value || update.value.trim() === '';
+                    if (isEmpty) {
+                        cell.classList.add('empty-cell');
+                    } else {
+                        cell.classList.remove('empty-cell');
+                    }
+                }
+            });
+
+            // Send updates to extension only if not in view-only mode
+            if (!sortState.isViewOnly) {
+                updates.forEach(update => {
+                    vscode.postMessage({
+                        command: 'updateCell',
+                        data: update
+                    });
+                });
+            }
+
+            console.log('Pasted data to cells:', updates.length, 'cells updated');
+        }
+
+        // Fallback copy to clipboard for older browsers
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    console.log('Copied to clipboard (fallback):', text);
+                } else {
+                    console.error('Failed to copy to clipboard (fallback)');
+                }
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        // Export table data to CSV
+        function exportToCSV() {
+            const currentData = displayData || tableData;
+            if (!currentData) {
+                showError('No table data to export');
+                return;
+            }
+
+            try {
+                // Generate CSV content
+                const csvContent = generateCSVContent(currentData);
+                
+                // Send export request to extension
+                vscode.postMessage({
+                    command: 'exportCSV',
+                    data: {
+                        csvContent: csvContent,
+                        filename: getDefaultCSVFilename()
+                    }
+                });
+                
+                console.log('CSV export requested');
+            } catch (error) {
+                console.error('Failed to export CSV:', error);
+                showError('Failed to export CSV: ' + error.message);
+            }
+        }
+
+        // Generate CSV content from table data
+        function generateCSVContent(data) {
+            const lines = [];
+            
+            // Add headers
+            const headerLine = data.headers.map(header => escapeCSVField(header)).join(',');
+            lines.push(headerLine);
+            
+            // Add data rows
+            data.rows.forEach(row => {
+                const csvRow = row.map(cell => {
+                    // Convert <br/> tags to newlines for CSV
+                    const cellValue = processCellContentForEditing(cell || '');
+                    return escapeCSVField(cellValue);
+                }).join(',');
+                lines.push(csvRow);
+            });
+            
+            return lines.join('\n');
+        }
+
+        // Escape CSV field (handle commas, quotes, newlines)
+        function escapeCSVField(field) {
+            if (field === null || field === undefined) {
+                return '';
+            }
+            
+            const stringField = String(field);
+            
+            // Always wrap in quotes if field contains:
+            // - comma (,)
+            // - double quote (")
+            // - newline (\n or \r\n)
+            // - carriage return (\r)
+            // - starts or ends with whitespace
+            const needsQuoting = stringField.includes(',') || 
+                               stringField.includes('"') || 
+                               stringField.includes('\n') || 
+                               stringField.includes('\r') || 
+                               stringField.startsWith(' ') || 
+                               stringField.endsWith(' ') ||
+                               stringField !== stringField.trim();
+            
+            if (needsQuoting) {
+                // Escape existing quotes by doubling them (RFC 4180 standard)
+                const escapedField = stringField.replace(/"/g, '""');
+                return `"${escapedField}"`;
+            }
+            
+            return stringField;
+        }
+
+        // Get default CSV filename based on current context
+        function getDefaultCSVFilename() {
+            // Use original filename if available
+            if (fileInfo && fileInfo.fileNameWithoutExt) {
+                return `${fileInfo.fileNameWithoutExt}.csv`;
+            }
+            
+            // Fallback to timestamp-based filename
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 19).replace(/[:.]/g, '-');
+            return `table-export-${timestamp}.csv`;
+        }
+
+        // IME composition state tracking
+        let isComposing = false;
+
+        // Start editing a cell
+        function startCellEdit(row, col) {
+            if (currentEditingCell) {
+                commitCellEdit();
+            }
+
+            const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`);
+            if (!cell) return;
+
+            // Get the original cell value from the data, processing any <br/> tags
+            const originalValue = (displayData || tableData).rows[row][col] || '';
+            const editableValue = processCellContentForEditing(originalValue);
+            
+            // Store original cell dimensions for restoration
+            const cellRect = cell.getBoundingClientRect();
+            const cellStyles = window.getComputedStyle(cell);
+            const originalCellHeight = Math.max(cellRect.height, 32); // 最小32px
+            const originalCellWidth = cellRect.width;
+            
+            currentEditingCell = { 
+                row, 
+                col, 
+                element: cell, 
+                originalValue: editableValue,
+                originalHeight: originalCellHeight,
+                originalWidth: originalCellWidth
+            };
+
+            // Reset IME composition state
+            isComposing = false;
+            
+            cell.classList.add('editing');
+            
+            // 常にtextareaを使用（統一）
+            const hasLineBreaks = currentEditingCell.originalValue.includes('\n');
+            const inputAttrs = hasLineBreaks ? `class="cell-input" data-multiline="true"` : `class="cell-input"`;
+            const inputContent = escapeHtml(currentEditingCell.originalValue);
+            
+            cell.innerHTML = `<textarea ${inputAttrs}>${inputContent}</textarea>`;
+            
+            const input = cell.querySelector('textarea.cell-input');
+            
+            // Set cell dimensions to maintain current size - 幅のみ固定、高さは自動
+            cell.style.width = originalCellWidth + 'px';
+            cell.style.height = 'auto';
+            cell.style.minHeight = originalCellHeight + 'px';
+            
+            // Set textarea dimensions and alignment
+            input.style.width = '100%';
+            // 未編集時のセルの高さと同じになるように調整（セルのパディング分も考慮）
+            input.style.minHeight = Math.max(originalCellHeight, 32) + 'px';
+            input.style.height = 'auto';
+            input.style.padding = '8px 12px';
+            input.style.margin = '0';
+            input.style.lineHeight = '1.4';
+            input.style.border = 'none';
+            input.style.outline = 'none';
+            
+            // 常に自動改行を有効にする
+            input.style.whiteSpace = 'pre-wrap';
+            input.style.wordWrap = 'break-word';
+            input.style.overflow = 'auto';
+            
+            if (hasLineBreaks) {
+                // 既に改行が含まれている場合は、手動リサイズを許可
+                input.style.resize = 'vertical';
+            } else {
+                // 改行がない場合は、手動リサイズを無効にしつつ自動改行は有効
+                input.style.resize = 'none';
+            }
+            
+            // Auto-resize height based on content while maintaining width
+            const adjustHeight = () => {
+                // Reset height to calculate scrollHeight accurately
+                input.style.height = 'auto';
+                const contentHeight = input.scrollHeight;
+                // 未編集時のセルの高さと同等以上になるように調整
+                const minInputHeight = Math.max(contentHeight, originalCellHeight, 32);
+                
+                // Update textarea height
+                input.style.height = minInputHeight + 'px';
+                
+                // セルの高さは自動で調整される（textareaの高さに追従）
+                cell.style.height = 'auto';
+                cell.style.minHeight = originalCellHeight + 'px';
+                
+                // 幅は絶対に変更しない
+                if (originalCellWidth) {
+                    cell.style.width = originalCellWidth + 'px';
+                }
+            };
+            
+            input.addEventListener('input', (e) => {
+                // 高さ調整を実行
+                adjustHeight();
+                
+                // IME入力中でない場合のみログ出力（デバッグ用）
+                if (!isComposing) {
+                    console.log('Input event (not during IME):', e.inputType);
+                }
+            });
+            
+            // Set initial height
+            setTimeout(adjustHeight, 0);
+            
+            // 強制的に上揃えにする
+            input.style.verticalAlign = 'top';
+            input.style.textAlign = 'left';
+            
+            // 強制的に上揃えスタイルを再適用
+            setTimeout(() => {
+                input.style.setProperty('vertical-align', 'top', 'important');
+                input.style.setProperty('text-align', 'left', 'important');
+                if (hasLineBreaks) {
+                    // 既に改行がある場合、カーソルを先頭に移動
+                    input.setSelectionRange(0, 0);
+                    input.scrollTop = 0;
+                }
+            }, 0);
+            
+            input.focus();
+            // カーソルを末尾に移動（テキストを選択しない）
+            const textLength = input.value.length;
+            input.setSelectionRange(textLength, textLength);
+
+            // Prevent the cell input from losing focus when clicked
+            input.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Keep focus on the input
+                setTimeout(() => input.focus(), 0);
+            });
+
+            // Prevent mousedown from bubbling to prevent cell selection
+            input.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+            });
+
+            // Enhanced blur handling - only commit if not clicking within the same input
+            input.addEventListener('blur', (e) => {
+                // Small delay to check if we're refocusing on the same input
+                setTimeout(() => {
+                    if (document.activeElement !== input) {
+                        commitCellEdit();
+                    }
+                }, 10);
+            });
+
+            // IME composition event handlers
+            input.addEventListener('compositionstart', (e) => {
+                console.log('IME composition started');
+                isComposing = true;
+            });
+
+            input.addEventListener('compositionupdate', (e) => {
+                console.log('IME composition updating:', e.data);
+                isComposing = true;
+            });
+
+            input.addEventListener('compositionend', (e) => {
+                console.log('IME composition ended:', e.data);
+                isComposing = false;
+            });
+            
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    // Ctrl+Enter / Cmd+Enter で編集確定
+                    e.preventDefault();
+                    commitCellEdit();
+                } else if (e.key === 'Enter' && e.shiftKey) {
+                    // Shift+Enter で改行
+                    e.stopPropagation();
+                    // 改行後に高さを調整
+                    setTimeout(adjustHeight, 0);
+                } else if (e.key === 'Enter' && !isComposing) {
+                    // Enter で編集確定し、下の行に移動（IME入力中でない場合のみ）
+                    console.log('Enter pressed, isComposing:', isComposing);
+                    e.preventDefault();
+                    commitCellEdit();
+                    // Clear selection of the current cell before moving
+                    clearSelection();
+                    // Move to next row, same column
+                    const nextRow = row + 1;
+                    if (nextRow < tableData.rows.length) {
+                        setTimeout(() => {
+                            selectCell(nextRow, col);
+                        }, 10);
+                    }
+                } else if (e.key === 'Enter' && isComposing) {
+                    // IME入力中のEnterは確定として処理し、編集は継続
+                    console.log('Enter pressed during IME composition - allowing IME to handle');
+                    // イベントをIMEに委ねる（preventDefault しない）
+                    e.stopPropagation();
+                    // 高さ調整は念のため実行
+                    setTimeout(adjustHeight, 0);
+                } else if (e.key === 'Escape') {
+                    // Escで変更を反映（確定）
+                    e.preventDefault();
+                    commitCellEdit();
+                } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    commitCellEdit();
+                    // Clear selection of the current cell before moving
+                    clearSelection();
+                    // Move to next cell
+                    const nextCol = (col + 1) % tableData.headers.length;
+                    const nextRow = nextCol === 0 ? row + 1 : row;
+                    if (nextRow < tableData.rows.length) {
+                        setTimeout(() => {
+                            selectCell(nextRow, nextCol);
+                        }, 10);
+                    }
+                } else if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x', 'a', 'z', 'y'].includes(e.key.toLowerCase())) {
+                    // コピー・ペースト・切り取り・全選択・アンドゥ・リドゥは通す
+                    return;
+                }
+                // Stop propagation to prevent other keyboard handlers
+                e.stopPropagation();
+            });
+        }
+
+        // Commit cell edit
+        function commitCellEdit() {
+            if (!currentEditingCell) return;
+
+            const input = currentEditingCell.element.querySelector('textarea.cell-input');
+            const rawValue = input ? input.value : currentEditingCell.originalValue;
+            
+            // Convert newlines to <br/> tags for storage in Markdown
+            const storageValue = processCellContentForStorage(rawValue);
+
+            // Update local data with storage format
+            tableData.rows[currentEditingCell.row][currentEditingCell.col] = storageValue;
+
+            // Store current cell dimensions before resetting classes
+            const currentWidth = currentEditingCell.element.style.width;
+
+            // Update UI with display format
+            currentEditingCell.element.classList.remove('editing');
+            currentEditingCell.element.innerHTML = `<div class="cell-content">${processCellContent(storageValue)}</div>`;
+            
+            // 幅のみ復元、高さは内容に応じて自動調整
+            if (currentWidth) {
+                currentEditingCell.element.style.width = currentWidth;
+            }
+            // 高さは自動に戻す
+            currentEditingCell.element.style.height = 'auto';
+            currentEditingCell.element.style.minHeight = '32px';
+            
+            // Also apply the width to the corresponding header for column consistency
+            const colIndex = currentEditingCell.col;
+            const header = document.querySelector(`th[data-col="${colIndex}"]`);
+            if (header && currentWidth) {
+                header.style.width = currentWidth;
+                header.style.minWidth = currentWidth;
+            }
+
+            // Show saving status
+            showSavingStatus();
+            
+            // Send update to extension with storage format
+            vscode.postMessage({
+                command: 'updateCell',
+                data: {
+                    row: currentEditingCell.row,
+                    col: currentEditingCell.col,
+                    value: storageValue
+                }
+            });
+
+            // Store edited cell position for potential scroll restoration
+            const editedCellPosition = {
+                row: currentEditingCell.row,
+                col: currentEditingCell.col
+            };
+
+            currentEditingCell = null;
+            
+            // Ensure the edited cell remains visible after any potential re-render
+            setTimeout(() => {
+                scrollToCell(editedCellPosition.row, editedCellPosition.col);
+            }, 50);
+        }
+
+        // Cancel cell edit
+        function cancelCellEdit() {
+            if (!currentEditingCell) return;
+
+            // Get the original storage value and convert to display format
+            const originalStorageValue = (displayData || tableData).rows[currentEditingCell.row][currentEditingCell.col] || '';
+
+            // Store current cell dimensions before resetting classes
+            const currentWidth = currentEditingCell.element.style.width;
+
+            currentEditingCell.element.classList.remove('editing');
+            currentEditingCell.element.innerHTML = `<div class="cell-content">${processCellContent(originalStorageValue)}</div>`;
+            
+            // 幅のみ復元、高さは内容に応じて自動調整
+            if (currentWidth) {
+                currentEditingCell.element.style.width = currentWidth;
+            }
+            // 高さは自動に戻す
+            currentEditingCell.element.style.height = 'auto';
+            currentEditingCell.element.style.minHeight = '32px';
+            
+            // Also apply the width to the corresponding header for column consistency
+            const colIndex = currentEditingCell.col;
+            const header = document.querySelector(`th[data-col="${colIndex}"]`);
+            if (header && currentWidth) {
+                header.style.width = currentWidth;
+                header.style.minWidth = currentWidth;
+            }
+            
+            currentEditingCell = null;
+        }
+
+        // Add row
+        function addRow() {
+            vscode.postMessage({
+                command: 'addRow',
+                data: { index: tableData.rows.length }
+            });
+        }
+
+        // Add column
+        function addColumn() {
+            const header = prompt('Enter column header:', 'New Column');
+            if (header !== null) {
+                vscode.postMessage({
+                    command: 'addColumn',
+                    data: { index: tableData.headers.length, header }
+                });
+            }
+        }
+
+        // Handle column header click (selection vs sorting)
+        function handleColumnHeaderClick(columnIndex, event) {
+            // Check if we're currently resizing - if so, don't handle the click
+            if (isResizing) {
+                return;
+            }
+            
+            // Check if the click is on a resize handle - if so, don't handle the click
+            if (event.target.classList.contains('resize-handle')) {
+                return;
+            }
+            
+            if (event && (event.ctrlKey || event.metaKey || event.shiftKey)) {
+                // Multi-selection mode
+                selectColumn(columnIndex, event);
+            } else {
+                // Normal sort mode - apply view-only sort
+                applySortView(columnIndex);
+            }
+        }
+
+        // Apply view-only sort (does not modify file)
+        function applySortView(columnIndex) {
+            let direction = 'asc';
+            if (sortState.column === columnIndex) {
+                direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+            }
+
+            // Store original data if this is the first sort
+            if (!sortState.isViewOnly) {
+                sortState.originalData = JSON.parse(JSON.stringify(tableData));
+                sortState.isViewOnly = true;
+            }
+
+            // Apply sort to display data
+            displayData = sortTableData(displayData || tableData, columnIndex, direction);
+            sortState.column = columnIndex;
+            sortState.direction = direction;
+
+            // Re-render table with sorted data while preserving scroll position
+            const tableContainer = document.querySelector('.table-container');
+            if (tableContainer) {
+                const scrollTop = tableContainer.scrollTop;
+                const scrollLeft = tableContainer.scrollLeft;
+                
+                tableContainer.innerHTML = `
+                    <table class="table-editor" id="tableEditor">
+                        ${renderTableContent()}
+                    </table>
+                `;
+                
+                // Restore scroll position
+                setTimeout(() => {
+                    tableContainer.scrollTop = scrollTop;
+                    tableContainer.scrollLeft = scrollLeft;
+                }, 0);
+            }
+
+            // Update UI indicators
+            updateSortActionsVisibility();
+            updateSortStatusInfo();
+            setupTableEvents();
+        }
+
+        // Sort table data utility function
+        function sortTableData(data, columnIndex, direction) {
+            const sortedData = JSON.parse(JSON.stringify(data)); // Deep clone
+            
+            const sortedIndices = sortedData.rows.map((row, index) => ({
+                index,
+                value: row[columnIndex] || '',
+                row
+            }));
+
+            sortedIndices.sort((a, b) => {
+                // Convert <br/> tags to spaces for sorting comparison
+                const aVal = a.value.toString().replace(/<br\s*\/?>/gi, ' ').toLowerCase().trim();
+                const bVal = b.value.toString().replace(/<br\s*\/?>/gi, ' ').toLowerCase().trim();
+                
+                // Try numeric comparison first
+                const aNum = parseFloat(aVal);
+                const bNum = parseFloat(bVal);
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return direction === 'asc' ? aNum - bNum : bNum - aNum;
+                }
+                
+                // Fall back to string comparison
+                if (direction === 'asc') {
+                    return aVal.localeCompare(bVal);
+                } else {
+                    return bVal.localeCompare(aVal);
+                }
+            });
+
+            sortedData.rows = sortedIndices.map(item => item.row);
+            return sortedData;
+        }
+
+        // Restore original view (before any sorting)
+        function restoreOriginalView() {
+            if (sortState.originalData) {
+                displayData = JSON.parse(JSON.stringify(sortState.originalData));
+                tableData = displayData;
+                
+                // Reset sort state
+                sortState = {
+                    column: -1,
+                    direction: 'none',
+                    isViewOnly: false,
+                    originalData: null
+                };
+
+                // Re-render table while preserving scroll position
+                const tableContainer = document.querySelector('.table-container');
+                if (tableContainer) {
+                    const scrollTop = tableContainer.scrollTop;
+                    const scrollLeft = tableContainer.scrollLeft;
+                    
+                    tableContainer.innerHTML = `
+                        <table class="table-editor" id="tableEditor">
+                            ${renderTableContent()}
+                        </table>
+                    `;
+                    
+                    // Restore scroll position
+                    setTimeout(() => {
+                        tableContainer.scrollTop = scrollTop;
+                        tableContainer.scrollLeft = scrollLeft;
+                    }, 0);
+                }
+
+                updateSortActionsVisibility();
+                updateSortStatusInfo();
+                setupTableEvents();
+                showSuccess('Original table order restored');
+            }
+        }
+
+        // Commit current sort to file
+        function commitSortToFile() {
+            if (sortState.isViewOnly && displayData) {
+                // Send the sorted data to extension for file update
+                vscode.postMessage({
+                    command: 'updateTableData',
+                    data: displayData
+                });
+
+                // Update the base table data and reset sort state
+                tableData = JSON.parse(JSON.stringify(displayData));
+                originalData = JSON.parse(JSON.stringify(displayData));
+                
+                sortState = {
+                    column: sortState.column,
+                    direction: sortState.direction,
+                    isViewOnly: false,
+                    originalData: null
+                };
+
+                updateSortActionsVisibility();
+                updateSortStatusInfo();
+                showSuccess('Sort order saved to file');
+            }
+        }
+
+        // Update sort actions panel visibility
+        function updateSortActionsVisibility() {
+            const sortActions = document.getElementById('sortActions');
+            if (sortActions) {
+                if (sortState.isViewOnly) {
+                    sortActions.classList.add('visible');
+                } else {
+                    sortActions.classList.remove('visible');
+                }
+            }
+        }
+
+        // Update sort status information
+        function updateSortStatusInfo() {
+            const statusInfo = document.getElementById('sortStatusInfo');
+            if (statusInfo) {
+                if (sortState.isViewOnly && sortState.column >= 0) {
+                    const columnLetter = getColumnLetter(sortState.column);
+                    statusInfo.textContent = ` | Sorted by ${columnLetter} (${sortState.direction.toUpperCase()}) - View Only`;
+                    statusInfo.style.display = 'inline';
+                    statusInfo.style.color = 'var(--vscode-statusBarItem-warningForeground)';
+                } else if (!sortState.isViewOnly && sortState.column >= 0) {
+                    const columnLetter = getColumnLetter(sortState.column);
+                    statusInfo.textContent = ` | Sorted by ${columnLetter} (${sortState.direction.toUpperCase()}) - Saved`;
+                    statusInfo.style.display = 'inline';
+                    statusInfo.style.color = 'var(--vscode-statusBarItem-prominentForeground)';
+                } else {
+                    statusInfo.style.display = 'none';
+                }
+            }
+        }
+
+        // Legacy sort function (kept for compatibility)
+        function sortByColumn(columnIndex) {
+            // Redirect to view-only sort
+            applySortView(columnIndex);
+        }
+
+        // Convert HTML break tags to newlines and properly format for display
+        function processCellContent(content) {
+            if (!content) return '';
+            
+            console.log('Processing cell content:', content);
+            
+            // Convert <br> and <br/> tags to actual HTML <br> tags for display
+            let processedContent = content
+                .replace(/<br\s*\/?>/gi, '<br>')
+                .replace(/<BR\s*\/?>/gi, '<br>');
+            
+            console.log('After BR tag conversion:', processedContent);
+            
+            // Escape other HTML content while preserving our <br> tags
+            const result = escapeHtmlExceptBreaks(processedContent);
+            console.log('Final result:', result);
+            return result;
+        }
+
+        // Convert HTML break tags to newlines for editing
+        function processCellContentForEditing(content) {
+            if (!content) return '';
+            
+            // Convert <br> and <br/> tags to newlines for text editing
+            return content
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<BR\s*\/?>/gi, '\n');
+        }
+
+        // Convert newlines back to <br/> tags for storage
+        function processCellContentForStorage(content) {
+            if (!content) return '';
+            
+            // Convert newlines to <br/> tags for Markdown storage
+            return content.replace(/\n/g, '<br/>');
+        }
+
+        // Escape HTML content while preserving <br> tags
+        function escapeHtmlExceptBreaks(text) {
+            if (!text) return '';
+            
+            // First, temporarily replace <br> tags with a placeholder
+            const placeholder = '###BR_PLACEHOLDER###';
+            let processedText = text.replace(/<br>/gi, placeholder);
+            
+            // Escape the rest of the HTML
+            const div = document.createElement('div');
+            div.textContent = processedText;
+            let escaped = div.innerHTML;
+            
+            // Restore <br> tags
+            escaped = escaped.replace(new RegExp(placeholder, 'g'), '<br>');
+            
+            return escaped;
+        }
+
+        // Utility function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Handle messages from extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            
+            switch (message.command) {
+                case 'updateTableData':
+                    // Store file information if provided
+                    if (message.fileInfo) {
+                        fileInfo = message.fileInfo;
+                        console.log('File info received:', fileInfo);
+                    }
+                    
+                    renderTableWithScrollPreservation(message.data);
+                    // Show auto-saved status when table data is updated from server
+                    showAutoSavedStatus();
+                    break;
+                case 'error':
+                    showError(message.message);
+                    break;
+                case 'success':
+                    showSuccess(message.message);
+                    break;
+                case 'status':
+                    showStatus(message.status, message.data);
+                    break;
+                case 'validationError':
+                    showValidationError(message.field, message.message);
+                    break;
+                case 'ping':
+                    // Respond to health check ping
+                    vscode.postMessage({
+                        command: 'pong',
+                        timestamp: message.timestamp,
+                        responseTime: Date.now()
+                    });
+                    break;
+            }
+        });
+
+        // Show error message in status bar center
+        function showError(message) {
+            const statusCenter = document.getElementById('statusMessages');
+            if (!statusCenter) return;
+            
+            // Clear any existing messages
+            statusCenter.innerHTML = '';
+            
+            // Create error message element
+            const errorElement = document.createElement('div');
+            errorElement.className = 'status-message error-message';
+            errorElement.textContent = message;
+            statusCenter.appendChild(errorElement);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (statusCenter.contains(errorElement)) {
+                    statusCenter.removeChild(errorElement);
+                }
+            }, 5000);
+        }
+
+        // Show saving status (replaces save indicator)
+        function showSavingStatus() {
+            const saveIndicator = document.getElementById('saveIndicator');
+            if (saveIndicator) {
+                saveIndicator.textContent = '💾 Saving...';
+                saveIndicator.className = 'save-indicator saving';
+            }
+        }
+
+        // Show auto-saved status
+        function showAutoSavedStatus() {
+            const saveIndicator = document.getElementById('saveIndicator');
+            if (saveIndicator) {
+                saveIndicator.textContent = '✓ Auto-saved';
+                saveIndicator.className = 'save-indicator saved';
+            }
+        }
+
+        // Show success message in status bar center (removed Cell update successfully message)
+        function showSuccess(message) {
+            // Don't show "Cell update successfully" messages anymore
+            if (message && (message.includes('Cell update successfully') || message.includes('Cell updated successfully'))) {
+                // Instead, show auto-saved status
+                showAutoSavedStatus();
+                return;
+            }
+            
+            const statusCenter = document.getElementById('statusMessages');
+            if (!statusCenter) return;
+            
+            // Clear any existing messages
+            statusCenter.innerHTML = '';
+            
+            // Create success message element
+            const successElement = document.createElement('div');
+            successElement.className = 'status-message success-message';
+            successElement.textContent = message;
+            statusCenter.appendChild(successElement);
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                if (statusCenter.contains(successElement)) {
+                    statusCenter.removeChild(successElement);
+                }
+            }, 3000);
+        }
+
+        // Drag and Drop functionality
+        let dragState = {
+            isDragging: false,
+            dragType: null, // 'row' or 'column'
+            dragIndex: -1,
+            dragElement: null,
+            dropIndicator: null
+        };
+
+        // Initialize drag and drop for rows and columns
+        function setupDragAndDrop() {
+            // Make row numbers draggable
+            document.querySelectorAll('.row-number').forEach((rowNum, index) => {
+                rowNum.draggable = true;
+                rowNum.setAttribute('data-drag-type', 'row');
+                rowNum.setAttribute('data-drag-index', index.toString());
+            });
+
+            // Make column headers draggable
+            document.querySelectorAll('.column-header').forEach((header, index) => {
+                header.draggable = true;
+                header.setAttribute('data-drag-type', 'column');
+                header.setAttribute('data-drag-index', index.toString());
+            });
+
+            // Add drag event listeners
+            document.addEventListener('dragstart', handleDragStart);
+            document.addEventListener('dragover', handleDragOver);
+            document.addEventListener('dragenter', handleDragEnter);
+            document.addEventListener('dragleave', handleDragLeave);
+            document.addEventListener('drop', handleDrop);
+            document.addEventListener('dragend', handleDragEnd);
+        }
+
+        function handleDragStart(event) {
+            const element = event.target;
+            const dragType = element.getAttribute('data-drag-type');
+            const dragIndex = parseInt(element.getAttribute('data-drag-index'));
+
+            if (!dragType || dragIndex === -1) {
+                event.preventDefault();
+                return;
+            }
+
+            dragState.isDragging = true;
+            dragState.dragType = dragType;
+            dragState.dragIndex = dragIndex;
+            dragState.dragElement = element;
+
+            // Set drag effect
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', '');
+
+            // Add visual feedback
+            element.style.opacity = '0.5';
+            element.classList.add('dragging');
+            
+            // Add drag state to table
+            const table = document.querySelector('.table-editor');
+            if (table) {
+                table.classList.add('drag-active');
+            }
+
+            // Create drop indicator
+            createDropIndicator();
+
+            console.log(`Started dragging ${dragType} ${dragIndex}`);
+        }
+
+        function handleDragOver(event) {
+            if (!dragState.isDragging) return;
+
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+
+            const element = event.target.closest(dragState.dragType === 'row' ? '.row-number' : '.column-header');
+            if (element) {
+                updateDropIndicator(element);
+            }
+        }
+
+        function handleDragEnter(event) {
+            if (!dragState.isDragging) return;
+            event.preventDefault();
+        }
+
+        function handleDragLeave(event) {
+            if (!dragState.isDragging) return;
+            // Only hide indicator if we're leaving the table area
+            if (!event.relatedTarget || !event.relatedTarget.closest('.table-editor')) {
+                hideDropIndicator();
+            }
+        }
+
+        function handleDrop(event) {
+            if (!dragState.isDragging) return;
+
+            event.preventDefault();
+
+            const dropTarget = event.target.closest(dragState.dragType === 'row' ? '.row-number' : '.column-header');
+            if (!dropTarget) return;
+
+            const dropIndex = parseInt(dropTarget.getAttribute('data-drag-index'));
+            if (dropIndex === -1 || dropIndex === dragState.dragIndex) return;
+
+            console.log(`Dropping ${dragState.dragType} ${dragState.dragIndex} onto ${dropIndex}`);
+
+            // Perform the move operation
+            if (dragState.dragType === 'row') {
+                moveRowViaDrag(dragState.dragIndex, dropIndex);
+            } else if (dragState.dragType === 'column') {
+                moveColumnViaDrag(dragState.dragIndex, dropIndex);
+            }
+        }
+
+        function handleDragEnd(event) {
+            if (!dragState.isDragging) return;
+
+            // Clean up visual feedback
+            if (dragState.dragElement) {
+                dragState.dragElement.style.opacity = '';
+                dragState.dragElement.classList.remove('dragging');
+            }
+            
+            // Remove drag state from table
+            const table = document.querySelector('.table-editor');
+            if (table) {
+                table.classList.remove('drag-active');
+            }
+
+            hideDropIndicator();
+
+            // Reset drag state
+            dragState = {
+                isDragging: false,
+                dragType: null,
+                dragIndex: -1,
+                dragElement: null,
+                dropIndicator: null
+            };
+        }
+
+        function createDropIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'drop-indicator';
+            indicator.style.cssText = `
+                position: absolute;
+                background-color: var(--vscode-focusBorder);
+                z-index: 1000;
+                pointer-events: none;
+                opacity: 0.8;
+                transition: all 0.2s ease;
+            `;
+
+            if (dragState.dragType === 'row') {
+                indicator.style.height = '3px';
+                indicator.style.left = '0';
+                indicator.style.right = '0';
+            } else {
+                indicator.style.width = '3px';
+                indicator.style.top = '0';
+                indicator.style.bottom = '0';
+            }
+
+            document.body.appendChild(indicator);
+            dragState.dropIndicator = indicator;
+        }
+
+        function updateDropIndicator(element) {
+            if (!dragState.dropIndicator) return;
+
+            const rect = element.getBoundingClientRect();
+            const indicator = dragState.dropIndicator;
+
+            if (dragState.dragType === 'row') {
+                indicator.style.top = (rect.bottom - 1) + 'px';
+                indicator.style.left = rect.left + 'px';
+                indicator.style.width = rect.width + 'px';
+                indicator.style.display = 'block';
+            } else {
+                indicator.style.left = (rect.right - 1) + 'px';
+                indicator.style.top = rect.top + 'px';
+                indicator.style.height = rect.height + 'px';
+                indicator.style.display = 'block';
+            }
+        }
+
+        function hideDropIndicator() {
+            if (dragState.dropIndicator) {
+                dragState.dropIndicator.style.display = 'none';
+            }
+        }
+
+        function moveRowViaDrag(fromIndex, toIndex) {
+            console.log(`Moving row from ${fromIndex} to ${toIndex}`);
+            
+            vscode.postMessage({
+                command: 'moveRow',
+                data: { from: fromIndex, to: toIndex }
+            });
+        }
+
+        function moveColumnViaDrag(fromIndex, toIndex) {
+            console.log(`Moving column from ${fromIndex} to ${toIndex}`);
+            
+            vscode.postMessage({
+                command: 'moveColumn',
+                data: { from: fromIndex, to: toIndex }
+            });
+        }
+
+        // Enhanced render function to include drag and drop setup
+        function renderTableWithDragDrop(data) {
+            renderTable(data);
+            setTimeout(() => {
+                setupDragAndDrop();
+            }, 100);
+        }
+
+        // Render table while preserving scroll position
+        function renderTableWithScrollPreservation(data) {
+            // Store current scroll position
+            const tableContainer = document.querySelector('.table-container');
+            let scrollTop = 0;
+            let scrollLeft = 0;
+            
+            if (tableContainer) {
+                scrollTop = tableContainer.scrollTop;
+                scrollLeft = tableContainer.scrollLeft;
+            }
+
+            // Check if we have existing table structure to avoid full re-render
+            const existingTable = document.querySelector('.table-editor');
+            if (existingTable && tableData && data && 
+                data.headers.length === tableData.headers.length && 
+                data.rows.length === tableData.rows.length) {
+                // Partial update - only update content without changing structure
+                updateTableContentOnly(data);
+            } else {
+                // Full render for structural changes
+                renderTable(data);
+            }
+            
+            // Restore scroll position
+            setTimeout(() => {
+                const newTableContainer = document.querySelector('.table-container');
+                if (newTableContainer) {
+                    newTableContainer.scrollTop = scrollTop;
+                    newTableContainer.scrollLeft = scrollLeft;
+                }
+            }, 0);
+        }
+
+        // Update only table content without changing structure
+        function updateTableContentOnly(data) {
+            tableData = data;
+            displayData = data;
+
+            // Update each cell content
+            data.rows.forEach((row, rowIndex) => {
+                row.forEach((cellContent, colIndex) => {
+                    const cell = document.querySelector(`td[data-row="${rowIndex}"][data-col="${colIndex}"]`);
+                    if (cell && !cell.classList.contains('editing')) {
+                        const contentDiv = cell.querySelector('.cell-content');
+                        if (contentDiv) {
+                            contentDiv.innerHTML = processCellContent(cellContent);
+                        }
+                        
+                        // Update empty cell class
+                        const isEmpty = !cellContent || cellContent.trim() === '';
+                        if (isEmpty) {
+                            cell.classList.add('empty-cell');
+                        } else {
+                            cell.classList.remove('empty-cell');
+                        }
+                    }
+                });
+            });
+
+            // Update headers if needed (though they rarely change)
+            data.headers.forEach((header, index) => {
+                const headerElement = document.querySelector(`th[data-col="${index}"] .header-text`);
+                if (headerElement) {
+                    headerElement.textContent = header;
+                }
+            });
+
+            // Update status bar
+            const statusInfo = document.querySelector('.status-info span');
+            if (statusInfo) {
+                statusInfo.textContent = `Rows: ${data.rows.length} | Columns: ${data.headers.length}`;
+            }
+        }
+
+        // Show status message
+        function showStatus(status, data) {
+            const statusBar = document.querySelector('.status-bar');
+            if (statusBar) {
+                statusBar.textContent = status;
+                if (data && tableData) {
+                    statusBar.textContent += ` | Rows: ${tableData.rows.length} | Columns: ${tableData.headers.length}`;
+                }
+            }
+        }
+
+        // Show validation error
+        function showValidationError(field, message) {
+            console.warn(`Validation error for ${field}: ${message}`);
+            showError(`Validation error: ${message}`);
+        }
+
+        // Cell selection functions
+        function startCellSelect(row, col) {
+            if (event) {
+                event.preventDefault();
+            }
+            isSelecting = true;
+            selectionStart = { row, col };
+            selectCell(row, col);
+        }
+
+        function startRowSelect(rowIndex) {
+            if (event) {
+                event.preventDefault();
+            }
+            selectRow(rowIndex);
+        }
+
+        function startRowDrag(rowIndex, event) {
+            // Check if this is a simple click or the start of a drag
+            const isClick = !event.shiftKey && !event.ctrlKey && !event.metaKey;
+            
+            if (isClick) {
+                // Start drag operation for row movement
+                startDragOperation('row', rowIndex, event);
+            } else {
+                // Handle selection
+                startRowSelect(rowIndex);
+            }
+        }
+
+        function startColumnSelect(colIndex) {
+            if (event) {
+                event.preventDefault();
+            }
+            selectColumn(colIndex);
+        }
+
+        function startColumnDrag(colIndex, event) {
+            // Check if we're currently resizing - if so, don't handle the drag
+            if (isResizing) {
+                return;
+            }
+            
+            // Check if the click is on the resize handle
+            if (event.target.classList.contains('resize-handle')) {
+                // Don't interfere with resize operation
+                return;
+            }
+            
+            // Check if this is a simple click or the start of a drag
+            const isClick = !event.shiftKey && !event.ctrlKey && !event.metaKey;
+            
+            if (isClick) {
+                // Start drag operation for column movement
+                startDragOperation('column', colIndex, event);
+            } else {
+                // Handle selection
+                startColumnSelect(colIndex);
+            }
+        }
+
+        // Context Menu Functions
+        let contextMenuState = {
+            currentRow: -1,
+            currentColumn: -1
+        };
+
+        function showRowContextMenu(event, rowIndex) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            contextMenuState.currentRow = rowIndex;
+            const menu = document.getElementById('rowContextMenu');
+            
+            // Position menu
+            menu.style.display = 'block';
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+            
+            // Hide column menu if visible
+            document.getElementById('columnContextMenu').style.display = 'none';
+            
+            // Disable delete if only one row
+            const deleteBtn = menu.querySelector('[onclick="deleteRowFromContext()"]');
+            if (tableData.rows.length <= 1) {
+                deleteBtn.disabled = true;
+            } else {
+                deleteBtn.disabled = false;
+            }
+        }
+
+        function showColumnContextMenu(event, columnIndex) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            contextMenuState.currentColumn = columnIndex;
+            const menu = document.getElementById('columnContextMenu');
+            
+            // Position menu
+            menu.style.display = 'block';
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+            
+            // Hide row menu if visible
+            document.getElementById('rowContextMenu').style.display = 'none';
+            
+            // Disable delete if only one column
+            const deleteBtn = menu.querySelector('[onclick="deleteColumnFromContext()"]');
+            if (tableData.headers.length <= 1) {
+                deleteBtn.disabled = true;
+            } else {
+                deleteBtn.disabled = false;
+            }
+        }
+
+        function hideContextMenus() {
+            document.getElementById('rowContextMenu').style.display = 'none';
+            document.getElementById('columnContextMenu').style.display = 'none';
+        }
+
+        // Row context menu actions
+        function addRowAbove() {
+            const index = contextMenuState.currentRow;
+            hideContextMenus();
+            
+            vscode.postMessage({
+                command: 'addRow',
+                data: { index: index }
+            });
+        }
+
+        function addRowBelow() {
+            const index = contextMenuState.currentRow + 1;
+            hideContextMenus();
+            
+            vscode.postMessage({
+                command: 'addRow',
+                data: { index: index }
+            });
+        }
+
+        function deleteRowFromContext() {
+            const index = contextMenuState.currentRow;
+            hideContextMenus();
+            
+            if (tableData.rows.length <= 1) {
+                showError('Cannot delete the last row');
+                return;
+            }
+            
+            vscode.postMessage({
+                command: 'deleteRow',
+                data: { index: index }
+            });
+        }
+
+        // Column context menu actions
+        function addColumnLeft() {
+            const index = contextMenuState.currentColumn;
+            hideContextMenus();
+            
+            vscode.postMessage({
+                command: 'addColumn',
+                data: { 
+                    index: index,
+                    header: `Column ${index + 1}`
+                }
+            });
+        }
+
+        function addColumnRight() {
+            const index = contextMenuState.currentColumn + 1;
+            hideContextMenus();
+            
+            vscode.postMessage({
+                command: 'addColumn',
+                data: { 
+                    index: index,
+                    header: `Column ${index + 1}`
+                }
+            });
+        }
+
+        function deleteColumnFromContext() {
+            const index = contextMenuState.currentColumn;
+            hideContextMenus();
+            
+            if (tableData.headers.length <= 1) {
+                showError('Cannot delete the last column');
+                return;
+            }
+            
+            vscode.postMessage({
+                command: 'deleteColumn',
+                data: { index: index }
+            });
+        }
+
+        // Hide context menus when clicking elsewhere
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.context-menu')) {
+                hideContextMenus();
+            }
+        });
+
+        // Hide context menus on scroll
+        document.addEventListener('scroll', hideContextMenus);
+
+        // ウィンドウリサイズ時の処理を追加
+        window.addEventListener('resize', function() {
+            // ウィンドウリサイズ時は、全てのセル幅を維持する
+            // columnWidthsの値を使って幅を再設定
+            Object.keys(columnWidths).forEach(colIndex => {
+                const width = columnWidths[colIndex];
+                const colCells = document.querySelectorAll(`th[data-col="${colIndex}"], td[data-col="${colIndex}"]`);
+                colCells.forEach(cell => {
+                    cell.style.width = width + 'px';
+                    cell.style.minWidth = width + 'px';
+                    cell.style.maxWidth = width + 'px';
+                });
+            });
+        });
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeTableEditor);
+    </script>
+</body>
+</html>

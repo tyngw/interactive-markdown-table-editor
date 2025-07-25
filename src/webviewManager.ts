@@ -31,7 +31,7 @@ export class WebviewManager {
     /**
      * Create a new table editor panel
      */
-    public createTableEditorPanel(tableData: TableData, uri: vscode.Uri): vscode.WebviewPanel {
+    public createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri): vscode.WebviewPanel {
         const panelId = uri.toString();
         
         console.log('Creating webview panel for:', panelId);
@@ -63,15 +63,42 @@ export class WebviewManager {
 
         console.log('Webview panel created, setting HTML content...');
 
-
-        // style.cssのvscode-resource URIを生成
+        // Generate vscode-resource URIs for CSS and JavaScript files
         const cssPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'style.css');
         const cssUri = panel.webview.asWebviewUri(cssPath);
 
-        // HTMLを取得し、window.cssUriとして注入
+        // Generate script URIs for modular JavaScript files
+        const scriptFiles = [
+            'js/core.js',
+            'js/table-renderer.js',
+            'js/selection.js',
+            'js/cell-editor.js',
+            'js/sorting.js',
+            'js/keyboard-navigation.js',
+            'js/clipboard.js',
+            'js/column-resize.js',
+            'js/context-menu.js',
+            'js/drag-drop.js',
+            'js/status-bar.js',
+            'js/csv-exporter.js'
+        ];
+
+        const scriptUris = scriptFiles.map(file => {
+            const scriptPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview', file);
+            return panel.webview.asWebviewUri(scriptPath);
+        });
+
+        // Get HTML content and inject URIs
         let html = this.getWebviewContent();
-        // <head>直後にwindow.cssUriを埋め込む
-        html = html.replace(/<head>/i, `<head>\n<script>window.cssUri = '${cssUri}';</script>`);
+        
+        // Inject CSS URI and script URIs into HTML
+        const injectionScript = `
+<script>
+window.cssUri = '${cssUri}';
+window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
+</script>`;
+        
+        html = html.replace(/<head>/i, `<head>${injectionScript}`);
         panel.webview.html = html;
 
         console.log('HTML content set, storing panel reference...');
@@ -116,7 +143,7 @@ export class WebviewManager {
     /**
      * Update table data in the webview
      */
-    public updateTableData(panel: vscode.WebviewPanel, tableData: TableData, uri?: vscode.Uri): void {
+    public updateTableData(panel: vscode.WebviewPanel, tableData: TableData | TableData[], uri?: vscode.Uri): void {
         const message: any = {
             command: 'updateTableData',
             data: tableData
@@ -133,6 +160,16 @@ export class WebviewManager {
         }
         
         panel.webview.postMessage(message);
+    }
+
+    /**
+     * Set active table index in webview
+     */
+    public setActiveTable(panel: vscode.WebviewPanel, index: number): void {
+        panel.webview.postMessage({
+            command: 'setActiveTable',
+            data: { index }
+        });
     }
 
     /**

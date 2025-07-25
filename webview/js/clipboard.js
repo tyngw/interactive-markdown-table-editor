@@ -1,0 +1,368 @@
+/**
+ * Clipboard Manager Module for Markdown Table Editor
+ * 
+ * This module handles all clipboard operations, including:
+ * - Copy selected cells
+ * - Paste to selected cells
+ * - Cut selected cells
+ * - Data format conversion
+ */
+
+const ClipboardManager = {
+    /**
+     * Initialize the clipboard manager module
+     */
+    init: function() {
+        console.log('ClipboardManager: Initializing clipboard manager module...');
+        
+        
+        console.log('ClipboardManager: Module initialized');
+    },
+    
+    /**
+     * Copy selected cells to clipboard
+     */
+    copySelectedCells: function() {
+        const state = window.TableEditor.state;
+        const data = state.displayData || state.tableData;
+        
+        if (!data || !data.rows || state.selectedCells.size === 0) {
+            window.TableEditor.showError('No cells selected to copy');
+            return;
+        }
+        
+        // Get selected cells data
+        const selectedData = this.getSelectedCellsData();
+        if (!selectedData || selectedData.length === 0) {
+            window.TableEditor.showError('No data to copy');
+            return;
+        }
+        
+        // Convert to clipboard format (TSV - Tab Separated Values)
+        const clipboardText = this.convertToClipboardFormat(selectedData);
+        
+        // Try to copy to clipboard
+        this.copyToClipboard(clipboardText).then(() => {
+            window.TableEditor.showSuccess(`Copied ${selectedData.length} row(s) to clipboard`);
+            console.log('ClipboardManager: Copied cells to clipboard');
+        }).catch(error => {
+            console.error('ClipboardManager: Failed to copy to clipboard:', error);
+            window.TableEditor.showError('Failed to copy to clipboard');
+        });
+    },
+    
+    /**
+     * Paste from clipboard to selected cells
+     */
+    pasteToSelectedCells: function() {
+        const state = window.TableEditor.state;
+        
+        if (!state.lastSelectedCell) {
+            window.TableEditor.showError('No cell selected for paste');
+            return;
+        }
+        
+        // Try to read from clipboard
+        this.readFromClipboard().then(clipboardText => {
+            if (!clipboardText || clipboardText.trim() === '') {
+                window.TableEditor.showError('Clipboard is empty');
+                return;
+            }
+            
+            this.processPasteData(clipboardText);
+        }).catch(error => {
+            console.error('ClipboardManager: Failed to read from clipboard:', error);
+            window.TableEditor.showError('Failed to read from clipboard');
+        });
+    },
+    
+    /**
+     * Cut selected cells to clipboard
+     */
+    cutSelectedCells: function() {
+        const state = window.TableEditor.state;
+        
+        if (state.selectedCells.size === 0) {
+            window.TableEditor.showError('No cells selected to cut');
+            return;
+        }
+        
+        // First copy the data
+        this.copySelectedCells();
+        
+        // Then clear the selected cells
+        window.TableEditor.callModule('KeyboardNavigationManager', 'clearSelectedCells');
+        
+        console.log('ClipboardManager: Cut selected cells');
+    },
+    
+    /**
+     * Get data from selected cells
+     */
+    getSelectedCellsData: function() {
+        const state = window.TableEditor.state;
+        const data = state.displayData || state.tableData;
+        
+        if (!data || !data.rows || state.selectedCells.size === 0) {
+            return [];
+        }
+        
+        // Convert selected cells to a 2D array
+        const cellsMap = new Map();
+        state.selectedCells.forEach(cellKey => {
+            const [row, col] = cellKey.split('-').map(Number);
+            if (!cellsMap.has(row)) {
+                cellsMap.set(row, new Map());
+            }
+            cellsMap.get(row).set(col, data.rows[row][col] || '');
+        });
+        
+        // Find bounds of selection
+        const rows = Array.from(cellsMap.keys()).sort((a, b) => a - b);
+        if (rows.length === 0) return [];
+        
+        const minRow = rows[0];
+        const maxRow = rows[rows.length - 1];
+        
+        let minCol = Infinity;
+        let maxCol = -Infinity;
+        cellsMap.forEach(rowMap => {
+            const cols = Array.from(rowMap.keys());
+            if (cols.length > 0) {
+                minCol = Math.min(minCol, Math.min(...cols));
+                maxCol = Math.max(maxCol, Math.max(...cols));
+            }
+        });
+        
+        // Build rectangular data array
+        const result = [];
+        for (let row = minRow; row <= maxRow; row++) {
+            const rowData = [];
+            for (let col = minCol; col <= maxCol; col++) {
+                const cellValue = cellsMap.has(row) && cellsMap.get(row).has(col) 
+                    ? cellsMap.get(row).get(col) 
+                    : '';
+                rowData.push(cellValue);
+            }
+            result.push(rowData);
+        }
+        
+        return result;
+    },
+    
+    /**
+     * Convert data to clipboard format (TSV)
+     */
+    convertToClipboardFormat: function(data) {
+        return data.map(row => 
+            row.map(cell => {
+                // Convert <br> tags to newlines for clipboard
+                const cellText = String(cell || '').replace(/<br\s*\/?>/gi, '\n');
+                
+                // If cell contains tabs, newlines, or quotes, we need to quote it
+                if (cellText.includes('\t') || cellText.includes('\n') || cellText.includes('"')) {
+                    // Escape quotes by doubling them and wrap in quotes
+                    return '"' + cellText.replace(/"/g, '""') + '"';
+                }
+                return cellText;
+            }).join('\t')
+        ).join('\n');
+    },
+    
+    /**
+     * Process paste data and update cells
+     */
+    processPasteData: function(clipboardText) {
+        const state = window.TableEditor.state;
+        const data = state.tableData;
+        
+        if (!data || !data.rows || !state.lastSelectedCell) {
+            return;
+        }
+        
+        // Parse clipboard data
+        const pasteData = this.parseClipboardData(clipboardText);
+        if (!pasteData || pasteData.length === 0) {
+            window.TableEditor.showError('No valid data to paste');
+            return;
+        }
+        
+        const startRow = state.lastSelectedCell.row;
+        const startCol = state.lastSelectedCell.col;
+        
+        let updatedCells = 0;
+        let expandedRows = 0;
+        let expandedCols = 0;
+        
+        // Check if we need to expand the table
+        const requiredRows = startRow + pasteData.length;
+        const requiredCols = startCol + (pasteData[0] ? pasteData[0].length : 0);
+        
+        // Expand rows if needed
+        while (data.rows.length < requiredRows) {
+            const newRow = new Array(data.headers.length).fill('');
+            data.rows.push(newRow);
+            expandedRows++;
+        }
+        
+        // Expand columns if needed
+        while (data.headers.length < requiredCols) {
+            const newColIndex = data.headers.length;
+            const columnLetter = window.TableEditor.callModule('TableRenderer', 'getColumnLetter', newColIndex);
+            data.headers.push(`Column ${columnLetter}`);
+            
+            // Add empty cells to all existing rows
+            data.rows.forEach(row => {
+                row.push('');
+            });
+            expandedCols++;
+        }
+        
+        // Paste the data
+        pasteData.forEach((pasteRow, rowOffset) => {
+            pasteRow.forEach((cellValue, colOffset) => {
+                const targetRow = startRow + rowOffset;
+                const targetCol = startCol + colOffset;
+                
+                if (targetRow < data.rows.length && targetCol < data.headers.length) {
+                    // Convert newlines back to <br> tags for storage
+                    const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', cellValue);
+                    data.rows[targetRow][targetCol] = processedValue;
+                    updatedCells++;
+                    
+                    // Send update to VSCode
+                    window.TableEditor.updateCell(targetRow, targetCol, processedValue);
+                }
+            });
+        });
+        
+        // Re-render table
+        const renderer = window.TableEditor.getModule('TableRenderer');
+        if (renderer) {
+            renderer.renderTable(data);
+        }
+        
+        // Show success message
+        let message = `Pasted ${updatedCells} cell(s)`;
+        if (expandedRows > 0 || expandedCols > 0) {
+            message += ` (expanded ${expandedRows} rows, ${expandedCols} columns)`;
+        }
+        window.TableEditor.showSuccess(message);
+        
+        console.log('ClipboardManager: Pasted data', {
+            updatedCells,
+            expandedRows,
+            expandedCols
+        });
+    },
+    
+    /**
+     * Parse clipboard data (TSV format)
+     */
+    parseClipboardData: function(clipboardText) {
+        const result = [];
+        let currentRow = [];
+        let currentCell = '';
+        let inQuotes = false;
+        let i = 0;
+        
+        while (i < clipboardText.length) {
+            const char = clipboardText[i];
+            
+            if (char === '"' && !inQuotes) {
+                inQuotes = true;
+            } else if (char === '"' && inQuotes) {
+                if (i + 1 < clipboardText.length && clipboardText[i + 1] === '"') {
+                    // Escaped quote
+                    currentCell += '"';
+                    i++; // Skip next quote
+                } else {
+                    inQuotes = false;
+                }
+            } else if (char === '\t' && !inQuotes) {
+                currentRow.push(currentCell);
+                currentCell = '';
+            } else if (char === '\n' && !inQuotes) {
+                // End of row
+                currentRow.push(currentCell);
+                if (currentRow.length > 0) {
+                    result.push(currentRow);
+                }
+                currentRow = [];
+                currentCell = '';
+            } else {
+                currentCell += char;
+            }
+            i++;
+        }
+        
+        // Add final cell and row if any content remains
+        if (currentCell !== '' || currentRow.length > 0) {
+            currentRow.push(currentCell);
+            if (currentRow.length > 0) {
+                result.push(currentRow);
+            }
+        }
+        
+        return result;
+    },
+    
+    /**
+     * Copy text to clipboard using modern API or fallback
+     */
+    copyToClipboard: function(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        } else {
+            // Fallback for older browsers
+            return this.fallbackCopyToClipboard(text);
+        }
+    },
+    
+    /**
+     * Read text from clipboard using modern API
+     */
+    readFromClipboard: function() {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            return navigator.clipboard.readText();
+        } else {
+            // Cannot read from clipboard in older browsers
+            return Promise.reject(new Error('Clipboard read not supported'));
+        }
+    },
+    
+    /**
+     * Fallback copy method for older browsers
+     */
+    fallbackCopyToClipboard: function(text) {
+        return new Promise((resolve, reject) => {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                if (successful) {
+                    resolve();
+                } else {
+                    reject(new Error('Copy command failed'));
+                }
+            } catch (err) {
+                document.body.removeChild(textArea);
+                reject(err);
+            }
+        });
+    }
+};
+
+// Make ClipboardManager globally available
+window.ClipboardManager = ClipboardManager;
+
+console.log('ClipboardManager: Module script loaded');

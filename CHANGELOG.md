@@ -5,7 +5,32 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# Changelog
+## [0.2.0] - 2025-01-25
+
+### Major Features
+- **Multiple Table Support with Tabs**: 
+  - Added tab-based interface for documents with multiple tables
+  - Seamless switching between tables without losing data
+  - Improved table selection and management
+
+### Enhanced UI/UX
+- **Improved Editing Experience**:
+  - Fixed cell height issues in editing mode
+  - Better textarea handling and auto-resizing
+  - Cleaner interface with reduced debug messages
+  - Responsive tab design matching VSCode theme
+
+### Critical Bug Fixes
+- **Row/Column Operations**: Fixed immediate file synchronization for add/delete operations
+- **Cell Editing**: Resolved position validation errors after table structure changes
+- **JavaScript Modules**: Fixed syntax errors in module loading system
+- **Data Synchronization**: Improved webview-extension communication reliability
+
+### Technical Improvements
+- **Modular Architecture**: Completed transition to modular JavaScript system
+- **Error Handling**: Enhanced error recovery and user feedback
+- **Performance**: Optimized rendering and data management
+- **Code Quality**: Removed debug logging and improved maintainability
 
 ## [0.1.23] - 2025-01-27
 

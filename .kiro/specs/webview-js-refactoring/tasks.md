@@ -1,29 +1,44 @@
 # Implementation Plan
 
-- [-] 1. プロジェクト準備とインフラストラクチャ構築
-  - webview/js/ ディレクトリを作成し、JavaScriptファイル分割の基盤を準備
-  - webviewManager.tsにスクリプトURI生成機能を実装し、vscode-resourcesスキーマでの安全な読み込みを確保
-  - Content Security Policyを更新してvscode-resource:からのスクリプト読み込みを許可
+- [x] 1. プロジェクト準備とインフラストラクチャ構築
+  - ✅ webview/js/ ディレクトリを作成し、JavaScriptファイル分割の基盤を準備
+  - ✅ webviewManager.tsにスクリプトURI生成機能を実装し、vscode-resourcesスキーマでの安全な読み込みを確保
+  - ✅ Content Security Policyを更新してvscode-resource:からのスクリプト読み込みを許可
+  - ✅ HTMLファイルにモジュールローダーを追加し、段階的な読み込み機能を実装
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 2. コアモジュールシステムの実装
-  - webview/js/core.jsを作成し、グローバル状態管理とモジュール登録システムを実装
-  - TableEditorオブジェクトにstate管理、vscode API初期化、モジュール登録機能を実装
-  - モジュール読み込みエラーハンドリングとフォールバック機能を実装
-  - 基本的なモジュール読み込みテストを作成して動作確認
+- [x] 2. コアモジュールシステムの実装
+  - ✅ webview/js/core.jsを作成し、グローバル状態管理とモジュール登録システムを実装
+  - ✅ TableEditorオブジェクトにstate管理、vscode API初期化、モジュール登録機能を実装
+  - ✅ モジュール読み込みエラーハンドリングとフォールバック機能を実装
+  - ✅ VSCodeメッセージハンドリングとモジュール間通信機能を実装
   - _Requirements: 3.3, 3.4, 7.1, 7.2_
 
-- [ ] 3. テーブルレンダリングモジュールの分割
-  - webview/js/table-renderer.jsを作成し、テーブル表示関連の全機能を移行
-  - renderTable, renderTableContent, getColumnLetter, processCellContent等の関数を分離
-  - HTML エスケープ処理と列幅管理機能を含める
-  - tableEditor.htmlからレンダリング関連コードを削除し、モジュール呼び出しに置換
-  - テーブル表示機能の動作確認テストを実行
+- [x] 3. テーブルレンダリングモジュールの分割
+  - ✅ webview/js/table-renderer.jsを作成し、テーブル表示関連の全機能を移行
+  - ✅ renderTable, renderTableContent, getColumnLetter, processCellContent等の関数を分離
+  - ✅ HTML エスケープ処理と列幅管理機能を含める
+  - ✅ セル内容処理機能（<br>タグ処理、HTMLエスケープ）を含める
+  - ⏳ tableEditor.htmlからレンダリング関連コードを削除し、モジュール呼び出しに置換
   - _Requirements: 1.1, 1.2, 3.1, 3.2, 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 4. セル編集モジュールの分割
-  - webview/js/cell-editor.jsを作成し、セル編集関連の全機能を移行
-  - startCellEdit, commitCellEdit, cancelCellEdit, handleCellClick等の関数を分離
+- [x] 4. セル編集モジュールの分割
+  - ✅ webview/js/cell-editor.jsを作成し、セル編集関連の全機能を移行
+  - ✅ startCellEdit, commitCellEdit, cancelCellEdit, handleCellClick等の関数を分離
+  - ✅ 適応的入力フィールド機能（single-line/multi-line判定、サイズ調整）を含める
+  - ✅ HTML タグ処理機能（<br/>タグの変換）を含める
+  - ✅ IME対応とバリデーション機能を含める
+  - ⏳ tableEditor.htmlからセル編集関連コードを削除し、モジュール呼び出しに置換
+  - _Requirements: 1.1, 1.2, 3.1, 3.2, 4.1, 4.2, 4.3, 4.4, 4.5_
+
+- [x] 5. セル選択管理モジュールの分割
+  - ✅ webview/js/selection.jsを作成し、セル選択関連の全機能を移行
+  - ✅ selectCell, selectRange, selectRow, selectColumn, selectAll等の関数を分離
+  - ✅ 複数選択、範囲選択、選択状態の視覚的表示機能を含める
+  - ✅ 選択状態のヘルパー関数（isRowFullySelected, isColumnFullySelected）を含める
+  - ✅ キーボードショートカット（Ctrl/Cmd, Shift）による選択拡張機能を含める
+  - ⏳ tableEditor.htmlから選択関連コードを削除し、モジュール呼び出しに置換
+  - _Requirements: 1.1, 1.2, 3.1, 3.2, 4.1, 4.2, 4.3, 4.4, 4.5_
   - 適応的入力フィールド機能（single-line/multi-line判定、サイズ調整）を含める
   - HTML タグ処理機能（<br/>タグの変換）を含める
   - tableEditor.htmlからセル編集関連コードを削除し、モジュール呼び出しに置換
