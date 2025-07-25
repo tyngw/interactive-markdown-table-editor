@@ -76,7 +76,7 @@ const ColumnResizeManager = {
         if (!state.isResizing) return;
         
         const deltaX = event.clientX - state.startX;
-        const newWidth = Math.max(60, state.startWidth + deltaX); // Minimum width of 60px
+        const newWidth = Math.max(10, state.startWidth + deltaX); // Minimum width of 10px
         
         // Store the new width in global state
         state.columnWidths[state.resizeColumn] = newWidth;
@@ -129,7 +129,7 @@ const ColumnResizeManager = {
         
         // Get all cells in the column (header + data cells)
         const colCells = document.querySelectorAll(`th[data-col="${colIndex}"], td[data-col="${colIndex}"]`);
-        let maxWidth = 80; // Minimum width
+        let maxWidth = 10; // Minimum width
         
         // Create a temporary element to measure text width
         const measureElement = this.createMeasureElement();
@@ -282,7 +282,7 @@ const ColumnResizeManager = {
         const state = window.TableEditor.state;
         
         // Validate width
-        width = Math.max(60, Math.min(800, width)); // Between 60px and 800px
+        width = Math.max(10, Math.min(800, width)); // Between 10px and 800px
         
         // Store and apply the width
         state.columnWidths[colIndex] = width;

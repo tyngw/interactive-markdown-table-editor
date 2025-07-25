@@ -132,7 +132,7 @@ body {
 
 /* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
 .table-editor th.user-resized {
-    min-width: 80px;
+    min-width: 10px;
 }
 
 .table-editor th:hover {
@@ -215,7 +215,7 @@ body {
 /* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
 .table-editor td.data-cell.user-resized,
 .table-editor td.editable-cell.user-resized {
-    min-width: 80px;
+    min-width: 10px;
 }
 
 .table-editor td.data-cell:hover,
