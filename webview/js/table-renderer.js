@@ -199,7 +199,6 @@ const TableRenderer = {
             
             html += `<th data-col="${index}" class="column-header sortable ${userResizedClass}" 
                         ${widthStyle}
-                        onclick="TableEditor.callModule('SortingManager', 'handleColumnHeaderClick', ${index}, event)"
                         oncontextmenu="TableEditor.callModule('ContextMenuManager', 'showColumnContextMenu', event, ${index}); return false;"
                         draggable="true"
                         onmousedown="TableEditor.callModule('SelectionManager', 'startColumnSelect', ${index})"
@@ -208,7 +207,9 @@ const TableRenderer = {
                         ondrop="TableEditor.callModule('DragDropManager', 'handleDrop', event)">
                      <div class="column-letter">${columnLetter}</div>
                      <div class="column-title">${this.escapeHtml(header)}</div>
-                     <div class="sort-indicator">${sortIcon}</div>
+                     <div class="sort-indicator" 
+                          onclick="TableEditor.callModule('SortingManager', 'handleColumnHeaderClick', ${index}, event); event.stopPropagation();"
+                          title="Sort column">${sortIcon}</div>
                      <div class="resize-handle" 
                           onmousedown="TableEditor.callModule('ColumnResizeManager', 'startColumnResize', event, ${index}); event.stopPropagation();"
                           ondblclick="event.stopPropagation(); event.preventDefault(); TableEditor.callModule('ColumnResizeManager', 'autoFitColumn', ${index});"></div>
