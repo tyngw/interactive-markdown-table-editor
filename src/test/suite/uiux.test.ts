@@ -215,3 +215,4 @@ Some text after the table.
         }
     });
 });
+
