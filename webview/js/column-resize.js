@@ -153,23 +153,27 @@ const ColumnResizeManager = {
                 cellText = cell.textContent || '';
             }
             
-            // Handle multi-line content by measuring the longest line
+            // Handle multi-line content by measuring the longest line only
             let maxLineWidth = 0;
             if (cellText.includes('\n') || cellText.includes('<br')) {
                 // Split by various line break formats
                 const lines = cellText.split(/\n|<br\s*\/?>|<BR\s*\/?>/gi);
-                lines.forEach(line => {
+                console.log(`ColumnResizeManager: Multi-line content found, ${lines.length} lines:`, lines.map(l => `"${l.trim()}"`));
+                lines.forEach((line, index) => {
                     const trimmedLine = line.trim();
                     if (trimmedLine) {
                         measureElement.textContent = trimmedLine;
                         const lineWidth = measureElement.offsetWidth;
+                        console.log(`ColumnResizeManager: Line ${index + 1}: "${trimmedLine}" -> ${lineWidth}px`);
                         maxLineWidth = Math.max(maxLineWidth, lineWidth);
                     }
                 });
+                console.log(`ColumnResizeManager: Maximum line width: ${maxLineWidth}px (not sum of all lines)`);
             } else {
                 // Single line content
                 measureElement.textContent = cellText;
                 maxLineWidth = measureElement.offsetWidth;
+                console.log(`ColumnResizeManager: Single line: "${cellText}" -> ${maxLineWidth}px`);
             }
             
             // Add padding and margin
