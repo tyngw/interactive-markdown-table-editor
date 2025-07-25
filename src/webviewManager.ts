@@ -80,7 +80,8 @@ export class WebviewManager {
             'js/context-menu.js',
             'js/drag-drop.js',
             'js/status-bar.js',
-            'js/csv-exporter.js'
+            'js/csv-exporter.js',
+            'js/test-module.js'
         ];
 
         const scriptUris = scriptFiles.map(file => {
@@ -272,7 +273,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     /**
      * Validate incoming message structure
      */
-    private validateMessage(message: any): message is WebviewMessage {
+    public validateMessage(message: any): message is WebviewMessage {
         if (!message || typeof message !== 'object') {
             return false;
         }
