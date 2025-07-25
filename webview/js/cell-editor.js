@@ -314,10 +314,23 @@ const CellEditor = {
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 event.stopPropagation(); // Prevent keyboard navigation handler from triggering
+                
+                // Get current editing position from state
+                const state = window.TableEditor.state;
+                const currentEditingCell = state.currentEditingCell;
+                
+                if (!currentEditingCell) {
+                    console.warn('CellEditor: Enter pressed but no current editing cell in state');
+                    return;
+                }
+                
+                const editingRow = currentEditingCell.row;
+                const editingCol = currentEditingCell.col;
+                
                 this.commitCellEdit();
                 // Navigate to next row in same column (README spec: 編集確定＆同列の次行へ)
                 // Just select the next cell, don't start editing automatically
-                window.TableEditor.callModule('KeyboardNavigationManager', 'navigateCell', row + 1, col);
+                window.TableEditor.callModule('KeyboardNavigationManager', 'navigateCell', editingRow + 1, editingCol);
             }
             // Shift+Enter for line break in textarea (README spec: 改行（編集継続）)
             else if (event.key === 'Enter' && event.shiftKey && input.tagName === 'TEXTAREA') {
@@ -335,9 +348,22 @@ const CellEditor = {
             else if (event.key === 'Tab') {
                 event.preventDefault();
                 event.stopPropagation(); // Prevent keyboard navigation handler from triggering
+                
+                // Get current editing position from state instead of closure variables
+                const state = window.TableEditor.state;
+                const currentEditingCell = state.currentEditingCell;
+                
+                if (!currentEditingCell) {
+                    console.warn('CellEditor: Tab pressed but no current editing cell in state');
+                    return;
+                }
+                
+                const editingRow = currentEditingCell.row;
+                const editingCol = currentEditingCell.col;
+                
                 this.commitCellEdit();
-                // Navigate to next/previous cell
-                window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', row, col, !event.shiftKey);
+                // Navigate to next/previous cell using the correct current position
+                window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', editingRow, editingCol, !event.shiftKey);
             }
             // Escape commits and ends editing (README spec: 編集確定＆編集終了)
             else if (event.key === 'Escape') {
