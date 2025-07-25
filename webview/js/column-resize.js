@@ -155,9 +155,24 @@ const ColumnResizeManager = {
             
             // Handle multi-line content by measuring the longest line only
             let maxLineWidth = 0;
-            if (cellText.includes('\n') || cellText.includes('<br')) {
+            
+            // Check for multi-line content: either newlines in textContent or <br> tags in innerHTML
+            const cellHTML = cell.innerHTML || '';
+            const hasNewlines = cellText.includes('\n');
+            const hasBrTags = cellHTML.includes('<br') || cellHTML.includes('<BR');
+            
+            if (hasNewlines || hasBrTags) {
                 // Split by various line break formats
-                const lines = cellText.split(/\n|<br\s*\/?>|<BR\s*\/?>/gi);
+                let lines;
+                if (hasNewlines) {
+                    lines = cellText.split(/\n/g);
+                } else {
+                    // For <br> tags, we need to work with innerHTML then strip tags
+                    const htmlWithNewlines = cellHTML.replace(/<br\s*\/?>/gi, '\n');
+                    const textFromHTML = htmlWithNewlines.replace(/<[^>]*>/g, '');
+                    lines = textFromHTML.split(/\n/g);
+                }
+                
                 console.log(`ColumnResizeManager: Multi-line content found, ${lines.length} lines:`, lines.map(l => `"${l.trim()}"`));
                 lines.forEach((line, index) => {
                     const trimmedLine = line.trim();
