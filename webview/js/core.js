@@ -123,14 +123,28 @@ const TableEditor = {
      * Register a module with the core system
      */
     registerModule: function(name, module) {
+        // Check if module is already registered to prevent duplicate registration
+        if (this.modules[name]) {
+            console.log('TableEditor: Module', name, 'already registered, skipping');
+            return;
+        }
+        
         console.log('TableEditor: Registering module', name, 'with methods:', Object.keys(module));
         this.modules[name] = module;
         
-        // Initialize module if it has an init method
+        // Initialize module if it has an init method and hasn't been initialized yet
         if (module && typeof module.init === 'function') {
+            // Check if module has already been initialized
+            if (module.isInitialized) {
+                console.log('TableEditor: Module', name, 'already initialized, skipping');
+                return;
+            }
+            
             try {
                 console.log('TableEditor: Initializing module', name);
                 module.init();
+                // Mark module as initialized
+                module.isInitialized = true;
                 console.log('TableEditor: Module', name, 'initialized successfully');
             } catch (error) {
                 console.error('TableEditor: Failed to initialize module', name, error);

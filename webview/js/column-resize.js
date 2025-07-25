@@ -9,10 +9,19 @@
  */
 
 const ColumnResizeManager = {
+    // Initialization state
+    isInitialized: false,
+    
     /**
      * Initialize the column resize manager module
      */
     init: function() {
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('ColumnResizeManager: Already initialized, skipping');
+            return;
+        }
+        
         console.log('ColumnResizeManager: Initializing column resize manager module...');
         
         // Register with the main TableEditor
@@ -23,6 +32,7 @@ const ColumnResizeManager = {
         // Set up window resize handler to maintain column widths
         this.setupWindowResizeHandler();
         
+        this.isInitialized = true;
         console.log('ColumnResizeManager: Module initialized');
     },
     

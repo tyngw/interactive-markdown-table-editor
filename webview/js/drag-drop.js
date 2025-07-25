@@ -9,6 +9,9 @@
  */
 
 const DragDropManager = {
+    // Initialization state
+    isInitialized: false,
+    
     // Drag state management
     dragState: {
         isDragging: false,
@@ -22,6 +25,12 @@ const DragDropManager = {
      * Initialize the drag and drop manager module
      */
     init: function() {
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('DragDropManager: Already initialized, skipping');
+            return;
+        }
+        
         console.log('DragDropManager: Initializing drag and drop manager module...');
         
         // Register with the main TableEditor
@@ -32,6 +41,7 @@ const DragDropManager = {
         this.setupDragAndDrop();
         this.setupDragDropListeners();
         
+        this.isInitialized = true;
         console.log('DragDropManager: Module initialized');
     },
     
@@ -41,13 +51,13 @@ const DragDropManager = {
     setupDragAndDrop: function() {
         console.log('DragDropManager: Setting up drag and drop...');
         
-        // Enable draggable on row numbers and column headers
-        const rowNumbers = document.querySelectorAll('.row-number');
+        // Only setup for elements that don't already have drag attributes
+        const rowNumbers = document.querySelectorAll('.row-number:not([draggable])');
         rowNumbers.forEach(rowNumber => {
             rowNumber.setAttribute('draggable', 'true');
         });
         
-        const columnHeaders = document.querySelectorAll('.table-editor th:not(.header-corner)');
+        const columnHeaders = document.querySelectorAll('.table-editor th:not(.header-corner):not([draggable])');
         columnHeaders.forEach(header => {
             header.setAttribute('draggable', 'true');
         });

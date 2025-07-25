@@ -9,13 +9,22 @@
  */
 
 const ClipboardManager = {
+    // Initialization state
+    isInitialized: false,
+    
     /**
      * Initialize the clipboard manager module
      */
     init: function() {
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('ClipboardManager: Already initialized, skipping');
+            return;
+        }
+        
         console.log('ClipboardManager: Initializing clipboard manager module...');
         
-        
+        this.isInitialized = true;
         console.log('ClipboardManager: Module initialized');
     },
     

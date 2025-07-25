@@ -9,13 +9,22 @@
  */
 
 const CellEditor = {
+    // Initialization state
+    isInitialized: false,
+    
     /**
      * Initialize the cell editor module
      */
     init: function() {
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('CellEditor: Already initialized, skipping');
+            return;
+        }
+        
         console.log('CellEditor: Initializing cell editor module...');
         
-        
+        this.isInitialized = true;
         console.log('CellEditor: Module initialized');
     },
     

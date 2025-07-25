@@ -5,13 +5,22 @@
  */
 
 const CSVExporter = {
+    // Initialization state
+    isInitialized: false,
+    
     /**
      * Initialize the CSV exporter module
      */
     init: function() {
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('CSVExporter: Already initialized, skipping');
+            return;
+        }
+        
         console.log('CSVExporter: Initializing CSV exporter module...');
         
-        
+        this.isInitialized = true;
         console.log('CSVExporter: Module initialized');
     },
     
