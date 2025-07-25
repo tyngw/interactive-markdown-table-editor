@@ -161,16 +161,23 @@ const ColumnResizeManager = {
             const hasNewlines = cellText.includes('\n');
             const hasBrTags = cellHTML.includes('<br') || cellHTML.includes('<BR');
             
+            console.log(`ColumnResizeManager: Cell content analysis - textContent: "${cellText}", innerHTML: "${cellHTML}"`);
+            console.log(`ColumnResizeManager: hasNewlines: ${hasNewlines}, hasBrTags: ${hasBrTags}`);
+            
             if (hasNewlines || hasBrTags) {
-                // Split by various line break formats
                 let lines;
-                if (hasNewlines) {
-                    lines = cellText.split(/\n/g);
-                } else {
-                    // For <br> tags, we need to work with innerHTML then strip tags
+                
+                if (hasBrTags) {
+                    // For <br> tags, convert to newlines first, then strip any remaining tags
+                    console.log(`ColumnResizeManager: Processing <br> tags in: "${cellHTML}"`);
                     const htmlWithNewlines = cellHTML.replace(/<br\s*\/?>/gi, '\n');
+                    console.log(`ColumnResizeManager: After <br> to newline conversion: "${htmlWithNewlines}"`);
                     const textFromHTML = htmlWithNewlines.replace(/<[^>]*>/g, '');
+                    console.log(`ColumnResizeManager: After tag removal: "${textFromHTML}"`);
                     lines = textFromHTML.split(/\n/g);
+                } else {
+                    // For plain newlines in textContent
+                    lines = cellText.split(/\n/g);
                 }
                 
                 console.log(`ColumnResizeManager: Multi-line content found, ${lines.length} lines:`, lines.map(l => `"${l.trim()}"`));
