@@ -47,7 +47,9 @@
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
     "test:integration": "npm run compile && node ./out/test/runIntegrationTests.js",
-    "test:all": "npm run test && npm run test:integration"
+    "test:all": "npm run test && npm run test:integration",
+    "dev": "node dev/start-dev-server.js",
+    "dev:watch": "npm run dev"
   },
   "devDependencies": {
     "@types/vscode": "^1.74.0",
