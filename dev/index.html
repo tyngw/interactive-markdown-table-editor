@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Table Editor - Development Mode</title>
+    
+    <!-- Load the main CSS styles -->
+    <link rel="stylesheet" href="/webview/style.css">
+    
+    <!-- Development-specific styles -->
+    <style>
+        /* VSCode theme variables for development */
+        :root {
+            --vscode-foreground: #cccccc;
+            --vscode-editor-background: #1e1e1e;
+            --vscode-panel-border: #3c3c3c;
+            --vscode-focusBorder: #007acc;
+            --vscode-list-hoverBackground: #2a2d2e;
+            --vscode-editor-lineHighlightBackground: #2a2d2e;
+            --vscode-descriptionForeground: #9d9d9d;
+            --vscode-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --vscode-font-size: 14px;
+            --vscode-editor-font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            --vscode-editor-font-size: 14px;
+            --vscode-input-background: #3c3c3c;
+            --vscode-input-foreground: #cccccc;
+            --vscode-input-border: #3c3c3c;
+            --vscode-button-background: #0e639c;
+            --vscode-button-foreground: #ffffff;
+            --vscode-button-hoverBackground: #1177bb;
+            --vscode-errorForeground: #f14c4c;
+            --vscode-warningForeground: #ffcc02;
+            --vscode-notificationCenterHeader-background: #2d2d30;
+            --vscode-notifications-background: #2d2d30;
+            --vscode-statusBar-background: #007acc;
+            --vscode-statusBar-foreground: #ffffff;
+            --vscode-statusBarItem-errorBackground: #c74e39;
+        }
+        
+        body {
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-foreground);
+        }
+        
+        .dev-header {
+            background-color: var(--vscode-notificationCenterHeader-background);
+            color: var(--vscode-foreground);
+            padding: 10px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            font-family: var(--vscode-font-family);
+            font-size: 13px;
+        }
+        
+        .dev-controls {
+            margin: 10px 0;
+        }
+        
+        .dev-button {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 6px 14px;
+            margin-right: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 2px;
+        }
+        
+        .dev-button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+        
+        .dev-select {
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border: 1px solid var(--vscode-input-border);
+            padding: 4px 8px;
+            margin-right: 8px;
+        }
+    </style>
+    
+    <!-- Mock VSCode API for development -->
+    <script>
+        // Sample table data for development testing
+        const SAMPLE_TABLES = {
+            simple: {
+                rows: [
+                    ['Name', 'Age', 'City'],
+                    ['John Doe', '30', 'New York'],
+                    ['Jane Smith', '25', 'Los Angeles'],
+                    ['Bob Johnson', '35', 'Chicago']
+                ],
+                metadata: {
+                    tableIndex: 0,
+                    startLine: 0,
+                    endLine: 4
+                }
+            },
+            complex: {
+                rows: [
+                    ['Feature', 'Status', 'Priority', 'Assignee', 'Due Date'],
+                    ['User Authentication', 'In Progress', 'High', 'Alice', '2024-02-15'],
+                    ['Dashboard Design', 'Completed', 'Medium', 'Bob', '2024-02-10'],
+                    ['API Integration', 'Pending', 'High', 'Charlie', '2024-02-20'],
+                    ['Testing', 'Not Started', 'Low', 'David', '2024-02-25']
+                ],
+                metadata: {
+                    tableIndex: 0,
+                    startLine: 10,
+                    endLine: 15
+                }
+            },
+            empty: {
+                rows: [
+                    ['Column 1', 'Column 2', 'Column 3'],
+                    ['', '', ''],
+                    ['', '', '']
+                ],
+                metadata: {
+                    tableIndex: 0,
+                    startLine: 0,
+                    endLine: 3
+                }
+            }
+        };
+        
+        // Mock VSCode API
+        window.vscode = {
+            postMessage: function(message) {
+                console.log('🔍 Dev Mode - VSCode Message:', message);
+                
+                // Handle different message types for development
+                switch (message.command) {
+                    case 'requestTableData':
+                        // Send back sample data
+                        setTimeout(() => {
+                            const selectedSample = document.getElementById('sampleSelect').value;
+                            const sampleData = SAMPLE_TABLES[selectedSample];
+                            
+                            window.postMessage({
+                                command: 'tableData',
+                                data: {
+                                    tables: [sampleData],
+                                    currentIndex: 0,
+                                    fileInfo: {
+                                        uri: 'dev://sample.md',
+                                        fileName: 'sample.md',
+                                        fileNameWithoutExt: 'sample'
+                                    }
+                                }
+                            }, '*');
+                        }, 100);
+                        break;
+                        
+                    case 'updateCell':
+                        console.log('📝 Cell update:', message.data);
+                        // In real VSCode, this would update the file
+                        break;
+                        
+                    case 'addRow':
+                        console.log('➕ Add row:', message.data);
+                        break;
+                        
+                    case 'deleteRow':
+                        console.log('🗑️ Delete row:', message.data);
+                        break;
+                        
+                    case 'addColumn':
+                        console.log('➕ Add column:', message.data);
+                        break;
+                        
+                    case 'deleteColumn':
+                        console.log('🗑️ Delete column:', message.data);
+                        break;
+                        
+                    case 'exportCSV':
+                        console.log('📊 Export CSV:', message.data);
+                        // Download the CSV data
+                        this.downloadCSV(message.data.csvData, message.data.filename);
+                        break;
+                        
+                    default:
+                        console.log('🤷 Unhandled message:', message);
+                }
+            },
+            
+            downloadCSV: function(csvData, filename) {
+                const blob = new Blob([csvData], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename || 'table-export.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+        };
+        
+        // Listen for messages from the mock VSCode API
+        window.addEventListener('message', function(event) {
+            if (event.data && typeof TableEditor !== 'undefined' && TableEditor.handleMessage) {
+                TableEditor.handleMessage(event.data);
+            }
+        });
+        
+        // Development utilities
+        window.devUtils = {
+            loadSample: function(sampleName) {
+                document.getElementById('sampleSelect').value = sampleName;
+                if (window.TableEditor && window.TableEditor.vscode) {
+                    window.TableEditor.vscode.postMessage({ command: 'requestTableData' });
+                }
+            },
+            
+            clearTable: function() {
+                if (window.TableEditor && window.TableEditor.clearTable) {
+                    window.TableEditor.clearTable();
+                }
+            },
+            
+            debugState: function() {
+                if (window.TableEditor && window.TableEditor.state) {
+                    console.log('🐛 TableEditor State:', window.TableEditor.state);
+                }
+            }
+        };
+        
+        // Set up CSS and script URIs for the webview system
+        window.cssUri = '/webview/style.css';
+        window.scriptUris = [
+            '/webview/js/core.js',
+            '/webview/js/table-renderer.js',
+            '/webview/js/cell-editor.js',
+            '/webview/js/selection.js',
+            '/webview/js/keyboard-navigation.js',
+            '/webview/js/context-menu.js',
+            '/webview/js/column-resize.js',
+            '/webview/js/drag-drop.js',
+            '/webview/js/sorting.js',
+            '/webview/js/status-bar.js',
+            '/webview/js/clipboard.js',
+            '/webview/js/csv-exporter.js'
+        ];
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Development mode initialized');
+        });
+    </script>
+</head>
+<body>
+    <div class="dev-header">
+        <strong>📋 Markdown Table Editor - Development Mode</strong>
+        <div class="dev-controls">
+            <label for="sampleSelect">Sample Data:</label>
+            <select id="sampleSelect" class="dev-select">
+                <option value="simple">Simple Table</option>
+                <option value="complex">Complex Table</option>
+                <option value="empty">Empty Table</option>
+            </select>
+            <button class="dev-button" onclick="devUtils.loadSample(document.getElementById('sampleSelect').value)">Load Sample</button>
+            <button class="dev-button" onclick="devUtils.clearTable()">Clear</button>
+            <button class="dev-button" onclick="devUtils.debugState()">Debug State</button>
+        </div>
+        <div style="font-size: 12px; margin-top: 5px; color: var(--vscode-descriptionForeground);">
+            This is a development version for testing HTML/CSS/JS changes without rebuilding the extension.
+        </div>
+    </div>
+
+    <!-- Copy the original webview structure -->
+    <div id="app">
+        <!-- Table tabs and content will be dynamically populated -->
+    </div>
+    
+    <!-- Main table container (dynamically populated) -->
+    <div id="table-container"></div>
+    
+    <!-- Sort Actions Panel -->
+    <div class="sort-actions" id="sortActions" style="display: none;">
+        <span class="sort-status-badge">📊 Viewing sorted data</span>
+        <button class="sort-action-btn secondary" onclick="TableEditor.callModule('SortingManager', 'restoreOriginalView')">📄 Restore Original</button>
+        <button class="sort-action-btn" onclick="TableEditor.callModule('SortingManager', 'commitSortToFile')">💾 Save Sort to File</button>
+    </div>
+    
+    <!-- Context Menus -->
+    <div class="context-menu" id="rowContextMenu" style="display: none;">
+        <button class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'addRowAbove')">
+            <span class="context-menu-item-icon">⬆️</span>
+            この上に行を追加
+        </button>
+        <button class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'addRowBelow')">
+            <span class="context-menu-item-icon">⬇️</span>
+            この下に行を追加
+        </button>
+        <div class="context-menu-separator"></div>
+        <button class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'deleteRowFromContext')">
+            <span class="context-menu-item-icon">🗑️</span>
+            この行を削除
+        </button>
+    </div>
+    
+    <div class="context-menu" id="columnContextMenu" style="display: none;">
+        <button class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'addColumnLeft')">
+            <span class="context-menu-item-icon">⬅️</span>
+            この左に列を追加
+        </button>
+        <button class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'addColumnRight')">
+            <span class="context-menu-item-icon">➡️</span>
+            この右に列を追加
+        </button>
+        <div class="context-menu-separator"></div>
+        <button class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'deleteColumnFromContext')">
+            <span class="context-menu-item-icon">🗑️</span>
+            この列を削除
+        </button>
+    </div>
+
+    <!-- Load modular JavaScript files in the same order as the webview -->
+    <script src="/webview/js/core.js"></script>
+    <script src="/webview/js/table-renderer.js"></script>
+    <script src="/webview/js/cell-editor.js"></script>
+    <script src="/webview/js/selection.js"></script>
+    <script src="/webview/js/keyboard-navigation.js"></script>
+    <script src="/webview/js/context-menu.js"></script>
+    <script src="/webview/js/column-resize.js"></script>
+    <script src="/webview/js/drag-drop.js"></script>
+    <script src="/webview/js/sorting.js"></script>
+    <script src="/webview/js/status-bar.js"></script>
+    <script src="/webview/js/clipboard.js"></script>
+    <script src="/webview/js/csv-exporter.js"></script>
+    
+    <script>
+        // Initialize the table editor after all modules are loaded
+        if (window.TableEditor && typeof window.TableEditor.init === 'function') {
+            try {
+                window.TableEditor.init();
+                console.log('✅ TableEditor initialized successfully');
+                
+                // Auto-load the first sample
+                setTimeout(() => {
+                    devUtils.loadSample('simple');
+                }, 500);
+            } catch (error) {
+                console.error('❌ Error initializing TableEditor:', error);
+            }
+        } else {
+            console.error('❌ TableEditor object not found');
+        }
+    </script>
+</body>
+</html>
