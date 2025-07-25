@@ -45,7 +45,7 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js",
+    "test": "node ./out/src/test/runTest.js",
     "test:integration": "npm run compile && node ./out/test/runIntegrationTests.js",
     "test:all": "npm run test && npm run test:integration",
     "dev": "node dev/start-dev-server.js",
