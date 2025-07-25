@@ -34,7 +34,7 @@ Some text after the table.
     });
 
     test('Extension should be present', () => {
-        assert.ok(vscode.extensions.getExtension('markdowntableeditor.markdown-table-editor'));
+        assert.ok(vscode.extensions.getExtension('tyngw.markdown-table-editor'));
     });
 
     test('Commands should be registered', async () => {
