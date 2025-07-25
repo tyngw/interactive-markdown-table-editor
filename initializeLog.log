@@ -1,0 +1,1034 @@
+ [Extension Host] Opening table editor...
+ [Extension Host] Reading markdown file: file:///Users/tyngw/Documents/workspace/test-design-contest2025/working/test-extension.md
+ [Extension Host] Found tables: 3
+ [Extension Host] Using table: Object
+ [Extension Host] Creating webview panel...
+ [Extension Host] Creating webview panel for: file:///Users/tyngw/Documents/workspace/test-design-contest2025/working/test-extension.md
+ [Extension Host] Creating new webview panel...
+ An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+mountTo @ workbench.desktop.main.js:3651
+P @ workbench.desktop.main.js:3651
+claim @ workbench.desktop.main.js:3651
+claim @ workbench.desktop.main.js:529
+hb @ workbench.desktop.main.js:529
+setInput @ workbench.desktop.main.js:529
+ [Extension Host] Webview panel created, setting HTML content...
+ [Extension Host] Reading HTML from path: /Users/tyngw/.vscode/extensions/tyngw.markdown-table-editor-0.2.0/webview/tableEditor.html
+ [Extension Host] Successfully read HTML file, length: 6304
+ [Extension Host] HTML content set, storing panel reference...
+ [Extension Host] Setting up initial data timeout...
+ [Extension Host] Webview panel setup complete
+ [Extension Host] Webview panel created successfully
+ [Extension Host] Sending initial table data to webview...
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+ DragDropManager: Drag and drop setup complete
+ DragDropManager: Module initialized
+ TableEditor: Module DragDropManager initialized successfully
+ DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete
+drag-drop.js:35 DragDropManager: Module initialized
+core.js:134 TableEditor: Module DragDropManager initialized successfully
+core.js:179 TableEditor: Found module object for StatusBarManager
+core.js:126 TableEditor: Registering module StatusBarManager with methods: Array(22)
+core.js:132 TableEditor: Initializing module StatusBarManager
+status-bar.js:17 StatusBarManager: Initializing status bar manager module...
+status-bar.js:23 StatusBarManager: Module initialized
+core.js:134 TableEditor: Module StatusBarManager initialized successfully
+core.js:179 TableEditor: Found module object for CSVExporter
+core.js:126 TableEditor: Registering module CSVExporter with methods: Array(5)
+core.js:132 TableEditor: Initializing module CSVExporter
+csv-exporter.js:12 CSVExporter: Initializing CSV exporter module...
+csv-exporter.js:15 CSVExporter: Module initialized
+core.js:134 TableEditor: Module CSVExporter initialized successfully
+core.js:189 TableEditor: Module initialization complete. Registered modules: Array(11)
+core.js:196 TableEditor: Initializing table editor application...
+core.js:385 TableEditor: Requesting table data from VSCode...
+core.js:388 TableEditor: Request sent successfully
+core.js:221 TableEditor: Table editor application initialized
+core.js:104 TableEditor: Core initialization complete
+core.js:105 TableEditor: Available modules after init: Array(11)
+console.ts:137 [Extension Host] Handling webview message: requestTableData undefined
+console.ts:137 [Extension Host] Table data requested for: file:///Users/tyngw/Documents/workspace/test-design-contest2025/working/test-extension.md
+console.ts:137 [Extension Host] Internal command: requestTableData Object
+style.css:1 
+            
+            
+           Failed to load resource: the server responded with a status of 408 ()
+core.js:229 TableEditor: Received message from VSCode: ping Object
+core.js:229 TableEditor: Received message from VSCode: ping Object
+core.js:229 TableEditor: Received message from VSCode: updateTableData Object
+table-renderer.js:55 TableRenderer: Starting table render with data: Object
+table-renderer.js:69 TableRenderer: Rendering table with 3 columns and 4 rows
+table-renderer.js:81 TableRenderer: Found app element: true
+console.ts:137 [Extension Host] Handling webview message: pong undefined
+console.ts:137 [Extension Host] Received pong from webview, response time: -1753447069916ms
+console.ts:137 [Extension Host] Handling webview message: pong undefined
+console.ts:137 [Extension Host] Received pong from webview, response time: -1753447129983ms
+column-resize.js:310 ColumnResizeManager: Restored column widths after re-render
+table-renderer.js:449 TableRenderer: Set table width to 530px
+table-renderer.js:169 TableRenderer: Table rendering completed successfully
+core.js:229 TableEditor: Received message from VSCode: success Object
+status-bar.js:247 StatusBarManager: Status message: Table data loaded successfully success
+service-worker.js?v=4&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&remoteAuthority=:1 Could not resolve unknown resource /Users/tyngw/.vscode/extensions/tyngw.markdown-table-editor-0.2.0/webview/style.css
+drag-drop.js:42 DragDropManager: Setting up drag and drop...
+drag-drop.js:55 DragDropManager: Drag and drop setup complete

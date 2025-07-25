@@ -319,9 +319,19 @@ const DragDropManager = {
      */
     getDropIndex: function(target, dragType) {
         if (dragType === 'column' && target.tagName === 'TH') {
-            return parseInt(target.getAttribute('data-col') || '-1');
+            const colIndex = parseInt(target.getAttribute('data-col') || '-1');
+            if (colIndex >= 0) {
+                // For columns, the drop indicator is shown at the left edge of the target column
+                // This means the column should be inserted before the target column
+                // So we return the target index as the insertion point
+                return colIndex;
+            }
         } else if (dragType === 'row' && (target.tagName === 'TR' || target.tagName === 'TD')) {
-            return parseInt(target.getAttribute('data-row') || '-1');
+            const rowIndex = parseInt(target.getAttribute('data-row') || '-1');
+            if (rowIndex >= 0) {
+                // For rows, we want to insert at the position where the drop indicator is shown
+                return rowIndex;
+            }
         }
         return -1;
     },
@@ -430,11 +440,24 @@ const DragDropManager = {
         
         if (fromIndex === toIndex) return;
         
+        // Adjust toIndex based on the direction of the move
+        // When moving a column, the original column is removed first, 
+        // so we need to adjust the target index accordingly
+        let adjustedToIndex = toIndex;
+        if (fromIndex < toIndex) {
+            // Moving right: target index should be decreased by 1
+            // because the source column will be removed first
+            adjustedToIndex = toIndex - 1;
+        }
+        // When moving left (fromIndex > toIndex), no adjustment needed
+        
+        console.log('DragDropManager: Adjusted reorder column from', fromIndex, 'to', adjustedToIndex);
+        
         // Send message to VSCode extension to move the column
         if (window.TableEditor.vscode) {
             window.TableEditor.vscode.postMessage({
                 command: 'moveColumn',
-                data: { from: fromIndex, to: toIndex }
+                data: { from: fromIndex, to: adjustedToIndex }
             });
         } else {
             console.error('DragDropManager: VSCode API not available');

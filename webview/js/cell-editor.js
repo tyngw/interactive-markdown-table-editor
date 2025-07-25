@@ -267,14 +267,32 @@ const CellEditor = {
         const actualLineHeight = lineHeight * fontSize;
         const padding = 8; // 4px top + 4px bottom
         
-        const initialHeight = (lineCount * actualLineHeight) + padding;
+        const textRequiredHeight = (lineCount * actualLineHeight) + padding;
         const minHeight = actualLineHeight + padding;
         
-        const finalHeight = Math.max(initialHeight, minHeight);
+        // Get current cell height (considering other cells in the same row might be taller)
+        const row = cell.closest('tr');
+        let currentCellHeight = cell.offsetHeight;
+        
+        if (row) {
+            // Check all cells in the same row and get the maximum height
+            const rowCells = row.querySelectorAll('td:not(.row-number)');
+            let maxRowCellHeight = 0;
+            rowCells.forEach(rowCell => {
+                if (rowCell !== cell) {
+                    maxRowCellHeight = Math.max(maxRowCellHeight, rowCell.offsetHeight);
+                }
+            });
+            currentCellHeight = Math.max(currentCellHeight, maxRowCellHeight);
+        }
+        
+        // Use the larger of the three heights: text requirement, current cell height, or minimum
+        const finalHeight = Math.max(textRequiredHeight, currentCellHeight, minHeight);
+        
         input.style.setProperty('height', finalHeight + 'px', 'important');
         input.style.setProperty('min-height', minHeight + 'px', 'important');
         
-        console.log(`StyleInput: lines=${lineCount}, initialHeight=${finalHeight}`);
+        console.log(`StyleInput: lines=${lineCount}, textRequired=${textRequiredHeight}, cellHeight=${currentCellHeight}, applied=${finalHeight}`);
         
         // デバッグ: 実際に設定された高さを確認
         setTimeout(() => {
@@ -295,8 +313,10 @@ const CellEditor = {
             // Enter key behavior (README spec)
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
+                event.stopPropagation(); // Prevent keyboard navigation handler from triggering
                 this.commitCellEdit();
                 // Navigate to next row in same column (README spec: 編集確定＆同列の次行へ)
+                // Just select the next cell, don't start editing automatically
                 window.TableEditor.callModule('KeyboardNavigationManager', 'navigateCell', row + 1, col);
             }
             // Shift+Enter for line break in textarea (README spec: 改行（編集継続）)
@@ -307,12 +327,14 @@ const CellEditor = {
             // Ctrl+Enter or Cmd+Enter commits and ends editing (README spec: 編集確定＆編集終了)
             else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
+                event.stopPropagation(); // Prevent keyboard navigation handler from triggering
                 this.commitCellEdit();
                 // Don't navigate to next cell - just end editing
             }
             // Tab commits and moves to next cell (README spec: 編集確定＆次のセルへ)
             else if (event.key === 'Tab') {
                 event.preventDefault();
+                event.stopPropagation(); // Prevent keyboard navigation handler from triggering
                 this.commitCellEdit();
                 // Navigate to next/previous cell
                 window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', row, col, !event.shiftKey);
@@ -320,6 +342,7 @@ const CellEditor = {
             // Escape commits and ends editing (README spec: 編集確定＆編集終了)
             else if (event.key === 'Escape') {
                 event.preventDefault();
+                event.stopPropagation(); // Prevent keyboard navigation handler from triggering
                 this.commitCellEdit();
                 // Don't navigate to next cell - just end editing
             }
@@ -387,17 +410,36 @@ const CellEditor = {
         
         // Calculate height based on line count
         const contentHeight = lineCount * lineHeight;
-        const totalHeight = contentHeight + totalPadding;
+        const textAreaRequiredHeight = contentHeight + totalPadding;
+        
+        // Get current cell height (considering other cells in the same row might be taller)
+        const row = cell.closest('tr');
+        let currentCellHeight = cell.offsetHeight;
+        
+        if (row) {
+            // Check all cells in the same row and get the maximum height
+            const rowCells = row.querySelectorAll('td:not(.row-number)');
+            let maxRowCellHeight = 0;
+            rowCells.forEach(rowCell => {
+                if (rowCell !== cell) {
+                    maxRowCellHeight = Math.max(maxRowCellHeight, rowCell.offsetHeight);
+                }
+            });
+            currentCellHeight = Math.max(currentCellHeight, maxRowCellHeight);
+        }
+        
+        // Use the larger of the two heights: text requirement or current cell height
+        const finalHeight = Math.max(textAreaRequiredHeight, currentCellHeight);
         
         // Set minimum height (at least 1 line)
         const minHeight = lineHeight + totalPadding;
-        const finalHeight = Math.max(totalHeight, minHeight);
+        const appliedHeight = Math.max(finalHeight, minHeight);
         
         // Update both textarea and cell height with !important
-        textarea.style.setProperty('height', finalHeight + 'px', 'important');
-        cell.style.setProperty('height', finalHeight + 'px', 'important');
+        textarea.style.setProperty('height', appliedHeight + 'px', 'important');
+        cell.style.setProperty('height', appliedHeight + 'px', 'important');
         
-        console.log(`AutoResize: lines=${lineCount}, lineHeight=${lineHeight}, finalHeight=${finalHeight}`);
+        console.log(`AutoResize: lines=${lineCount}, textRequired=${textAreaRequiredHeight}, cellHeight=${currentCellHeight}, applied=${appliedHeight}`);
         
         // デバッグ: 実際に設定された高さを確認
         setTimeout(() => {
