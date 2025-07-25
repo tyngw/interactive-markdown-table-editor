@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Initialization Performance</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .log { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; max-height: 400px; overflow-y: auto; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Initialization Performance Test</h1>
+    <p>This test simulates the module initialization process to verify the fix for duplicate initializations.</p>
+    
+    <button onclick="runInitializationTest()">Run Initialization Test</button>
+    <button onclick="clearLog()">Clear Log</button>
+    
+    <div id="test-log" class="log"></div>
+    
+    <script>
+        // Mock VSCode API
+        window.globalVscode = {
+            postMessage: function(message) {
+                console.log('Mock VSCode message:', message);
+            }
+        };
+        window.vscode = window.globalVscode;
+        
+        // Mock script URIs
+        window.scriptUris = [
+            'webview/js/core.js',
+            'webview/js/table-renderer.js',
+            'webview/js/drag-drop.js',
+            'webview/js/selection.js',
+            'webview/js/cell-editor.js',
+            'webview/js/sorting.js',
+            'webview/js/keyboard-navigation.js',
+            'webview/js/clipboard.js',
+            'webview/js/column-resize.js',
+            'webview/js/context-menu.js',
+            'webview/js/status-bar.js',
+            'webview/js/csv-exporter.js'
+        ];
+        
+        let logElement = document.getElementById('test-log');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString().slice(11, 23);
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            logElement.innerHTML = '';
+        }
+        
+        // Override console.log to capture logs from modules
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            const message = args.join(' ');
+            log(message);
+            originalConsoleLog.apply(console, args);
+        };
+        
+        // Override console.warn and console.error
+        const originalConsoleWarn = console.warn;
+        console.warn = function(...args) {
+            const message = args.join(' ');
+            log(message, 'warning');
+            originalConsoleWarn.apply(console, args);
+        };
+        
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            const message = args.join(' ');
+            log(message, 'error');
+            originalConsoleError.apply(console, args);
+        };
+        
+        async function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        async function runInitializationTest() {
+            clearLog();
+            log('Starting initialization performance test...', 'success');
+            
+            try {
+                // Load all scripts
+                for (const scriptUri of window.scriptUris) {
+                    try {
+                        await loadScript(scriptUri);
+                        log(`Loaded script: ${scriptUri}`);
+                    } catch (error) {
+                        log(`Failed to load script: ${scriptUri} - ${error.message}`, 'error');
+                    }
+                }
+                
+                log('All scripts loaded successfully', 'success');
+                
+                // Initialize TableEditor
+                if (window.TableEditor) {
+                    log('Initializing TableEditor...');
+                    window.TableEditor.init();
+                    log('TableEditor initialized', 'success');
+                    
+                    // Test multiple table renders to simulate the original issue
+                    log('Testing multiple table renders...');
+                    
+                    const testData = {
+                        headers: ['Column 1', 'Column 2', 'Column 3'],
+                        rows: [
+                            ['Data 1', 'Data 2', 'Data 3'],
+                            ['Data 4', 'Data 5', 'Data 6']
+                        ]
+                    };
+                    
+                    // Simulate multiple renders like what was causing the issue
+                    for (let i = 0; i < 5; i++) {
+                        log(`Rendering table (iteration ${i + 1})...`);
+                        if (window.TableEditor.modules.TableRenderer) {
+                            // Create a simple container for testing
+                            const container = document.createElement('div');
+                            container.id = 'app';
+                            document.body.appendChild(container);
+                            
+                            window.TableEditor.modules.TableRenderer.renderTable(testData);
+                        }
+                    }
+                    
+                    log('Multiple table renders completed', 'success');
+                    log('Test completed successfully!', 'success');
+                } else {
+                    log('TableEditor not found in window', 'error');
+                }
+                
+            } catch (error) {
+                log(`Test failed: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

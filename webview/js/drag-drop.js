@@ -33,11 +33,6 @@ const DragDropManager = {
         
         console.log('DragDropManager: Initializing drag and drop manager module...');
         
-        // Register with the main TableEditor
-        if (window.TableEditor) {
-            window.TableEditor.registerModule('DragDropManager', this);
-        }
-        
         this.setupDragAndDrop();
         this.setupDragDropListeners();
         

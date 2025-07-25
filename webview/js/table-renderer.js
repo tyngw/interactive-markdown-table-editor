@@ -49,11 +49,6 @@ const TableRenderer = {
         
         console.log('TableRenderer: Initializing table renderer module...');
         
-        // Register with the main TableEditor
-        if (window.TableEditor) {
-            window.TableEditor.registerModule('TableRenderer', this);
-        }
-        
         this.isInitialized = true;
         console.log('TableRenderer: Module initialized');
     },
