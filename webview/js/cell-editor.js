@@ -335,9 +335,26 @@ const CellEditor = {
             else if (event.key === 'Tab') {
                 event.preventDefault();
                 event.stopPropagation(); // Prevent keyboard navigation handler from triggering
+                
+                // Get current editing position from state instead of closure variables
+                const state = window.TableEditor.state;
+                const currentEditingCell = state.currentEditingCell;
+                
+                if (!currentEditingCell) {
+                    console.warn('CellEditor: Tab pressed but no current editing cell in state');
+                    return;
+                }
+                
+                const editingRow = currentEditingCell.row;
+                const editingCol = currentEditingCell.col;
+                
+                console.log('CellEditor: Tab pressed during editing at', editingRow, editingCol, 'forward:', !event.shiftKey);
+                console.log('CellEditor: Closure variables were', row, col);
+                
                 this.commitCellEdit();
-                // Navigate to next/previous cell
-                window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', row, col, !event.shiftKey);
+                // Navigate to next/previous cell using the correct current position
+                console.log('CellEditor: Calling navigateToNextCell with', editingRow, editingCol, !event.shiftKey);
+                window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', editingRow, editingCol, !event.shiftKey);
             }
             // Escape commits and ends editing (README spec: 編集確定＆編集終了)
             else if (event.key === 'Escape') {
