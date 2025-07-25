@@ -321,12 +321,17 @@ const KeyboardNavigationManager = {
         const state = window.TableEditor.state;
         const data = state.displayData || state.tableData;
         
+        console.log('KeyboardNavigationManager: navigateToNextCell called with', row, col, 'forward:', forward);
+        
         if (!data || !data.rows || !data.headers) {
+            console.log('KeyboardNavigationManager: No data available');
             return;
         }
         
         const totalRows = data.rows.length;
         const totalCols = data.headers.length;
+        
+        console.log('KeyboardNavigationManager: Table dimensions:', totalRows, 'rows,', totalCols, 'cols');
         
         let newRow = row;
         let newCol = col;
@@ -353,6 +358,7 @@ const KeyboardNavigationManager = {
             }
         }
         
+        console.log('KeyboardNavigationManager: Calculated new position:', newRow, newCol);
         this.navigateCell(newRow, newCol);
     },
     
