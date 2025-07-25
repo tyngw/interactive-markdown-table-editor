@@ -1,120 +1,59 @@
-# Development Guidelines
+# Development Quick Start
 
-## Git Commit Rules
+## TL;DR - Fast Development Setup
 
-### Commit Message Prefixes
-All commit messages must use one of the following prefixes:
-
-- `feat: ` - New features or functionality
-- `fix: ` - Bug fixes
-- `refactor: ` - Code refactoring without changing functionality
-- `doc: ` - Documentation changes
-
-### Example Commit Messages
-- `feat: add markdown table parser with AST extraction`
-- `fix: resolve table position detection issue`
-- `refactor: improve table parsing performance`
-- `doc: update API documentation for parser`
-
-## Development Workflow
-
-### Task Completion Process
-1. **Implement the task** - Write code according to the task requirements
-2. **Run tests** - Execute all relevant tests to ensure functionality works
-3. **Verify test success** - All tests must pass before proceeding
-4. **Git commit** - Commit changes with appropriate prefix
-5. **Update task status** - Mark task as completed in tasks.md
-
-### VSIX Package Creation
-**IMPORTANT**: Before creating a new VSIX package, always increment the version number in `package.json`:
-- For bug fixes: increment patch version (e.g., 0.1.2 → 0.1.3)
-- For new features: increment minor version (e.g., 0.1.3 → 0.2.0)
-- For breaking changes: increment major version (e.g., 0.2.0 → 1.0.0)
-
-Steps to create a new package:
-1. Update version in `package.json`
-2. Run `npm run compile` to compile latest changes
-3. Run `npx vsce package` to create VSIX file
-4. Install the new VSIX in VS Code
-5. Test functionality to ensure it works correctly
-
-### Testing Requirements
-- All new functionality must have corresponding unit tests
-- Tests must pass before any git commit
-- Use `npm test` to run the full test suite
-- Use `npm run compile` to check for TypeScript compilation errors
-
-### Code Quality
-- Follow TypeScript strict mode requirements
-- Use ESLint for code style consistency
-- Ensure proper error handling for all functions
-- Document public APIs with JSDoc comments
-
-## Project Structure
-```
-src/
-├── extension.ts          # Main extension entry point with multi-table support
-├── markdownParser.ts     # Markdown parsing with table extraction
-├── tableDataManager.ts   # Table data management with index tracking
-├── webviewManager.ts     # Webview panel management
-├── fileHandler.ts        # File system operations with multi-table updates
-└── test/
-    ├── runTest.ts        # Test runner
-    └── suite/
-        ├── index.ts      # Test suite setup
-        ├── markdownParser.test.ts     # Parser tests including multi-table
-        ├── tableDataManager.test.ts   # Table management tests
-        ├── fileHandler.test.ts        # File operations tests
-        └── webviewManager.test.ts     # Webview tests
+```bash
+npm run dev        # Start development server
+# Open http://localhost:3000/dev/ in browser
+# Edit files in webview/ folder and refresh to see changes
 ```
 
-## Multi-Table Architecture
+## Why Use Development Mode?
 
-### Key Components
+- ❌ **Before**: Edit CSS → Run `vsce package` → Install VSIX → Test in VSCode → Repeat
+- ✅ **After**: Edit CSS → Refresh browser → See changes instantly
 
-1. **TableDataManager**: Now includes `tableIndex` to track which table in a document is being edited
-2. **FileHandler**: Enhanced with `updateTableByIndex()` for precise table updates
-3. **Extension**: Updated to support table selection dialog for multiple tables
-4. **Parser**: Robust handling of mixed content (tables, code blocks, lists, etc.)
-5. **WebviewManager**: Enhanced with UI/UX improvements for better user experience
+## Development Commands
 
-### UI/UX Enhancements
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run dev:watch` | Start with file change monitoring |
+| `npm run compile` | Compile TypeScript |
+| `npm test` | Run tests |
 
-#### Status Bar and Messaging
-- **Bottom Status Bar**: Error and save messages now appear at the bottom of the interface
-- **Non-intrusive Feedback**: Status messages provide feedback without blocking the editing workflow
-- **VSCode Theme Integration**: All messages use proper VSCode theme colors and styling
+## What You Get
 
-#### Simplified Interface
-- **Toolbar Simplification**: Removed Save, Export, Delete Row, and Delete Column buttons from the top toolbar
-- **Context Menu Focus**: All operations accessible through intuitive right-click context menus
-- **Clean Workspace**: Minimized UI clutter for better focus on table content
+- 🔄 **Instant refresh** - No extension rebuilding needed
+- 🎯 **Sample data** - Pre-loaded test tables
+- 🐛 **Debug tools** - Console logging and state inspection  
+- 🎨 **VSCode theming** - Accurate visual simulation
+- 👀 **File watching** - Notifications when files change
 
-#### Enhanced Editing Experience
-- **Smart Focus Management**: Editing automatically commits when selecting another cell
-- **Improved Input Handling**: Text input boxes properly handle clicks and prevent focus issues
-- **Event Propagation Control**: Better handling of keyboard and mouse events during editing
-- **Seamless Cell Navigation**: Enhanced keyboard navigation and cell selection behavior
+## File Structure
 
-### Error Handling
-- Automatic backup creation before file modifications
-- Comprehensive validation of table structure and file content
-- Clear error messages with recovery options
-- Graceful handling of malformed tables and mixed content
-- Status bar error display for non-disruptive user experience
+```
+webview/
+├── style.css              # Edit and refresh to see CSS changes
+├── js/
+│   ├── core.js            # Main table editor logic
+│   ├── table-renderer.js  # Table rendering
+│   └── ...                # Other modules
+dev/
+├── index.html             # Development page (rarely needs editing)
+└── start-dev-server.js    # Server logic
+```
 
-### Test Coverage
-- Multi-table scenarios
-- Mixed content documents (tables + code blocks + lists)
-- Error conditions and edge cases
-- File system operations with backup/recovery
-- Table selection and indexing accuracy
-- UI/UX enhancements and user interaction patterns (146+ tests total)
+## Tips
 
-## Commands
-- `npm run compile` - Compile TypeScript
-- `npm run watch` - Watch mode compilation
-- `npm test` - Run all tests
-- `npm run lint` - Run ESLint
-- `npm run vscode:prepublish` - Prepare for publishing
-- `npx vsce package` - Create VSIX package (remember to increment version first!)
+- Use browser DevTools for debugging JavaScript
+- Check console for operation logs (with helpful emojis!)
+- Use \"Debug State\" button to inspect table state
+- Test CSV export directly in browser
+- All keyboard shortcuts work in development mode
+
+## Need Help?
+
+See full documentation in:
+- `README.md` - User documentation with development section
+- `DEVELOPMENT.md` - Comprehensive development guide
