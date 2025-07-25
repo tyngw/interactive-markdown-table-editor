@@ -7,6 +7,7 @@ const url = require('url');
 
 const PORT = process.env.PORT || 3000;
 const ROOT_DIR = path.join(__dirname, '..');
+const WATCH_MODE = process.argv.includes('--watch');
 
 // MIME types
 const mimeTypes = {
@@ -25,6 +26,61 @@ function getMimeType(filePath) {
     const ext = path.extname(filePath).toLowerCase();
     return mimeTypes[ext] || 'application/octet-stream';
 }
+
+// Watch mode functionality
+let watchMode = {
+    watchers: [],
+    lastModified: new Map(),
+    
+    startWatching() {
+        if (!WATCH_MODE) return;
+        
+        const webviewDir = path.join(ROOT_DIR, 'webview');
+        const devDir = path.join(ROOT_DIR, 'dev');
+        
+        console.log('📁 Watching for file changes in webview/ and dev/ directories...');
+        
+        this.watchDirectory(webviewDir);
+        this.watchDirectory(devDir);
+    },
+    
+    watchDirectory(dir) {
+        if (!fs.existsSync(dir)) return;
+        
+        const watcher = fs.watch(dir, { recursive: true }, (eventType, filename) => {
+            if (filename && this.shouldReload(path.join(dir, filename))) {
+                console.log(`🔄 File changed: ${filename} - Browser refresh recommended`);
+            }
+        });
+        
+        this.watchers.push(watcher);
+    },
+    
+    shouldReload(filePath) {
+        const ext = path.extname(filePath);
+        if (!['.html', '.css', '.js'].includes(ext)) return false;
+        
+        try {
+            const stats = fs.statSync(filePath);
+            const lastMod = this.lastModified.get(filePath);
+            
+            if (!lastMod || stats.mtime > lastMod) {
+                this.lastModified.set(filePath, stats.mtime);
+                return true;
+            }
+        } catch (err) {
+            // File might have been deleted
+            this.lastModified.delete(filePath);
+        }
+        
+        return false;
+    },
+    
+    cleanup() {
+        this.watchers.forEach(watcher => watcher.close());
+        this.watchers = [];
+    }
+};
 
 const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url);
@@ -82,12 +138,25 @@ server.listen(PORT, () => {
     console.log('   • Refresh the browser to see changes');
     console.log('   • No need to rebuild the VSCode extension!');
     console.log('');
+    if (WATCH_MODE) {
+        console.log('👀 Watch mode enabled - file changes will be logged');
+        watchMode.startWatching();
+    } else {
+        console.log('💡 Tip: Use --watch flag for file change monitoring');
+    }
+    console.log('');
     console.log('⚡ Press Ctrl+C to stop the server');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 });
 
 process.on('SIGINT', () => {
     console.log('\n🛑 Stopping development server...');
+    
+    if (WATCH_MODE) {
+        watchMode.cleanup();
+        console.log('👁️ File watchers cleaned up');
+    }
+    
     server.close(() => {
         console.log('✅ Development server stopped');
         process.exit(0);
