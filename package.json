@@ -52,7 +52,7 @@
     "test:interface": "npm run compile && echo 'Running interface tests...' && node -e \"console.log('Interface tests compiled successfully. Run in VS Code test environment.')\"",
     "test:all": "npm run test && npm run test:integration",
     "dev": "node dev/start-dev-server.js",
-    "dev:watch": "npm run dev"
+    "dev:watch": "node dev/start-dev-server.js --watch"
   },
   "devDependencies": {
     "@types/vscode": "^1.74.0",
