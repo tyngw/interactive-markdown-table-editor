@@ -436,6 +436,16 @@ textarea.cell-input[data-multiline="true"] {
     background-clip: padding-box;
 }
 
+/* First column header - sticky both horizontally and vertically */
+.table-editor th[data-col="0"] {
+    position: sticky;
+    left: 60px; /* Position after row numbers */
+    top: 0;
+    z-index: 105; /* Higher than regular headers but lower than corner */
+    background-color: var(--vscode-editor-lineHighlightBackground) !important;
+    background-clip: padding-box;
+}
+
 .header-corner:hover {
     background: linear-gradient(135deg,
             var(--vscode-list-hoverBackground) 0%,
