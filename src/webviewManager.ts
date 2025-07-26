@@ -33,9 +33,9 @@ export class WebviewManager {
      */
     public createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri): vscode.WebviewPanel {
         const panelId = uri.toString();
-        
+
         console.log('Creating webview panel for:', panelId);
-        
+
         // If panel already exists, reveal it
         if (this.panels.has(panelId)) {
             console.log('Panel already exists, revealing...');
@@ -91,14 +91,14 @@ export class WebviewManager {
 
         // Get HTML content and inject URIs
         let html = this.getWebviewContent();
-        
+
         // Inject CSS URI and script URIs into HTML
         const injectionScript = `
 <script>
 window.cssUri = '${cssUri}';
 window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 </script>`;
-        
+
         html = html.replace(/<head>/i, `<head>${injectionScript}`);
         panel.webview.html = html;
 
@@ -136,10 +136,10 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         setTimeout(() => {
             console.log('Sending initial table data to webview...');
             this.updateTableData(panel, tableData, uri);
-            
+
             // Send a second update after another delay to ensure it's received
             setTimeout(() => {
-                console.log('Sending backup table data to webview...');
+                console.log('Sending table data to webview...');
                 this.updateTableData(panel, tableData, uri);
             }, 1000);
         }, 500);
@@ -156,7 +156,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             command: 'updateTableData',
             data: tableData
         };
-        
+
         // Include file information if URI is provided
         if (uri) {
             const path = require('path');
@@ -166,7 +166,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
                 fileNameWithoutExt: path.basename(uri.fsPath, path.extname(uri.fsPath))
             };
         }
-        
+
         panel.webview.postMessage(message);
     }
 
@@ -185,7 +185,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     private refreshPanelData(panel: vscode.WebviewPanel, uri: vscode.Uri): void {
         console.log('Refreshing panel data for:', uri.toString());
-        
+
         // Request fresh table data from the file
         vscode.commands.executeCommand('markdownTableEditor.internal.requestTableData', {
             uri,
@@ -298,9 +298,9 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      * Validate incoming message structure
      */
     public validateMessage(message: any): message is WebviewMessage {
-        return this.validateBasicMessageStructure(message) && 
-               this.validateMessageCommand(message) && 
-               this.validateMessageData(message);
+        return this.validateBasicMessageStructure(message) &&
+            this.validateMessageCommand(message) &&
+            this.validateMessageData(message);
     }
 
     /**
@@ -323,7 +323,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     public validateMessageCommand(message: any): boolean {
         const validCommands = [
-            'requestTableData', 'updateCell', 'addRow', 'deleteRow', 
+            'requestTableData', 'updateCell', 'addRow', 'deleteRow',
             'addColumn', 'deleteColumn', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'pong', 'switchTable'
         ];
 
@@ -378,55 +378,55 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     private validateCellUpdateData(data: any): boolean {
         if (!data) return false;
         return typeof data.row === 'number' && data.row >= 0 &&
-               typeof data.col === 'number' && data.col >= 0 &&
-               typeof data.value === 'string' &&
-               (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
+            typeof data.col === 'number' && data.col >= 0 &&
+            typeof data.value === 'string' &&
+            (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
 
     private validateAddRowData(data: any): boolean {
-        return !data || (data && 
-               (data.index === undefined || (typeof data.index === 'number' && data.index >= 0)) &&
-               (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0)));
+        return !data || (data &&
+            (data.index === undefined || (typeof data.index === 'number' && data.index >= 0)) &&
+            (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0)));
     }
 
     private validateDeleteRowData(data: any): boolean {
         if (!data) return false;
         return typeof data.index === 'number' && data.index >= 0 &&
-               (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
+            (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
 
     private validateAddColumnData(data: any): boolean {
-        return !data || (data && 
-               (data.index === undefined || (typeof data.index === 'number' && data.index >= 0)) &&
-               (data.header === undefined || typeof data.header === 'string') &&
-               (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0)));
+        return !data || (data &&
+            (data.index === undefined || (typeof data.index === 'number' && data.index >= 0)) &&
+            (data.header === undefined || typeof data.header === 'string') &&
+            (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0)));
     }
 
     private validateDeleteColumnData(data: any): boolean {
         if (!data) return false;
         return typeof data.index === 'number' && data.index >= 0 &&
-               (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
+            (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
 
     private validateSortData(data: any): boolean {
         if (!data) return false;
         return typeof data.column === 'number' && data.column >= 0 &&
-               typeof data.direction === 'string' && 
-               (data.direction === 'asc' || data.direction === 'desc') &&
-               (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
+            typeof data.direction === 'string' &&
+            (data.direction === 'asc' || data.direction === 'desc') &&
+            (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
 
     private validateMoveData(data: any): boolean {
         if (!data) return false;
         return typeof data.from === 'number' && data.from >= 0 &&
-               typeof data.to === 'number' && data.to >= 0 &&
-               (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
+            typeof data.to === 'number' && data.to >= 0 &&
+            (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
 
     private validateExportCSVData(data: any): boolean {
         if (!data) return false;
         return typeof data.csvContent === 'string' &&
-               typeof data.filename === 'string' && data.filename.length > 0;
+            typeof data.filename === 'string' && data.filename.length > 0;
     }
 
     private validateSwitchTableData(data: any): boolean {
@@ -439,7 +439,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     private async handleRequestTableData(panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Table data requested for:', uri.toString());
-        
+
         // Emit custom event that can be handled by the extension
         vscode.commands.executeCommand('markdownTableEditor.internal.requestTableData', {
             uri,
@@ -453,7 +453,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     private async handleCellUpdate(data: { row: number; col: number; value: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Cell update:', data, 'for file:', uri.toString());
         console.log('Cell update tableIndex:', data.tableIndex);
-        
+
         const commandData = {
             uri,
             panelId: this.getPanelId(uri),
@@ -462,9 +462,9 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             value: data.value,
             tableIndex: data.tableIndex
         };
-        
+
         console.log('Sending command data:', commandData);
-        
+
         // Emit custom event that can be handled by the extension
         vscode.commands.executeCommand('markdownTableEditor.internal.updateCell', commandData);
     }
@@ -474,7 +474,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     private async handleAddRow(data: { index?: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Add row:', data, 'for file:', uri.toString());
-        
+
         vscode.commands.executeCommand('markdownTableEditor.internal.addRow', {
             uri,
             panelId: this.getPanelId(uri),
@@ -488,7 +488,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     private async handleDeleteRow(data: { index: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Delete row:', data, 'for file:', uri.toString());
-        
+
         vscode.commands.executeCommand('markdownTableEditor.internal.deleteRow', {
             uri,
             panelId: this.getPanelId(uri),
@@ -502,7 +502,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     private async handleAddColumn(data: { index?: number; header?: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Add column:', data, 'for file:', uri.toString());
-        
+
         vscode.commands.executeCommand('markdownTableEditor.internal.addColumn', {
             uri,
             panelId: this.getPanelId(uri),
@@ -517,7 +517,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     private async handleDeleteColumn(data: { index: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Delete column:', data, 'for file:', uri.toString());
-        
+
         vscode.commands.executeCommand('markdownTableEditor.internal.deleteColumn', {
             uri,
             panelId: this.getPanelId(uri),
@@ -531,7 +531,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     private async handleSort(data: { column: number; direction: 'asc' | 'desc'; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Sort:', data, 'for file:', uri.toString());
-        
+
         vscode.commands.executeCommand('markdownTableEditor.internal.sort', {
             uri,
             panelId: this.getPanelId(uri),
@@ -546,7 +546,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     private async handleMoveRow(data: { from: number; to: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Move row:', data, 'for file:', uri.toString());
-        
+
         vscode.commands.executeCommand('markdownTableEditor.internal.moveRow', {
             uri,
             panelId: this.getPanelId(uri),
@@ -561,7 +561,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     private async handleMoveColumn(data: { from: number; to: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Move column:', data, 'for file:', uri.toString());
-        
+
         vscode.commands.executeCommand('markdownTableEditor.internal.moveColumn', {
             uri,
             panelId: this.getPanelId(uri),
@@ -576,7 +576,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     private async handleExportCSV(data: { csvContent: string; filename: string }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Export CSV:', data.filename, 'for file:', uri.toString());
-        
+
         vscode.commands.executeCommand('markdownTableEditor.internal.exportCSV', {
             uri,
             panelId: this.getPanelId(uri),
@@ -591,9 +591,9 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     private getWebviewContent(): string {
         // Read the HTML file content
         const htmlPath = path.join(this.context.extensionPath, 'webview', 'tableEditor.html');
-        
+
         console.log('Reading HTML from path:', htmlPath);
-        
+
         try {
             const fs = require('fs');
             const content = fs.readFileSync(htmlPath, 'utf8');
@@ -773,7 +773,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 
         for (const [panelId, panel] of this.panels.entries()) {
             const health = this.connectionHealthMap.get(panelId);
-            
+
             if (!health || (now - health.lastActivity) > healthTimeout) {
                 // Connection may be unhealthy
                 this.connectionHealthMap.set(panelId, {

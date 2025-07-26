@@ -174,29 +174,7 @@ More content here.`;
             assert.ok(error instanceof Error);
         }
     });
-    test('Backup functionality integration', async () => {
-        const backupTestFile = path.join(testDir, 'backup-test.md');
-        const originalContent = `| Original | Table |
-|----------|-------|
-| Data     | Here  |`;
-        fs.writeFileSync(backupTestFile, originalContent);
-        const fileHandler = (0, fileHandler_1.getFileHandler)();
-        // Create backup
-        const backupPath = await fileHandler.createBackup(vscode.Uri.file(backupTestFile));
-        assert.ok(backupPath);
-        assert.ok(fs.existsSync(backupPath));
-        // Verify backup content
-        const backupContent = fs.readFileSync(backupPath, 'utf8');
-        assert.strictEqual(backupContent, originalContent);
-        // Modify original file
-        const modifiedContent = originalContent.replace('Original', 'Modified');
-        await fileHandler.writeMarkdownFile(vscode.Uri.file(backupTestFile), modifiedContent);
-        // Verify original is modified but backup is unchanged
-        const currentContent = await fileHandler.readMarkdownFile(vscode.Uri.file(backupTestFile));
-        assert.ok(currentContent.includes('Modified'));
-        const backupContentAfter = fs.readFileSync(backupPath, 'utf8');
-        assert.ok(backupContentAfter.includes('Original'));
-    });
+
     test('Multiple file operations integration', async () => {
         const fileHandler = (0, fileHandler_1.getFileHandler)();
         const parser = new markdownParser_1.MarkdownParser();

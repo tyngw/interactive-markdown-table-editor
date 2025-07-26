@@ -424,6 +424,11 @@ const TableEditor = {
             return;
         }
         
+        // Save current scroll position
+        const tableContainer = tableContent.querySelector('.table-container');
+        const scrollTop = tableContainer ? tableContainer.scrollTop : 0;
+        const scrollLeft = tableContainer ? tableContainer.scrollLeft : 0;
+        
         const renderer = this.getModule('TableRenderer');
         if (!renderer) {
             console.error('TableEditor: TableRenderer module not available');
@@ -436,12 +441,8 @@ const TableEditor = {
             return;
         }
         
-        // Initialize data models on first render
+        // Update state data
         const state = this.state;
-        if (!state.originalData) {
-            state.originalData = JSON.parse(JSON.stringify(data)); // Deep clone
-        }
-        
         state.tableData = data;
         state.displayData = data; // Currently displayed data
         
@@ -493,6 +494,16 @@ const TableEditor = {
             
             // Set table width to sum of column widths to prevent window resize effects
             renderer.setTableWidth();
+            
+            // Restore scroll position
+            const newTableContainer = tableContent.querySelector('.table-container');
+            if (newTableContainer) {
+                newTableContainer.scrollTop = scrollTop;
+                newTableContainer.scrollLeft = scrollLeft;
+            }
+            
+            // Update sort actions visibility after rendering
+            this.callModule('SortingManager', 'updateSortActionsVisibility');
             
             console.log('TableEditor: Table rendering completed successfully');
         } catch (error) {

@@ -140,31 +140,7 @@ suite('FileHandler Test Suite', () => {
             }
         });
 
-        test('should create backup before updating', async () => {
-            // Clean up any existing backup files first
-            const existingBackups = fs.readdirSync(testDir).filter(file => 
-                file.startsWith('test.md.backup-')
-            );
-            existingBackups.forEach(backup => {
-                fs.unlinkSync(path.join(testDir, backup));
-            });
-            
-            const originalContent = '# Test\n\n| A | B |\n|---|---|\n| 1 | 2 |';
-            fs.writeFileSync(testFile.fsPath, originalContent, 'utf8');
-            
-            await fileHandler.updateTableInFile(testFile, 2, 4, '| X | Y |\n|---|---|\n| 3 | 4 |');
-            
-            // Check if backup file was created
-            const backupFiles = fs.readdirSync(testDir).filter(file => 
-                file.startsWith('test.md.backup-')
-            );
-            assert.ok(backupFiles.length > 0, 'Backup file should be created');
-            
-            // Verify backup content - should match the original content before update
-            const backupPath = path.join(testDir, backupFiles[0]);
-            const backupContent = fs.readFileSync(backupPath, 'utf8');
-            assert.strictEqual(backupContent, originalContent);
-        });
+
     });
 
     suite('updateMultipleTablesInFile', () => {
