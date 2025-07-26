@@ -95,6 +95,19 @@ export class TableDataManager {
     }
 
     /**
+     * Update header value
+     */
+    updateHeader(col: number, value: string): void {
+        if (col < 0 || col >= this.tableData.headers.length) {
+            throw new Error(`Invalid header column: ${col}`);
+        }
+
+        this.tableData.headers[col] = value;
+        this.updateMetadata();
+        this.notifyChange();
+    }
+
+    /**
      * Add new row
      */
     addRow(index?: number): void {
