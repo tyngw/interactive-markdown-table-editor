@@ -209,7 +209,6 @@ body {
     min-width: 150px;
     cursor: cell;
     transition: background-color 0.15s ease;
-    vertical-align: top !important;
     /* 枠線をセル内側に描画してサイズ変更を防ぐ */
     box-sizing: border-box;
     /* 高さを内容に応じて自動調整 */
@@ -363,6 +362,64 @@ textarea.cell-input[data-multiline="true"] {
     opacity: 0.9;
 }
 
+/* Header editing styles */
+.table-editor th.editing {
+    background-color: var(--vscode-input-background) !important;
+    outline: 2px solid var(--vscode-inputOption-activeBorder);
+    outline-offset: -1px;
+}
+
+.header-input {
+    border: none !important;
+    background: transparent !important;
+    color: inherit !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    outline: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+}
+
+.header-input:focus {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Column header layout improvements */
+
+
+
+.column-title:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    border-radius: 2px;
+    padding: 1px 2px;
+    margin: -1px -2px;
+}
+
+/* Move sort indicator further to the right */
+.sort-indicator {
+    position: absolute;
+    right: 6px; /* Move closer to the edge */
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0; /* Remove left margin */
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 2px;
+    transition: background-color 0.15s ease;
+    user-select: none;
+    display: inline-block;
+}
+
+.sort-indicator:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
 /* Selection indicators - 統一されたスタイル */
 .table-editor td.data-cell.selected {
     background-color: var(--vscode-list-activeSelectionBackground) !important;
@@ -465,33 +522,20 @@ textarea.cell-input[data-multiline="true"] {
 }
 
 /* Enhanced column headers */
-.column-header {
-    position: relative;
-    overflow: hidden;
-}
 
-.header-content {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-}
-
-.column-letter {
-    font-size: 10px;
-    color: var(--vscode-descriptionForeground);
-    font-weight: 400;
-    text-transform: uppercase;
-}
 
 .column-title {
+    cursor: text;
+    flex: 1;
+    min-width: 0;
+    word-wrap: break-word;
     font-size: 13px;
     font-weight: 600;
     color: var(--vscode-foreground);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: calc(100% - 40px); /* Leave space for sort indicator */
+    max-width: 100%;
     display: inline-block;
 }
 
@@ -536,7 +580,6 @@ textarea.cell-input[data-multiline="true"] {
     padding: 4px 6px !important;
     /* 編集時と同じパディングを追加 */
     /* 垂直配置を上揃えに統一 */
-    vertical-align: top !important;
     /* セル全体を埋める */
     width: 100%;
     box-sizing: border-box;
@@ -626,20 +669,7 @@ textarea.cell-input[data-multiline="true"] {
     font-weight: 500;
 }
 
-.sort-indicator {
-    margin-left: 8px;
-    font-size: 12px;
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: 2px;
-    transition: background-color 0.15s ease;
-    user-select: none;
-    display: inline-block;
-}
 
-.sort-indicator:hover {
-    background-color: var(--vscode-list-hoverBackground);
-}
 
 .sort-asc::after {
     content: "▲";
@@ -679,7 +709,6 @@ textarea.cell-input[data-multiline="true"] {
     border: 1px solid var(--vscode-notifications-border);
     border-radius: 4px;
     padding: 8px 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 1000;
     display: none;
     gap: 8px;

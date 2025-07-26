@@ -3,7 +3,7 @@ import * as path from 'path';
 import { TableData } from './tableDataManager';
 
 export interface WebviewMessage {
-    command: 'requestTableData' | 'updateCell' | 'addRow' | 'deleteRow' | 'addColumn' | 'deleteColumn' | 'sort' | 'moveRow' | 'moveColumn' | 'exportCSV' | 'pong' | 'switchTable';
+    command: 'requestTableData' | 'updateCell' | 'updateHeader' | 'addRow' | 'deleteRow' | 'addColumn' | 'deleteColumn' | 'sort' | 'moveRow' | 'moveColumn' | 'exportCSV' | 'pong' | 'switchTable';
     data?: any;
     timestamp?: number;
     responseTime?: number;
@@ -214,6 +214,13 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         });
     }
 
+    public sendHeaderUpdateError(panel: vscode.WebviewPanel, errorInfo: { col: number; error: string }): void {
+        panel.webview.postMessage({
+            command: 'headerUpdateError',
+            data: errorInfo
+        });
+    }
+
     /**
      * Handle messages from webview
      */
@@ -248,6 +255,10 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 
                 case 'updateCell':
                     await this.handleCellUpdate(message.data, panel, uri);
+                    break;
+
+                case 'updateHeader':
+                    await this.handleHeaderUpdate(message.data, panel, uri);
                     break;
 
                 case 'addRow':
@@ -333,7 +344,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     public validateMessageCommand(message: any): boolean {
         const validCommands = [
-            'requestTableData', 'updateCell', 'addRow', 'deleteRow',
+            'requestTableData', 'updateCell', 'updateHeader', 'addRow', 'deleteRow',
             'addColumn', 'deleteColumn', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'pong', 'switchTable'
         ];
 
@@ -351,6 +362,9 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 
             case 'updateCell':
                 return this.validateCellUpdateData(message.data);
+
+            case 'updateHeader':
+                return this.validateHeaderUpdateData(message.data);
 
             case 'addRow':
                 return this.validateAddRowData(message.data);
@@ -389,6 +403,13 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         if (!data) return false;
         return typeof data.row === 'number' && data.row >= 0 &&
             typeof data.col === 'number' && data.col >= 0 &&
+            typeof data.value === 'string' &&
+            (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
+    }
+
+    private validateHeaderUpdateData(data: any): boolean {
+        if (!data) return false;
+        return typeof data.col === 'number' && data.col >= 0 &&
             typeof data.value === 'string' &&
             (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
@@ -478,6 +499,27 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 
         // Emit custom event that can be handled by the extension
         vscode.commands.executeCommand('markdownTableEditor.internal.updateCell', commandData);
+    }
+
+    /**
+     * Handle header update
+     */
+    private async handleHeaderUpdate(data: { col: number; value: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('Header update:', data, 'for file:', uri.toString());
+        console.log('Header update tableIndex:', data.tableIndex);
+
+        const commandData = {
+            uri,
+            panelId: this.getPanelId(uri),
+            col: data.col,
+            value: data.value,
+            tableIndex: data.tableIndex
+        };
+
+        console.log('Sending header command data:', commandData);
+
+        // Emit custom event that can be handled by the extension
+        vscode.commands.executeCommand('markdownTableEditor.internal.updateHeader', commandData);
     }
 
     /**

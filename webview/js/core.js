@@ -839,6 +839,48 @@ const TableEditor = {
     },
     
     /**
+     * Update a header column name
+     */
+    updateHeader: function(col, value) {
+        console.log('TableEditor: Updating header', col, 'with value:', value);
+        console.log('TableEditor: Current table index:', this.state.currentTableIndex);
+        
+        const data = this.state.displayData || this.state.tableData;
+        if (!data || !data.headers || col < 0 || col >= data.headers.length) {
+            console.error('TableEditor: Invalid header column index');
+            return;
+        }
+        
+        // Update the header value
+        data.headers[col] = value;
+        
+        // Update both tableData and displayData
+        this.state.tableData = data;
+        this.state.displayData = data;
+        
+        // Debug current state before sending update
+        this.debugCurrentState();
+        
+        // Send update to extension (with auto-save and current table index)
+        if (this.vscode) {
+            console.log('TableEditor: Sending updateHeader command with tableIndex:', this.state.currentTableIndex);
+            this.vscode.postMessage({
+                command: 'updateHeader',
+                data: {
+                    col: col,
+                    value: value,
+                    tableIndex: this.state.currentTableIndex
+                }
+            });
+        }
+        
+        // Show auto-saved status
+        this.showAutoSavedStatus();
+        
+        console.log('TableEditor: Header updated successfully');
+    },
+
+    /**
      * Update a single cell value
      */
     updateCell: function(row, col, value) {
