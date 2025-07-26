@@ -208,6 +208,15 @@ const TableEditor = {
         });
         
         console.log('TableEditor: Module initialization complete. Registered modules:', Object.keys(this.modules));
+        
+        // Verify TableRenderer is properly registered
+        const renderer = this.getModule('TableRenderer');
+        console.log('TableEditor: TableRenderer module check:', {
+            exists: !!renderer,
+            hasRenderTableContent: !!(renderer && renderer.renderTableContent),
+            hasInitializeColumnWidths: !!(renderer && renderer.initializeColumnWidths),
+            hasSetTableWidth: !!(renderer && renderer.setTableWidth)
+        });
     },
     
     /**
@@ -227,17 +236,16 @@ const TableEditor = {
         // For debugging: Add a timeout to show test data if no response received
         setTimeout(() => {
             if (!this.state.tableData) {
-                console.warn('TableEditor: No table data received after 3 seconds, showing test data');
-                this.handleUpdateTableData({
-                    headers: ['Column A', 'Column B', 'Column C'],
-                    rows: [
-                        ['Row 1, Col A', 'Row 1, Col B', 'Row 1, Col C'],
-                        ['Row 2, Col A', 'Row 2, Col B', 'Row 2, Col C'],
-                        ['Row 3, Col A', 'Row 3, Col B', 'Row 3, Col C']
-                    ]
-                }, { filename: 'test.md' });
+                console.warn('TableEditor: No table data received after 5 seconds, requesting again...');
+                this.requestTableData();
+                
+                // Show loading message
+                const app = document.getElementById('app');
+                if (app) {
+                    app.innerHTML = '<div style="padding: 20px; text-align: center;">テーブルデータを読み込み中...</div>';
+                }
             }
-        }, 3000);
+        }, 5000);
         
         console.log('TableEditor: Table editor application initialized');
     },
@@ -251,6 +259,7 @@ const TableEditor = {
         
         switch (message.command) {
             case 'updateTableData':
+                console.log('TableEditor: Processing updateTableData message with data:', message.data);
                 this.handleUpdateTableData(message.data, message.fileInfo);
                 break;
             case 'setActiveTable':
@@ -285,18 +294,24 @@ const TableEditor = {
      * Handle table data update from VSCode
      */
     handleUpdateTableData: function(data, fileInfo) {
+        console.log('TableEditor: handleUpdateTableData called with data:', data, 'fileInfo:', fileInfo);
+        
         // Support both single table and multiple tables data structure
         if (Array.isArray(data)) {
             // Multiple tables
+            console.log('TableEditor: Processing multiple tables, count:', data.length);
             this.state.allTables = data;
             this.state.currentTableIndex = Math.min(this.state.currentTableIndex, data.length - 1);
             this.state.tableData = data[this.state.currentTableIndex] || null;
         } else {
             // Single table (legacy)
+            console.log('TableEditor: Processing single table');
             this.state.allTables = data ? [data] : [];
             this.state.currentTableIndex = 0;
             this.state.tableData = data;
         }
+        
+        console.log('TableEditor: Final tableData:', this.state.tableData);
         
         this.state.displayData = this.state.tableData;
         this.state.originalData = this.state.tableData ? JSON.parse(JSON.stringify(this.state.tableData)) : null;
@@ -311,6 +326,7 @@ const TableEditor = {
         };
         
         // Render table with tabs if multiple tables exist
+        console.log('TableEditor: Calling renderApplicationWithTabs...');
         this.renderApplicationWithTabs();
     },
 
@@ -327,11 +343,14 @@ const TableEditor = {
      * Render the application with table tabs
      */
     renderApplicationWithTabs: function() {
+        console.log('TableEditor: renderApplicationWithTabs called');
         const app = document.getElementById('app');
         if (!app) {
             console.error('TableEditor: App element not found');
             return;
         }
+        
+        console.log('TableEditor: App element found, allTables count:', this.state.allTables.length);
         
         let html = '';
         
@@ -349,20 +368,20 @@ const TableEditor = {
         // Add table container
         html += '<div id="table-content"></div>';
         
+        console.log('TableEditor: Setting app innerHTML');
         app.innerHTML = html;
         
         // Render current table
         const renderer = this.getModule('TableRenderer');
-        if (renderer && renderer.renderTable && this.state.tableData) {
-            // Temporarily set the target to table-content for rendering
-            const originalApp = document.getElementById('app');
-            const tableContent = document.getElementById('table-content');
-            if (tableContent) {
-                tableContent.id = 'app'; // Temporarily change ID for renderer
-                renderer.renderTable(this.state.tableData);
-                tableContent.id = 'table-content'; // Restore ID
-            }
+        console.log('TableEditor: TableRenderer module:', !!renderer);
+        console.log('TableEditor: Current tableData:', !!this.state.tableData);
+        
+        if (renderer && this.state.tableData) {
+            console.log('TableEditor: Rendering table with TableRenderer');
+            // Create a custom render method that targets table-content
+            this.renderTableInContainer(this.state.tableData);
         } else if (!this.state.tableData) {
+            console.log('TableEditor: No table data, showing no-data message');
             document.getElementById('table-content').innerHTML = '<div class="no-data">テーブルデータがありません</div>';
         } else {
             console.error('TableEditor: TableRenderer module not available');
@@ -370,6 +389,95 @@ const TableEditor = {
         }
     },
     
+    /**
+     * Render table in the table-content container
+     */
+    renderTableInContainer: function(data) {
+        console.log('TableEditor: renderTableInContainer called with data:', data);
+        
+        const tableContent = document.getElementById('table-content');
+        if (!tableContent) {
+            console.error('TableEditor: table-content element not found');
+            return;
+        }
+        
+        const renderer = this.getModule('TableRenderer');
+        if (!renderer) {
+            console.error('TableEditor: TableRenderer module not available');
+            return;
+        }
+        
+        if (!data || !data.headers || !data.rows) {
+            console.error('TableEditor: Invalid data structure:', data);
+            tableContent.innerHTML = '<div class="error">Invalid table data structure</div>';
+            return;
+        }
+        
+        // Initialize data models on first render
+        const state = this.state;
+        if (!state.originalData) {
+            state.originalData = JSON.parse(JSON.stringify(data)); // Deep clone
+        }
+        
+        state.tableData = data;
+        state.displayData = data; // Currently displayed data
+        
+        console.log('TableEditor: Rendering table with', data.headers.length, 'columns and', data.rows.length, 'rows');
+        
+        try {
+            const tableContentHtml = renderer.renderTableContent();
+            console.log('TableEditor: Generated table content HTML length:', tableContentHtml.length);
+            
+            tableContent.innerHTML = `
+                <div class="table-container">
+                    <table class="table-editor" id="tableEditor">
+                        ${tableContentHtml}
+                    </table>
+                </div>
+                
+                <!-- Sort Actions Panel -->
+                <div class="sort-actions" id="sortActions" style="display: none;">
+                    <span class="sort-status-badge">📊 Viewing sorted data</span>
+                    <button class="sort-action-btn secondary" onclick="TableEditor.callModule('SortingManager', 'restoreOriginalView')">📄 Restore Original</button>
+                    <button class="sort-action-btn" onclick="TableEditor.callModule('SortingManager', 'commitSortToFile')">💾 Save Sort to File</button>
+                </div>
+                
+                <!-- Export Actions Panel -->
+                <div class="export-actions">
+                    <select class="encoding-select" id="encodingSelect">
+                        <option value="utf8">UTF-8</option>
+                        <option value="sjis">Shift_JIS</option>
+                    </select>
+                    <button class="export-btn" onclick="TableEditor.callModule('CSVExporter', 'exportToCSV')">📄 Export CSV</button>
+                </div>
+                
+                <!-- Status Bar -->
+                <div class="status-bar" id="statusBar">
+                    <div class="status-left">
+                        <div class="status-item" id="statusSelection"></div>
+                    </div>
+                    <div class="status-center">
+                        <div class="status-message" id="statusMessage"></div>
+                    </div>
+                    <div class="status-right">
+                        <div class="status-item" id="statusInfo"></div>
+                    </div>
+                </div>
+            `;
+
+            // Initialize column widths for new data
+            renderer.initializeColumnWidths(data);
+            
+            // Set table width to sum of column widths to prevent window resize effects
+            renderer.setTableWidth();
+            
+            console.log('TableEditor: Table rendering completed successfully');
+        } catch (error) {
+            console.error('TableEditor: Error during table rendering:', error);
+            tableContent.innerHTML = '<div class="error">Error rendering table: ' + error.message + '</div>';
+        }
+    },
+
     /**
      * Switch to a different table
      */
@@ -714,14 +822,7 @@ const TableEditor = {
         }
     },
     
-    /**
-     * Initialize the TableEditor system
-     */
-    init: function() {
-        console.log('TableEditor: Initializing core system');
-        this.setupErrorHandling();
-        return true;
-    },
+
     
     /**
      * Load a module dynamically
