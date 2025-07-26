@@ -98,9 +98,6 @@ body {
 
 /* テーブルヘッダー - 完全に不透過で固定 */
 .table-editor thead {
-    position: sticky;
-    top: 0;
-    z-index: 100;
     background-color: var(--vscode-editor-background);
 }
 
@@ -111,8 +108,8 @@ body {
     border-top: 2px solid var(--vscode-focusBorder);
     padding: 10px 12px;
     text-align: left;
-    position: sticky;
-    top: 0;
+    position: sticky !important;
+    top: 0 !important;
     /* デフォルトの列幅 - ユーザーがリサイズしていない場合 */
     width: 150px;
     min-width: 150px;
@@ -123,8 +120,8 @@ body {
     transition: background-color 0.15s ease;
     box-sizing: border-box;
     z-index: 100;
-    opacity: 1;
-    /* 完全に不透過な背景を保証 */
+    opacity: 1 !important;
+    /* 完全に不透過な背景を強制保証 */
     background-clip: padding-box;
     /* 長いヘッダーテキストでも幅を維持 */
     overflow: hidden;
@@ -138,7 +135,7 @@ body {
 .table-editor th:hover {
     background-color: var(--vscode-list-hoverBackground);
     /* ホバー時も完全に不透過 */
-    opacity: 1;
+    opacity: 1 !important;
 }
 
 .table-editor th:first-child {
@@ -165,12 +162,12 @@ body {
     color: var(--vscode-descriptionForeground);
     cursor: pointer;
     transition: background-color 0.15s ease;
-    position: sticky;
-    left: 0;
+    position: sticky !important;
+    left: 0 !important;
     z-index: 90;
     box-sizing: border-box;
-    opacity: 1;
-    /* 完全に不透過な背景を保証 */
+    opacity: 1 !important;
+    /* 完全に不透過な背景を強制保証 */
     background-clip: padding-box;
     /* スクロール時の固定表示を強化 */
     background-color: var(--vscode-editor-lineHighlightBackground) !important;
@@ -180,7 +177,7 @@ body {
     background-color: var(--vscode-list-hoverBackground) !important;
     color: var(--vscode-foreground);
     /* ホバー時も完全に不透過でスクロール時固定表示を保持 */
-    opacity: 1;
+    opacity: 1 !important;
 }
 
 /* Data cells */
@@ -415,7 +412,7 @@ textarea.cell-input[data-multiline="true"] {
 .header-corner {
     background: linear-gradient(135deg,
             var(--vscode-editor-lineHighlightBackground) 0%,
-            var(--vscode-list-hoverBackground) 100%);
+            var(--vscode-list-hoverBackground) 100%) !important;
     border: 2px solid var(--vscode-focusBorder);
     border-bottom: 1px solid var(--vscode-panel-border);
     border-right: 1px solid var(--vscode-panel-border);
@@ -437,15 +434,19 @@ textarea.cell-input[data-multiline="true"] {
     /* パディングを追加 */
     /* スティッキー要素を確実に表示 */
     background-clip: padding-box;
+    opacity: 1 !important;
+    /* 完全に不透過な表示を強制保証 */
 }
 
 .header-corner:hover {
     background: linear-gradient(135deg,
             var(--vscode-list-hoverBackground) 0%,
-            var(--vscode-list-activeSelectionBackground) 100%);
+            var(--vscode-list-activeSelectionBackground) 100%) !important;
     color: var(--vscode-foreground);
     /* ホバー時もスティッキー要素を確実に表示 */
     background-clip: padding-box;
+    opacity: 1 !important;
+    /* ホバー時も完全に不透過な表示を強制保証 */
 }
 
 /* Enhanced column headers */
@@ -565,13 +566,12 @@ textarea.cell-input[data-multiline="true"] {
 .table-editor tbody tr:hover td.row-number {
     background: linear-gradient(90deg,
             var(--vscode-list-hoverBackground) 0%,
-            var(--vscode-list-activeSelectionBackground) 100%);
+            var(--vscode-list-activeSelectionBackground) 100%) !important;
+    opacity: 1 !important;
+    /* スティッキー要素のホバー時も完全に不透過な表示を保証 */
 }
 
-/* Resize cursor */
-.table-editor th {
-    position: relative;
-}
+/* Removed conflicting position rule that was overriding sticky positioning for th elements */
 
 /* 重複定義を削除 - 上の定義を使用 */
 
