@@ -436,7 +436,8 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     private validateExportCSVData(data: any): boolean {
         if (!data) return false;
         return typeof data.csvContent === 'string' &&
-            typeof data.filename === 'string' && data.filename.length > 0;
+            typeof data.filename === 'string' && data.filename.length > 0 &&
+            (data.encoding === undefined || typeof data.encoding === 'string');
     }
 
     private validateSwitchTableData(data: any): boolean {
@@ -584,14 +585,15 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     /**
      * Handle CSV export
      */
-    private async handleExportCSV(data: { csvContent: string; filename: string }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Export CSV:', data.filename, 'for file:', uri.toString());
+    private async handleExportCSV(data: { csvContent: string; filename: string; encoding?: string }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('Export CSV:', data.filename, 'encoding:', data.encoding || 'utf8', 'for file:', uri.toString());
 
         vscode.commands.executeCommand('markdownTableEditor.internal.exportCSV', {
             uri,
             panelId: this.getPanelId(uri),
             csvContent: data.csvContent,
-            filename: data.filename
+            filename: data.filename,
+            encoding: data.encoding || 'utf8'
         });
     }
 
