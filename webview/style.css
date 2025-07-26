@@ -209,7 +209,6 @@ body {
     min-width: 150px;
     cursor: cell;
     transition: background-color 0.15s ease;
-    vertical-align: top !important;
     /* 枠線をセル内側に描画してサイズ変更を防ぐ */
     box-sizing: border-box;
     /* 高さを内容に応じて自動調整 */
@@ -581,7 +580,6 @@ textarea.cell-input[data-multiline="true"] {
     padding: 4px 6px !important;
     /* 編集時と同じパディングを追加 */
     /* 垂直配置を上揃えに統一 */
-    vertical-align: top !important;
     /* セル全体を埋める */
     width: 100%;
     box-sizing: border-box;
@@ -711,7 +709,6 @@ textarea.cell-input[data-multiline="true"] {
     border: 1px solid var(--vscode-notifications-border);
     border-radius: 4px;
     padding: 8px 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 1000;
     display: none;
     gap: 8px;
