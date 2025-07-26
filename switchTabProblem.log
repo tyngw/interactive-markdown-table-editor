@@ -1,0 +1,279 @@
+ [Extension Host] Opening table editor...
+ [Extension Host] Reading markdown file: file:///Users/tyngw/Documents/workspace/test-design-contest2025/working/test-extension.md
+ [Extension Host] Found tables: 4
+ [Extension Host] Using table: Object
+ [Extension Host] Creating webview panel...
+ [Extension Host] Creating webview panel for: file:///Users/tyngw/Documents/workspace/test-design-contest2025/working/test-extension.md
+ [Extension Host] Creating new webview panel...
+ An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+mountTo @ workbench.desktop.main.js:3651
+ [Extension Host] Webview panel created, setting HTML content...
+ [Extension Host] Reading HTML from path: /Users/tyngw/.vscode/extensions/tyngw.markdown-table-editor-0.2.0/webview/tableEditor.html
+ [Extension Host] Successfully read HTML file, length: 7018
+ [Extension Host] HTML content set, storing panel reference...
+ [Extension Host] Setting up initial data timeout...
+ [Extension Host] Webview panel setup complete
+ [Extension Host] Webview panel created successfully
+ Global VSCode API acquired successfully
+ TableEditor: Core module loaded
+ [Extension Host] Sending initial table data to webview...
+ TableRenderer: Module script loaded
+ SelectionManager: Module script loaded
+ CellEditor: Module script loaded
+ SortingManager: Module script loaded
+ KeyboardNavigationManager: Module script loaded
+ ClipboardManager: Module script loaded
+ ColumnResizeManager: Module script loaded
+ ContextMenuManager: Module script loaded
+ DragDropManager: Module script loaded
+ StatusBarManager: Module script loaded
+ CSVExporter: Module script loaded
+ TableEditor: Registering module TestModule with methods: Array(6)
+ TableEditor: Initializing module TestModule
+ TestModule initialized
+ TableEditor: Module TestModule initialized successfully
+ TableEditor: Initializing core system...
+ TableEditor: Available modules before init: Array(1)
+ TableEditor: Using globally acquired VSCode API
+ TableEditor: CSS loaded from https://file%2B.vscode-resource.vscode-cdn.net/Users/tyngw/.vscode/extensions/tyngw.markdown-table-editor-0.2.0/webview/style.css
+ TableEditor: Module initialization phase starting...
+ TableEditor: Available module objects in window: Array(10)
+ TableEditor: Found module object for TableRenderer
+ TableEditor: Registering module TableRenderer with methods: Array(15)
+ TableEditor: Initializing module TableRenderer
+ TableRenderer: Initializing table renderer module...
+ TableRenderer: Module initialized
+ TableEditor: Module TableRenderer initialized successfully
+ TableEditor: Found module object for SelectionManager
+ TableEditor: Registering module SelectionManager with methods: Array(18)
+ TableEditor: Initializing module SelectionManager
+ SelectionManager: Initializing selection manager module...
+ SelectionManager: Module initialized
+ TableEditor: Module SelectionManager initialized successfully
+ TableEditor: Found module object for CellEditor
+ TableEditor: Registering module CellEditor with methods: Array(14)
+ TableEditor: Initializing module CellEditor
+ CellEditor: Initializing cell editor module...
+ CellEditor: Module initialized
+ TableEditor: Module CellEditor initialized successfully
+ TableEditor: Found module object for SortingManager
+ TableEditor: Registering module SortingManager with methods: Array(11)
+ TableEditor: Initializing module SortingManager
+ SortingManager: Initializing sorting manager module...
+ SortingManager: Module initialized
+ TableEditor: Module SortingManager initialized successfully
+ TableEditor: Found module object for KeyboardNavigationManager
+ TableEditor: Registering module KeyboardNavigationManager with methods: Array(8)
+ TableEditor: Initializing module KeyboardNavigationManager
+ KeyboardNavigationManager: Initializing keyboard navigation module...
+ KeyboardNavigationManager: Module initialized
+ TableEditor: Module KeyboardNavigationManager initialized successfully
+ TableEditor: Found module object for ClipboardManager
+ TableEditor: Registering module ClipboardManager with methods: Array(12)
+ TableEditor: Initializing module ClipboardManager
+ ClipboardManager: Initializing clipboard manager module...
+ ClipboardManager: Module initialized
+ TableEditor: Module ClipboardManager initialized successfully
+ TableEditor: Found module object for ColumnResizeManager
+ TableEditor: Registering module ColumnResizeManager with methods: Array(16)
+ TableEditor: Initializing module ColumnResizeManager
+ ColumnResizeManager: Initializing column resize manager module...
+column-resize.js:47 ColumnResizeManager: Window resize handler disabled - using CSS defaults
+column-resize.js:38 ColumnResizeManager: Module initialized
+core.js:155 TableEditor: Module ColumnResizeManager initialized successfully
+core.js:200 TableEditor: Found module object for ContextMenuManager
+core.js:139 TableEditor: Registering module ContextMenuManager with methods: Array(25)
+core.js:151 TableEditor: Initializing module ContextMenuManager
+context-menu.js:31 ContextMenuManager: Initializing context menu manager module...
+context-menu.js:36 ContextMenuManager: Module initialized
+core.js:155 TableEditor: Module ContextMenuManager initialized successfully
+core.js:200 TableEditor: Found module object for DragDropManager
+core.js:139 TableEditor: Registering module DragDropManager with methods: Array(24)
+core.js:151 TableEditor: Initializing module DragDropManager
+drag-drop.js:34 DragDropManager: Initializing drag and drop manager module...
+drag-drop.js:47 DragDropManager: Setting up drag and drop...
+drag-drop.js:60 DragDropManager: Drag and drop setup complete
+drag-drop.js:40 DragDropManager: Module initialized
+core.js:155 TableEditor: Module DragDropManager initialized successfully
+core.js:200 TableEditor: Found module object for StatusBarManager
+core.js:139 TableEditor: Registering module StatusBarManager with methods: Array(23)
+core.js:151 TableEditor: Initializing module StatusBarManager
+status-bar.js:26 StatusBarManager: Initializing status bar manager module...
+status-bar.js:32 StatusBarManager: Module initialized
+core.js:155 TableEditor: Module StatusBarManager initialized successfully
+core.js:200 TableEditor: Found module object for CSVExporter
+core.js:139 TableEditor: Registering module CSVExporter with methods: Array(6)
+core.js:151 TableEditor: Initializing module CSVExporter
+csv-exporter.js:21 CSVExporter: Initializing CSV exporter module...
+csv-exporter.js:24 CSVExporter: Module initialized
+core.js:155 TableEditor: Module CSVExporter initialized successfully
+core.js:210 TableEditor: Module initialization complete. Registered modules: Array(12)
+core.js:214 TableEditor: TableRenderer module check: Object
+core.js:226 TableEditor: Initializing table editor application...
+core.js:556 TableEditor: Requesting table data from VSCode...
+core.js:559 TableEditor: Request sent successfully
+core.js:250 TableEditor: Table editor application initialized
+core.js:111 TableEditor: Core initialization complete
+core.js:112 TableEditor: Available modules after init: Array(12)
+console.ts:137 [Extension Host] Handling webview message: requestTableData undefined
+console.ts:137 [Extension Host] Table data requested for: file:///Users/tyngw/Documents/workspace/test-design-contest2025/working/test-extension.md
+console.ts:137 [Extension Host] Internal command: requestTableData Object
+console.ts:137 [Extension Host] Reading fresh data from file for: file:///Users/tyngw/Documents/workspace/test-design-contest2025/working/test-extension.md (request)
+console.ts:137 [Extension Host] Table data refreshed: 4 tables loaded
+core.js:258 TableEditor: Received message from VSCode: updateTableData Object
+core.js:262 TableEditor: Processing updateTableData message with data: Array(4)
+core.js:297 TableEditor: handleUpdateTableData called with data: Array(4) fileInfo: Object
+core.js:298 TableEditor: Current table index before update: 0
+core.js:303 TableEditor: Processing multiple tables, count: 4
+core.js:313 TableEditor: Preserving table index 0
+core.js:323 TableEditor: Selected table at index 0 : Object
+core.js:332 TableEditor: Final currentTableIndex: 0
+core.js:333 TableEditor: Final tableData: Object
+core.js:890 === TableEditor Debug State ===
+core.js:891 currentTableIndex: 0
+core.js:892 allTables.length: 4
+core.js:893 tableData exists: true
+core.js:894 displayData exists: true
+core.js:896 tableData.id: table_1753497032737_r652sgkmw
+core.js:897 tableData.metadata.tableIndex: 0
+core.js:899 ===============================
+core.js:351 TableEditor: Calling renderApplicationWithTabs...
+core.js:368 TableEditor: renderApplicationWithTabs called
+core.js:375 TableEditor: App element found, allTables count: 4
+core.js:385 TableEditor: Rendering tab 0 active: true currentTableIndex: 0
+core.js:385 TableEditor: Rendering tab 1 active: false currentTableIndex: 0
+core.js:385 TableEditor: Rendering tab 2 active: false currentTableIndex: 0
+core.js:385 TableEditor: Rendering tab 3 active: false currentTableIndex: 0
+core.js:394 TableEditor: Setting app innerHTML
+core.js:399 TableEditor: TableRenderer module: true
+core.js:400 TableEditor: Current tableData: true
+core.js:403 TableEditor: Rendering table with TableRenderer
+core.js:419 TableEditor: renderTableInContainer called with data: Object
+core.js:448 TableEditor: Rendering table with 3 columns and 10 rows
+core.js:452 TableEditor: Generated table content HTML length: 39642
+table-renderer.js:419 TableRenderer: Set table width to 530px
+core.js:497 TableEditor: Table rendering completed successfully
+core.js:258 TableEditor: Received message from VSCode: success Object
+status-bar.js:256 StatusBarManager: Status message: Loaded 4 tables successfully success
+console.ts:137 [Extension Host] Sending backup table data to webview...
+core.js:258 TableEditor: Received message from VSCode: updateTableData Object
+core.js:262 TableEditor: Processing updateTableData message with data: Array(4)
+core.js:297 TableEditor: handleUpdateTableData called with data: Array(4) fileInfo: Object
+core.js:298 TableEditor: Current table index before update: 0
+core.js:303 TableEditor: Processing multiple tables, count: 4
+core.js:313 TableEditor: Preserving table index 0
+core.js:323 TableEditor: Selected table at index 0 : Object
+core.js:332 TableEditor: Final currentTableIndex: 0
+core.js:333 TableEditor: Final tableData: Object
+core.js:890 === TableEditor Debug State ===
+core.js:891 currentTableIndex: 0
+core.js:892 allTables.length: 4
+core.js:893 tableData exists: true
+core.js:894 displayData exists: true
+core.js:896 tableData.id: table_1753497032019_1k06ucucw
+core.js:897 tableData.metadata.tableIndex: 0
+core.js:899 ===============================
+core.js:351 TableEditor: Calling renderApplicationWithTabs...
+core.js:368 TableEditor: renderApplicationWithTabs called
+core.js:375 TableEditor: App element found, allTables count: 4
+core.js:385 TableEditor: Rendering tab 0 active: true currentTableIndex: 0
+core.js:385 TableEditor: Rendering tab 1 active: false currentTableIndex: 0
+core.js:385 TableEditor: Rendering tab 2 active: false currentTableIndex: 0
+core.js:385 TableEditor: Rendering tab 3 active: false currentTableIndex: 0
+core.js:394 TableEditor: Setting app innerHTML
+core.js:399 TableEditor: TableRenderer module: true
+core.js:400 TableEditor: Current tableData: true
+core.js:403 TableEditor: Rendering table with TableRenderer
+core.js:419 TableEditor: renderTableInContainer called with data: Object
+core.js:448 TableEditor: Rendering table with 3 columns and 10 rows
+core.js:452 TableEditor: Generated table content HTML length: 39642
+table-renderer.js:419 TableRenderer: Set table width to 530px
+core.js:497 TableEditor: Table rendering completed successfully
+core.js:508 TableEditor: switchToTable called with index: 1
+core.js:509 TableEditor: Current state - currentTableIndex: 0 allTables.length: 4
+core.js:512 TableEditor: Switching from table 0 to table 1
+core.js:520 TableEditor: Updated currentTableIndex to: 1
+core.js:521 TableEditor: New tableData: loaded
+core.js:368 TableEditor: renderApplicationWithTabs called
+core.js:375 TableEditor: App element found, allTables count: 4
+core.js:385 TableEditor: Rendering tab 0 active: false currentTableIndex: 1
+core.js:385 TableEditor: Rendering tab 1 active: true currentTableIndex: 1
+core.js:385 TableEditor: Rendering tab 2 active: false currentTableIndex: 1
+core.js:385 TableEditor: Rendering tab 3 active: false currentTableIndex: 1
+core.js:394 TableEditor: Setting app innerHTML
+core.js:399 TableEditor: TableRenderer module: true
+core.js:400 TableEditor: Current tableData: true
+core.js:403 TableEditor: Rendering table with TableRenderer
+core.js:419 TableEditor: renderTableInContainer called with data: {id: 'table_1753497032019_tnnqawljd', headers: Array(3), rows: Array(3), alignment: Array(3), metadata: {…}}
+core.js:448 TableEditor: Rendering table with 3 columns and 3 rows
+core.js:452 TableEditor: Generated table content HTML length: 14951
+table-renderer.js:419 TableRenderer: Set table width to 530px
+core.js:497 TableEditor: Table rendering completed successfully
+core.js:546 TableEditor: Successfully switched to table 1 currentTableIndex is now: 1
+console.ts:137 [Extension Host] Handling webview message: switchTable {index: 1}
+core.js:258 TableEditor: Received message from VSCode: error {command: 'error', message: 'Unknown command: switchTable'}
+core.js:1039 TableEditor: Unknown command: switchTable
+showError @ core.js:1039
+handleVSCodeMessage @ core.js:269
+(anonymous) @ core.js:230
+postMessage
+(anonymous) @ index.html?id=17768672-10d3-4127-99ba-afa55546bf7f&parentId=1&origin=e265c363-37bf-466d-8c56-8500ae456ea2&swVersion=4&extensionId=tyngw.markdown-table-editor&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app:1242
+HostMessaging.channel.port1.onmessage @ index.html?id=17768672-10d3-4127-99ba-afa55546bf7f&parentId=1&origin=e265c363-37bf-466d-8c56-8500ae456ea2&swVersion=4&extensionId=tyngw.markdown-table-editor&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app:324
+cell-editor.js:304 StyleInput: lines=1, textRequired=24.8, cellHeight=24, applied=24.8
+cell-editor.js:116 CellEditor: Started editing cell 0 0
+cell-editor.js:477 AutoResize: lines=1, textRequired=22.4, cellHeight=24, applied=24
+cell-editor.js:310 StyleInput Debug: actualHeight=25, computedHeight=24.7969px
+cell-editor.js:483 AutoResize Debug: actualHeight=25, computedHeight=24.7969px
+cell-editor.js:477 AutoResize: lines=1, textRequired=22.4, cellHeight=24, applied=24
+cell-editor.js:483 AutoResize Debug: actualHeight=25, computedHeight=24.7969px
+core.js:810 TableEditor: Updating cell 0 0 with value: Pen1
+core.js:811 TableEditor: Current table index: 1
+core.js:890 === TableEditor Debug State ===
+core.js:891 currentTableIndex: 1
+core.js:892 allTables.length: 4
+core.js:893 tableData exists: true
+core.js:894 displayData exists: true
+core.js:896 tableData.id: table_1753497032019_tnnqawljd
+core.js:897 tableData.metadata.tableIndex: 1
+core.js:899 ===============================
+core.js:836 TableEditor: Sending updateCell command with tableIndex: 1
+core.js:851 TableEditor: Cell updated successfully
+cell-editor.js:161 CellEditor: Cell updated 0 0 Pen1
+cell-editor.js:191 CellEditor: Committed cell edit 0 0
+console.ts:137 [Extension Host] Handling webview message: updateCell {row: 0, col: 0, value: 'Pen1', tableIndex: 1}
+console.ts:137 [Extension Host] Cell update: {row: 0, col: 0, value: 'Pen1', tableIndex: 1} for file: file:///Users/tyngw/Documents/workspace/test-design-contest2025/working/test-extension.md
+console.ts:137 [Extension Host] Internal command: updateCell {uri: {…}, panelId: 'file:///Users/tyngw/Documents/workspace/test-design-contest2025/working/test-extension.md', row: 0, col: 0, value: 'Pen1'}
+console.ts:137 [Extension Host] Updating table at index 0, lines 6-18
+core.js:258 TableEditor: Received message from VSCode: updateTableData {command: 'updateTableData', data: Array(4), fileInfo: {…}}
+core.js:262 TableEditor: Processing updateTableData message with data: (4) [{…}, {…}, {…}, {…}]
+core.js:297 TableEditor: handleUpdateTableData called with data: (4) [{…}, {…}, {…}, {…}] fileInfo: {uri: 'file:///Users/tyngw/Documents/workspace/test-design-contest2025/working/test-extension.md', fileName: 'test-extension.md', fileNameWithoutExt: 'test-extension'}
+core.js:298 TableEditor: Current table index before update: 1
+core.js:303 TableEditor: Processing multiple tables, count: 4
+core.js:313 TableEditor: Preserving table index 1
+core.js:323 TableEditor: Selected table at index 1 : {id: 'table_1753497032737_trqjc688d', headers: Array(3), rows: Array(3), alignment: Array(3), metadata: {…}}
+core.js:332 TableEditor: Final currentTableIndex: 1
+core.js:333 TableEditor: Final tableData: {id: 'table_1753497032737_trqjc688d', headers: Array(3), rows: Array(3), alignment: Array(3), metadata: {…}}
+core.js:890 === TableEditor Debug State ===
+core.js:891 currentTableIndex: 1
+core.js:892 allTables.length: 4
+core.js:893 tableData exists: true
+core.js:894 displayData exists: true
+core.js:896 tableData.id: table_1753497032737_trqjc688d
+core.js:897 tableData.metadata.tableIndex: 1
+core.js:899 ===============================
+core.js:351 TableEditor: Calling renderApplicationWithTabs...
+core.js:368 TableEditor: renderApplicationWithTabs called
+core.js:375 TableEditor: App element found, allTables count: 4
+core.js:385 TableEditor: Rendering tab 0 active: false currentTableIndex: 1
+core.js:385 TableEditor: Rendering tab 1 active: true currentTableIndex: 1
+core.js:385 TableEditor: Rendering tab 2 active: false currentTableIndex: 1
+core.js:385 TableEditor: Rendering tab 3 active: false currentTableIndex: 1
+core.js:394 TableEditor: Setting app innerHTML
+core.js:399 TableEditor: TableRenderer module: true
+core.js:400 TableEditor: Current tableData: true
+core.js:403 TableEditor: Rendering table with TableRenderer
+core.js:419 TableEditor: renderTableInContainer called with data: {id: 'table_1753497032737_trqjc688d', headers: Array(3), rows: Array(3), alignment: Array(3), metadata: {…}}
+core.js:448 TableEditor: Rendering table with 3 columns and 3 rows
+core.js:452 TableEditor: Generated table content HTML length: 14951
+table-renderer.js:419 TableRenderer: Set table width to 530px
+core.js:497 TableEditor: Table rendering completed successfully

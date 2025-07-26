@@ -295,14 +295,32 @@ const TableEditor = {
      */
     handleUpdateTableData: function(data, fileInfo) {
         console.log('TableEditor: handleUpdateTableData called with data:', data, 'fileInfo:', fileInfo);
+        console.log('TableEditor: Current table index before update:', this.state.currentTableIndex);
         
         // Support both single table and multiple tables data structure
         if (Array.isArray(data)) {
             // Multiple tables
             console.log('TableEditor: Processing multiple tables, count:', data.length);
+            
+            // Store the previous table index to preserve user's current view
+            const previousTableIndex = this.state.currentTableIndex;
             this.state.allTables = data;
-            this.state.currentTableIndex = Math.min(this.state.currentTableIndex, data.length - 1);
+            
+            // Ensure currentTableIndex is valid for the new data
+            if (previousTableIndex >= 0 && previousTableIndex < data.length) {
+                // Keep the same table index if it's still valid
+                this.state.currentTableIndex = previousTableIndex;
+                console.log('TableEditor: Preserving table index', previousTableIndex);
+            } else if (this.state.currentTableIndex >= data.length) {
+                console.log('TableEditor: Current table index', this.state.currentTableIndex, 'is out of range, resetting to 0');
+                this.state.currentTableIndex = 0;
+            } else if (this.state.currentTableIndex < 0) {
+                console.log('TableEditor: Current table index is negative, resetting to 0');
+                this.state.currentTableIndex = 0;
+            }
+            
             this.state.tableData = data[this.state.currentTableIndex] || null;
+            console.log('TableEditor: Selected table at index', this.state.currentTableIndex, ':', this.state.tableData);
         } else {
             // Single table (legacy)
             console.log('TableEditor: Processing single table');
@@ -311,11 +329,15 @@ const TableEditor = {
             this.state.tableData = data;
         }
         
+        console.log('TableEditor: Final currentTableIndex:', this.state.currentTableIndex);
         console.log('TableEditor: Final tableData:', this.state.tableData);
         
         this.state.displayData = this.state.tableData;
         this.state.originalData = this.state.tableData ? JSON.parse(JSON.stringify(this.state.tableData)) : null;
         this.state.fileInfo = fileInfo;
+        
+        // Debug state after update
+        this.debugCurrentState();
         
         // Clear any existing sort state when new data arrives
         this.state.sortState = { 
@@ -360,6 +382,7 @@ const TableEditor = {
             this.state.allTables.forEach((table, index) => {
                 const isActive = index === this.state.currentTableIndex;
                 const tabTitle = `表 ${index + 1}`;
+                console.log('TableEditor: Rendering tab', index, 'active:', isActive, 'currentTableIndex:', this.state.currentTableIndex);
                 html += `<button class="tab-button ${isActive ? 'active' : ''}" onclick="TableEditor.switchToTable(${index})">${tabTitle}</button>`;
             });
             html += '</div>';
@@ -482,11 +505,20 @@ const TableEditor = {
      * Switch to a different table
      */
     switchToTable: function(index) {
+        console.log('TableEditor: switchToTable called with index:', index);
+        console.log('TableEditor: Current state - currentTableIndex:', this.state.currentTableIndex, 'allTables.length:', this.state.allTables.length);
+        
         if (index >= 0 && index < this.state.allTables.length) {
+            console.log('TableEditor: Switching from table', this.state.currentTableIndex, 'to table', index);
+            
+            // Update current table index FIRST
             this.state.currentTableIndex = index;
             this.state.tableData = this.state.allTables[index];
             this.state.displayData = this.state.tableData;
             this.state.originalData = JSON.parse(JSON.stringify(this.state.tableData));
+            
+            console.log('TableEditor: Updated currentTableIndex to:', this.state.currentTableIndex);
+            console.log('TableEditor: New tableData:', this.state.tableData ? 'loaded' : 'null');
             
             // Clear sort state when switching tables
             this.state.sortState = { 
@@ -496,6 +528,12 @@ const TableEditor = {
                 originalData: null
             };
             
+            // Clear selection state when switching tables
+            this.state.selectedCells.clear();
+            this.state.selectionStart = null;
+            this.state.isSelecting = false;
+            this.state.lastSelectedCell = null;
+            
             // Re-render with new table
             this.renderApplicationWithTabs();
             
@@ -504,6 +542,10 @@ const TableEditor = {
                 command: 'switchTable',
                 data: { index: index }
             });
+            
+            console.log('TableEditor: Successfully switched to table', index, 'currentTableIndex is now:', this.state.currentTableIndex);
+        } else {
+            console.error('TableEditor: Invalid table index:', index, 'valid range: 0 -', this.state.allTables.length - 1);
         }
     },
     
@@ -627,10 +669,13 @@ const TableEditor = {
         // Re-render table
         this.callModule('TableRenderer', 'renderTable', data);
         
-        // Send addRow command to extension
+        // Send addRow command to extension with current table index
         this.sendMessage({
             command: 'addRow',
-            data: { index: index }
+            data: { 
+                index: index,
+                tableIndex: this.state.currentTableIndex
+            }
         });
     },
     
@@ -659,10 +704,13 @@ const TableEditor = {
         // Re-render table
         this.callModule('TableRenderer', 'renderTable', data);
         
-        // Send deleteRow command to extension
+        // Send deleteRow command to extension with current table index
         this.sendMessage({
             command: 'deleteRow',
-            data: { index: index }
+            data: { 
+                index: index,
+                tableIndex: this.state.currentTableIndex
+            }
         });
     },
     
@@ -702,10 +750,14 @@ const TableEditor = {
         // Re-render table
         this.callModule('TableRenderer', 'renderTable', data);
         
-        // Send addColumn command to extension
+        // Send addColumn command to extension with current table index
         this.sendMessage({
             command: 'addColumn',
-            data: { index: index, header: headerName }
+            data: { 
+                index: index, 
+                header: headerName,
+                tableIndex: this.state.currentTableIndex
+            }
         });
     },
     
@@ -741,10 +793,13 @@ const TableEditor = {
         // Re-render table
         this.callModule('TableRenderer', 'renderTable', data);
         
-        // Send deleteColumn command to extension
+        // Send deleteColumn command to extension with current table index
         this.sendMessage({
             command: 'deleteColumn',
-            data: { index: index }
+            data: { 
+                index: index,
+                tableIndex: this.state.currentTableIndex
+            }
         });
     },
     
@@ -753,6 +808,7 @@ const TableEditor = {
      */
     updateCell: function(row, col, value) {
         console.log('TableEditor: Updating cell', row, col, 'with value:', value);
+        console.log('TableEditor: Current table index:', this.state.currentTableIndex);
         
         const data = this.state.displayData || this.state.tableData;
         if (!data || !data.rows || row < 0 || row >= data.rows.length) {
@@ -772,14 +828,19 @@ const TableEditor = {
         this.state.tableData = data;
         this.state.displayData = data;
         
-        // Send update to extension (with auto-save)
+        // Debug current state before sending update
+        this.debugCurrentState();
+        
+        // Send update to extension (with auto-save and current table index)
         if (this.vscode) {
+            console.log('TableEditor: Sending updateCell command with tableIndex:', this.state.currentTableIndex);
             this.vscode.postMessage({
                 command: 'updateCell',
                 data: {
                     row: row,
                     col: col,
-                    value: value
+                    value: value,
+                    tableIndex: this.state.currentTableIndex
                 }
             });
         }
@@ -820,6 +881,22 @@ const TableEditor = {
         if (this.vscode) {
             this.vscode.postMessage(message);
         }
+    },
+    
+    /**
+     * Debug function to check current state
+     */
+    debugCurrentState: function() {
+        console.log('=== TableEditor Debug State ===');
+        console.log('currentTableIndex:', this.state.currentTableIndex);
+        console.log('allTables.length:', this.state.allTables.length);
+        console.log('tableData exists:', !!this.state.tableData);
+        console.log('displayData exists:', !!this.state.displayData);
+        if (this.state.tableData) {
+            console.log('tableData.id:', this.state.tableData.id);
+            console.log('tableData.metadata.tableIndex:', this.state.tableData.metadata?.tableIndex);
+        }
+        console.log('===============================');
     },
     
 

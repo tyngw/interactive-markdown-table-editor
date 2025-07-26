@@ -462,7 +462,11 @@ const DragDropManager = {
         if (window.TableEditor.vscode) {
             window.TableEditor.vscode.postMessage({
                 command: 'moveColumn',
-                data: { from: fromIndex, to: adjustedToIndex }
+                data: { 
+                    from: fromIndex, 
+                    to: adjustedToIndex,
+                    tableIndex: window.TableEditor.state.currentTableIndex
+                }
             });
         } else {
             console.error('DragDropManager: VSCode API not available');
@@ -481,7 +485,11 @@ const DragDropManager = {
         if (window.TableEditor.vscode) {
             window.TableEditor.vscode.postMessage({
                 command: 'moveRow',
-                data: { from: fromIndex, to: toIndex }
+                data: { 
+                    from: fromIndex, 
+                    to: toIndex,
+                    tableIndex: window.TableEditor.state.currentTableIndex
+                }
             });
         } else {
             console.error('DragDropManager: VSCode API not available');
