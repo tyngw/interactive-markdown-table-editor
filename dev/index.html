@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Markdown Table Editor - Development Mode</title>
-    
+
     <!-- Load the main CSS styles -->
     <link rel="stylesheet" href="/webview/style.css">
-    
+
     <!-- Development-specific styles -->
     <style>
         /* VSCode theme variables for development */
@@ -37,12 +38,12 @@
             --vscode-statusBar-foreground: #ffffff;
             --vscode-statusBarItem-errorBackground: #c74e39;
         }
-        
+
         body {
             background-color: var(--vscode-editor-background);
             color: var(--vscode-foreground);
         }
-        
+
         .dev-header {
             background-color: var(--vscode-notificationCenterHeader-background);
             color: var(--vscode-foreground);
@@ -51,11 +52,11 @@
             font-family: var(--vscode-font-family);
             font-size: 13px;
         }
-        
+
         .dev-controls {
             margin: 10px 0;
         }
-        
+
         .dev-button {
             background-color: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
@@ -66,11 +67,11 @@
             font-size: 13px;
             border-radius: 2px;
         }
-        
+
         .dev-button:hover {
             background-color: var(--vscode-button-hoverBackground);
         }
-        
+
         .dev-select {
             background-color: var(--vscode-input-background);
             color: var(--vscode-input-foreground);
@@ -79,7 +80,7 @@
             margin-right: 8px;
         }
     </style>
-    
+
     <!-- Mock VSCode API for development -->
     <script>
         // Sample table data for development testing
@@ -122,14 +123,55 @@
                     startLine: 0,
                     endLine: 3
                 }
-            }
+            },
+            multiple: [
+                {
+                    headers: ['Product', 'Price', 'Stock'],
+                    rows: [
+                        ['Laptop', '1200', '15'],
+                        ['Mouse', '25', '50'],
+                        ['Keyboard', '80', '30']
+                    ],
+                    metadata: {
+                        tableIndex: 0,
+                        startLine: 0,
+                        endLine: 4
+                    }
+                },
+                {
+                    headers: ['Employee', 'Department', 'Salary'],
+                    rows: [
+                        ['Alice', 'Engineering', '90000'],
+                        ['Bob', 'Marketing', '70000'],
+                        ['Charlie', 'Sales', '65000']
+                    ],
+                    metadata: {
+                        tableIndex: 1,
+                        startLine: 6,
+                        endLine: 10
+                    }
+                },
+                {
+                    headers: ['Task', 'Status', 'Due'],
+                    rows: [
+                        ['Design Review', 'Complete', '2024-01-15'],
+                        ['Code Review', 'In Progress', '2024-01-20'],
+                        ['Testing', 'Pending', '2024-01-25']
+                    ],
+                    metadata: {
+                        tableIndex: 2,
+                        startLine: 12,
+                        endLine: 16
+                    }
+                }
+            ]
         };
-        
+
         // Mock VSCode API
         window.vscode = {
-            postMessage: function(message) {
+            postMessage: function (message) {
                 console.log('🔍 Dev Mode - VSCode Message:', message);
-                
+
                 // Handle different message types for development
                 switch (message.command) {
                     case 'requestTableData':
@@ -137,10 +179,18 @@
                         setTimeout(() => {
                             const selectedSample = document.getElementById('sampleSelect').value;
                             const sampleData = SAMPLE_TABLES[selectedSample];
-                            
+
+                            // Handle multiple tables vs single table
+                            let dataToSend;
+                            if (selectedSample === 'multiple') {
+                                dataToSend = sampleData; // Already an array
+                            } else {
+                                dataToSend = [sampleData]; // Wrap single table in array
+                            }
+
                             window.postMessage({
                                 command: 'updateTableData',
-                                data: [sampleData],
+                                data: dataToSend,
                                 fileInfo: {
                                     uri: 'dev://sample.md',
                                     fileName: 'sample.md',
@@ -149,40 +199,40 @@
                             }, '*');
                         }, 100);
                         break;
-                        
+
                     case 'updateCell':
                         console.log('📝 Cell update:', message.data);
                         // In real VSCode, this would update the file
                         break;
-                        
+
                     case 'addRow':
                         console.log('➕ Add row:', message.data);
                         break;
-                        
+
                     case 'deleteRow':
                         console.log('🗑️ Delete row:', message.data);
                         break;
-                        
+
                     case 'addColumn':
                         console.log('➕ Add column:', message.data);
                         break;
-                        
+
                     case 'deleteColumn':
                         console.log('🗑️ Delete column:', message.data);
                         break;
-                        
+
                     case 'exportCSV':
                         console.log('📊 Export CSV:', message.data);
                         // Download the CSV data
                         this.downloadCSV(message.data.csvData, message.data.filename);
                         break;
-                        
+
                     default:
                         console.log('🤷 Unhandled message:', message);
                 }
             },
-            
-            downloadCSV: function(csvData, filename) {
+
+            downloadCSV: function (csvData, filename) {
                 const blob = new Blob([csvData], { type: 'text/csv' });
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -194,36 +244,36 @@
                 window.URL.revokeObjectURL(url);
             }
         };
-        
+
         // Listen for messages from the mock VSCode API
-        window.addEventListener('message', function(event) {
+        window.addEventListener('message', function (event) {
             if (event.data && typeof TableEditor !== 'undefined' && TableEditor.handleVSCodeMessage) {
                 TableEditor.handleVSCodeMessage(event);
             }
         });
-        
+
         // Development utilities
         window.devUtils = {
-            loadSample: function(sampleName) {
+            loadSample: function (sampleName) {
                 document.getElementById('sampleSelect').value = sampleName;
                 if (window.TableEditor && window.TableEditor.vscode) {
                     window.TableEditor.vscode.postMessage({ command: 'requestTableData' });
                 }
             },
-            
-            clearTable: function() {
+
+            clearTable: function () {
                 if (window.TableEditor && window.TableEditor.clearTable) {
                     window.TableEditor.clearTable();
                 }
             },
-            
-            debugState: function() {
+
+            debugState: function () {
                 if (window.TableEditor && window.TableEditor.state) {
                     console.log('🐛 TableEditor State:', window.TableEditor.state);
                 }
             }
         };
-        
+
         // Set up CSS and script URIs for the webview system
         window.cssUri = '/webview/style.css';
         window.scriptUris = [
@@ -240,13 +290,14 @@
             '/webview/js/clipboard.js',
             '/webview/js/csv-exporter.js'
         ];
-        
+
         // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('🚀 Development mode initialized');
         });
     </script>
 </head>
+
 <body>
     <div class="dev-header">
         <strong>📋 Markdown Table Editor - Development Mode</strong>
@@ -256,8 +307,10 @@
                 <option value="simple">Simple Table</option>
                 <option value="complex">Complex Table</option>
                 <option value="empty">Empty Table</option>
+                <option value="multiple">Multiple Tables (3 tables)</option>
             </select>
-            <button class="dev-button" onclick="devUtils.loadSample(document.getElementById('sampleSelect').value)">Load Sample</button>
+            <button class="dev-button" onclick="devUtils.loadSample(document.getElementById('sampleSelect').value)">Load
+                Sample</button>
             <button class="dev-button" onclick="devUtils.clearTable()">Clear</button>
             <button class="dev-button" onclick="devUtils.debugState()">Debug State</button>
         </div>
@@ -270,17 +323,19 @@
     <div id="app">
         <!-- Table tabs and content will be dynamically populated -->
     </div>
-    
+
     <!-- Main table container (dynamically populated) -->
     <div id="table-container"></div>
-    
+
     <!-- Sort Actions Panel -->
     <div class="sort-actions" id="sortActions" style="display: none;">
         <span class="sort-status-badge">📊 Viewing sorted data</span>
-        <button class="sort-action-btn secondary" onclick="TableEditor.callModule('SortingManager', 'restoreOriginalView')">📄 Restore Original</button>
-        <button class="sort-action-btn" onclick="TableEditor.callModule('SortingManager', 'commitSortToFile')">💾 Save Sort to File</button>
+        <button class="sort-action-btn secondary"
+            onclick="TableEditor.callModule('SortingManager', 'restoreOriginalView')">📄 Restore Original</button>
+        <button class="sort-action-btn" onclick="TableEditor.callModule('SortingManager', 'commitSortToFile')">💾 Save
+            Sort to File</button>
     </div>
-    
+
     <!-- Context Menus -->
     <div class="context-menu" id="rowContextMenu" style="display: none;">
         <button class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'addRowAbove')">
@@ -292,12 +347,13 @@
             この下に行を追加
         </button>
         <div class="context-menu-separator"></div>
-        <button class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'deleteRowFromContext')">
+        <button class="context-menu-item"
+            onclick="TableEditor.callModule('ContextMenuManager', 'deleteRowFromContext')">
             <span class="context-menu-item-icon">🗑️</span>
             この行を削除
         </button>
     </div>
-    
+
     <div class="context-menu" id="columnContextMenu" style="display: none;">
         <button class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'addColumnLeft')">
             <span class="context-menu-item-icon">⬅️</span>
@@ -308,7 +364,8 @@
             この右に列を追加
         </button>
         <div class="context-menu-separator"></div>
-        <button class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'deleteColumnFromContext')">
+        <button class="context-menu-item"
+            onclick="TableEditor.callModule('ContextMenuManager', 'deleteColumnFromContext')">
             <span class="context-menu-item-icon">🗑️</span>
             この列を削除
         </button>
@@ -327,14 +384,14 @@
     <script src="/webview/js/status-bar.js"></script>
     <script src="/webview/js/clipboard.js"></script>
     <script src="/webview/js/csv-exporter.js"></script>
-    
+
     <script>
         // Initialize the table editor after all modules are loaded
         if (window.TableEditor && typeof window.TableEditor.init === 'function') {
             try {
                 window.TableEditor.init();
                 console.log('✅ TableEditor initialized successfully');
-                
+
                 // Auto-load the first sample
                 setTimeout(() => {
                     devUtils.loadSample('simple');
@@ -347,4 +404,5 @@
         }
     </script>
 </body>
+
 </html>

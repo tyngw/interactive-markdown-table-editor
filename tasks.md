@@ -56,7 +56,6 @@
 - [x] 4.2 テーブル更新機能を実装
   - 元ファイル内の特定テーブル部分を置換する機能を実装
   - ファイル変更通知機能を実装
-  - バックアップ機能を追加
   - _Requirements: 1.3, 6.2_
 
 - [x] 5. Webviewパネル管理システムの実装
@@ -261,7 +260,6 @@
   - _Requirements: 8.4, 9.3_
 
 - [x] 9.5 エラーハンドリング強化
-  - 自動バックアップ機能の強化
   - 詳細なエラーメッセージとユーザーフレンドリーな回復オプション
   - ファイルアクセス権限問題への対応
   - _Requirements: 10.1, 10.2, 10.3, 10.4_
@@ -312,7 +310,7 @@
 - **Table Structure Manipulation**: Add/delete rows and columns with context menu operations
 - **Sorting**: Column-based sorting with visual indicators (ascending/descending)
 - **Drag & Drop**: Row and column reordering with visual feedback
-- **File Integration**: Automatic file updates, backup creation, error handling
+- **File Integration**: Automatic file updates, error handling
 - **Multi-Table Support**: Table selection dialog, index-based tracking, safe updates
 - **Mixed Content Compatibility**: Code blocks, lists, headers preservation
 - **Comprehensive Testing**: 148 tests covering all features and edge cases

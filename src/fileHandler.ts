@@ -99,10 +99,7 @@ export class MarkdownFileHandler implements FileHandler {
         try {
             this.outputChannel.appendLine(`Writing file: ${uri.fsPath}`);
             
-            // Create backup before modifying file
-            if (fs.existsSync(uri.fsPath)) {
-                await this.createBackup(uri);
-            }
+
             
             // Ensure directory exists
             const dir = path.dirname(uri.fsPath);
@@ -384,22 +381,7 @@ export class MarkdownFileHandler implements FileHandler {
         }
     }
 
-    /**
-     * Create a backup of the file before modification
-     */
-    private async createBackup(uri: vscode.Uri): Promise<void> {
-        try {
-            const originalContent = await this.readMarkdownFile(uri);
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const backupPath = `${uri.fsPath}.backup-${timestamp}`;
-            
-            fs.writeFileSync(backupPath, originalContent, 'utf8');
-            this.outputChannel.appendLine(`Backup created: ${backupPath}`);
-        } catch (error) {
-            this.outputChannel.appendLine(`Warning: Could not create backup: ${error}`);
-            // Don't throw error - backup failure shouldn't prevent file updates
-        }
-    }
+
 
     /**
      * Notify VSCode about file changes

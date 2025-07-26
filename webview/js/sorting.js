@@ -88,11 +88,8 @@ const SortingManager = {
             const sortedData = this.sortTableData(data, columnIndex, direction);
             state.displayData = sortedData;
             
-            // Re-render table with sorted data
-            const renderer = window.TableEditor.getModule('TableRenderer');
-            if (renderer) {
-                renderer.renderTableWithScrollPreservation(sortedData);
-            }
+            // Re-render table with sorted data while preserving tabs
+            window.TableEditor.renderTableInContainer(sortedData);
         }
         
         // Update sort actions visibility
@@ -126,11 +123,8 @@ const SortingManager = {
             originalData: null
         };
         
-        // Re-render table
-        const renderer = window.TableEditor.getModule('TableRenderer');
-        if (renderer) {
-            renderer.renderTableWithScrollPreservation(state.displayData);
-        }
+        // Re-render table while preserving tabs
+        window.TableEditor.renderTableInContainer(state.displayData);
         
         // Update sort actions visibility
         this.updateSortActionsVisibility();
@@ -279,8 +273,8 @@ const SortingManager = {
             originalData: null
         };
         
-        // Re-render table
-        window.TableEditor.callModule('TableRenderer', 'renderTable', state.displayData);
+        // Re-render table while preserving tabs
+        window.TableEditor.renderTableInContainer(state.displayData);
         
         // Update UI
         this.updateSortActionsVisibility();

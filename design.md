@@ -329,7 +329,6 @@ interface EnhancedFileHandler {
   updateTableInFile(uri: vscode.Uri, startLine: number, endLine: number, newTableContent: string): Promise<void>;
   updateTableByIndex(uri: vscode.Uri, tableIndex: number, newTableContent: string): Promise<void>;  // New
   updateMultipleTablesInFile(uri: vscode.Uri, updates: TableUpdate[]): Promise<void>;
-  createBackup(uri: vscode.Uri): Promise<string>;
   extractTablePositionsFromTokens(tokens: any[], content: string): TablePosition[];  // New
 }
 
@@ -527,7 +526,6 @@ graph TB
     D --> L[Table Position Tracker]
     D --> M[Mixed Content Handler]
     E --> N[Index-Based Updater]
-    E --> O[Backup Manager]
     F --> P[Table Selection Dialog]
 ```
 
@@ -544,7 +542,6 @@ graph TB
    - Accurate line range calculation prevents corruption
 
 3. **Enhanced Error Handling**
-   - Automatic backup creation before any file modification
    - Comprehensive validation with detailed error messages
    - Recovery options for failed operations
 
@@ -578,7 +575,6 @@ graph TB
    ```
    Error occurs during update
    → Show detailed error message to user
-   → Offer backup restoration option
    → Log error details for debugging
    → Provide alternative save options
    ```
@@ -586,9 +582,8 @@ graph TB
 ## Implementation Benefits
 
 1. **Accuracy**: Index-based tracking prevents table mix-ups
-2. **Safety**: Automatic backups protect against data loss
-3. **Robustness**: Handles complex document structures gracefully
-4. **User Experience**: Intuitive table selection for multi-table documents
+2. **Robustness**: Handles complex document structures gracefully
+3. **User Experience**: Intuitive table selection for multi-table documents
 5. **Maintainability**: Clear separation of concerns and error handling
 6. **Enhanced UI/UX (v0.1.6)**: Improved user interface with better usability
 

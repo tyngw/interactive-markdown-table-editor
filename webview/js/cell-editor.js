@@ -282,21 +282,24 @@ const CellEditor = {
         // Get current cell height (considering other cells in the same row might be taller)
         const row = cell.closest('tr');
         let currentCellHeight = cell.offsetHeight;
+        let maxRowCellHeight = 0;
         
         if (row) {
             // Check all cells in the same row and get the maximum height
             const rowCells = row.querySelectorAll('td:not(.row-number)');
-            let maxRowCellHeight = 0;
             rowCells.forEach(rowCell => {
                 if (rowCell !== cell) {
                     maxRowCellHeight = Math.max(maxRowCellHeight, rowCell.offsetHeight);
                 }
             });
-            currentCellHeight = Math.max(currentCellHeight, maxRowCellHeight);
         }
         
-        // Use the larger of the three heights: text requirement, current cell height, or minimum
-        const finalHeight = Math.max(textRequiredHeight, currentCellHeight, minHeight);
+        // Use the larger of the following heights:
+        // 1. Text requirement (based on content)
+        // 2. Current cell height (its own height)
+        // 3. Other cells' maximum height in the same row
+        // 4. Minimum height
+        const finalHeight = Math.max(textRequiredHeight, currentCellHeight, maxRowCellHeight, minHeight);
         
         input.style.setProperty('height', finalHeight + 'px', 'important');
         input.style.setProperty('min-height', minHeight + 'px', 'important');
@@ -450,21 +453,23 @@ const CellEditor = {
         // Get current cell height (considering other cells in the same row might be taller)
         const row = cell.closest('tr');
         let currentCellHeight = cell.offsetHeight;
+        let maxRowCellHeight = 0;
         
         if (row) {
             // Check all cells in the same row and get the maximum height
             const rowCells = row.querySelectorAll('td:not(.row-number)');
-            let maxRowCellHeight = 0;
             rowCells.forEach(rowCell => {
                 if (rowCell !== cell) {
                     maxRowCellHeight = Math.max(maxRowCellHeight, rowCell.offsetHeight);
                 }
             });
-            currentCellHeight = Math.max(currentCellHeight, maxRowCellHeight);
         }
         
-        // Use the larger of the two heights: text requirement or current cell height
-        const finalHeight = Math.max(textAreaRequiredHeight, currentCellHeight);
+        // Use the larger of the following heights:
+        // 1. Text requirement (based on content)
+        // 2. Current cell height (its own height)
+        // 3. Other cells' maximum height in the same row
+        const finalHeight = Math.max(textAreaRequiredHeight, currentCellHeight, maxRowCellHeight);
         
         // Set minimum height (at least 1 line)
         const minHeight = lineHeight + totalPadding;

@@ -107,7 +107,7 @@ This extension now robustly handles documents containing multiple tables and mix
 - **Line Range Accuracy**: Uses advanced parsing to determine exact table boundaries
 
 ### Error Prevention
-- **Backup Creation**: Automatic backup before any file modification
+
 - **Validation**: Comprehensive validation of table structure and file content
 - **Recovery**: Clear error messages and recovery options if something goes wrong
 
@@ -231,7 +231,7 @@ This extension contributes the following settings:
 - **Table Selection Dialog**: 複数テーブル時の選択インターフェース
 - **Mixed Content Support**: コードブロック、リスト等との共存
 - **Index-Based Updates**: テーブルインデックスによる正確な更新
-- **Enhanced Error Handling**: 堅牢なエラー処理とバックアップ機能
+- **Enhanced Error Handling**: 堅牢なエラー処理機能
 
 ### 0.1.0
 
@@ -241,7 +241,7 @@ Initial release of Markdown Table Editor
 - Spreadsheet-like interface
 - Row/column manipulation
 - Sorting and drag & drop
-- Auto-save and backup
+- Auto-save
 
 ## Development Mode
 
