@@ -108,6 +108,8 @@ const SelectionManager = {
         
         // Update toolbar buttons
         this.updateToolbarButtons();
+        // Shift+カーソル連打時も常に現在位置をlastSelectedCellに
+        state.lastSelectedCell = { row: endRow, col: endCol };
     },
     
     /**
@@ -315,13 +317,18 @@ const SelectionManager = {
             }
         });
         
-        // Highlight row numbers for fully selected rows
+        // Highlight row numbers and column headers ONLY if all cells are selected (本当の全選択時のみ)
         const data = state.displayData || state.tableData;
+        let allSelected = false;
+        if (data && data.rows && data.headers) {
+            allSelected = (state.selectedCells.size === data.rows.length * data.headers.length);
+        }
+        // 行番号
         if (data && data.rows) {
             for (let row = 0; row < data.rows.length; row++) {
                 const rowNumber = document.querySelector(`td[data-row="${row}"][data-col="-1"]`);
                 if (rowNumber) {
-                    if (this.isRowFullySelected(row)) {
+                    if (allSelected) {
                         rowNumber.classList.add('row-selected');
                     } else {
                         rowNumber.classList.remove('row-selected');
@@ -329,13 +336,12 @@ const SelectionManager = {
                 }
             }
         }
-        
-        // Highlight column headers for fully selected columns
+        // 列ヘッダー
         if (data && data.headers) {
             for (let col = 0; col < data.headers.length; col++) {
                 const columnHeader = document.querySelector(`th[data-col="${col}"]`);
                 if (columnHeader) {
-                    if (this.isColumnFullySelected(col)) {
+                    if (allSelected) {
                         columnHeader.classList.add('col-selected');
                     } else {
                         columnHeader.classList.remove('col-selected');

@@ -11,6 +11,7 @@
 const KeyboardNavigationManager = {
     // Initialization state
     isInitialized: false,
+    _shiftKeyListenerAdded: false,
     
     /**
      * Initialize the keyboard navigation manager module
@@ -26,13 +27,28 @@ const KeyboardNavigationManager = {
         
         this.isInitialized = true;
         console.log('KeyboardNavigationManager: Module initialized');
+
+        // ShiftキーupでselectionStartを必ず解除（グローバル）
+        if (!this._shiftKeyListenerAdded) {
+            document.addEventListener('keyup', function(e) {
+                if (e.key === 'Shift') {
+                    const state = window.TableEditor.state;
+                    state.selectionStart = null;
+                }
+            });
+            this._shiftKeyListenerAdded = true;
+        }
     },
     
     /**
      * Handle keyboard events
      */
     handleKeyDown: function(event) {
+        // Shiftキーが押された瞬間にselectionStartをセット（Excel風）
         const state = window.TableEditor.state;
+        if (event.key === 'Shift' && !state.selectionStart && state.lastSelectedCell) {
+            state.selectionStart = { ...state.lastSelectedCell };
+        }
         
         // Don't handle keys while editing unless it's navigation or special shortcuts
         if (state.currentEditingCell && !state.isComposing) {
@@ -69,40 +85,44 @@ const KeyboardNavigationManager = {
         // Arrow key navigation
         switch (event.key) {
             case 'ArrowUp':
-                event.preventDefault();
-                if (event.ctrlKey || event.metaKey) {
-                    this.navigateCellSmart(currentRow, currentCol, 'up');
-                } else {
-                    this.navigateCell(currentRow - 1, currentCol);
-                }
-                break;
-                
             case 'ArrowDown':
-                event.preventDefault();
-                if (event.ctrlKey || event.metaKey) {
-                    this.navigateCellSmart(currentRow, currentCol, 'down');
-                } else {
-                    this.navigateCell(currentRow + 1, currentCol);
-                }
-                break;
-                
             case 'ArrowLeft':
+            case 'ArrowRight': {
                 event.preventDefault();
-                if (event.ctrlKey || event.metaKey) {
-                    this.navigateCellSmart(currentRow, currentCol, 'left');
+                let nextRow = currentRow;
+                let nextCol = currentCol;
+                let direction = null;
+                if (event.key === 'ArrowUp') {
+                    direction = 'up';
+                    nextRow = currentRow - 1;
+                } else if (event.key === 'ArrowDown') {
+                    direction = 'down';
+                    nextRow = currentRow + 1;
+                } else if (event.key === 'ArrowLeft') {
+                    direction = 'left';
+                    nextCol = currentCol - 1;
+                } else if (event.key === 'ArrowRight') {
+                    direction = 'right';
+                    nextCol = currentCol + 1;
+                }
+
+                // Excel風: Ctrl+矢印はスマートナビゲーション
+                if ((event.ctrlKey || event.metaKey) && !event.shiftKey) {
+                    this.navigateCellSmart(currentRow, currentCol, direction);
+                } else if (event.shiftKey) {
+                    // Shift+矢印: 範囲選択（始点はShift押下時のselectionStart）
+                    nextRow = Math.max(0, Math.min(data.rows.length - 1, nextRow));
+                    nextCol = Math.max(0, Math.min(data.headers.length - 1, nextCol));
+                    let start = state.selectionStart ? state.selectionStart : { row: currentRow, col: currentCol };
+                    window.TableEditor.callModule('SelectionManager', 'selectRange', start.row, start.col, nextRow, nextCol);
+                    // スクロールも追従
+                    this.scrollToCell(nextRow, nextCol);
                 } else {
-                    this.navigateCell(currentRow, currentCol - 1);
+                    // 通常: 1セル移動＆単一選択
+                    this.navigateCell(nextRow, nextCol);
                 }
                 break;
-                
-            case 'ArrowRight':
-                event.preventDefault();
-                if (event.ctrlKey || event.metaKey) {
-                    this.navigateCellSmart(currentRow, currentCol, 'right');
-                } else {
-                    this.navigateCell(currentRow, currentCol + 1);
-                }
-                break;
+            }
                 
             case 'Home':
                 event.preventDefault();
