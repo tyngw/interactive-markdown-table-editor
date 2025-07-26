@@ -1,3 +1,18 @@
+/* === セル編集: テキスト選択制御 === */
+/* 編集モードでないセルのテキスト選択を禁止 */
+.table-editor td:not(.editing) {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
+/* 編集モードのセルや入力欄は選択可 */
+.table-editor td.editing,
+.table-editor td.editing textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+}
 /* ====== Table tabs styles ====== */
 .table-tabs {
     display: flex;
