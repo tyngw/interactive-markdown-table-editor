@@ -49,7 +49,6 @@
     "lint": "eslint src --ext ts",
     "test": "node ./out/src/test/runTest.js",
     "test:integration": "npm run compile && node ./out/test/runIntegrationTests.js",
-    "test:interface": "npm run compile && echo 'Running interface tests...' && node -e \"console.log('Interface tests compiled successfully. Run in VS Code test environment.')\"",
     "test:all": "npm run test && npm run test:integration",
     "dev": "node dev/start-dev-server.js",
     "dev:watch": "node dev/start-dev-server.js --watch"
