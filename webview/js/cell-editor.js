@@ -163,10 +163,10 @@ const CellEditor = {
         const data = state.tableData;
         if (data && data.rows && data.rows[row]) {
             const oldValue = data.rows[row][col];
-            
+
             // Update local data immediately
             data.rows[row][col] = processedValue;
-            
+
             // Also update displayData to maintain consistency
             if (state.displayData && state.displayData.rows && state.displayData.rows[row]) {
                 state.displayData.rows[row][col] = processedValue;
@@ -206,6 +206,7 @@ const CellEditor = {
         // Clear editing state
         state.currentEditingCell = null;
         state.isComposing = false;
+        state.imeJustEnded = false;
 
         console.log('CellEditor: Committed cell edit', row, col);
     },
@@ -255,6 +256,7 @@ const CellEditor = {
         // Clear editing state
         state.currentEditingCell = null;
         state.isComposing = false;
+        state.imeJustEnded = false;
 
         console.log('CellEditor: Cancelled cell edit', row, col);
     },
@@ -335,11 +337,16 @@ const CellEditor = {
         input.addEventListener('keydown', (event) => {
             // Enter key behavior (README spec)
             if (event.key === 'Enter' && !event.shiftKey) {
+                // IME入力中、または直後の場合は処理をスキップ（日本語入力の確定を区別）
+                if (state.isComposing || state.imeJustEnded) {
+                    console.log('CellEditor: Enter pressed during/after IME composition, ignoring');
+                    return;
+                }
+
                 event.preventDefault();
                 event.stopPropagation(); // Prevent keyboard navigation handler from triggering
 
                 // Get current editing position from state
-                const state = window.TableEditor.state;
                 const currentEditingCell = state.currentEditingCell;
 
                 if (!currentEditingCell) {
@@ -362,6 +369,7 @@ const CellEditor = {
             }
             // Ctrl+Enter or Cmd+Enter commits and ends editing (README spec: 編集確定＆編集終了)
             else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                // IME入力中でもCtrl+Enter/Cmd+Enterは強制的に確定
                 event.preventDefault();
                 event.stopPropagation(); // Prevent keyboard navigation handler from triggering
                 this.commitCellEdit();
@@ -373,7 +381,6 @@ const CellEditor = {
                 event.stopPropagation(); // Prevent keyboard navigation handler from triggering
 
                 // Get current editing position from state instead of closure variables
-                const state = window.TableEditor.state;
                 const currentEditingCell = state.currentEditingCell;
 
                 if (!currentEditingCell) {
@@ -397,7 +404,7 @@ const CellEditor = {
             }
         });
 
-        // Handle IME composition
+        // Handle IME composition (日本語入力対応)
         input.addEventListener('compositionstart', (e) => {
             console.log('CellEditor: IME composition started');
             state.isComposing = true;
@@ -411,6 +418,13 @@ const CellEditor = {
         input.addEventListener('compositionend', (e) => {
             console.log('CellEditor: IME composition ended:', e.data);
             state.isComposing = false;
+
+            // IME確定直後のEnterキーイベントを適切に処理するため、
+            // 短時間だけフラグを設定
+            state.imeJustEnded = true;
+            setTimeout(() => {
+                state.imeJustEnded = false;
+            }, 50); // 50ms後にフラグをクリア
         });
 
         // Auto-resize textarea

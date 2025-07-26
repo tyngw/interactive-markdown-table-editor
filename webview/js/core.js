@@ -28,6 +28,7 @@ const TableEditor = {
         
         // IME composition state tracking
         isComposing: false,
+        imeJustEnded: false,
         
         // Multiple tables support
         allTables: [], // All tables from the document
