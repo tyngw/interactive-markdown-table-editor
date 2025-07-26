@@ -243,19 +243,20 @@ export function activate(context: vscode.ExtensionContext) {
                 updatedMarkdown
             );
 
-            // Refresh all table data and send back to webview
-            const allTableData: TableData[] = [];
-            tableManagersMap.forEach((manager, index) => {
-                allTableData[index] = manager.getTableData();
-            });
-            
-            webviewManager.updateTableData(panel, allTableData, uri);
-            // Don't send success message - webview will handle auto-saved status
+            // Don't send any update back to webview to avoid re-rendering
+            // The webview has already updated the cell locally
+            console.log('Cell update completed successfully without triggering webview re-render');
         } catch (error) {
             console.error('Error in updateCell:', error);
             const panel = webviewManager.getPanel(data.uri);
             if (panel) {
+                // Send error with original position information for potential rollback
                 webviewManager.sendError(panel, `Failed to update cell: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                webviewManager.sendCellUpdateError(panel, {
+                    row: data.row,
+                    col: data.col,
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                });
             }
         }
     });

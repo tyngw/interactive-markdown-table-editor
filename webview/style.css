@@ -1009,3 +1009,8 @@ textarea.cell-input[data-multiline="true"] {
     color: var(--vscode-charts-red);
     background-color: rgba(var(--vscode-charts-red), 0.1);
 }
+
+.save-indicator.failed {
+    color: var(--vscode-charts-red);
+    background-color: rgba(var(--vscode-charts-red), 0.1);
+}

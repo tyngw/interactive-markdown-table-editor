@@ -159,17 +159,25 @@ const CellEditor = {
         // Process content for storage
         const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', newValue);
 
-        // Update data model
+        // Update data model locally first
         const data = state.tableData;
         if (data && data.rows && data.rows[row]) {
             const oldValue = data.rows[row][col];
+            
+            // Update local data immediately
             data.rows[row][col] = processedValue;
+            
+            // Also update displayData to maintain consistency
+            if (state.displayData && state.displayData.rows && state.displayData.rows[row]) {
+                state.displayData.rows[row][col] = processedValue;
+            }
 
-            // Send update to VSCode if value changed
+            // Send update to VSCode if value changed (for file saving only)
             if (oldValue !== processedValue) {
                 window.TableEditor.updateCell(row, col, processedValue);
-
-                console.log('CellEditor: Cell updated', row, col, processedValue);
+                console.log('CellEditor: Cell updated and sent to VSCode', row, col, processedValue);
+            } else {
+                console.log('CellEditor: Cell value unchanged, no update sent', row, col);
             }
         }
 

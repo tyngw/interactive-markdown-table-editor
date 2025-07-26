@@ -262,6 +262,10 @@ const TableEditor = {
                 console.log('TableEditor: Processing updateTableData message with data:', message.data);
                 this.handleUpdateTableData(message.data, message.fileInfo);
                 break;
+            case 'cellUpdateError':
+                console.log('TableEditor: Cell update error received:', message.data);
+                this.handleCellUpdateError(message.data);
+                break;
             case 'setActiveTable':
                 this.handleSetActiveTable(message.data);
                 break;
@@ -358,6 +362,25 @@ const TableEditor = {
     handleSetActiveTable: function(data) {
         if (data && typeof data.index === 'number') {
             this.switchToTable(data.index);
+        }
+    },
+
+    /**
+     * Handle cell update error from VSCode
+     */
+    handleCellUpdateError: function(errorData) {
+        const { row, col, error } = errorData;
+        console.error('TableEditor: Cell update failed for row', row, 'col', col, ':', error);
+        
+        // Could implement rollback logic here if needed
+        // For now, just show an error message
+        this.showError(`Failed to update cell at row ${row + 1}, column ${col + 1}: ${error}`);
+        
+        // Mark save as failed
+        const saveIndicator = document.getElementById('saveIndicator');
+        if (saveIndicator) {
+            saveIndicator.textContent = '✗ Save failed';
+            saveIndicator.className = 'save-indicator failed';
         }
     },
     

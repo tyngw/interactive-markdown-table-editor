@@ -205,6 +205,16 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     }
 
     /**
+     * Send cell update error to webview for potential rollback
+     */
+    public sendCellUpdateError(panel: vscode.WebviewPanel, errorInfo: { row: number; col: number; error: string }): void {
+        panel.webview.postMessage({
+            command: 'cellUpdateError',
+            data: errorInfo
+        });
+    }
+
+    /**
      * Handle messages from webview
      */
     private async handleMessage(message: WebviewMessage, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
