@@ -66,14 +66,14 @@
         
         // Start loading scripts when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
-            // Wait a bit for script URIs to be injected
+            // Wait longer for script URIs to be injected
             setTimeout(() => {
                 if (window.scriptUris) {
                     loadNextScript();
                 } else {
                     // Keep checking for script URIs with timeout
                     let retryCount = 0;
-                    const maxRetries = 50; // 5 seconds total
+                    const maxRetries = 100; // 10 seconds total
                     const checkInterval = setInterval(() => {
                         retryCount++;
                         if (window.scriptUris) {
@@ -82,10 +82,12 @@
                         } else if (retryCount >= maxRetries) {
                             console.error('Script URIs never became available');
                             clearInterval(checkInterval);
+                            // Show fallback message
+                            document.body.innerHTML = '<div style="padding: 20px; color: red;">Failed to load table editor scripts. Please reload the webview.</div>';
                         }
                     }, 100);
                 }
-            }, 50);
+            }, 200);
         });
         
         // Test module system functionality

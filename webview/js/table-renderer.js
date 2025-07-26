@@ -3,32 +3,7 @@
  * 
  * This module handles all table rendering operations, including:
  * - HTML table generation
- * - Cell con            // Get stored column width or use default
-                     // Get stored column width or use default
-                const state = window.TableEditor.state;
-                const storedWidth = state.columnWidths[colIndex] || 150;
-                const isUserResized = state.columnWidths[colIndex] && state.columnWidths[colIndex] !== 150;
-                
-                // インラインスタイルはユーザーがリサイズした列のみに適用
-                const widthStyle = isUserResized ? `style="width: ${storedWidth}px; min-width: ${storedWidth}px; max-width: ${storedWidth}px;"` : '';
-                const userResizedClass = isUserResized ? 'user-resized' : '';
-                
-                html += `<td data-row="${rowIndex}" data-col="${colIndex}" class="editable-cell ${userResizedClass}" ${multilineAttr}
-                            ${widthStyle}
-                            onclick="TableEditor.callModule('SelectionManager', 'selectCell', ${rowIndex}, ${colIndex}, event)"
-                            ondblclick="TableEditor.callModule('CellEditor', 'startCellEdit', ${rowIndex}, ${colIndex})"
-                            ondragover="TableEditor.callModule('DragDropManager', 'handleDragOver', event)"`;t state = window.TableEditor.state;
-            const storedWidth = state.columnWidths[index] || 150;
-            const isUserResized = state.columnWidths[index] && state.columnWidths[index] !== 150;
-            
-            // インラインスタイルはユーザーがリサイズした列のみに適用
-            const widthStyle = isUserResized ? `style="width: ${storedWidth}px; min-width: ${storedWidth}px; max-width: ${storedWidth}px;"` : '';
-            const userResizedClass = isUserResized ? 'user-resized' : '';
-            
-            html += `<th data-col="${index}" class="column-header sortable ${userResizedClass}" 
-                        ${widthStyle}
-                        onclick="TableEditor.callModule('SortingManager', 'handleColumnHeaderClick', ${index}, event)"
-                        oncontextmenu="TableEditor.callModule('ContextMenuManager', 'showColumnContextMenu', event, ${index}); return false;"`;ssing
+ * - Cell content processing
  * - Column width management
  * - HTML escaping and formatting
  */
@@ -384,18 +359,6 @@ const TableRenderer = {
         return text.replace(/[&<>"']/g, function(m) { return map[m]; });
     },
     
-    /**
-     * Convert HTML break tags to newlines for editing
-     */
-    processCellContentForEditing: function(content) {
-        if (!content) return '';
-
-        // Convert <br> and <br/> tags to newlines for text editing
-        return content
-            .replace(/<br\s*\/?>/gi, '\n')
-            .replace(/<BR\s*\/?>/gi, '\n');
-    },
-
     /**
      * Render table while preserving scroll position
      */

@@ -86,7 +86,10 @@ export function activate(context: vscode.ExtensionContext) {
             // Create and show the webview panel with all tables
             const panel = webviewManager.createTableEditorPanel(allTableData, uri);
             
-            console.log('Webview panel created successfully');
+            // Wait a moment to ensure panel is stable before showing success message
+            setTimeout(() => {
+                console.log('Webview panel created successfully');
+            }, 100);
             
             const tableCount = allTableData.length;
             const primaryTable = allTableData[selectedTableIndex];

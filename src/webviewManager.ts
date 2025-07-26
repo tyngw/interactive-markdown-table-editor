@@ -111,6 +111,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         panel.onDidDispose(() => {
             console.log('Panel disposed for:', panelId);
             this.panels.delete(panelId);
+            this.connectionHealthMap.delete(panelId);
         }, null, this.context.subscriptions);
 
         // Handle panel view state changes (when tab becomes active/inactive)
@@ -131,11 +132,17 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 
         console.log('Setting up initial data timeout...');
 
-        // Send initial data after a short delay to ensure webview is ready
+        // Send initial data after webview is fully ready
         setTimeout(() => {
             console.log('Sending initial table data to webview...');
             this.updateTableData(panel, tableData, uri);
-        }, 100);
+            
+            // Send a second update after another delay to ensure it's received
+            setTimeout(() => {
+                console.log('Sending backup table data to webview...');
+                this.updateTableData(panel, tableData, uri);
+            }, 1000);
+        }, 500);
 
         console.log('Webview panel setup complete');
         return panel;
@@ -270,6 +277,8 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
                     console.log(`Received pong from webview, response time: ${message.responseTime ? message.responseTime - (message.timestamp || 0) : 'unknown'}ms`);
                     this.markConnectionHealthy(this.getPanelId(uri));
                     break;
+
+
 
                 default:
                     console.warn('Unknown message command:', message.command);
