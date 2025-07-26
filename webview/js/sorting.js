@@ -154,7 +154,8 @@ const SortingManager = {
             command: 'sort',
             data: {
                 column: state.sortState.column,
-                direction: state.sortState.direction
+                direction: state.sortState.direction,
+                tableIndex: state.currentTableIndex
             }
         });
         
