@@ -217,7 +217,8 @@ const TableRenderer = {
                           title="Sort column">${sortIcon}</div>
                      <div class="resize-handle" 
                           onmousedown="TableEditor.callModule('ColumnResizeManager', 'startColumnResize', event, ${index}); event.stopPropagation();"
-                          ondblclick="event.stopPropagation(); event.preventDefault(); TableEditor.callModule('ColumnResizeManager', 'autoFitColumn', ${index});"></div>
+                          ondblclick="event.stopPropagation(); event.preventDefault(); TableEditor.callModule('ColumnResizeManager', 'autoFitColumn', ${index});"
+                          title="Drag to resize column, double-click to auto-fit"></div>
                   </th>`;
         });
         html += '</tr></thead>';
