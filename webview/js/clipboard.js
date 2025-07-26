@@ -245,10 +245,22 @@ const ClipboardManager = {
             });
         });
         
-        // Re-render table
-        const renderer = window.TableEditor.getModule('TableRenderer');
-        if (renderer) {
-            renderer.renderTable(data);
+        // Update display data and re-render without full table rebuild
+        state.displayData = data;
+        
+        // Save current scroll position
+        const tableContainer = document.querySelector('.table-container');
+        const scrollTop = tableContainer ? tableContainer.scrollTop : 0;
+        const scrollLeft = tableContainer ? tableContainer.scrollLeft : 0;
+        
+        // Re-render table content only
+        window.TableEditor.renderTableInContainer(data);
+        
+        // Restore scroll position
+        const newTableContainer = document.querySelector('.table-container');
+        if (newTableContainer) {
+            newTableContainer.scrollTop = scrollTop;
+            newTableContainer.scrollLeft = scrollLeft;
         }
         
         // Show success message
