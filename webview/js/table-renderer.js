@@ -34,17 +34,22 @@
  */
 
 const TableRenderer = {
+    // Initialization state
+    isInitialized: false,
+    
     /**
      * Initialize the table renderer module
      */
     init: function() {
-        console.log('TableRenderer: Initializing table renderer module...');
-        
-        // Register with the main TableEditor
-        if (window.TableEditor) {
-            window.TableEditor.registerModule('TableRenderer', this);
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('TableRenderer: Already initialized, skipping');
+            return;
         }
         
+        console.log('TableRenderer: Initializing table renderer module...');
+        
+        this.isInitialized = true;
         console.log('TableRenderer: Module initialized');
     },
     
@@ -199,7 +204,6 @@ const TableRenderer = {
             
             html += `<th data-col="${index}" class="column-header sortable ${userResizedClass}" 
                         ${widthStyle}
-                        onclick="TableEditor.callModule('SortingManager', 'handleColumnHeaderClick', ${index}, event)"
                         oncontextmenu="TableEditor.callModule('ContextMenuManager', 'showColumnContextMenu', event, ${index}); return false;"
                         draggable="true"
                         onmousedown="TableEditor.callModule('SelectionManager', 'startColumnSelect', ${index})"
@@ -208,8 +212,9 @@ const TableRenderer = {
                         ondrop="TableEditor.callModule('DragDropManager', 'handleDrop', event)">
                      <div class="column-letter">${columnLetter}</div>
                      <div class="column-title">${this.escapeHtml(header)}</div>
-                     <div class="sort-indicator">${sortIcon}</div>
-                     <!-- Resize handle with double-click auto-fit functionality -->
+                     <div class="sort-indicator" 
+                          onclick="TableEditor.callModule('SortingManager', 'handleColumnHeaderClick', ${index}, event); event.stopPropagation();"
+                          title="Sort column">${sortIcon}</div>
                      <div class="resize-handle" 
                           onmousedown="TableEditor.callModule('ColumnResizeManager', 'startColumnResize', event, ${index}); event.stopPropagation();"
                           ondblclick="event.stopPropagation(); event.preventDefault(); TableEditor.callModule('ColumnResizeManager', 'autoFitColumn', ${index});"

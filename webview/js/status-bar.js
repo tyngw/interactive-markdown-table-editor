@@ -10,16 +10,25 @@
  */
 
 const StatusBarManager = {
+    // Initialization state
+    isInitialized: false,
+    
     /**
      * Initialize the status bar manager module
      */
     init: function() {
-        console.log('StatusBarManager: Initializing status bar manager module...');
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('StatusBarManager: Already initialized, skipping');
+            return;
+        }
         
+        console.log('StatusBarManager: Initializing status bar manager module...');
         
         this.createStatusBar();
         this.setupStatusBarListeners();
         
+        this.isInitialized = true;
         console.log('StatusBarManager: Module initialized');
     },
     

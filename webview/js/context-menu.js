@@ -9,6 +9,9 @@
  */
 
 const ContextMenuManager = {
+    // Initialization state
+    isInitialized: false,
+    
     // Context menu state
     contextMenuState: {
         currentRow: -1,
@@ -19,10 +22,17 @@ const ContextMenuManager = {
      * Initialize the context menu manager module
      */
     init: function() {
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('ContextMenuManager: Already initialized, skipping');
+            return;
+        }
+        
         console.log('ContextMenuManager: Initializing context menu manager module...');
         
         this.setupContextMenuListeners();
         
+        this.isInitialized = true;
         console.log('ContextMenuManager: Module initialized');
     },
     

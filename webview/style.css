@@ -132,7 +132,7 @@ body {
 
 /* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
 .table-editor th.user-resized {
-    min-width: 80px;
+    min-width: 10px;
 }
 
 .table-editor th:hover {
@@ -215,7 +215,7 @@ body {
 /* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
 .table-editor td.data-cell.user-resized,
 .table-editor td.editable-cell.user-resized {
-    min-width: 80px;
+    min-width: 10px;
 }
 
 .table-editor td.data-cell:hover,
@@ -468,6 +468,17 @@ textarea.cell-input[data-multiline="true"] {
     text-transform: uppercase;
 }
 
+.column-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 40px); /* Leave space for sort indicator */
+    display: inline-block;
+}
+
 .header-text {
     font-size: 13px;
     font-weight: 600;
@@ -603,6 +614,16 @@ textarea.cell-input[data-multiline="true"] {
 .sort-indicator {
     margin-left: 8px;
     font-size: 12px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 2px;
+    transition: background-color 0.15s ease;
+    user-select: none;
+    display: inline-block;
+}
+
+.sort-indicator:hover {
+    background-color: var(--vscode-list-hoverBackground);
 }
 
 .sort-asc::after {

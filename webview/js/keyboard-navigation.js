@@ -9,13 +9,22 @@
  */
 
 const KeyboardNavigationManager = {
+    // Initialization state
+    isInitialized: false,
+    
     /**
      * Initialize the keyboard navigation manager module
      */
     init: function() {
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('KeyboardNavigationManager: Already initialized, skipping');
+            return;
+        }
+        
         console.log('KeyboardNavigationManager: Initializing keyboard navigation module...');
         
-        
+        this.isInitialized = true;
         console.log('KeyboardNavigationManager: Module initialized');
     },
     

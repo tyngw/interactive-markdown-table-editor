@@ -9,13 +9,22 @@
  */
 
 const SortingManager = {
+    // Initialization state
+    isInitialized: false,
+    
     /**
      * Initialize the sorting manager module
      */
     init: function() {
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('SortingManager: Already initialized, skipping');
+            return;
+        }
+        
         console.log('SortingManager: Initializing sorting manager module...');
         
-        
+        this.isInitialized = true;
         console.log('SortingManager: Module initialized');
     },
     

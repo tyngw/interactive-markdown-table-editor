@@ -9,16 +9,25 @@
  */
 
 const SelectionManager = {
+    // Initialization state
+    isInitialized: false,
+    
     /**
      * Initialize the selection manager module
      */
     init: function() {
-        console.log('SelectionManager: Initializing selection manager module...');
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+            console.log('SelectionManager: Already initialized, skipping');
+            return;
+        }
         
+        console.log('SelectionManager: Initializing selection manager module...');
         
         // Set up global keyboard listeners for selection
         this.setupGlobalKeyboardListeners();
         
+        this.isInitialized = true;
         console.log('SelectionManager: Module initialized');
     },
     

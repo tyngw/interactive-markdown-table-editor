@@ -87,6 +87,18 @@
                 }
             }, 50);
         });
+        
+        // Test module system functionality
+        function testModuleSystem() {
+            if (typeof TableEditor !== 'undefined') {
+                const testResult = TableEditor.callModule('TestModule', 'getMessage');
+                console.log('Module system test result:', testResult);
+                return testResult;
+            } else {
+                console.warn('TableEditor not available for module testing');
+                return null;
+            }
+        }
     </script>
 </head>
 <body>
