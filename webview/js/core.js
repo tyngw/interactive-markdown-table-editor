@@ -424,10 +424,11 @@ const TableEditor = {
             return;
         }
         
-        // Save current scroll position
+        // Save current scroll position before replacing content
         const tableContainer = tableContent.querySelector('.table-container');
-        const scrollTop = tableContainer ? tableContainer.scrollTop : 0;
-        const scrollLeft = tableContainer ? tableContainer.scrollLeft : 0;
+        const savedScrollTop = tableContainer ? tableContainer.scrollTop : 0;
+        const savedScrollLeft = tableContainer ? tableContainer.scrollLeft : 0;
+        console.log('TableEditor: Saving scroll position - top:', savedScrollTop, 'left:', savedScrollLeft);
         
         const renderer = this.getModule('TableRenderer');
         if (!renderer) {
@@ -495,11 +496,30 @@ const TableEditor = {
             // Set table width to sum of column widths to prevent window resize effects
             renderer.setTableWidth();
             
-            // Restore scroll position
-            const newTableContainer = tableContent.querySelector('.table-container');
-            if (newTableContainer) {
-                newTableContainer.scrollTop = scrollTop;
-                newTableContainer.scrollLeft = scrollLeft;
+            // Restore scroll position after DOM has been updated
+            // Use requestAnimationFrame to ensure the browser has finished rendering
+            const restoreScrollPosition = () => {
+                const newTableContainer = tableContent.querySelector('.table-container');
+                if (newTableContainer && (savedScrollTop > 0 || savedScrollLeft > 0)) {
+                    newTableContainer.scrollTop = savedScrollTop;
+                    newTableContainer.scrollLeft = savedScrollLeft;
+                    console.log('TableEditor: Restored scroll position - top:', savedScrollTop, 'left:', savedScrollLeft);
+                } else if (newTableContainer) {
+                    console.log('TableEditor: No scroll position to restore (was at top)');
+                } else {
+                    console.warn('TableEditor: Could not find new table container for scroll restoration');
+                }
+            };
+            
+            // Use requestAnimationFrame for better timing, with fallback to setTimeout
+            if (window.requestAnimationFrame) {
+                requestAnimationFrame(() => {
+                    // Double RAF to ensure layout is complete
+                    requestAnimationFrame(restoreScrollPosition);
+                });
+            } else {
+                // Fallback for older browsers
+                setTimeout(restoreScrollPosition, 10);
             }
             
             // Update sort actions visibility after rendering
