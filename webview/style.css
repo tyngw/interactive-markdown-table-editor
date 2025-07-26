@@ -363,6 +363,79 @@ textarea.cell-input[data-multiline="true"] {
     opacity: 0.9;
 }
 
+/* Header editing styles */
+.table-editor th.editing {
+    background-color: var(--vscode-input-background) !important;
+    outline: 2px solid var(--vscode-inputOption-activeBorder);
+    outline-offset: -1px;
+}
+
+.header-input {
+    border: none !important;
+    background: transparent !important;
+    color: inherit !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    outline: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+}
+
+.header-input:focus {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Column header layout improvements */
+.column-header {
+    position: relative;
+    padding: 8px 32px 8px 12px !important; /* More padding on right for sort button */
+}
+
+.column-letter {
+    font-size: 10px;
+    color: var(--vscode-descriptionForeground);
+    margin-bottom: 2px;
+}
+
+.column-title {
+    cursor: text;
+    flex: 1;
+    min-width: 0;
+    word-wrap: break-word;
+}
+
+.column-title:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    border-radius: 2px;
+    padding: 1px 2px;
+    margin: -1px -2px;
+}
+
+/* Move sort indicator further to the right */
+.sort-indicator {
+    position: absolute;
+    right: 6px; /* Move closer to the edge */
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0; /* Remove left margin */
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 2px;
+    transition: background-color 0.15s ease;
+    user-select: none;
+    display: inline-block;
+}
+
+.sort-indicator:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
 /* Selection indicators - 統一されたスタイル */
 .table-editor td.data-cell.selected {
     background-color: var(--vscode-list-activeSelectionBackground) !important;
@@ -626,20 +699,7 @@ textarea.cell-input[data-multiline="true"] {
     font-weight: 500;
 }
 
-.sort-indicator {
-    margin-left: 8px;
-    font-size: 12px;
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: 2px;
-    transition: background-color 0.15s ease;
-    user-select: none;
-    display: inline-block;
-}
 
-.sort-indicator:hover {
-    background-color: var(--vscode-list-hoverBackground);
-}
 
 .sort-asc::after {
     content: "▲";

@@ -143,6 +143,12 @@ const CellEditor = {
             return; // No active edit
         }
 
+        // Check if it's a header edit
+        if (state.currentEditingCell.row === -1) {
+            this.commitHeaderEdit();
+            return;
+        }
+
         const { row, col } = state.currentEditingCell;
         const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`);
 
@@ -225,6 +231,12 @@ const CellEditor = {
 
         if (!state.currentEditingCell) {
             return; // No active edit
+        }
+
+        // Check if it's a header edit
+        if (state.currentEditingCell.row === -1) {
+            this.cancelHeaderEdit();
+            return;
         }
 
         const { row, col } = state.currentEditingCell;
@@ -555,6 +567,270 @@ const CellEditor = {
         }
 
         return { valid: true };
+    },
+
+    /**
+     * Start editing a header cell
+     */
+    startHeaderEdit: function (colIndex) {
+        const state = window.TableEditor.state;
+        const data = state.displayData || state.tableData;
+
+        if (!data || !data.headers || colIndex < 0 || colIndex >= data.headers.length) {
+            console.warn('CellEditor: Invalid header column index', colIndex);
+            return;
+        }
+
+        // Commit any existing edit first
+        if (state.currentEditingCell) {
+            this.commitCellEdit();
+        }
+
+        // Set editing state for header (using row -1 to indicate header)
+        state.currentEditingCell = { row: -1, col: colIndex };
+
+        // Get the header element - find the column-title div
+        const headerCell = document.querySelector(`th[data-col="${colIndex}"]`);
+        if (!headerCell) {
+            console.warn('CellEditor: Header cell element not found', colIndex);
+            return;
+        }
+
+        const columnTitleDiv = headerCell.querySelector('.column-title');
+        if (!columnTitleDiv) {
+            console.warn('CellEditor: Column title div not found', colIndex);
+            return;
+        }
+
+        // Get current header content
+        const currentValue = data.headers[colIndex] || '';
+
+        // Create input element
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'header-input';
+        input.value = currentValue;
+
+        // Add editing class to header cell
+        headerCell.classList.add('editing');
+
+        // Replace column title content with input
+        const originalContent = columnTitleDiv.innerHTML;
+        columnTitleDiv.innerHTML = '';
+        columnTitleDiv.appendChild(input);
+
+        // Style the input to match the header
+        this.styleHeaderInputElement(input, columnTitleDiv);
+
+        // Add event listeners for header editing
+        this.addHeaderInputEventListeners(input, colIndex, columnTitleDiv, originalContent);
+
+        // Focus and select content
+        input.focus();
+        input.select();
+
+        console.log('CellEditor: Started editing header', colIndex);
+    },
+
+    /**
+     * Commit current header edit
+     */
+    commitHeaderEdit: function () {
+        const state = window.TableEditor.state;
+
+        if (!state.currentEditingCell || state.currentEditingCell.row !== -1) {
+            return; // No active header edit
+        }
+
+        const { col } = state.currentEditingCell;
+        const headerCell = document.querySelector(`th[data-col="${col}"]`);
+
+        if (!headerCell) {
+            console.warn('CellEditor: Header cell not found during commit', col);
+            state.currentEditingCell = null;
+            return;
+        }
+
+        const columnTitleDiv = headerCell.querySelector('.column-title');
+        if (!columnTitleDiv) {
+            console.warn('CellEditor: Column title div not found during commit');
+            state.currentEditingCell = null;
+            return;
+        }
+
+        const input = columnTitleDiv.querySelector('input');
+        if (!input) {
+            console.warn('CellEditor: Input element not found during commit');
+            state.currentEditingCell = null;
+            return;
+        }
+
+        // Get new value
+        const newValue = input.value.trim();
+
+        // Update data model locally first
+        const data = state.tableData;
+        if (data && data.headers) {
+            const oldValue = data.headers[col];
+
+            // Update local data immediately
+            data.headers[col] = newValue;
+
+            // Also update displayData to maintain consistency
+            if (state.displayData && state.displayData.headers) {
+                state.displayData.headers[col] = newValue;
+            }
+
+            // Send update to VSCode if value changed (for file saving)
+            if (oldValue !== newValue) {
+                window.TableEditor.updateHeader(col, newValue);
+                console.log('CellEditor: Header updated and sent to VSCode', col, newValue);
+            } else {
+                console.log('CellEditor: Header value unchanged, no update sent', col);
+            }
+        }
+
+        // Remove editing class and restore header display
+        headerCell.classList.remove('editing');
+
+        // Restore column title content with new value
+        const processedContent = window.TableEditor.callModule('TableRenderer', 'escapeHtml', newValue);
+        columnTitleDiv.innerHTML = processedContent;
+
+        // Clear editing state
+        state.currentEditingCell = null;
+        state.isComposing = false;
+        state.imeJustEnded = false;
+
+        console.log('CellEditor: Committed header edit', col);
+    },
+
+    /**
+     * Cancel current header edit
+     */
+    cancelHeaderEdit: function () {
+        const state = window.TableEditor.state;
+
+        if (!state.currentEditingCell || state.currentEditingCell.row !== -1) {
+            return; // No active header edit
+        }
+
+        const { col } = state.currentEditingCell;
+        const headerCell = document.querySelector(`th[data-col="${col}"]`);
+
+        if (headerCell) {
+            // Remove editing class
+            headerCell.classList.remove('editing');
+
+            const columnTitleDiv = headerCell.querySelector('.column-title');
+            if (columnTitleDiv) {
+                // Restore original content
+                const data = state.displayData || state.tableData;
+                if (data && data.headers && data.headers[col] !== undefined) {
+                    const originalValue = data.headers[col] || '';
+                    const processedContent = window.TableEditor.callModule('TableRenderer', 'escapeHtml', originalValue);
+                    columnTitleDiv.innerHTML = processedContent;
+                }
+            }
+        }
+
+        // Clear editing state
+        state.currentEditingCell = null;
+        state.isComposing = false;
+        state.imeJustEnded = false;
+
+        console.log('CellEditor: Cancelled header edit', col);
+    },
+
+    /**
+     * Style header input element
+     */
+    styleHeaderInputElement: function (input, container) {
+        // Set styles to match the header cell
+        input.style.width = '100%';
+        input.style.boxSizing = 'border-box';
+        input.style.border = 'none';
+        input.style.background = 'transparent';
+        input.style.color = 'inherit';
+        input.style.fontFamily = 'inherit';
+        input.style.fontSize = 'inherit';
+        input.style.fontWeight = 'inherit';
+        input.style.padding = '0';
+        input.style.margin = '0';
+        input.style.outline = 'none';
+        input.style.textAlign = 'left';
+    },
+
+    /**
+     * Add event listeners to header input element
+     */
+    addHeaderInputEventListeners: function (input, colIndex, container, originalContent) {
+        const state = window.TableEditor.state;
+
+        // Handle keyboard events for header editing
+        input.addEventListener('keydown', (event) => {
+            // Enter key behavior - commit and end editing
+            if (event.key === 'Enter') {
+                // IME入力中、または直後の場合は処理をスキップ（日本語入力の確定を区別）
+                if (state.isComposing || state.imeJustEnded) {
+                    console.log('CellEditor: Enter pressed during/after IME composition in header, ignoring');
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                this.commitHeaderEdit();
+            }
+            // Escape cancels editing
+            else if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                this.cancelHeaderEdit();
+            }
+            // Tab commits and moves focus away
+            else if (event.key === 'Tab') {
+                event.preventDefault();
+                event.stopPropagation();
+                this.commitHeaderEdit();
+            }
+        });
+
+        // Handle IME composition (日本語入力対応)
+        input.addEventListener('compositionstart', (e) => {
+            console.log('CellEditor: IME composition started in header');
+            state.isComposing = true;
+        });
+
+        input.addEventListener('compositionupdate', (e) => {
+            console.log('CellEditor: IME composition updating in header:', e.data);
+            state.isComposing = true;
+        });
+
+        input.addEventListener('compositionend', (e) => {
+            console.log('CellEditor: IME composition ended in header:', e.data);
+            state.isComposing = false;
+
+            // IME確定直後のEnterキーイベントを適切に処理するため、
+            // 短時間だけフラグを設定
+            state.imeJustEnded = true;
+            setTimeout(() => {
+                state.imeJustEnded = false;
+            }, 50); // 50ms後にフラグをクリア
+        });
+
+        // Commit on blur (focus lost)
+        input.addEventListener('blur', () => {
+            // Don't commit if we're in the middle of IME composition
+            if (!state.isComposing) {
+                setTimeout(() => {
+                    // Check if focus moved to another input in the same table
+                    const activeElement = document.activeElement;
+                    if (!activeElement || !activeElement.closest('.table-editor')) {
+                        this.commitHeaderEdit();
+                    }
+                }, 10);
+            }
+        });
     },
 
     /**
