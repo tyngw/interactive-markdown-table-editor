@@ -52,6 +52,13 @@ const TableEditor = {
             visible: false,
             type: null, // 'row' or 'column'
             index: -1
+        },
+        
+        // Module loading state tracking
+        loadingState: {
+            loaded: new Set(),
+            failed: new Set(),
+            loading: new Set()
         }
     },
     
@@ -705,6 +712,146 @@ const TableEditor = {
         if (this.vscode) {
             this.vscode.postMessage(message);
         }
+    },
+    
+    /**
+     * Initialize the TableEditor system
+     */
+    init: function() {
+        console.log('TableEditor: Initializing core system');
+        this.setupErrorHandling();
+        return true;
+    },
+    
+    /**
+     * Load a module dynamically
+     */
+    loadModule: function(moduleName) {
+        // For now, assume modules are already loaded since we're using script tags
+        // This could be extended to support dynamic loading in the future
+        if (this.modules.has(moduleName)) {
+            console.log(`TableEditor: Module ${moduleName} already loaded`);
+            return true;
+        }
+        console.warn(`TableEditor: Module ${moduleName} not found`);
+        return false;
+    },
+    
+    /**
+     * Handle module errors gracefully
+     */
+    handleModuleError: function(moduleName, methodName, error) {
+        const errorMsg = `Error in ${moduleName}.${methodName}: ${error.message}`;
+        console.error('TableEditor:', errorMsg, error);
+        this.showError(errorMsg);
+        
+        // Track failed modules for diagnostics
+        if (!this.state.loadingState) {
+            this.state.loadingState = {
+                loaded: new Set(),
+                failed: new Set(),
+                loading: new Set()
+            };
+        }
+        this.state.loadingState.failed.add(moduleName);
+        return false;
+    },
+    
+    /**
+     * Get system diagnostics
+     */
+    getDiagnostics: function() {
+        return {
+            modules: Array.from(this.modules.keys()),
+            loadingState: this.state.loadingState || {
+                loaded: new Set(this.modules.keys()),
+                failed: new Set(),
+                loading: new Set()
+            },
+            tableCount: this.state.allTables ? this.state.allTables.length : 0,
+            currentTable: this.state.currentTableIndex,
+            hasVSCode: !!this.vscode,
+            errors: this.errorLog || []
+        };
+    },
+    
+    /**
+     * Setup error handling mechanisms
+     */
+    setupErrorHandling: function() {
+        // Use the state object for loading state tracking
+        this.state.loadingState = {
+            loaded: new Set(),
+            failed: new Set(),
+            loading: new Set()
+        };
+        
+        // Initialize error log
+        this.errorLog = [];
+        
+        // Global error handlers
+        window.addEventListener('error', (event) => {
+            this.handleCriticalError('JavaScript Error', event.error);
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            this.handleCriticalError('Unhandled Promise Rejection', event.reason);
+        });
+        
+        console.log('TableEditor: Error handling initialized');
+    },
+    
+    /**
+     * Handle critical errors
+     */
+    handleCriticalError: function(type, error) {
+        const errorEntry = {
+            type: type,
+            message: error ? error.message || String(error) : 'Unknown error',
+            timestamp: new Date().toISOString(),
+            stack: error ? error.stack : undefined
+        };
+        
+        this.errorLog = this.errorLog || [];
+        this.errorLog.push(errorEntry);
+        
+        console.error('TableEditor Critical Error:', errorEntry);
+        
+        // Show fallback UI if main interface fails
+        if (type === 'JavaScript Error') {
+            this.showFallbackMessage();
+        }
+        
+        // Show critical error UI for severe issues
+        this.showCriticalErrorUI(errorEntry);
+    },
+    
+    /**
+     * Show fallback message when main interface fails
+     */
+    showFallbackMessage: function() {
+        const container = document.getElementById('table-container');
+        if (container) {
+            container.innerHTML = '<div class="error-fallback">Table editor encountered an error. Please reload the webview.</div>';
+        }
+    },
+    
+    /**
+     * Show critical error UI
+     */
+    showCriticalErrorUI: function(errorEntry) {
+        const statusBar = document.getElementById('statusMessage');
+        if (statusBar) {
+            statusBar.textContent = `Critical Error: ${errorEntry.message}`;
+            statusBar.className = 'status-message error critical';
+        }
+    },
+    
+    /**
+     * Check if a module is loaded
+     */
+    isModuleLoaded: function(moduleName) {
+        return this.modules.has(moduleName);
     },
     
     /**

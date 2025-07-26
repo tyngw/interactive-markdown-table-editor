@@ -49,7 +49,7 @@ suite('Core Module System Tests', () => {
     });
     
     test('WebviewManager includes core module in script loading', () => {
-        const webviewManagerPath = path.join(__dirname, '../../../src/webviewManager.ts');
+        const webviewManagerPath = path.join(__dirname, '../../webviewManager.js');
         const content = fs.readFileSync(webviewManagerPath, 'utf8');
         
         assert.ok(content.includes('js/core.js'), 'Should include core.js in script files');

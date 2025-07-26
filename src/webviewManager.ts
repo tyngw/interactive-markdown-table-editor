@@ -80,7 +80,8 @@ export class WebviewManager {
             'js/context-menu.js',
             'js/drag-drop.js',
             'js/status-bar.js',
-            'js/csv-exporter.js'
+            'js/csv-exporter.js',
+            'js/test-module.js'
         ];
 
         const scriptUris = scriptFiles.map(file => {
@@ -204,13 +205,24 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             // Mark connection as healthy when we receive a message
             this.markConnectionHealthy(this.getPanelId(uri));
 
-            // Validate message structure
-            if (!this.validateMessage(message)) {
+            // Basic message structure validation
+            if (!this.validateBasicMessageStructure(message)) {
                 this.sendError(panel, 'Invalid message format received from webview');
                 return;
             }
 
             console.log(`Handling webview message: ${message.command}`, message.data);
+
+            // Validate specific message content based on command
+            if (!this.validateMessageCommand(message)) {
+                this.sendError(panel, `Unknown command: ${message.command}`);
+                return;
+            }
+
+            if (!this.validateMessageData(message)) {
+                this.sendError(panel, 'Invalid message data received from webview');
+                return;
+            }
 
             switch (message.command) {
                 case 'requestTableData':
@@ -272,7 +284,16 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     /**
      * Validate incoming message structure
      */
-    private validateMessage(message: any): message is WebviewMessage {
+    public validateMessage(message: any): message is WebviewMessage {
+        return this.validateBasicMessageStructure(message) && 
+               this.validateMessageCommand(message) && 
+               this.validateMessageData(message);
+    }
+
+    /**
+     * Validate basic message structure (object with command)
+     */
+    public validateBasicMessageStructure(message: any): boolean {
         if (!message || typeof message !== 'object') {
             return false;
         }
@@ -281,15 +302,25 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             return false;
         }
 
+        return true;
+    }
+
+    /**
+     * Validate if the command is known
+     */
+    public validateMessageCommand(message: any): boolean {
         const validCommands = [
             'requestTableData', 'updateCell', 'addRow', 'deleteRow', 
             'addColumn', 'deleteColumn', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'pong'
         ];
 
-        if (!validCommands.includes(message.command)) {
-            return false;
-        }
+        return validCommands.includes(message.command);
+    }
 
+    /**
+     * Validate message data based on command
+     */
+    public validateMessageData(message: any): boolean {
         // Validate data structure based on command
         switch (message.command) {
             case 'requestTableData':
@@ -329,8 +360,8 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     }
 
     private validateCellUpdateData(data: any): boolean {
-        return data && 
-               typeof data.row === 'number' && data.row >= 0 &&
+        if (!data) return false;
+        return typeof data.row === 'number' && data.row >= 0 &&
                typeof data.col === 'number' && data.col >= 0 &&
                typeof data.value === 'string';
     }
@@ -340,7 +371,8 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     }
 
     private validateDeleteRowData(data: any): boolean {
-        return data && typeof data.index === 'number' && data.index >= 0;
+        if (!data) return false;
+        return typeof data.index === 'number' && data.index >= 0;
     }
 
     private validateAddColumnData(data: any): boolean {
@@ -350,25 +382,26 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     }
 
     private validateDeleteColumnData(data: any): boolean {
-        return data && typeof data.index === 'number' && data.index >= 0;
+        if (!data) return false;
+        return typeof data.index === 'number' && data.index >= 0;
     }
 
     private validateSortData(data: any): boolean {
-        return data && 
-               typeof data.column === 'number' && data.column >= 0 &&
+        if (!data) return false;
+        return typeof data.column === 'number' && data.column >= 0 &&
                typeof data.direction === 'string' && 
                (data.direction === 'asc' || data.direction === 'desc');
     }
 
     private validateMoveData(data: any): boolean {
-        return data && 
-               typeof data.from === 'number' && data.from >= 0 &&
+        if (!data) return false;
+        return typeof data.from === 'number' && data.from >= 0 &&
                typeof data.to === 'number' && data.to >= 0;
     }
 
     private validateExportCSVData(data: any): boolean {
-        return data && 
-               typeof data.csvContent === 'string' &&
+        if (!data) return false;
+        return typeof data.csvContent === 'string' &&
                typeof data.filename === 'string' && data.filename.length > 0;
     }
 
