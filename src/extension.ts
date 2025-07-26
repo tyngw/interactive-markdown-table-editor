@@ -261,6 +261,95 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    const updateHeaderCommand = vscode.commands.registerCommand('markdownTableEditor.internal.updateHeader', async (data: any) => {
+        try {
+            console.log('Internal command: updateHeader', data);
+            const { uri, panelId, col, value, tableIndex } = data;
+            const panel = webviewManager.getPanel(uri);
+            
+            if (!panel) {
+                console.error('Panel not found for URI:', uri.toString());
+                return;
+            }
+
+            // Get the specific table manager by index
+            const tableManagersMap = activeMultiTableManagers.get(uri.toString());
+            if (!tableManagersMap) {
+                webviewManager.sendError(panel, 'Table managers not found');
+                return;
+            }
+
+            // Use tableIndex from data, or fall back to 0
+            const targetTableIndex = tableIndex !== undefined ? tableIndex : 0;
+            let tableDataManager = tableManagersMap.get(targetTableIndex);
+            
+            if (!tableDataManager) {
+                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);
+                return;
+            }
+
+            // Try to update the header, if it fails due to invalid position, refresh the table data
+            try {
+                tableDataManager.updateHeader(col, value);
+            } catch (positionError) {
+                if (positionError instanceof Error && positionError.message.includes('Invalid')) {
+                    console.log('Invalid position detected, attempting to refresh table data from file...');
+                    try {
+                        // Read fresh content from file and re-parse
+                        const content = await fileHandler.readMarkdownFile(uri);
+                        const ast = markdownParser.parseDocument(content);
+                        const tables = markdownParser.findTablesInDocument(ast);
+                        
+                        if (targetTableIndex < tables.length) {
+                            // Create new manager with fresh data
+                            const newManager = new TableDataManager(tables[targetTableIndex], uri.toString(), targetTableIndex);
+                            tableManagersMap.set(targetTableIndex, newManager);
+                            tableDataManager = newManager;
+                            console.log('Table data refreshed successfully');
+                            
+                            // Try the update again with fresh data
+                            tableDataManager.updateHeader(col, value);
+                        } else {
+                            throw new Error(`Table index ${targetTableIndex} not found in refreshed data`);
+                        }
+                    } catch (refreshError) {
+                        console.error('Could not refresh table data:', refreshError);
+                        throw positionError; // Re-throw the original error
+                    }
+                } else {
+                    throw positionError; // Re-throw if it's not a position error
+                }
+            }
+            
+            // Update the file using table index for more accurate positioning
+            const updatedMarkdown = tableDataManager.serializeToMarkdown();
+            const tableData = tableDataManager.getTableData();
+            
+            console.log(`Updating table header at index ${tableData.metadata.tableIndex}, lines ${tableData.metadata.startLine}-${tableData.metadata.endLine}`);
+            
+            await fileHandler.updateTableByIndex(
+                uri, 
+                tableData.metadata.tableIndex,
+                updatedMarkdown
+            );
+
+            // Don't send any update back to webview to avoid re-rendering
+            // The webview has already updated the header locally
+            console.log('Header update completed successfully without triggering webview re-render');
+        } catch (error) {
+            console.error('Error in updateHeader:', error);
+            const panel = webviewManager.getPanel(data.uri);
+            if (panel) {
+                // Send error with original position information for potential rollback
+                webviewManager.sendError(panel, `Failed to update header: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                webviewManager.sendHeaderUpdateError(panel, {
+                    col: data.col,
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                });
+            }
+        }
+    });
+
     const addRowCommand = vscode.commands.registerCommand('markdownTableEditor.internal.addRow', async (data: any) => {
         try {
             console.log('Internal command: addRow', data);
@@ -714,6 +803,7 @@ export function activate(context: vscode.ExtensionContext) {
         openEditorCommand,
         requestTableDataCommand,
         updateCellCommand,
+        updateHeaderCommand,
         addRowCommand,
         deleteRowCommand,
         addColumnCommand,
