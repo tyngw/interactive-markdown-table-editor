@@ -495,7 +495,8 @@ textarea.cell-input[data-multiline="true"] {
     position: sticky;
     left: 0;
     top: 0;
-    z-index: 110;
+    z-index: 200 !important;
+    /* th(100)より高くする */
     cursor: pointer;
     text-align: center;
     vertical-align: middle;
