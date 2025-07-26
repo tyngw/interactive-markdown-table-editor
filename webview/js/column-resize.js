@@ -2,10 +2,17 @@
  * Column Resize Manager Module for Markdown Table Editor
  * 
  * This module handles all column resizing operations, including:
- * - Manual column resizing
- * - Auto-fit functionality
- * - Column width persistence
- * - Visual feedback during resize
+ * - Manual column resizing via mouse drag
+ * - Auto-fit functionality triggered by double-clicking resize handles
+ * - Column width persistence across table updates
+ * - Visual feedback during resize operations
+ * 
+ * Auto-fit Feature:
+ * - Double-click on any column's resize handle to auto-fit that column
+ * - Calculates optimal width based on content in all cells of the column
+ * - Handles multi-line content by measuring the longest line
+ * - Enforces minimum width (80px) and maximum width (400px) constraints
+ * - Provides visual feedback with user-resized styling
  */
 
 const ColumnResizeManager = {
@@ -151,12 +158,53 @@ const ColumnResizeManager = {
                 cellText = cell.textContent || '';
             }
             
-            // Set the text and measure width
-            measureElement.textContent = cellText;
-            const textWidth = measureElement.offsetWidth;
+            // Handle multi-line content by measuring the longest line only
+            let maxLineWidth = 0;
+            
+            // Check for multi-line content: either newlines in textContent or <br> tags in innerHTML
+            const cellHTML = cell.innerHTML || '';
+            const hasNewlines = cellText.includes('\n');
+            const hasBrTags = cellHTML.includes('<br') || cellHTML.includes('<BR');
+            
+            console.log(`ColumnResizeManager: Cell content analysis - textContent: "${cellText}", innerHTML: "${cellHTML}"`);
+            console.log(`ColumnResizeManager: hasNewlines: ${hasNewlines}, hasBrTags: ${hasBrTags}`);
+            
+            if (hasNewlines || hasBrTags) {
+                let lines;
+                
+                if (hasBrTags) {
+                    // For <br> tags, convert to newlines first, then strip any remaining tags
+                    console.log(`ColumnResizeManager: Processing <br> tags in: "${cellHTML}"`);
+                    const htmlWithNewlines = cellHTML.replace(/<br\s*\/?>/gi, '\n');
+                    console.log(`ColumnResizeManager: After <br> to newline conversion: "${htmlWithNewlines}"`);
+                    const textFromHTML = htmlWithNewlines.replace(/<[^>]*>/g, '');
+                    console.log(`ColumnResizeManager: After tag removal: "${textFromHTML}"`);
+                    lines = textFromHTML.split(/\n/g);
+                } else {
+                    // For plain newlines in textContent
+                    lines = cellText.split(/\n/g);
+                }
+                
+                console.log(`ColumnResizeManager: Multi-line content found, ${lines.length} lines:`, lines.map(l => `"${l.trim()}"`));
+                lines.forEach((line, index) => {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine) {
+                        measureElement.textContent = trimmedLine;
+                        const lineWidth = measureElement.offsetWidth;
+                        console.log(`ColumnResizeManager: Line ${index + 1}: "${trimmedLine}" -> ${lineWidth}px`);
+                        maxLineWidth = Math.max(maxLineWidth, lineWidth);
+                    }
+                });
+                console.log(`ColumnResizeManager: Maximum line width: ${maxLineWidth}px (not sum of all lines)`);
+            } else {
+                // Single line content
+                measureElement.textContent = cellText;
+                maxLineWidth = measureElement.offsetWidth;
+                console.log(`ColumnResizeManager: Single line: "${cellText}" -> ${maxLineWidth}px`);
+            }
             
             // Add padding and margin
-            const cellWidth = textWidth + 24; // 12px padding on each side
+            const cellWidth = maxLineWidth + 24; // 12px padding on each side
             maxWidth = Math.max(maxWidth, cellWidth);
         });
         

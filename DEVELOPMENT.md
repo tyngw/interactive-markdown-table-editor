@@ -48,7 +48,11 @@ dev/
 
 - Use browser DevTools for debugging JavaScript
 - Check console for operation logs (with helpful emojis!)
+<<<<<<< HEAD
 - Use "Debug State" button to inspect table state
+=======
+- Use "Debug State" button to inspect table state
+>>>>>>> main
 - Test CSV export directly in browser
 - All keyboard shortcuts work in development mode
 
