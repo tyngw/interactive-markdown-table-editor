@@ -85,8 +85,8 @@
         // Sample table data for development testing
         const SAMPLE_TABLES = {
             simple: {
+                headers: ['Name', 'Age', 'City'],
                 rows: [
-                    ['Name', 'Age', 'City'],
                     ['John Doe', '30', 'New York'],
                     ['Jane Smith', '25', 'Los Angeles'],
                     ['Bob Johnson', '35', 'Chicago']
@@ -98,8 +98,8 @@
                 }
             },
             complex: {
+                headers: ['Feature', 'Status', 'Priority', 'Assignee', 'Due Date'],
                 rows: [
-                    ['Feature', 'Status', 'Priority', 'Assignee', 'Due Date'],
                     ['User Authentication', 'In Progress', 'High', 'Alice', '2024-02-15'],
                     ['Dashboard Design', 'Completed', 'Medium', 'Bob', '2024-02-10'],
                     ['API Integration', 'Pending', 'High', 'Charlie', '2024-02-20'],
@@ -112,8 +112,8 @@
                 }
             },
             empty: {
+                headers: ['Column 1', 'Column 2', 'Column 3'],
                 rows: [
-                    ['Column 1', 'Column 2', 'Column 3'],
                     ['', '', ''],
                     ['', '', '']
                 ],
@@ -139,15 +139,12 @@
                             const sampleData = SAMPLE_TABLES[selectedSample];
                             
                             window.postMessage({
-                                command: 'tableData',
-                                data: {
-                                    tables: [sampleData],
-                                    currentIndex: 0,
-                                    fileInfo: {
-                                        uri: 'dev://sample.md',
-                                        fileName: 'sample.md',
-                                        fileNameWithoutExt: 'sample'
-                                    }
+                                command: 'updateTableData',
+                                data: [sampleData],
+                                fileInfo: {
+                                    uri: 'dev://sample.md',
+                                    fileName: 'sample.md',
+                                    fileNameWithoutExt: 'sample'
                                 }
                             }, '*');
                         }, 100);
@@ -200,8 +197,8 @@
         
         // Listen for messages from the mock VSCode API
         window.addEventListener('message', function(event) {
-            if (event.data && typeof TableEditor !== 'undefined' && TableEditor.handleMessage) {
-                TableEditor.handleMessage(event.data);
+            if (event.data && typeof TableEditor !== 'undefined' && TableEditor.handleVSCodeMessage) {
+                TableEditor.handleVSCodeMessage(event);
             }
         });
         
