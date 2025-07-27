@@ -256,6 +256,23 @@ state.isComposing = false;
 state.imeJustEnded = false;
 ```
 
+
+### 状態フラグのリセットタイミング
+
+IME状態管理用のフラグ（`isComposing`, `imeJustEnded`）は、セル編集の「確定」や「キャンセル」など編集モードを終了するタイミングで必ずリセットしてください。
+
+**例:**
+
+```javascript
+// セル編集の確定・キャンセル時に必ずリセット
+state.isComposing = false;
+state.imeJustEnded = false;
+```
+
+これにより、IME確定直後のEnterキー誤動作や、次回編集時の状態不整合を防止できます。
+
+---
+
 ### パフォーマンス考慮事項
 
 - IMEイベントは頻繁に発生するため、ログ出力は本番環境では削除を検討
