@@ -318,6 +318,7 @@ body {
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: break-word;
+    vertical-align: top;
 }
 
 .table-editor td.data-cell.user-resized,
