@@ -1,19 +1,65 @@
-/* === セル編集: テキスト選択制御 === */
-/* 編集モードでないセルのテキスト選択を禁止 */
-.table-editor td:not(.editing) {
-  user-select: none;
-  -webkit-user-select: none;
-  -ms-user-select: none;
+/* ====== 1. 基本レイアウト ====== */
+html,
+body {
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
 }
 
-/* 編集モードのセルや入力欄は選択可 */
-.table-editor td.editing,
-.table-editor td.editing textarea {
-  user-select: text;
-  -webkit-user-select: text;
-  -ms-user-select: text;
+body {
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-editor-background);
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
-/* ====== Table tabs styles ====== */
+
+#app {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: calc(100vh - 24px);
+    margin-bottom: 24px;
+}
+
+#table-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.table-container {
+    border: 2px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    background-color: var(--vscode-editor-background);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    min-height: 0;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+}
+
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+}
+
+/* ====== 2. テーブルタブ ====== */
 .table-tabs {
     display: flex;
     border-bottom: 1px solid var(--vscode-panel-border);
@@ -45,210 +91,31 @@
     background-color: var(--vscode-editor-lineHighlightBackground);
 }
 
-.no-data {
-    text-align: center;
-    padding: 40px;
-    color: var(--vscode-descriptionForeground);
-    font-style: italic;
-}
-
-/* ====== ここから旧tableEditor.htmlのインナーCSSを完全移植 ====== */
-html,
-body {
-    height: 100vh;
-    overflow: hidden;
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    font-family: var(--vscode-font-family);
-    font-size: var(--vscode-font-size);
-    color: var(--vscode-foreground);
-    background-color: var(--vscode-editor-background);
-    padding: 20px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-}
-
-#app {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    margin-bottom: 30px;
-    /* ステータスバーとの重なりを防ぐ */
-}
-
-#table-content {
-    flex: 1;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.table-container {
-    border: 2px solid var(--vscode-panel-border);
-    border-radius: 6px;
-    background-color: var(--vscode-editor-background);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    flex: 1;
-    position: relative;
-    overflow: auto;
-    min-height: 0;
-}
-
+/* ====== 3. テーブル基本構造 ====== */
 .table-editor {
     border-collapse: separate;
     border-spacing: 0;
-    width: auto; /* ウィンドウサイズに影響されないように auto に変更 */
+    width: auto;
     min-width: 600px;
     font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
     font-size: var(--vscode-editor-font-size, 14px);
     table-layout: fixed;
-    /* 列幅を固定し、ウィンドウサイズに影響されないように */
     display: table;
 }
 
-/* テーブルヘッダー - 完全に不透過で固定 */
 .table-editor thead {
     background-color: var(--vscode-editor-background);
 }
 
-/* Column headers - 完全に不透過 */
-.table-editor th {
-    background-color: var(--vscode-editor-lineHighlightBackground);
-    border: 1px solid var(--vscode-panel-border);
-    border-top: 2px solid var(--vscode-focusBorder);
-    padding: 10px 12px;
-    text-align: left;
-    position: sticky !important;
-    top: 0 !important;
-    /* デフォルトの列幅 - ユーザーがリサイズしていない場合 */
-    width: 150px;
-    min-width: 150px;
-    font-weight: 600;
-    cursor: pointer;
-    user-select: none;
-    color: var(--vscode-foreground);
-    transition: background-color 0.15s ease;
-    box-sizing: border-box;
-    z-index: 100;
-    opacity: 1 !important;
-    /* 完全に不透過な背景を強制保証 */
-    background-clip: padding-box;
-    /* 長いヘッダーテキストでも幅を維持 */
-    overflow: hidden;
-}
-
-/* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
-.table-editor th.user-resized {
-    min-width: 10px;
-}
-
-.table-editor th:hover {
-    background-color: var(--vscode-list-hoverBackground);
-    /* ホバー時も完全に不透過 */
-    opacity: 1 !important;
-}
-
-.table-editor th:first-child {
-    border-left: 2px solid var(--vscode-focusBorder);
-}
-
-.table-editor th:last-child {
-    border-right: 2px solid var(--vscode-focusBorder);
-}
-
-/* Row numbers - 完全に不透過で固定 */
-.table-editor td.row-number {
-    background-color: var(--vscode-editor-lineHighlightBackground);
-    border: 1px solid var(--vscode-panel-border);
-    border-left: 2px solid var(--vscode-focusBorder);
-    font-weight: 700; /* 太字を強化 */
-    text-align: left; /* 左寄せに変更 */
-    vertical-align: middle;
-    padding: 0 8px; /* 左右8pxのパディング */
-    width: 60px;
-    min-width: 60px;
-    max-width: 60px;
-    user-select: none;
-    color: var(--vscode-descriptionForeground);
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-    position: sticky !important;
-    left: 0 !important;
-    z-index: 90;
-    box-sizing: border-box;
-    opacity: 1 !important;
-    /* 完全に不透過な背景を強制保証 */
-    background-clip: padding-box;
-    /* スクロール時の固定表示を強化 */
-    background-color: var(--vscode-editor-lineHighlightBackground) !important;
-}
-
-.table-editor td.row-number:hover {
-    background-color: var(--vscode-list-hoverBackground) !important;
-    color: var(--vscode-foreground);
-    /* ホバー時も完全に不透過でスクロール時固定表示を保持 */
-    opacity: 1 !important;
-}
-
-/* Data cells */
-.table-editor td.data-cell,
-.table-editor td.editable-cell {
-    background-color: var(--vscode-editor-background);
-    border: 1px solid var(--vscode-panel-border);
-    padding: 0 !important;
-    /* パディングを完全に削除 */
-    text-align: left;
-    position: relative;
-    /* デフォルトの列幅 - ユーザーがリサイズしていない場合 */
-    width: 150px;
-    min-width: 150px;
-    cursor: cell;
-    transition: background-color 0.15s ease;
-    /* 枠線をセル内側に描画してサイズ変更を防ぐ */
-    box-sizing: border-box;
-    /* 高さを内容に応じて自動調整 */
-    height: auto;
-    /* 長いコンテンツでも幅を維持 */
-    overflow: hidden;
-    /* セル内のテキスト設定 - line-heightは.cell-contentで管理 */
-    white-space: normal;
-    /* pre-wrapを削除してnormalに */
-    word-wrap: break-word;
-    word-break: break-word;
-    overflow-wrap: break-word;
-}
-
-/* ユーザーがリサイズした後は、より小さな最小幅を許可するクラス */
-.table-editor td.data-cell.user-resized,
-.table-editor td.editable-cell.user-resized {
-    min-width: 10px;
-}
-
-.table-editor td.data-cell:hover,
-.table-editor td.editable-cell:hover {
+.table-editor tbody tr:hover {
     background-color: var(--vscode-list-hoverBackground);
 }
 
-.table-editor td.data-cell.editing,
-.table-editor td.editable-cell.editing {
-    padding: 0 !important;
-    /* パディングを完全に削除 */
-    background-color: var(--vscode-input-background);
-    /* outlineを使用してセルの内部サイズを変更しない */
-    outline: 2px solid var(--vscode-inputOption-activeBorder);
-    outline-offset: -1px;
-    /* セルサイズを維持 */
-    box-sizing: border-box;
-    /* 高さを内容に応じて調整 */
-    height: auto !important;
-    position: relative;
-    vertical-align: top !important;
-    text-align: left !important;
+.table-editor tbody tr:hover td.row-number {
+    background: linear-gradient(90deg,
+            var(--vscode-list-hoverBackground) 0%,
+            var(--vscode-list-activeSelectionBackground) 100%) !important;
+    opacity: 1 !important;
 }
 
 /* Grid lines enhancement */
@@ -262,107 +129,46 @@ body {
     background-color: var(--vscode-list-hoverBackground);
 }
 
-/* Cell input - textarea統一 */
-textarea.cell-input {
-    border: none;
-    background-color: var(--vscode-input-background);
-    color: var(--vscode-foreground);
-    padding: 4px 6px !important;
-    /* .cell-contentと同じパディング */
-    font-family: inherit;
-    font-size: inherit;
-    outline: none;
-    resize: none;
-    /* リサイズ機能を無効化 */
-    box-sizing: border-box;
-    margin: 0;
-    /* 自動改行を有効にする */
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    overflow: hidden;
-    /* スクロールバーを非表示 */
-    line-height: 1.2 !important;
-    /* .cell-contentと同じ行間 */
-    /* テキストを上揃えにする */
-    vertical-align: top !important;
-    text-align: left !important;
-    /* 高さはJavaScriptで動的に設定される */
-}
-
-.cell-input:focus {
-    background-color: var(--vscode-input-background);
-    box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
-}
-
-/* 重複削除 - 上のセル定義を使用 */
-
-.table-editor td.data-cell.editing textarea.cell-input,
-.table-editor td.editable-cell.editing textarea.cell-input {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    /* 高さはJavaScriptで動的に設定される */
-    z-index: 5;
-    box-sizing: border-box;
-    padding: 4px 6px !important;
-    /* .cell-contentと同じパディング */
-    line-height: 1.2 !important;
-    /* .cell-contentと同じ行間 */
-    /* 自動改行を有効にする */
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    overflow-wrap: break-word !important;
-    /* テキストを上揃えにする */
-    vertical-align: top !important;
-    text-align: left !important;
-    /* 高さを内容に応じて自動調整、リサイズ無効 */
-    resize: none;
-    overflow: hidden;
-    /* スクロールバーを非表示 */
-}
-
-/* Textarea specific styling */
-textarea.cell-input[data-multiline="true"] {
-    overflow-y: auto;
-    max-height: 200px;
-    resize: none;
-    /* リサイズ機能を無効化 */
-}
-
-/* Column resize handle */
-.resize-handle {
-    position: absolute;
-    top: 0;
-    right: -2px;
-    width: 6px;
-    height: 100%;
-    cursor: col-resize;
-    background-color: transparent;
-    z-index: 10;
-    border-radius: 2px;
-    /* ダブルクリック操作を改善 */
+/* ====== 4. テーブルヘッダー関連 ====== */
+.table-editor th {
+    background-color: var(--vscode-editor-lineHighlightBackground);
+    border: 1px solid var(--vscode-panel-border);
+    border-top: 2px solid var(--vscode-focusBorder);
+    padding: 10px 12px;
+    text-align: left;
+    position: sticky !important;
+    top: 0 !important;
+    width: 150px;
+    min-width: 150px;
+    font-weight: 600;
+    cursor: pointer;
     user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
+    color: var(--vscode-foreground);
+    transition: background-color 0.15s ease;
+    box-sizing: border-box;
+    z-index: 100;
+    opacity: 1 !important;
+    background-clip: padding-box;
+    overflow: hidden;
 }
 
-.resize-handle:hover {
-    background-color: var(--vscode-focusBorder);
-    opacity: 0.7;
+.table-editor th.user-resized {
+    min-width: 10px;
 }
 
-/* リサイズ中の視覚的フィードバック */
-.resize-handle:active {
-    background-color: var(--vscode-focusBorder);
-    opacity: 0.9;
+.table-editor th:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    opacity: 1 !important;
 }
 
-/* Header editing styles */
+.table-editor th:first-child {
+    border-left: 2px solid var(--vscode-focusBorder);
+}
+
+.table-editor th:last-child {
+    border-right: 2px solid var(--vscode-focusBorder);
+}
+
 .table-editor th.editing {
     background-color: var(--vscode-input-background) !important;
     outline: 2px solid var(--vscode-inputOption-activeBorder);
@@ -389,9 +195,20 @@ textarea.cell-input[data-multiline="true"] {
     box-shadow: none !important;
 }
 
-/* Column header layout improvements */
-
-
+.column-title {
+    cursor: text;
+    flex: 1;
+    min-width: 0;
+    word-wrap: break-word;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    display: inline-block;
+}
 
 .column-title:hover {
     background-color: var(--vscode-list-hoverBackground);
@@ -400,67 +217,278 @@ textarea.cell-input[data-multiline="true"] {
     margin: -1px -2px;
 }
 
-/* Move sort indicator further to the right */
-.sort-indicator {
-    position: absolute;
-    right: 6px; /* Move closer to the edge */
-    top: 50%;
-    transform: translateY(-50%);
-    margin-left: 0; /* Remove left margin */
-    font-size: 12px;
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: 2px;
-    transition: background-color 0.15s ease;
-    user-select: none;
-    display: inline-block;
+.header-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
-.sort-indicator:hover {
+/* Header corner cell */
+.header-corner {
+    background: linear-gradient(135deg,
+            var(--vscode-editor-lineHighlightBackground) 0%,
+            var(--vscode-list-hoverBackground) 100%) !important;
+    border: 2px solid var(--vscode-focusBorder);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    border-right: 1px solid var(--vscode-panel-border);
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 200 !important;
+    cursor: pointer;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 16px;
+    color: var(--vscode-descriptionForeground);
+    padding: 4px;
+    background-clip: padding-box;
+    opacity: 1 !important;
+}
+
+.header-corner:hover {
+    background: linear-gradient(135deg,
+            var(--vscode-list-hoverBackground) 0%,
+            var(--vscode-list-activeSelectionBackground) 100%) !important;
+    color: var(--vscode-foreground);
+    background-clip: padding-box;
+    opacity: 1 !important;
+}
+
+/* ====== 5. 行番号セル ====== */
+.table-editor td.row-number {
+    background-color: var(--vscode-editor-lineHighlightBackground);
+    border: 1px solid var(--vscode-panel-border);
+    border-left: 2px solid var(--vscode-focusBorder);
+    font-weight: 700;
+    text-align: left;
+    vertical-align: middle;
+    padding: 0 8px;
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
+    user-select: none;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 90;
+    box-sizing: border-box;
+    opacity: 1 !important;
+    background-clip: padding-box;
+    background-color: var(--vscode-editor-lineHighlightBackground) !important;
+}
+
+.table-editor td.row-number:hover {
+    background-color: var(--vscode-list-hoverBackground) !important;
+    color: var(--vscode-foreground);
+    opacity: 1 !important;
+}
+
+.table-editor td.row-number.selected,
+.column-header.selected {
+    background: var(--vscode-list-activeSelectionBackground) !important;
+    color: var(--vscode-list-activeSelectionForeground);
+    box-sizing: border-box !important;
+}
+
+/* ====== 6. データセル ====== */
+.table-editor td.data-cell,
+.table-editor td.editable-cell {
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    padding: 0 !important;
+    text-align: left;
+    position: relative;
+    width: 150px;
+    min-width: 150px;
+    cursor: cell;
+    transition: background-color 0.15s ease;
+    box-sizing: border-box;
+    height: auto;
+    overflow: hidden;
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.table-editor td.data-cell.user-resized,
+.table-editor td.editable-cell.user-resized {
+    min-width: 10px;
+}
+
+.table-editor td.data-cell:hover,
+.table-editor td.editable-cell:hover {
     background-color: var(--vscode-list-hoverBackground);
 }
 
-/* Selection indicators - 統一されたスタイル */
+.data-cell {
+    position: relative;
+    box-sizing: border-box;
+}
+
+.cell-content {
+    word-wrap: break-word;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    overflow: hidden;
+    line-height: 1.2 !important;
+    display: block;
+    max-width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    height: auto;
+    min-height: 1.2em;
+    margin: 0 !important;
+    padding: 4px 6px !important;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.empty-cell {
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+}
+
+.empty-cell .cell-content:empty::before {
+    content: "Empty";
+    opacity: 0.5;
+}
+
+.empty-cell-placeholder {
+    display: inline-block;
+    height: 1.2em;
+    line-height: 1.2;
+    width: 1px;
+    opacity: 0;
+}
+
+/* ====== 7. セル編集関連 ====== */
+/* テキスト選択制御 */
+.table-editor td:not(.editing) {
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+.table-editor td.editing,
+.table-editor td.editing textarea {
+    user-select: text;
+    -webkit-user-select: text;
+    -ms-user-select: text;
+}
+
+.table-editor td.data-cell.editing,
+.table-editor td.editable-cell.editing {
+    padding: 0 !important;
+    background-color: var(--vscode-input-background);
+    outline: 2px solid var(--vscode-inputOption-activeBorder);
+    outline-offset: -1px;
+    box-sizing: border-box;
+    height: auto !important;
+    position: relative;
+    vertical-align: top !important;
+    text-align: left !important;
+}
+
+textarea.cell-input {
+    border: none;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-foreground);
+    padding: 4px 6px !important;
+    font-family: inherit;
+    font-size: inherit;
+    outline: none;
+    resize: none;
+    box-sizing: border-box;
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    overflow: hidden;
+    line-height: 1.2 !important;
+    vertical-align: top !important;
+    text-align: left !important;
+}
+
+.cell-input:focus {
+    background-color: var(--vscode-input-background);
+    box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
+}
+
+.table-editor td.data-cell.editing textarea.cell-input,
+.table-editor td.editable-cell.editing textarea.cell-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 5;
+    box-sizing: border-box;
+    padding: 4px 6px !important;
+    line-height: 1.2 !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    vertical-align: top !important;
+    text-align: left !important;
+    resize: none;
+    overflow: hidden;
+}
+
+textarea.cell-input[data-multiline="true"] {
+    overflow-y: auto;
+    max-height: 200px;
+    resize: none;
+}
+
+.cell-editing-focus {
+    box-shadow: 0 0 0 2px var(--vscode-focusBorder) !important;
+    z-index: 10;
+}
+
+/* ====== 8. 選択・ハイライト関連 ====== */
 .table-editor td.data-cell.selected {
     background-color: var(--vscode-list-activeSelectionBackground) !important;
     color: var(--vscode-list-activeSelectionForeground) !important;
-    /* outlineを使用してセルの内部サイズを変更しない */
     outline: 2px solid var(--vscode-focusBorder) !important;
     outline-offset: -1px !important;
     box-sizing: border-box !important;
-    /* 高さを内容に応じて自動調整 */
     height: auto !important;
 }
 
-/* editable-cellクラスにも対応 */
 .table-editor td.editable-cell.selected {
     background-color: var(--vscode-list-activeSelectionBackground) !important;
     color: var(--vscode-list-activeSelectionForeground) !important;
-    /* outlineを使用してセルの内部サイズを変更しない */
     outline: 2px solid var(--vscode-focusBorder) !important;
     outline-offset: -1px !important;
     box-sizing: border-box !important;
-    /* 高さを内容に応じて自動調整 */
     height: auto !important;
 }
 
 .table-editor td.data-cell.cell-multi-selected {
     background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    /* outlineを使用（薄い選択表示） */
     outline: 1px solid var(--vscode-list-activeSelectionForeground) !important;
     outline-offset: -1px !important;
     box-sizing: border-box !important;
-    /* 高さを内容に応じて自動調整 */
     height: auto !important;
 }
 
 .table-editor td.editable-cell.cell-multi-selected {
     background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    /* outlineを使用（薄い選択表示） */
     outline: 1px solid var(--vscode-list-activeSelectionForeground) !important;
     outline-offset: -1px !important;
     box-sizing: border-box !important;
-    /* 高さを内容に応じて自動調整 */
     height: auto !important;
 }
 
@@ -480,197 +508,72 @@ textarea.cell-input[data-multiline="true"] {
     background-color: var(--vscode-list-activeSelectionBackground) !important;
 }
 
-/* Header corner cell */
-.header-corner {
-    background: linear-gradient(135deg,
-            var(--vscode-editor-lineHighlightBackground) 0%,
-            var(--vscode-list-hoverBackground) 100%) !important;
-    border: 2px solid var(--vscode-focusBorder);
-    border-bottom: 1px solid var(--vscode-panel-border);
-    border-right: 1px solid var(--vscode-panel-border);
-    width: 60px;
-    /* 行番号列に合わせて60pxに変更 */
-    min-width: 60px;
-    max-width: 60px;
-    position: sticky;
-    left: 0;
+.column-highlight {
+    background-color: var(--vscode-list-hoverBackground) !important;
+}
+
+.row-highlight {
+    background-color: var(--vscode-list-hoverBackground) !important;
+}
+
+/* ====== 9. リサイズ機能 ====== */
+.resize-handle {
+    position: absolute;
     top: 0;
-    z-index: 200 !important;
-    /* th(100)より高くする */
+    right: -2px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: transparent;
+    z-index: 10;
+    border-radius: 2px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.resize-handle:hover {
+    background-color: var(--vscode-focusBorder);
+    opacity: 0.7;
+}
+
+.resize-handle:active {
+    background-color: var(--vscode-focusBorder);
+    opacity: 0.9;
+}
+
+.user-resized {
+    border-right: 2px solid var(--vscode-focusBorder) !important;
+}
+
+/* ====== 10. ソート機能 ====== */
+.sort-indicator {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0;
+    font-size: 12px;
     cursor: pointer;
-    text-align: center;
-    vertical-align: middle;
-    /* 縦中央揃えを追加 */
-    font-size: 16px;
-    color: var(--vscode-descriptionForeground);
-    padding: 4px;
-    /* パディングを追加 */
-    /* スティッキー要素を確実に表示 */
-    background-clip: padding-box;
-    opacity: 1 !important;
-    /* 完全に不透過な表示を強制保証 */
-}
-
-.header-corner:hover {
-    background: linear-gradient(135deg,
-            var(--vscode-list-hoverBackground) 0%,
-            var(--vscode-list-activeSelectionBackground) 100%) !important;
-    color: var(--vscode-foreground);
-    /* ホバー時もスティッキー要素を確実に表示 */
-    background-clip: padding-box;
-    opacity: 1 !important;
-    /* ホバー時も完全に不透過な表示を強制保証 */
-}
-
-/* Enhanced column headers */
-
-
-.column-title {
-    cursor: text;
-    flex: 1;
-    min-width: 0;
-    word-wrap: break-word;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--vscode-foreground);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    padding: 2px 4px;
+    border-radius: 2px;
+    transition: background-color 0.15s ease;
+    user-select: none;
     display: inline-block;
 }
 
-.header-text {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--vscode-foreground);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-}
-
-/* Enhanced data cells */
-.data-cell {
-    position: relative;
-    box-sizing: border-box;
-}
-
-.cell-content {
-    /* 長いURLなどでも幅を維持するための強制折り返し設定 */
-    word-wrap: break-word;
-    word-break: break-all;
-    overflow-wrap: break-word;
-    white-space: pre-wrap;
-    overflow: hidden;
-    /* 高さの安定化 */
-    line-height: 1.2 !important;
-    /* セルと同じ行間 */
-    display: block;
-    /* セル幅を絶対に超えないように制限 */
-    max-width: 100%;
-    box-sizing: border-box;
-    /* テキストを上揃えで統一 */
-    text-align: left;
-    /* 高さを内容に応じて自動調整 */
-    height: auto;
-    min-height: 1.2em;
-    /* 1行分の最小高さ */
-    margin: 0 !important;
-    /* マージンを削除 */
-    padding: 4px 6px !important;
-    /* 編集時と同じパディングを追加 */
-    /* 垂直配置を上揃えに統一 */
-    /* セル全体を埋める */
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.empty-cell {
-    color: var(--vscode-descriptionForeground);
-    font-style: italic;
-}
-
-.empty-cell .cell-content:empty::before {
-    content: "Empty";
-    opacity: 0.5;
-}
-
-.empty-cell-placeholder {
-    display: inline-block;
-    height: 1.2em;
-    /* 1行分の高さを確保 */
-    line-height: 1.2;
-    width: 1px;
-    /* 最小幅 */
-    opacity: 0;
-    /* 非表示だが高さは確保 */
-}
-
-/* Selection enhancements */
-
-.table-editor td.row-number.selected,
-.column-header.selected {
-    background: var(--vscode-list-activeSelectionBackground) !important;
-    color: var(--vscode-list-activeSelectionForeground);
-    /* セルサイズを維持 */
-    box-sizing: border-box !important;
-}
-
-/* Grid enhancements */
-.table-editor tbody tr:hover {
+.sort-indicator:hover {
     background-color: var(--vscode-list-hoverBackground);
 }
 
-.table-editor tbody tr:hover td.row-number {
-    background: linear-gradient(90deg,
-            var(--vscode-list-hoverBackground) 0%,
-            var(--vscode-list-activeSelectionBackground) 100%) !important;
-    opacity: 1 !important;
-    /* スティッキー要素のホバー時も完全に不透過な表示を保証 */
+.sort-indicator.view-only {
+    color: var(--vscode-statusBarItem-warningForeground);
 }
 
-/* Removed conflicting position rule that was overriding sticky positioning for th elements */
-
-/* 重複定義を削除 - 上の定義を使用 */
-
-/* Toolbar enhancements */
-.toolbar {
-    margin-bottom: 16px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    padding: 8px;
-    background-color: var(--vscode-editor-lineHighlightBackground);
-    border-radius: 4px;
-    border: 1px solid var(--vscode-panel-border);
+.sort-indicator.committed {
+    color: var(--vscode-statusBarItem-prominentForeground);
 }
-
-.toolbar-group {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
-
-.toolbar-separator {
-    width: 1px;
-    height: 20px;
-    background-color: var(--vscode-panel-border);
-    margin: 0 8px;
-}
-
-/* Status bar enhancements */
-.status-info {
-    display: flex;
-    gap: 16px;
-}
-
-.status-selection {
-    color: var(--vscode-statusBar-prominentForeground);
-    font-weight: 500;
-}
-
-
 
 .sort-asc::after {
     content: "▲";
@@ -680,28 +583,6 @@ textarea.cell-input[data-multiline="true"] {
     content: "▼";
 }
 
-/* 重複定義を削除 - 上の定義を使用 */
-
-.btn {
-    background-color: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    border: none;
-    padding: 6px 12px;
-    border-radius: 2px;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-.btn:hover {
-    background-color: var(--vscode-button-hoverBackground);
-}
-
-.btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Sort Action Controls */
 .sort-actions {
     position: fixed;
     top: 20px;
@@ -750,16 +631,48 @@ textarea.cell-input[data-multiline="true"] {
     margin-right: 8px;
 }
 
-/* Enhanced Sort Indicators */
-.sort-indicator.view-only {
-    color: var(--vscode-statusBarItem-warningForeground);
+/* ====== 11. ドラッグ&ドロップ ====== */
+.dragging {
+    opacity: 0.6;
+    z-index: 1000;
+    transform: rotate(2deg);
 }
 
-.sort-indicator.committed {
-    color: var(--vscode-statusBarItem-prominentForeground);
+.drag-over {
+    background-color: var(--vscode-list-dropBackground) !important;
 }
 
-/* ====== Context Menu Styles ====== */
+.drop-zone {
+    background-color: var(--vscode-list-focusBackground) !important;
+    border: 2px dashed var(--vscode-focusBorder) !important;
+}
+
+.drag-selecting {
+    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
+}
+
+.drop-indicator {
+    position: absolute;
+    width: 3px;
+    background-color: var(--vscode-focusBorder);
+    z-index: 2000;
+    pointer-events: none;
+    box-shadow: 0 0 4px var(--vscode-focusBorder);
+    opacity: 0.8;
+}
+
+.drop-indicator.column {
+    top: 0;
+    bottom: 0;
+}
+
+.drop-indicator.row {
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+
+/* ====== 12. コンテキストメニュー ====== */
 .context-menu {
     position: absolute;
     background-color: var(--vscode-menu-background);
@@ -819,157 +732,51 @@ textarea.cell-input[data-multiline="true"] {
     margin: 4px 0;
 }
 
-/* ====== Drag and Drop Styles ====== */
-.dragging {
-    opacity: 0.6;
-    z-index: 1000;
-    transform: rotate(2deg);
-}
-
-.drag-over {
-    background-color: var(--vscode-list-dropBackground) !important;
-}
-
-.drop-zone {
-    background-color: var(--vscode-list-focusBackground) !important;
-    border: 2px dashed var(--vscode-focusBorder) !important;
-}
-
-.drag-selecting {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-}
-
-/* Drag-and-drop insertion indicator */
-.drop-indicator {
-    position: absolute;
-    width: 3px;
-    background-color: var(--vscode-focusBorder);
-    z-index: 2000;
-    pointer-events: none;
-    box-shadow: 0 0 4px var(--vscode-focusBorder);
-    opacity: 0.8;
-}
-
-.drop-indicator.column {
-    top: 0;
-    bottom: 0;
-}
-
-.drop-indicator.row {
-    left: 0;
-    right: 0;
-    height: 3px;
-}
-
-/* Column resize visual feedback */
-.user-resized {
-    border-right: 2px solid var(--vscode-focusBorder) !important;
-}
-
-/* ====== Status Bar Styles ====== */
-.status-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 24px;
-    background-color: var(--vscode-statusBar-background);
-    color: var(--vscode-statusBar-foreground);
-    border-top: 1px solid var(--vscode-statusBar-border);
+/* ====== 13. ツールバー ====== */
+.toolbar {
+    margin-bottom: 16px;
     display: flex;
+    gap: 8px;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 12px;
-    font-size: 12px;
-    z-index: 999;
+    padding: 8px;
+    background-color: var(--vscode-editor-lineHighlightBackground);
+    border-radius: 4px;
+    border: 1px solid var(--vscode-panel-border);
 }
 
-.status-left,
-.status-center,
-.status-right {
+.toolbar-group {
     display: flex;
+    gap: 4px;
     align-items: center;
-    gap: 12px;
 }
 
-.status-item {
-    color: var(--vscode-statusBar-foreground);
-    white-space: nowrap;
+.toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background-color: var(--vscode-panel-border);
+    margin: 0 8px;
 }
 
-.status-message {
-    color: var(--vscode-statusBar-foreground);
-    font-weight: normal;
+.btn {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 13px;
 }
 
-.status-message.success {
-    color: var(--vscode-statusBarItem-prominentForeground);
+.btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
 }
 
-.status-message.error {
-    color: var(--vscode-statusBarItem-errorForeground);
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.status-message.warning {
-    color: var(--vscode-statusBarItem-warningForeground);
-}
-
-.status-message.info {
-    color: var(--vscode-statusBarItem-prominentForeground);
-}
-
-/* ====== Enhanced Visual States ====== */
-.cell-editing-focus {
-    box-shadow: 0 0 0 2px var(--vscode-focusBorder) !important;
-    z-index: 10;
-}
-
-.column-highlight {
-    background-color: var(--vscode-list-hoverBackground) !important;
-}
-
-.row-highlight {
-    background-color: var(--vscode-list-hoverBackground) !important;
-}
-
-/* ====== Loading and App States ====== */
-.loading {
-    text-align: center;
-    padding: 20px;
-    color: var(--vscode-descriptionForeground);
-    font-style: italic;
-}
-
-#app {
-    min-height: calc(100vh - 24px);
-    /* Account for status bar */
-    margin-bottom: 24px;
-    /* Space for status bar */
-}
-
-/* ====== Responsive Adjustments ====== */
-@media (max-width: 768px) {
-    .status-bar {
-        font-size: 11px;
-        padding: 0 8px;
-    }
-
-    .status-left,
-    .status-right {
-        gap: 8px;
-    }
-
-    .context-menu {
-        min-width: 150px;
-    }
-
-    .context-menu-item {
-        padding: 6px 10px;
-        font-size: 12px;
-    }
-}
-
-/* ====== Export Actions Styles ====== */
+/* ====== 14. エクスポート機能 ====== */
 .export-actions {
     display: flex;
     justify-content: flex-end;
@@ -977,7 +784,6 @@ textarea.cell-input[data-multiline="true"] {
     gap: 10px;
     padding: 10px 20px;
     margin-bottom: 30px;
-    /* ステータスバーとの重なりを防ぐ */
     background-color: var(--vscode-editor-background);
     border-top: 1px solid var(--vscode-panel-border);
 }
@@ -1031,7 +837,68 @@ textarea.cell-input[data-multiline="true"] {
     box-shadow: 0 0 0 1px var(--vscode-focusBorder);
 }
 
-/* ====== Save Indicator Styles ====== */
+/* ====== 15. ステータスバー ====== */
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background-color: var(--vscode-statusBar-background);
+    color: var(--vscode-statusBar-foreground);
+    border-top: 1px solid var(--vscode-statusBar-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 12px;
+    z-index: 999;
+}
+
+.status-left,
+.status-center,
+.status-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-item {
+    color: var(--vscode-statusBar-foreground);
+    white-space: nowrap;
+}
+
+.status-info {
+    display: flex;
+    gap: 16px;
+}
+
+.status-selection {
+    color: var(--vscode-statusBar-prominentForeground);
+    font-weight: 500;
+}
+
+.status-message {
+    color: var(--vscode-statusBar-foreground);
+    font-weight: normal;
+}
+
+.status-message.success {
+    color: var(--vscode-statusBarItem-prominentForeground);
+}
+
+.status-message.error {
+    color: var(--vscode-statusBarItem-errorForeground);
+}
+
+.status-message.warning {
+    color: var(--vscode-statusBarItem-warningForeground);
+}
+
+.status-message.info {
+    color: var(--vscode-statusBarItem-prominentForeground);
+}
+
 .save-indicator {
     font-size: 12px;
     padding: 4px 8px;
@@ -1058,4 +925,26 @@ textarea.cell-input[data-multiline="true"] {
 .save-indicator.failed {
     color: var(--vscode-charts-red);
     background-color: rgba(var(--vscode-charts-red), 0.1);
+}
+
+/* ====== 16. レスポンシブ対応 ====== */
+@media (max-width: 768px) {
+    .status-bar {
+        font-size: 11px;
+        padding: 0 8px;
+    }
+
+    .status-left,
+    .status-right {
+        gap: 8px;
+    }
+
+    .context-menu {
+        min-width: 150px;
+    }
+
+    .context-menu-item {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
 }
