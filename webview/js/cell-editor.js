@@ -13,6 +13,49 @@ const CellEditor = {
     isInitialized: false,
 
     /**
+     * 共通: 編集用textarea生成（<br>→\n変換含む）
+     */
+    createEditingTextarea: function (content, className) {
+        // <br>→\n変換
+        const editableContent = window.TableEditor.callModule('TableRenderer', 'processCellContentForEditing', content || '');
+        const textarea = document.createElement('textarea');
+        textarea.className = className;
+        textarea.value = editableContent;
+        if (editableContent.includes('\n')) {
+            textarea.setAttribute('data-multiline', 'true');
+        }
+        return textarea;
+    },
+
+    /**
+     * Commit current edit (cell or header, unified)
+     */
+    commitEdit: function () {
+        const state = window.TableEditor.state;
+        if (!state.currentEditingCell) return;
+        if (state.currentEditingCell.row === -1) {
+            this.commitHeaderEdit();
+        } else {
+            this.commitCellEdit();
+        }
+    },
+
+    /**
+     * Cancel current edit (cell or header, unified)
+     */
+    cancelEdit: function () {
+        const state = window.TableEditor.state;
+        if (!state.currentEditingCell) return;
+        if (state.currentEditingCell.row === -1) {
+            this.cancelHeaderEdit();
+        } else {
+            this.cancelCellEdit();
+        }
+    },
+    // Initialization state
+    isInitialized: false,
+
+    /**
      * Initialize the cell editor module
      */
     init: function () {
@@ -76,21 +119,8 @@ const CellEditor = {
 
         // Get current cell content
         const currentValue = data.rows[row][col] || '';
-        const editableContent = window.TableEditor.callModule('TableRenderer', 'processCellContentForEditing', currentValue);
-
-        // Determine input type based on content
-        const inputType = this.determineInputType(editableContent);
-
-        // Create input element (always textarea for consistency)
-        const input = document.createElement('textarea');
-        input.className = 'cell-input';
-        input.value = editableContent;
-
-        // Check if content has line breaks for multiline attribute
-        const hasLineBreaks = editableContent.includes('\n');
-        if (hasLineBreaks) {
-            input.setAttribute('data-multiline', 'true');
-        }
+        // 共通関数でtextarea生成
+        const input = this.createEditingTextarea(currentValue, 'cell-input');
 
         // 編集開始前のセルの高さを取得（他のセルの高さも取得）
         const rowElement = cell.closest('tr');
@@ -353,72 +383,43 @@ const CellEditor = {
 
         // Handle keyboard events for editing
         input.addEventListener('keydown', (event) => {
+            // Shift+Enter for line break in textarea (README spec: 改行（編集継続）)
+            if (event.key === 'Enter' && event.shiftKey && input.tagName === 'TEXTAREA') {
+                return; // allow newline
+            }
             // Enter key behavior (README spec)
             if (event.key === 'Enter' && !event.shiftKey) {
-                // IME入力中、または直後の場合は処理をスキップ（日本語入力の確定を区別）
                 if (state.isComposing || state.imeJustEnded) {
                     console.log('CellEditor: Enter pressed during/after IME composition, ignoring');
                     return;
                 }
-
                 event.preventDefault();
-                event.stopPropagation(); // Prevent keyboard navigation handler from triggering
-
-                // Get current editing position from state
+                event.stopPropagation();
+                // 編集確定
+                this.commitEdit();
+                // セルの場合のみ次行へ移動
                 const currentEditingCell = state.currentEditingCell;
-
-                if (!currentEditingCell) {
-                    console.warn('CellEditor: Enter pressed but no current editing cell in state');
-                    return;
+                if (currentEditingCell && currentEditingCell.row !== -1) {
+                    window.TableEditor.callModule('KeyboardNavigationManager', 'navigateCell', currentEditingCell.row + 1, currentEditingCell.col);
                 }
-
-                const editingRow = currentEditingCell.row;
-                const editingCol = currentEditingCell.col;
-
-                this.commitCellEdit();
-                // Navigate to next row in same column (README spec: 編集確定＆同列の次行へ)
-                // Just select the next cell, don't start editing automatically
-                window.TableEditor.callModule('KeyboardNavigationManager', 'navigateCell', editingRow + 1, editingCol);
-            }
-            // Shift+Enter for line break in textarea (README spec: 改行（編集継続）)
-            else if (event.key === 'Enter' && event.shiftKey && input.tagName === 'TEXTAREA') {
-                // Allow default behavior for line break
-                return;
-            }
-            // Ctrl+Enter or Cmd+Enter commits and ends editing (README spec: 編集確定＆編集終了)
-            else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                // IME入力中でもCtrl+Enter/Cmd+Enterは強制的に確定
+            } else if (event.key === 'Tab') {
                 event.preventDefault();
-                event.stopPropagation(); // Prevent keyboard navigation handler from triggering
-                this.commitCellEdit();
-                // Don't navigate to next cell - just end editing
-            }
-            // Tab commits and moves to next cell (README spec: 編集確定＆次のセルへ)
-            else if (event.key === 'Tab') {
-                event.preventDefault();
-                event.stopPropagation(); // Prevent keyboard navigation handler from triggering
-
-                // Get current editing position from state instead of closure variables
+                event.stopPropagation();
+                this.commitEdit();
+                // セル・ヘッダー共通: 次/前のセル・ヘッダーへ
                 const currentEditingCell = state.currentEditingCell;
-
-                if (!currentEditingCell) {
-                    console.warn('CellEditor: Tab pressed but no current editing cell in state');
-                    return;
+                if (currentEditingCell) {
+                    window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', currentEditingCell.row, currentEditingCell.col, !event.shiftKey);
                 }
-
-                const editingRow = currentEditingCell.row;
-                const editingCol = currentEditingCell.col;
-
-                this.commitCellEdit();
-                // Navigate to next/previous cell using the correct current position
-                window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', editingRow, editingCol, !event.shiftKey);
-            }
-            // Escape commits and ends editing (README spec: 編集確定＆編集終了)
-            else if (event.key === 'Escape') {
+            } else if (event.key === 'Escape') {
                 event.preventDefault();
-                event.stopPropagation(); // Prevent keyboard navigation handler from triggering
-                this.commitCellEdit();
-                // Don't navigate to next cell - just end editing
+                event.stopPropagation();
+                this.cancelEdit();
+            } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                event.stopPropagation();
+                this.commitEdit();
+                // 編集終了のみ
             }
         });
 
@@ -604,12 +605,8 @@ const CellEditor = {
 
         // Get current header content
         const currentValue = data.headers[colIndex] || '';
-
-        // Create input element
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'header-input';
-        input.value = currentValue;
+        // 共通関数でtextarea生成
+        const input = this.createEditingTextarea(currentValue, 'header-input');
 
         // Add editing class to header cell
         headerCell.classList.add('editing');
@@ -619,15 +616,15 @@ const CellEditor = {
         columnTitleDiv.innerHTML = '';
         columnTitleDiv.appendChild(input);
 
-        // Style the input to match the header
+        // Style the textarea to match the header
         this.styleHeaderInputElement(input, columnTitleDiv);
 
         // Add event listeners for header editing
         this.addHeaderInputEventListeners(input, colIndex, columnTitleDiv, originalContent);
 
-        // Focus and select content
+        // Focus and select content (textarea: 全選択 or 末尾にカーソル)
         input.focus();
-        input.select();
+        input.setSelectionRange(input.value.length, input.value.length);
 
         console.log('CellEditor: Started editing header', colIndex);
     },
@@ -658,15 +655,18 @@ const CellEditor = {
             return;
         }
 
-        const input = columnTitleDiv.querySelector('input');
+        const input = columnTitleDiv.querySelector('textarea');
         if (!input) {
             console.warn('CellEditor: Input element not found during commit');
             state.currentEditingCell = null;
             return;
         }
 
+
         // Get new value
-        const newValue = input.value.trim();
+        const rawValue = input.value;
+        // セルと同様に改行→<br>変換
+        const newValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', rawValue.trim());
 
         // Update data model locally first
         const data = state.tableData;
@@ -693,8 +693,8 @@ const CellEditor = {
         // Remove editing class and restore header display
         headerCell.classList.remove('editing');
 
-        // Restore column title content with new value
-        const processedContent = window.TableEditor.callModule('TableRenderer', 'escapeHtml', newValue);
+        // Restore column title content with new value（セルと同様にHTML化）
+        const processedContent = window.TableEditor.callModule('TableRenderer', 'processCellContent', newValue);
         columnTitleDiv.innerHTML = processedContent;
 
         // Clear editing state
@@ -746,7 +746,7 @@ const CellEditor = {
      * Style header input element
      */
     styleHeaderInputElement: function (input, container) {
-        // Set styles to match the header cell
+        // Set styles to match the header cell (textarea用)
         input.style.width = '100%';
         input.style.boxSizing = 'border-box';
         input.style.border = 'none';
@@ -759,6 +759,8 @@ const CellEditor = {
         input.style.margin = '0';
         input.style.outline = 'none';
         input.style.textAlign = 'left';
+        input.style.resize = 'none';
+        input.style.overflow = 'hidden';
     },
 
     /**
@@ -767,33 +769,8 @@ const CellEditor = {
     addHeaderInputEventListeners: function (input, colIndex, container, originalContent) {
         const state = window.TableEditor.state;
 
-        // Handle keyboard events for header editing
-        input.addEventListener('keydown', (event) => {
-            // Enter key behavior - commit and end editing
-            if (event.key === 'Enter') {
-                // IME入力中、または直後の場合は処理をスキップ（日本語入力の確定を区別）
-                if (state.isComposing || state.imeJustEnded) {
-                    console.log('CellEditor: Enter pressed during/after IME composition in header, ignoring');
-                    return;
-                }
-
-                event.preventDefault();
-                event.stopPropagation();
-                this.commitHeaderEdit();
-            }
-            // Escape cancels editing
-            else if (event.key === 'Escape') {
-                event.preventDefault();
-                event.stopPropagation();
-                this.cancelHeaderEdit();
-            }
-            // Tab commits and moves focus away
-            else if (event.key === 'Tab') {
-                event.preventDefault();
-                event.stopPropagation();
-                this.commitHeaderEdit();
-            }
-        });
+        // セルと同じイベントハンドラを利用
+        this.addInputEventListeners(input, -1, colIndex);
 
         // Handle IME composition (日本語入力対応)
         input.addEventListener('compositionstart', (e) => {

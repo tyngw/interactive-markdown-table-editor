@@ -31,10 +31,9 @@
 - IME状態は `state.isComposing`/`state.imeJustEnded` で管理。
 
 ### 編集UIの仕様
-- セル編集は常にtextarea、ヘッダー編集はinput[type=text]。
-- 編集用input/textareaは親セル/ヘッダーのフォント・色・サイズ・幅・高さに合わせてスタイリング。
+- セル・ヘッダー編集UIは常に<textarea>で統一し、input[type=text]は使用しない。
 - 高さ自動調整（auto-resize）は、テキスト行数・他セル高さ・最小高さを考慮し、優先順位で決定。
-- 編集開始時はinput/textareaに即フォーカス。セルは末尾にカーソル移動、ヘッダーは全選択。
+- 編集開始時は<textarea>に即フォーカス。セル・ヘッダーともに末尾にカーソル移動（どちらも同じ挙動とする）。
 
 ### 編集状態管理・排他制御
 - 編集中は `state.currentEditingCell` で管理（row=-1はヘッダー、row>=0はセル）。
