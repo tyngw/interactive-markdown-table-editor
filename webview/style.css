@@ -697,6 +697,7 @@ textarea.cell-input[data-multiline="true"] {
     user-select: none;
     font-size: 13px;
     width: 100%;
+    border: none;
 }
 
 .context-menu-item:hover:not(.disabled) {
