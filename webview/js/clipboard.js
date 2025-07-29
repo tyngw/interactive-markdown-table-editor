@@ -185,7 +185,7 @@ const ClipboardManager = {
         const state = window.TableEditor.state;
         const data = state.tableData;
         
-        if (!data || !data.rows || !state.lastSelectedCell) {
+        if (!data || !data.rows) {
             return;
         }
         
@@ -196,54 +196,141 @@ const ClipboardManager = {
             return;
         }
         
-        const startRow = state.lastSelectedCell.row;
-        const startCol = state.lastSelectedCell.col;
-        
         let updatedCells = 0;
         let expandedRows = 0;
         let expandedCols = 0;
         
-        // Check if we need to expand the table
-        const requiredRows = startRow + pasteData.length;
-        const requiredCols = startCol + (pasteData[0] ? pasteData[0].length : 0);
-        
-        // Expand rows if needed
-        while (data.rows.length < requiredRows) {
-            const newRow = new Array(data.headers.length).fill('');
-            data.rows.push(newRow);
-            expandedRows++;
-        }
-        
-        // Expand columns if needed
-        while (data.headers.length < requiredCols) {
-            const newColIndex = data.headers.length;
-            const columnLetter = window.TableEditor.callModule('TableRenderer', 'getColumnLetter', newColIndex);
-            data.headers.push(`Column ${columnLetter}`);
+        // Check if we have selected cells
+        if (state.selectedCells.size > 0) {
+            // Case 1: Multiple cells are selected - paste to all selected cells
+            // If clipboard has single cell data, paste it to all selected cells
+            // If clipboard has multiple cells, paste starting from the first selected cell
             
-            // Add empty cells to all existing rows
-            data.rows.forEach(row => {
-                row.push('');
-            });
-            expandedCols++;
-        }
-        
-        // Paste the data
-        pasteData.forEach((pasteRow, rowOffset) => {
-            pasteRow.forEach((cellValue, colOffset) => {
-                const targetRow = startRow + rowOffset;
-                const targetCol = startCol + colOffset;
+            if (pasteData.length === 1 && pasteData[0].length === 1) {
+                // Single cell data - paste to all selected cells
+                const singleValue = pasteData[0][0];
+                const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', singleValue);
                 
-                if (targetRow < data.rows.length && targetCol < data.headers.length) {
-                    // Convert newlines back to <br> tags for storage
-                    const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', cellValue);
-                    data.rows[targetRow][targetCol] = processedValue;
-                    updatedCells++;
+                state.selectedCells.forEach(cellKey => {
+                    const [row, col] = cellKey.split('-').map(Number);
+                    if (row < data.rows.length && col < data.headers.length) {
+                        data.rows[row][col] = processedValue;
+                        updatedCells++;
+                        
+                        // Send update to VSCode
+                        window.TableEditor.updateCell(row, col, processedValue);
+                    }
+                });
+                
+                console.log('ClipboardManager: Pasted single value to multiple selected cells');
+            } else {
+                // Multiple cell data - paste starting from the first selected cell
+                const selectedCells = Array.from(state.selectedCells).map(cellKey => {
+                    const [row, col] = cellKey.split('-').map(Number);
+                    return { row, col };
+                }).sort((a, b) => a.row - b.row || a.col - b.col);
+                
+                if (selectedCells.length > 0) {
+                    const startRow = selectedCells[0].row;
+                    const startCol = selectedCells[0].col;
                     
-                    // Send update to VSCode
-                    window.TableEditor.updateCell(targetRow, targetCol, processedValue);
+                    // Check if we need to expand the table
+                    const requiredRows = startRow + pasteData.length;
+                    const requiredCols = startCol + (pasteData[0] ? pasteData[0].length : 0);
+                    
+                    // Expand rows if needed
+                    while (data.rows.length < requiredRows) {
+                        const newRow = new Array(data.headers.length).fill('');
+                        data.rows.push(newRow);
+                        expandedRows++;
+                    }
+                    
+                    // Expand columns if needed
+                    while (data.headers.length < requiredCols) {
+                        const newColIndex = data.headers.length;
+                        const columnLetter = window.TableEditor.callModule('TableRenderer', 'getColumnLetter', newColIndex);
+                        data.headers.push(`Column ${columnLetter}`);
+                        
+                        // Add empty cells to all existing rows
+                        data.rows.forEach(row => {
+                            row.push('');
+                        });
+                        expandedCols++;
+                    }
+                    
+                    // Paste the data
+                    pasteData.forEach((pasteRow, rowOffset) => {
+                        pasteRow.forEach((cellValue, colOffset) => {
+                            const targetRow = startRow + rowOffset;
+                            const targetCol = startCol + colOffset;
+                            
+                            if (targetRow < data.rows.length && targetCol < data.headers.length) {
+                                // Convert newlines back to <br> tags for storage
+                                const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', cellValue);
+                                data.rows[targetRow][targetCol] = processedValue;
+                                updatedCells++;
+                                
+                                // Send update to VSCode
+                                window.TableEditor.updateCell(targetRow, targetCol, processedValue);
+                            }
+                        });
+                    });
+                    
+                    console.log('ClipboardManager: Pasted multiple cell data starting from first selected cell');
                 }
+            }
+        } else if (state.lastSelectedCell) {
+            // Case 2: No multiple selection, use last selected cell as starting point
+            const startRow = state.lastSelectedCell.row;
+            const startCol = state.lastSelectedCell.col;
+            
+            // Check if we need to expand the table
+            const requiredRows = startRow + pasteData.length;
+            const requiredCols = startCol + (pasteData[0] ? pasteData[0].length : 0);
+            
+            // Expand rows if needed
+            while (data.rows.length < requiredRows) {
+                const newRow = new Array(data.headers.length).fill('');
+                data.rows.push(newRow);
+                expandedRows++;
+            }
+            
+            // Expand columns if needed
+            while (data.headers.length < requiredCols) {
+                const newColIndex = data.headers.length;
+                const columnLetter = window.TableEditor.callModule('TableRenderer', 'getColumnLetter', newColIndex);
+                data.headers.push(`Column ${columnLetter}`);
+                
+                // Add empty cells to all existing rows
+                data.rows.forEach(row => {
+                    row.push('');
+                });
+                expandedCols++;
+            }
+            
+            // Paste the data
+            pasteData.forEach((pasteRow, rowOffset) => {
+                pasteRow.forEach((cellValue, colOffset) => {
+                    const targetRow = startRow + rowOffset;
+                    const targetCol = startCol + colOffset;
+                    
+                    if (targetRow < data.rows.length && targetCol < data.headers.length) {
+                        // Convert newlines back to <br> tags for storage
+                        const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', cellValue);
+                        data.rows[targetRow][targetCol] = processedValue;
+                        updatedCells++;
+                        
+                        // Send update to VSCode
+                        window.TableEditor.updateCell(targetRow, targetCol, processedValue);
+                    }
+                });
             });
-        });
+            
+            console.log('ClipboardManager: Pasted data starting from last selected cell');
+        } else {
+            window.TableEditor.showError('No cell selected for paste');
+            return;
+        }
         
         // Update display data and re-render without full table rebuild
         state.displayData = data;
