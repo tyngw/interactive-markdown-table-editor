@@ -25,6 +25,8 @@ const TableEditor = {
         selectionStart: null,
         isSelecting: false,
         lastSelectedCell: null,
+        // 範囲選択のアンカーセル（選択開始点）を追跡
+        rangeSelectionAnchor: null,
         
         // IME composition state tracking
         isComposing: false,
@@ -575,6 +577,7 @@ const TableEditor = {
             this.state.selectionStart = null;
             this.state.isSelecting = false;
             this.state.lastSelectedCell = null;
+            this.state.rangeSelectionAnchor = null;
             
             // Re-render with new table
             this.renderApplicationWithTabs();
@@ -724,6 +727,7 @@ const TableEditor = {
             this.state.selectedCells.clear();
             this.state.currentEditingCell = null;
             this.state.tableData = null;
+            this.state.rangeSelectionAnchor = null;
             this.state.displayData = null;
             this.state.originalData = null;
             
