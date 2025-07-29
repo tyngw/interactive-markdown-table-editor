@@ -447,6 +447,29 @@ const SelectionManager = {
         
         // Select the column
         this.selectColumn(colIndex);
+    },
+    
+    /**
+     * Cleanup resources when module is being disposed
+     */
+    cleanup: function() {
+        console.log('SelectionManager: Starting cleanup...');
+        
+        // Clear selection state
+        const state = window.TableEditor.state;
+        if (state) {
+            state.selectedCells.clear();
+            state.lastSelectedCell = null;
+            state.isSelecting = false;
+            state.selectionStart = null;
+        }
+        
+        // Remove selection styling
+        document.querySelectorAll('.selected, .row-selected, .col-selected').forEach(cell => {
+            cell.classList.remove('selected', 'row-selected', 'col-selected');
+        });
+        
+        console.log('SelectionManager: Cleanup completed');
     }
 };
 

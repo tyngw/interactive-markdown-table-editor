@@ -827,6 +827,33 @@ const CellEditor = {
                 this.startCellEdit(row, col);
             }
         }
+    },
+
+    /**
+     * Cleanup resources when module is being disposed
+     */
+    cleanup: function () {
+        console.log('CellEditor: Starting cleanup...');
+
+        // Cancel any active edit
+        if (this.isEditing()) {
+            this.cancelEdit();
+        }
+
+        // Clear editing state
+        const state = window.TableEditor.state;
+        if (state) {
+            state.currentEditingCell = null;
+            state.isComposing = false;
+            state.imeJustEnded = false;
+        }
+
+        // Remove editing classes from all cells
+        document.querySelectorAll('.editing').forEach(cell => {
+            cell.classList.remove('editing');
+        });
+
+        console.log('CellEditor: Cleanup completed');
     }
 };
 

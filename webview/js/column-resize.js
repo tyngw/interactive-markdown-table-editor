@@ -68,9 +68,13 @@ const ColumnResizeManager = {
             return;
         }
         
+        // Store bound functions to ensure proper removal
+        this.boundHandleColumnResize = this.handleColumnResize.bind(this);
+        this.boundStopColumnResize = this.stopColumnResize.bind(this);
+        
         // Add global event listeners
-        document.addEventListener('mousemove', this.handleColumnResize.bind(this));
-        document.addEventListener('mouseup', this.stopColumnResize.bind(this));
+        document.addEventListener('mousemove', this.boundHandleColumnResize);
+        document.addEventListener('mouseup', this.boundStopColumnResize);
         
         // Prevent text selection during resize
         document.body.style.userSelect = 'none';
@@ -103,18 +107,25 @@ const ColumnResizeManager = {
     stopColumnResize: function() {
         const state = window.TableEditor.state;
         
-        // Remove global event listeners
-        document.removeEventListener('mousemove', this.handleColumnResize.bind(this));
-        document.removeEventListener('mouseup', this.stopColumnResize.bind(this));
+        // Remove global event listeners using stored bound functions
+        if (this.boundHandleColumnResize) {
+            document.removeEventListener('mousemove', this.boundHandleColumnResize);
+            this.boundHandleColumnResize = null;
+        }
+        if (this.boundStopColumnResize) {
+            document.removeEventListener('mouseup', this.boundStopColumnResize);
+            this.boundStopColumnResize = null;
+        }
         
         // Restore normal cursor and text selection
         document.body.style.userSelect = '';
         document.body.style.cursor = '';
         
         // Small delay to prevent immediate click events
-        setTimeout(() => {
+        this.resizeCleanupTimeout = setTimeout(() => {
             state.isResizing = false;
             state.resizeColumn = -1;
+            this.resizeCleanupTimeout = null;
         }, 10);
         
         console.log('ColumnResizeManager: Stopped resizing column');
@@ -385,6 +396,35 @@ const ColumnResizeManager = {
         table.style.width = totalWidth + 'px';
         
         console.log('ColumnResizeManager: Updated table total width to', totalWidth + 'px');
+    },
+    
+    /**
+     * Cleanup resources when module is being disposed
+     */
+    cleanup: function() {
+        console.log('ColumnResizeManager: Starting cleanup...');
+        
+        // Clear any pending timeouts
+        if (this.resizeCleanupTimeout) {
+            clearTimeout(this.resizeCleanupTimeout);
+            this.resizeCleanupTimeout = null;
+        }
+        
+        // Remove any remaining event listeners
+        if (this.boundHandleColumnResize) {
+            document.removeEventListener('mousemove', this.boundHandleColumnResize);
+            this.boundHandleColumnResize = null;
+        }
+        if (this.boundStopColumnResize) {
+            document.removeEventListener('mouseup', this.boundStopColumnResize);
+            this.boundStopColumnResize = null;
+        }
+        
+        // Restore body styles
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        
+        console.log('ColumnResizeManager: Cleanup completed');
     }
 };
 

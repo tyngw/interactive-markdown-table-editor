@@ -557,6 +557,31 @@ const DragDropManager = {
         });
         
         console.log('DragDropManager: Finalized drag selection', selectedCells.length, 'cells');
+    },
+    
+    /**
+     * Cleanup resources when module is being disposed
+     */
+    cleanup: function() {
+        console.log('DragDropManager: Starting cleanup...');
+        
+        // Clear drag state
+        const state = window.TableEditor.state;
+        if (state && state.dragState) {
+            state.dragState.isDragging = false;
+            state.dragState.dragType = null;
+            state.dragState.dragIndex = -1;
+            state.dragState.dropIndex = -1;
+        }
+        
+        // Clear drag selection visuals
+        document.querySelectorAll('.drag-selecting, .drag-over, .drag-source').forEach(element => {
+            element.classList.remove('drag-selecting', 'drag-over', 'drag-source');
+        });
+        
+        // Note: Event listeners are attached to table container, so they'll be cleaned up when the table is removed
+        
+        console.log('DragDropManager: Cleanup completed');
     }
 };
 

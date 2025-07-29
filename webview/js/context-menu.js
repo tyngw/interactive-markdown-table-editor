@@ -651,6 +651,26 @@ const ContextMenuManager = {
         }
         
         window.TableEditor.deleteColumn(index);
+    },
+    
+    /**
+     * Cleanup resources when module is being disposed
+     */
+    cleanup: function() {
+        console.log('ContextMenuManager: Starting cleanup...');
+        
+        // Hide all context menus
+        this.hideContextMenus();
+        
+        // Clear context menu state
+        const state = window.TableEditor.state;
+        if (state && state.contextMenuState) {
+            state.contextMenuState.visible = false;
+            state.contextMenuState.type = null;
+            state.contextMenuState.index = -1;
+        }
+        
+        console.log('ContextMenuManager: Cleanup completed');
     }
 };
 

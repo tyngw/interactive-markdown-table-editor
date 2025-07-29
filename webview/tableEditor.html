@@ -90,6 +90,18 @@
             }, 200);
         });
         
+        // Cleanup when webview is being unloaded
+        window.addEventListener('beforeunload', function() {
+            console.log('Webview: beforeunload event triggered, starting cleanup...');
+            if (window.TableEditor && typeof window.TableEditor.cleanup === 'function') {
+                try {
+                    window.TableEditor.cleanup();
+                } catch (error) {
+                    console.error('Error during webview cleanup:', error);
+                }
+            }
+        });
+        
         // Test module system functionality
         function testModuleSystem() {
             if (typeof TableEditor !== 'undefined') {

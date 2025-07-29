@@ -227,15 +227,22 @@ const TableEditor = {
         console.log('TableEditor: Initializing table editor application...');
         
         // Set up message listener for VSCode communication
-        window.addEventListener('message', (event) => {
+        this.messageHandler = (event) => {
             this.handleVSCodeMessage(event);
-        });
+        };
+        window.addEventListener('message', this.messageHandler);
+        
+        // Set up beforeunload handler for cleanup
+        this.beforeUnloadHandler = () => {
+            this.cleanup();
+        };
+        window.addEventListener('beforeunload', this.beforeUnloadHandler);
         
         // Request initial table data
         this.requestTableData();
         
         // For debugging: Add a timeout to show test data if no response received
-        setTimeout(() => {
+        this.initialDataTimeout = setTimeout(() => {
             if (!this.state.tableData) {
                 console.warn('TableEditor: No table data received after 5 seconds, requesting again...');
                 this.requestTableData();
@@ -674,6 +681,56 @@ const TableEditor = {
             console.warn(`TableEditor: Module method ${moduleName}.${methodName} not available`);
         }
         return null;
+    },
+    
+    /**
+     * Cleanup resources when webview is being closed
+     */
+    cleanup: function() {
+        console.log('TableEditor: Starting cleanup...');
+        
+        try {
+            // Clear any pending timeouts
+            if (this.initialDataTimeout) {
+                clearTimeout(this.initialDataTimeout);
+                this.initialDataTimeout = null;
+            }
+            
+            // Remove global event listeners
+            if (this.messageHandler) {
+                window.removeEventListener('message', this.messageHandler);
+                this.messageHandler = null;
+            }
+            
+            if (this.beforeUnloadHandler) {
+                window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+                this.beforeUnloadHandler = null;
+            }
+            
+            // Cleanup all modules
+            Object.keys(this.modules).forEach(moduleName => {
+                const module = this.modules[moduleName];
+                if (module && typeof module.cleanup === 'function') {
+                    try {
+                        module.cleanup();
+                        console.log(`TableEditor: Cleaned up module ${moduleName}`);
+                    } catch (error) {
+                        console.error(`TableEditor: Error cleaning up module ${moduleName}:`, error);
+                    }
+                }
+            });
+            
+            // Clear state
+            this.state.selectedCells.clear();
+            this.state.currentEditingCell = null;
+            this.state.tableData = null;
+            this.state.displayData = null;
+            this.state.originalData = null;
+            
+            console.log('TableEditor: Cleanup completed');
+        } catch (error) {
+            console.error('TableEditor: Error during cleanup:', error);
+        }
     },
     
     /**

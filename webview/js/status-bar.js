@@ -380,6 +380,25 @@ const StatusBarManager = {
         
         this.showMessage('Ready');
         this.updateMode('table');
+    },
+    
+    /**
+     * Cleanup resources when module is being disposed
+     */
+    cleanup: function() {
+        console.log('StatusBarManager: Starting cleanup...');
+        
+        // Clear any pending timeouts
+        if (this.messageTimeout) {
+            clearTimeout(this.messageTimeout);
+            this.messageTimeout = null;
+        }
+        
+        // Remove event listeners (note: these are bound functions, so we need to store references)
+        // For now, we'll just clear the status bar content
+        this.clear();
+        
+        console.log('StatusBarManager: Cleanup completed');
     }
 };
 

@@ -819,5 +819,27 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-    console.log('Markdown Table Editor extension is now deactivated!');
+    console.log('Markdown Table Editor extension is now deactivating...');
+    
+    try {
+        // Dispose WebviewManager resources
+        const webviewManager = WebviewManager.getInstance();
+        if (webviewManager) {
+            webviewManager.dispose();
+            console.log('WebviewManager disposed');
+        }
+    } catch (error) {
+        console.error('Error disposing WebviewManager:', error);
+    }
+    
+    try {
+        // Dispose FileHandler resources
+        const { disposeFileHandler } = require('./fileHandler');
+        disposeFileHandler();
+        console.log('FileHandler disposed');
+    } catch (error) {
+        console.error('Error disposing FileHandler:', error);
+    }
+    
+    console.log('Markdown Table Editor extension deactivated successfully');
 }

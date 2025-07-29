@@ -918,8 +918,24 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      * Cleanup resources
      */
     public dispose(): void {
-        this.stopHealthMonitoring();
-        this.closeAllPanels();
-        this.connectionHealthMap.clear();
+        console.log('WebviewManager: Starting disposal...');
+        
+        try {
+            // Stop health monitoring first
+            this.stopHealthMonitoring();
+            
+            // Close all panels (this will trigger their onDidDispose handlers)
+            this.closeAllPanels();
+            
+            // Clear connection health map
+            this.connectionHealthMap.clear();
+            
+            // Clear panels map
+            this.panels.clear();
+            
+            console.log('WebviewManager: Disposal completed successfully');
+        } catch (error) {
+            console.error('WebviewManager: Error during disposal:', error);
+        }
     }
 }
