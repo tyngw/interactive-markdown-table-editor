@@ -395,19 +395,21 @@ const CellEditor = {
                 }
                 event.preventDefault();
                 event.stopPropagation();
+                // 編集確定前に現在の位置を保存
+                const currentEditingCell = state.currentEditingCell;
                 // 編集確定
                 this.commitEdit();
                 // セルの場合のみ次行へ移動
-                const currentEditingCell = state.currentEditingCell;
                 if (currentEditingCell && currentEditingCell.row !== -1) {
                     window.TableEditor.callModule('KeyboardNavigationManager', 'navigateCell', currentEditingCell.row + 1, currentEditingCell.col);
                 }
             } else if (event.key === 'Tab') {
                 event.preventDefault();
                 event.stopPropagation();
+                // 編集確定前に現在の位置を保存
+                const currentEditingCell = state.currentEditingCell;
                 this.commitEdit();
                 // セル・ヘッダー共通: 次/前のセル・ヘッダーへ
-                const currentEditingCell = state.currentEditingCell;
                 if (currentEditingCell) {
                     window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', currentEditingCell.row, currentEditingCell.col, !event.shiftKey);
                 }
