@@ -47,16 +47,17 @@ const StatusBarManager = {
         
         statusBar.innerHTML = `
             <div class="status-left">
+                <span class="save-indicator saved" id="saveIndicator">✓ Auto-saved</span>
                 <span id="status-position" class="status-item">-</span>
-                <span id="status-dimensions" class="status-item">-</span>
                 <span id="status-selection" class="status-item">-</span>
             </div>
             <div class="status-center">
-                <span id="status-message" class="status-message">Ready</span>
+                <span id="status-message" class="status-message"></span>
             </div>
             <div class="status-right">
+                <span id="status-rows" class="status-item">-</span>
+                <span id="status-columns" class="status-item">-</span>
                 <span id="status-stats" class="status-item">-</span>
-                <span id="status-mode" class="status-item">Table Editor</span>
             </div>
         `;
         
@@ -143,8 +144,8 @@ const StatusBarManager = {
      * Update table dimensions display
      */
     updateTableDimensions: function() {
-        const dimensionsElement = document.getElementById('status-dimensions');
-        if (!dimensionsElement) return;
+        const rowsElement = document.getElementById('status-rows');
+        const columnsElement = document.getElementById('status-columns');
         
         const state = window.TableEditor.state;
         const data = state.displayData || state.tableData;
@@ -152,9 +153,20 @@ const StatusBarManager = {
         if (data && data.headers && data.rows) {
             const cols = data.headers.length;
             const rows = data.rows.length;
-            dimensionsElement.textContent = `${rows}行 × ${cols}列`;
+            
+            if (rowsElement) {
+                rowsElement.textContent = `${rows}行`;
+            }
+            if (columnsElement) {
+                columnsElement.textContent = `${cols}列`;
+            }
         } else {
-            dimensionsElement.textContent = '-';
+            if (rowsElement) {
+                rowsElement.textContent = '-';
+            }
+            if (columnsElement) {
+                columnsElement.textContent = '-';
+            }
         }
     },
     
@@ -248,7 +260,7 @@ const StatusBarManager = {
         // Auto-clear message after duration
         if (duration > 0) {
             this.messageTimeout = setTimeout(() => {
-                messageElement.textContent = 'Ready';
+                messageElement.textContent = '';
                 messageElement.className = 'status-message';
             }, duration);
         }
@@ -284,23 +296,7 @@ const StatusBarManager = {
         this.showMessage(message, 'info', duration);
     },
     
-    /**
-     * Update operation mode
-     */
-    updateMode: function(mode) {
-        const modeElement = document.getElementById('status-mode');
-        if (!modeElement) return;
-        
-        const modes = {
-            'table': 'Table Editor',
-            'editing': 'Cell Editing',
-            'selecting': 'Selection Mode',
-            'sorting': 'Sorting',
-            'resizing': 'Column Resize'
-        };
-        
-        modeElement.textContent = modes[mode] || mode;
-    },
+
     
     /**
      * Convert column number to Excel-style letter
@@ -337,14 +333,33 @@ const StatusBarManager = {
      * Show auto-saved status
      */
     showAutoSavedStatus: function() {
-        this.showSuccess('✓ Auto-saved', 2000);
+        const saveIndicator = document.getElementById('saveIndicator');
+        if (saveIndicator) {
+            saveIndicator.textContent = '✓ Auto-saved';
+            saveIndicator.className = 'save-indicator saved';
+        }
     },
     
     /**
      * Show saving status
      */
     showSavingStatus: function() {
-        this.showInfo('💾 Saving...', 0); // No auto-clear
+        const saveIndicator = document.getElementById('saveIndicator');
+        if (saveIndicator) {
+            saveIndicator.textContent = '💾 Saving...';
+            saveIndicator.className = 'save-indicator saving';
+        }
+    },
+    
+    /**
+     * Show save error status
+     */
+    showSaveError: function() {
+        const saveIndicator = document.getElementById('saveIndicator');
+        if (saveIndicator) {
+            saveIndicator.textContent = '✗ Save failed';
+            saveIndicator.className = 'save-indicator failed';
+        }
     },
     
     /**
@@ -358,19 +373,14 @@ const StatusBarManager = {
      * Show status with data
      */
     showStatus: function(status, data) {
-        let message = status;
-        if (data && window.TableEditor.state.tableData) {
-            const tableData = window.TableEditor.state.tableData;
-            message += ` | Rows: ${tableData.rows.length} | Columns: ${tableData.headers.length}`;
-        }
-        this.showInfo(message);
+        this.showInfo(status);
     },
 
     /**
      * Clear all status information
      */
     clear: function() {
-        const elements = ['status-position', 'status-dimensions', 'status-selection', 'status-stats'];
+        const elements = ['status-position', 'status-selection', 'status-rows', 'status-columns', 'status-stats'];
         elements.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -378,8 +388,12 @@ const StatusBarManager = {
             }
         });
         
-        this.showMessage('Ready');
-        this.updateMode('table');
+        // Clear message
+        const messageElement = document.getElementById('status-message');
+        if (messageElement) {
+            messageElement.textContent = '';
+            messageElement.className = 'status-message';
+        }
     },
     
     /**
