@@ -384,7 +384,6 @@ const TableEditor = {
         // Update status bar after rendering
         setTimeout(() => {
             this.callModule('StatusBarManager', 'updateTableDimensions');
-            this.callModule('StatusBarManager', 'updateTableStats');
         }, 100);
     },
 
@@ -572,7 +571,6 @@ const TableEditor = {
 
             // Update status bar with table information
             this.callModule('StatusBarManager', 'updateTableDimensions');
-            this.callModule('StatusBarManager', 'updateTableStats');
 
             console.log('TableEditor: Table rendering completed successfully');
         } catch (error) {
@@ -621,7 +619,6 @@ const TableEditor = {
             // Update status bar after switching tables
             setTimeout(() => {
                 this.callModule('StatusBarManager', 'updateTableDimensions');
-                this.callModule('StatusBarManager', 'updateTableStats');
             }, 100);
 
             // Send table switch notification to VSCode
