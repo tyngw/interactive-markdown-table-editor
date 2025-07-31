@@ -287,7 +287,12 @@ export class MarkdownFileHandler implements FileHandler {
             // Replace table content
             const beforeTable = lines.slice(0, startLine);
             const afterTable = lines.slice(endLine + 1);
-            const newTableLines = newTableContent.split('\n');
+            const newTableLines = newTableContent.split('\n').filter(line => line.trim() !== '' || line === '');
+            
+            // Remove any trailing empty lines from the new table content to prevent unwanted blank lines
+            while (newTableLines.length > 0 && newTableLines[newTableLines.length - 1].trim() === '') {
+                newTableLines.pop();
+            }
             
             const updatedLines = [...beforeTable, ...newTableLines, ...afterTable];
             const updatedContent = updatedLines.join('\n');

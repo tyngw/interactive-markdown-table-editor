@@ -52,7 +52,7 @@ export class TableDataManager {
     loadTable(tableNode: TableNode, sourceUri: string = '', tableIndex: number = 0): TableData {
         const id = this.generateTableId();
         const validation = this.validateTableStructure(tableNode);
-        
+
         const tableData: TableData = {
             id,
             headers: [...tableNode.headers],
@@ -112,14 +112,14 @@ export class TableDataManager {
      */
     addRow(index?: number): void {
         const insertIndex = index !== undefined ? index : this.tableData.rows.length;
-        
+
         if (insertIndex < 0 || insertIndex > this.tableData.rows.length) {
             throw new Error(`Invalid row index: ${insertIndex}`);
         }
 
         const newRow = new Array(this.tableData.headers.length).fill('');
         this.tableData.rows.splice(insertIndex, 0, newRow);
-        
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -142,19 +142,19 @@ export class TableDataManager {
      */
     addColumn(index?: number, header?: string): void {
         const insertIndex = index !== undefined ? index : this.tableData.headers.length;
-        
+
         if (insertIndex < 0 || insertIndex > this.tableData.headers.length) {
             throw new Error(`Invalid column index: ${insertIndex}`);
         }
 
         const columnHeader = header || `Column ${insertIndex + 1}`;
-        
+
         // Add header
         this.tableData.headers.splice(insertIndex, 0, columnHeader);
-        
+
         // Add alignment
         this.tableData.alignment.splice(insertIndex, 0, 'left');
-        
+
         // Add cells to all rows
         for (const row of this.tableData.rows) {
             row.splice(insertIndex, 0, '');
@@ -178,10 +178,10 @@ export class TableDataManager {
 
         // Remove header
         this.tableData.headers.splice(index, 1);
-        
+
         // Remove alignment
         this.tableData.alignment.splice(index, 1);
-        
+
         // Remove cells from all rows
         for (const row of this.tableData.rows) {
             row.splice(index, 1);
@@ -202,15 +202,15 @@ export class TableDataManager {
         this.tableData.rows.sort((a, b) => {
             const valueA = a[columnIndex] || '';
             const valueB = b[columnIndex] || '';
-            
+
             // Try to parse as numbers first
             const numA = parseFloat(valueA);
             const numB = parseFloat(valueB);
-            
+
             if (!isNaN(numA) && !isNaN(numB)) {
                 return direction === 'asc' ? numA - numB : numB - numA;
             }
-            
+
             // Fall back to string comparison
             const comparison = valueA.localeCompare(valueB);
             return direction === 'asc' ? comparison : -comparison;
@@ -273,11 +273,11 @@ export class TableDataManager {
         dropZones: number[];
         previewData?: TableData;
     } = {
-        isDragging: false,
-        dragType: null,
-        dragIndex: -1,
-        dropZones: []
-    };
+            isDragging: false,
+            dragType: null,
+            dragIndex: -1,
+            dropZones: []
+        };
 
     /**
      * Start drag operation for row
@@ -329,7 +329,7 @@ export class TableDataManager {
         }
 
         const isValidDropZone = this.dragDropState.dropZones.includes(targetIndex);
-        
+
         if (isValidDropZone) {
             // Create preview of the drop result
             this.createDragPreview(targetIndex);
@@ -351,7 +351,7 @@ export class TableDataManager {
         }
 
         const { dragType, dragIndex } = this.dragDropState;
-        
+
         if (!this.dragDropState.dropZones.includes(dropIndex)) {
             this.cancelDragDrop();
             return false;
@@ -366,7 +366,7 @@ export class TableDataManager {
 
             this.notifyDragComplete(dragType!, dragIndex, dropIndex);
             this.resetDragDropState();
-            
+
             // Ensure Markdown is updated (already handled by moveRow/moveColumn through notifyChange)
             return true;
         } catch (error) {
@@ -541,10 +541,10 @@ export class TableDataManager {
      */
     serializeToMarkdown(): string {
         let markdown = '';
-        
+
         // Header row
         markdown += '| ' + this.tableData.headers.join(' | ') + ' |\n';
-        
+
         // Separator row
         markdown += '|';
         for (const alignment of this.tableData.alignment) {
@@ -563,13 +563,14 @@ export class TableDataManager {
             markdown += separator + '|';
         }
         markdown += '\n';
-        
+
         // Data rows
         for (const row of this.tableData.rows) {
             markdown += '| ' + row.join(' | ') + ' |\n';
         }
-        
-        return markdown;
+
+        // Remove trailing newline to prevent empty lines when splitting
+        return markdown.trimEnd();
     }
 
     /**
@@ -640,10 +641,10 @@ export class TableDataManager {
     } {
         const totalCells = this.tableData.headers.length * this.tableData.rows.length;
         let emptyCells = 0;
-        
+
         const columnWidths = this.tableData.headers.map((header, colIndex) => {
             let maxWidth = header.length;
-            
+
             for (const row of this.tableData.rows) {
                 const cellValue = row[colIndex] || '';
                 if (!cellValue.trim()) {
@@ -651,7 +652,7 @@ export class TableDataManager {
                 }
                 maxWidth = Math.max(maxWidth, cellValue.length);
             }
-            
+
             return maxWidth;
         });
 
@@ -705,7 +706,7 @@ export class TableDataManager {
         this.tableData.metadata.lastModified = new Date();
         this.tableData.metadata.columnCount = this.tableData.headers.length;
         this.tableData.metadata.rowCount = this.tableData.rows.length;
-        
+
         // Re-validate
         const tableNode: TableNode = {
             startLine: this.tableData.metadata.startLine,
@@ -714,7 +715,7 @@ export class TableDataManager {
             rows: this.tableData.rows,
             alignment: this.tableData.alignment
         };
-        
+
         const validation = this.validateTableStructure(tableNode);
         this.tableData.metadata.isValid = validation.isValid;
         this.tableData.metadata.validationIssues = validation.issues;
@@ -759,7 +760,7 @@ export class TableDataManager {
             throw new Error(`Invalid row count: ${count}`);
         }
 
-        const newRows = Array(count).fill(null).map(() => 
+        const newRows = Array(count).fill(null).map(() =>
             new Array(this.tableData.headers.length).fill('')
         );
 
@@ -802,7 +803,7 @@ export class TableDataManager {
         }
 
         // Generate headers if not provided
-        const columnHeaders = headers || Array(count).fill(null).map((_, i) => 
+        const columnHeaders = headers || Array(count).fill(null).map((_, i) =>
             `Column ${startIndex + i + 1}`
         );
 
@@ -847,10 +848,10 @@ export class TableDataManager {
         for (const index of sortedIndices) {
             // Remove header
             this.tableData.headers.splice(index, 1);
-            
+
             // Remove alignment
             this.tableData.alignment.splice(index, 1);
-            
+
             // Remove cells from all rows
             for (const row of this.tableData.rows) {
                 row.splice(index, 1);
@@ -960,7 +961,7 @@ export class TableDataManager {
 
         const targetIndex = insertIndex !== undefined ? insertIndex : rowIndex + 1;
         const duplicatedRow = [...this.tableData.rows[rowIndex]];
-        
+
         this.tableData.rows.splice(targetIndex, 0, duplicatedRow);
         this.updateMetadata();
         this.notifyChange();
@@ -975,7 +976,7 @@ export class TableDataManager {
         }
 
         const targetIndex = insertIndex !== undefined ? insertIndex : colIndex + 1;
-        
+
         // Duplicate header
         const duplicatedHeader = this.tableData.headers[colIndex] + ' Copy';
         this.tableData.headers.splice(targetIndex, 0, duplicatedHeader);
@@ -1121,7 +1122,7 @@ export class TableDataManager {
      */
     getEmptyCells(): Array<{ row: number; col: number }> {
         const emptyCells: Array<{ row: number; col: number }> = [];
-        
+
         for (let rowIndex = 0; rowIndex < this.tableData.rows.length; rowIndex++) {
             for (let colIndex = 0; colIndex < this.tableData.rows[rowIndex].length; colIndex++) {
                 if (!this.tableData.rows[rowIndex][colIndex].trim()) {
@@ -1129,7 +1130,7 @@ export class TableDataManager {
                 }
             }
         }
-        
+
         return emptyCells;
     }
 
@@ -1148,7 +1149,7 @@ export class TableDataManager {
      * Advanced sort with custom comparator
      */
     sortByColumnAdvanced(
-        columnIndex: number, 
+        columnIndex: number,
         direction: 'asc' | 'desc',
         options?: {
             dataType?: 'string' | 'number' | 'date' | 'auto';
@@ -1224,7 +1225,7 @@ export class TableDataManager {
         // Determine data types for auto detection
         const processedCriteria = sortCriteria.map(criteria => ({
             ...criteria,
-            dataType: criteria.dataType === 'auto' || !criteria.dataType 
+            dataType: criteria.dataType === 'auto' || !criteria.dataType
                 ? this.detectColumnDataType(criteria.columnIndex)
                 : criteria.dataType
         }));
@@ -1262,10 +1263,10 @@ export class TableDataManager {
      */
     sortByCustomFunction(compareFn: (rowA: string[], rowB: string[]) => number): void {
         this.tableData.rows.sort(compareFn);
-        
+
         // Clear sort state since it's custom
         this.sortState = null;
-        
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -1289,12 +1290,12 @@ export class TableDataManager {
      */
     reverseRows(): void {
         this.tableData.rows.reverse();
-        
+
         // Update sort state to indicate reversed order
         if (this.sortState) {
             this.sortState.direction = this.sortState.direction === 'asc' ? 'desc' : 'asc';
         }
-        
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -1333,7 +1334,7 @@ export class TableDataManager {
         }
 
         const values = this.tableData.rows.map(row => row[columnIndex]).filter(val => val.trim());
-        
+
         if (values.length === 0) {
             return 'string';
         }
@@ -1357,8 +1358,8 @@ export class TableDataManager {
      * Compare values based on data type
      */
     private compareValues(
-        valueA: string, 
-        valueB: string, 
+        valueA: string,
+        valueB: string,
         dataType: 'string' | 'number' | 'date',
         options: { caseSensitive?: boolean; locale?: string }
     ): number {
@@ -1393,7 +1394,7 @@ export class TableDataManager {
         this.tableData.rows.sort((a, b) => {
             const valueA = a[columnIndex] || '';
             const valueB = b[columnIndex] || '';
-            
+
             const comparison = this.naturalCompare(valueA, valueB);
             return direction === 'asc' ? comparison : -comparison;
         });
@@ -1414,10 +1415,10 @@ export class TableDataManager {
     private naturalCompare(a: string, b: string): number {
         const reA = /[^a-zA-Z]/g;
         const reN = /[^0-9]/g;
-        
+
         const aA = a.replace(reA, '');
         const bA = b.replace(reA, '');
-        
+
         if (aA === bA) {
             const aN = parseInt(a.replace(reN, ''), 10);
             const bN = parseInt(b.replace(reN, ''), 10);
@@ -1467,12 +1468,12 @@ export class TableDataManager {
         const values = this.tableData.rows.map(row => row[columnIndex]);
         const nonEmptyValues = values.filter(val => val.trim());
         const uniqueValues = new Set(nonEmptyValues);
-        
+
         const dataType = this.detectColumnDataType(columnIndex);
-        
+
         let minValue = '';
         let maxValue = '';
-        
+
         if (nonEmptyValues.length > 0) {
             if (dataType === 'number') {
                 const numbers = nonEmptyValues.map(val => parseFloat(val)).filter(num => !isNaN(num));
@@ -1564,10 +1565,10 @@ export class TableDataManager {
             this.moveRow(fromIndex, toIndex);
             return { success: true, previousState };
         } catch (error) {
-            return { 
-                success: false, 
+            return {
+                success: false,
                 error: error instanceof Error ? error.message : 'Unknown error occurred',
-                previousState 
+                previousState
             };
         }
     }
@@ -1591,10 +1592,10 @@ export class TableDataManager {
             this.moveColumn(fromIndex, toIndex);
             return { success: true, previousState };
         } catch (error) {
-            return { 
-                success: false, 
+            return {
+                success: false,
                 error: error instanceof Error ? error.message : 'Unknown error occurred',
-                previousState 
+                previousState
             };
         }
     }
