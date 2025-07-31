@@ -9,6 +9,7 @@
     "url": "https://github.com/tyngw/markdown-table-editor.git"
   },
   "license": "MIT",
+  "icon": "icon.png",
   "keywords": ["markdown", "table", "editor", "spreadsheet"],
   "engines": {
     "vscode": "^1.74.0"
