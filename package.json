@@ -2,7 +2,7 @@
   "name": "markdown-table-editor",
   "displayName": "Markdown Table Editor",
   "description": "Edit Markdown tables with a spreadsheet-like interface",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "publisher": "tyngw",
   "repository": {
     "type": "git",
