@@ -223,7 +223,9 @@ const ColumnResizeManager = {
         document.body.removeChild(measureElement);
         
         // Cap the maximum width to prevent extremely wide columns
-        const finalWidth = Math.min(maxWidth, 400);
+        const config = window.TableEditor.config;
+        const maxAllowedWidth = config ? config.columnWidth.max : 400;
+        const finalWidth = Math.min(maxWidth, maxAllowedWidth);
         
         console.log('ColumnResizeManager: Auto-fit calculated width', finalWidth, 'for column', colIndex);
         
@@ -345,8 +347,11 @@ const ColumnResizeManager = {
     setColumnWidth: function(colIndex, width) {
         const state = window.TableEditor.state;
         
-        // Validate width
-        width = Math.max(10, Math.min(800, width)); // Between 10px and 800px
+        // Validate width using config values
+        const config = window.TableEditor.config;
+        const minWidth = config ? config.columnWidth.min : 50;
+        const maxWidth = config ? config.columnWidth.max : 800;
+        width = Math.max(minWidth, Math.min(maxWidth, width));
         
         // Store and apply the width
         state.columnWidths[colIndex] = width;

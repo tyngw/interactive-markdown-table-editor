@@ -96,6 +96,31 @@ const TableRenderer = {
                 </div>
             </div>
             
+            <!-- Column Width Dialog -->
+            <div class="dialog-overlay" id="columnWidthDialogOverlay" style="display: none;">
+                <div class="dialog" id="columnWidthDialog">
+                    <div class="dialog-header">
+                        <h3>列幅を変更</h3>
+                    </div>
+                    <div class="dialog-content">
+                        <div class="form-group">
+                            <label for="columnWidthInput">幅 (px):</label>
+                            <div class="input-with-spinner">
+                                <input type="number" id="columnWidthInput" min="50" max="800" step="10" value="150">
+                                <div class="spinner-buttons">
+                                    <button type="button" class="spinner-up" onclick="TableEditor.callModule('ContextMenuManager', 'adjustColumnWidthInput', 10)">▲</button>
+                                    <button type="button" class="spinner-down" onclick="TableEditor.callModule('ContextMenuManager', 'adjustColumnWidthInput', -10)">▼</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dialog-footer">
+                        <button type="button" class="dialog-btn secondary" onclick="TableEditor.callModule('ContextMenuManager', 'hideColumnWidthDialog')">キャンセル</button>
+                        <button type="button" class="dialog-btn primary" onclick="TableEditor.callModule('ContextMenuManager', 'applyColumnWidth')">OK</button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Context Menus -->
             <div class="context-menu" id="rowContextMenu" style="display: none;">
                 <div class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'addRowAbove')">
@@ -120,6 +145,11 @@ const TableRenderer = {
                 <div class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'addColumnRight')">
                     <span class="context-menu-icon">➡️</span>
                     この右に列を追加
+                </div>
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'showColumnWidthDialogFromContext')">
+                    <span class="context-menu-icon">📏</span>
+                    幅を変更
                 </div>
                 <div class="context-menu-separator"></div>
                 <div class="context-menu-item" onclick="TableEditor.callModule('ContextMenuManager', 'deleteColumnFromContext')">

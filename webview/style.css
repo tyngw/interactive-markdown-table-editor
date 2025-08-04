@@ -929,7 +929,174 @@ textarea.cell-input[data-multiline="true"] {
     background-color: rgba(var(--vscode-charts-red), 0.1);
 }
 
-/* ====== 16. レスポンシブ対応 ====== */
+/* ====== 16. ダイアログ ====== */
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.dialog {
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    min-width: 320px;
+    max-width: 500px;
+    width: 90%;
+}
+
+.dialog-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.dialog-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.dialog-content {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: var(--vscode-foreground);
+}
+
+.input-with-spinner {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-spinner input[type="number"] {
+    flex: 1;
+    padding: 8px 40px 8px 12px;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    font-size: 14px;
+    font-family: var(--vscode-font-family);
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.input-with-spinner input[type="number"]:focus {
+    border-color: var(--vscode-focusBorder);
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+}
+
+/* Hide default number input spinner buttons */
+.input-with-spinner input[type="number"]::-webkit-outer-spin-button,
+.input-with-spinner input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input-with-spinner input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.spinner-buttons {
+    position: absolute;
+    right: 2px;
+    top: 2px;
+    bottom: 2px;
+    display: flex;
+    flex-direction: column;
+    width: 24px;
+}
+
+.spinner-buttons button {
+    flex: 1;
+    border: none;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    padding: 0;
+    border-radius: 0;
+    transition: background-color 0.2s ease;
+}
+
+.spinner-buttons button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.spinner-buttons button:active {
+    background-color: var(--vscode-button-background);
+}
+
+.spinner-up {
+    border-top-right-radius: 2px;
+    border-bottom: 1px solid var(--vscode-input-border);
+}
+
+.spinner-down {
+    border-bottom-right-radius: 2px;
+}
+
+.dialog-footer {
+    padding: 12px 20px 16px;
+    border-top: 1px solid var(--vscode-panel-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.dialog-btn {
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.dialog-btn.primary {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-color: var(--vscode-button-background);
+}
+
+.dialog-btn.primary:hover {
+    background-color: var(--vscode-button-hoverBackground);
+    border-color: var(--vscode-button-hoverBackground);
+}
+
+.dialog-btn.secondary {
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border-color: var(--vscode-button-secondaryBackground);
+}
+
+.dialog-btn.secondary:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+    border-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+/* ====== 17. レスポンシブ対応 ====== */
 @media (max-width: 768px) {
     .status-bar {
         font-size: 11px;
@@ -948,5 +1115,19 @@ textarea.cell-input[data-multiline="true"] {
     .context-menu-item {
         padding: 6px 10px;
         font-size: 12px;
+    }
+
+    .dialog {
+        margin: 20px;
+        width: calc(100% - 40px);
+        min-width: 280px;
+    }
+
+    .dialog-content {
+        padding: 16px;
+    }
+
+    .dialog-footer {
+        padding: 12px 16px;
     }
 }
