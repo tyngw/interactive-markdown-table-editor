@@ -805,15 +805,13 @@ const ContextMenuManager = {
         const state = window.TableEditor.state;
         state.columnWidths[columnIndex] = newWidth;
 
-        // Apply width to column using ColumnResizeManager
+        // Apply width to column using ColumnResizeManager without resize indicator
         if (window.TableEditor.modules.ColumnResizeManager) {
-            window.TableEditor.modules.ColumnResizeManager.applyColumnWidth(columnIndex, newWidth);
+            window.TableEditor.modules.ColumnResizeManager.applyColumnWidth(columnIndex, newWidth, false);
         }
 
         // Hide dialog
         this.hideColumnWidthDialog();
-
-
 
         // Show success message
         if (window.TableEditor.callModule) {

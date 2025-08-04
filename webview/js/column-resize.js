@@ -18,48 +18,48 @@
 const ColumnResizeManager = {
     // Initialization state
     isInitialized: false,
-    
+
     /**
      * Initialize the column resize manager module
      */
-    init: function() {
+    init: function () {
         // Prevent duplicate initialization
         if (this.isInitialized) {
             console.log('ColumnResizeManager: Already initialized, skipping');
             return;
         }
-        
+
         console.log('ColumnResizeManager: Initializing column resize manager module...');
-        
+
         // Set up window resize handler to maintain column widths
         this.setupWindowResizeHandler();
-        
+
         this.isInitialized = true;
         console.log('ColumnResizeManager: Module initialized');
     },
-    
+
     /**
      * Set up window resize handler to maintain column widths
      */
-    setupWindowResizeHandler: function() {
+    setupWindowResizeHandler: function () {
         // ウィンドウリサイズ時は何もしない - デフォルト幅を維持し、ユーザーの変更のみ保持
         // CSSのデフォルト幅とuser-resizedクラスによるカスタム幅で自動的に処理される
         console.log('ColumnResizeManager: Window resize handler disabled - using CSS defaults');
     },
-    
+
     /**
      * Start column resize operation
      */
-    startColumnResize: function(event, colIndex) {
+    startColumnResize: function (event, colIndex) {
         event.stopPropagation();
         event.preventDefault();
-        
+
         const state = window.TableEditor.state;
-        
+
         state.isResizing = true;
         state.resizeColumn = colIndex;
         state.startX = event.clientX;
-        
+
         const header = document.querySelector(`th[data-col="${colIndex}"]`);
         if (header) {
             state.startWidth = header.offsetWidth;
@@ -67,46 +67,47 @@ const ColumnResizeManager = {
             console.warn('ColumnResizeManager: Header not found for column', colIndex);
             return;
         }
-        
+
         // Store bound functions to ensure proper removal
         this.boundHandleColumnResize = this.handleColumnResize.bind(this);
         this.boundStopColumnResize = this.stopColumnResize.bind(this);
-        
+
         // Add global event listeners
         document.addEventListener('mousemove', this.boundHandleColumnResize);
         document.addEventListener('mouseup', this.boundStopColumnResize);
-        
+
         // Prevent text selection during resize
         document.body.style.userSelect = 'none';
         document.body.style.cursor = 'col-resize';
-        
+
         console.log('ColumnResizeManager: Started resizing column', colIndex);
     },
-    
+
     /**
      * Handle column resize mouse movement
      */
-    handleColumnResize: function(event) {
+    handleColumnResize: function (event) {
         const state = window.TableEditor.state;
-        
+
         if (!state.isResizing) return;
-        
+
         const deltaX = event.clientX - state.startX;
         const newWidth = Math.max(10, state.startWidth + deltaX); // Minimum width of 10px
-        
+
         // Store the new width in global state
         state.columnWidths[state.resizeColumn] = newWidth;
-        
-        // Apply new width to all cells in the column
-        this.applyColumnWidth(state.resizeColumn, newWidth);
+
+        // Apply new width to all cells in the column with resize indicator
+        this.applyColumnWidth(state.resizeColumn, newWidth, true);
     },
-    
+
     /**
      * Stop column resize operation
      */
-    stopColumnResize: function() {
+    stopColumnResize: function () {
         const state = window.TableEditor.state;
-        
+        const resizedColumn = state.resizeColumn;
+
         // Remove global event listeners using stored bound functions
         if (this.boundHandleColumnResize) {
             document.removeEventListener('mousemove', this.boundHandleColumnResize);
@@ -116,47 +117,56 @@ const ColumnResizeManager = {
             document.removeEventListener('mouseup', this.boundStopColumnResize);
             this.boundStopColumnResize = null;
         }
-        
+
         // Restore normal cursor and text selection
         document.body.style.userSelect = '';
         document.body.style.cursor = '';
-        
+
+        // Remove blue border indicator after resize is complete
+        if (resizedColumn >= 0) {
+            const currentWidth = state.columnWidths[resizedColumn];
+            if (currentWidth) {
+                // Apply final width without resize indicator
+                this.applyColumnWidth(resizedColumn, currentWidth, false);
+            }
+        }
+
         // Small delay to prevent immediate click events
         this.resizeCleanupTimeout = setTimeout(() => {
             state.isResizing = false;
             state.resizeColumn = -1;
             this.resizeCleanupTimeout = null;
         }, 10);
-        
-        console.log('ColumnResizeManager: Stopped resizing column');
+
+        console.log('ColumnResizeManager: Stopped resizing column and removed blue border');
     },
-    
+
     /**
      * Auto-fit column width to content
      */
-    autoFitColumn: function(colIndex) {
+    autoFitColumn: function (colIndex) {
         console.log('ColumnResizeManager: Auto-fitting column', colIndex);
-        
+
         const state = window.TableEditor.state;
         const data = state.displayData || state.tableData;
-        
+
         if (!data || !data.headers || colIndex < 0 || colIndex >= data.headers.length) {
             console.warn('ColumnResizeManager: Invalid column index for auto-fit', colIndex);
             return;
         }
-        
+
         // Cancel any ongoing resize operation
         if (state.isResizing) {
             this.stopColumnResize();
         }
-        
+
         // Get all cells in the column (header + data cells)
         const colCells = document.querySelectorAll(`th[data-col="${colIndex}"], td[data-col="${colIndex}"]`);
         let maxWidth = 10; // Minimum width
-        
+
         // Create a temporary element to measure text width
         const measureElement = this.createMeasureElement();
-        
+
         colCells.forEach(cell => {
             // Get cell content
             let cellText = '';
@@ -168,21 +178,21 @@ const ColumnResizeManager = {
                 // For data cells, get the processed content
                 cellText = cell.textContent || '';
             }
-            
+
             // Handle multi-line content by measuring the longest line only
             let maxLineWidth = 0;
-            
+
             // Check for multi-line content: either newlines in textContent or <br> tags in innerHTML
             const cellHTML = cell.innerHTML || '';
             const hasNewlines = cellText.includes('\n');
             const hasBrTags = cellHTML.includes('<br') || cellHTML.includes('<BR');
-            
+
             console.log(`ColumnResizeManager: Cell content analysis - textContent: "${cellText}", innerHTML: "${cellHTML}"`);
             console.log(`ColumnResizeManager: hasNewlines: ${hasNewlines}, hasBrTags: ${hasBrTags}`);
-            
+
             if (hasNewlines || hasBrTags) {
                 let lines;
-                
+
                 if (hasBrTags) {
                     // For <br> tags, convert to newlines first, then strip any remaining tags
                     console.log(`ColumnResizeManager: Processing <br> tags in: "${cellHTML}"`);
@@ -195,7 +205,7 @@ const ColumnResizeManager = {
                     // For plain newlines in textContent
                     lines = cellText.split(/\n/g);
                 }
-                
+
                 console.log(`ColumnResizeManager: Multi-line content found, ${lines.length} lines:`, lines.map(l => `"${l.trim()}"`));
                 lines.forEach((line, index) => {
                     const trimmedLine = line.trim();
@@ -213,62 +223,59 @@ const ColumnResizeManager = {
                 maxLineWidth = measureElement.offsetWidth;
                 console.log(`ColumnResizeManager: Single line: "${cellText}" -> ${maxLineWidth}px`);
             }
-            
+
             // Add padding and margin
             const cellWidth = maxLineWidth + 24; // 12px padding on each side
             maxWidth = Math.max(maxWidth, cellWidth);
         });
-        
+
         // Clean up the temporary element
         document.body.removeChild(measureElement);
-        
+
         // Cap the maximum width to prevent extremely wide columns
         const config = window.TableEditor.config;
         const maxAllowedWidth = config ? config.columnWidth.max : 400;
         const finalWidth = Math.min(maxWidth, maxAllowedWidth);
-        
+
         console.log('ColumnResizeManager: Auto-fit calculated width', finalWidth, 'for column', colIndex);
-        
+
         // Store the new width
         state.columnWidths[colIndex] = finalWidth;
-        
-        // Apply the new width
-        this.applyColumnWidth(colIndex, finalWidth);
+
+        // Apply the new width without resize indicator
+        this.applyColumnWidth(colIndex, finalWidth, false);
     },
-    
+
     /**
      * Apply width to all cells in a column
      */
-    applyColumnWidth: function(colIndex, width) {
+    applyColumnWidth: function (colIndex, width, showResizeIndicator = false) {
         const colCells = document.querySelectorAll(`th[data-col="${colIndex}"], td[data-col="${colIndex}"]`);
-        
+
         colCells.forEach(cell => {
             cell.style.width = width + 'px';
             cell.style.minWidth = width + 'px';
             cell.style.maxWidth = width + 'px';
-            
-            // Add visual indicator that this column has been user-resized
-            // Only add if width is different from default
-            if (width !== 150) {
-                if (!cell.classList.contains('user-resized')) {
-                    cell.classList.add('user-resized');
-                }
-            } else {
-                // Remove user-resized class if width is back to default
-                cell.classList.remove('user-resized');
+
+            // Remove user-resized class first
+            cell.classList.remove('user-resized');
+
+            // Add visual indicator only if explicitly requested (during drag)
+            if (showResizeIndicator) {
+                cell.classList.add('user-resized');
             }
         });
-        
+
         // Update table total width to prevent window resize effects
         this.updateTableTotalWidth();
-        
-        console.log('ColumnResizeManager: Applied width', width, 'to column', colIndex);
+
+        console.log('ColumnResizeManager: Applied width', width, 'to column', colIndex, 'showIndicator:', showResizeIndicator);
     },
-    
+
     /**
      * Create temporary element for text measurement
      */
-    createMeasureElement: function() {
+    createMeasureElement: function () {
         const measureElement = document.createElement('div');
         measureElement.style.position = 'absolute';
         measureElement.style.visibility = 'hidden';
@@ -279,142 +286,142 @@ const ColumnResizeManager = {
         measureElement.style.border = 'none';
         measureElement.style.margin = '0';
         document.body.appendChild(measureElement);
-        
+
         return measureElement;
     },
-    
+
     /**
      * Reset column width to default
      */
-    resetColumnWidth: function(colIndex) {
+    resetColumnWidth: function (colIndex) {
         const state = window.TableEditor.state;
-        
+
         // Reset to default width
         const defaultWidth = 150;
         state.columnWidths[colIndex] = defaultWidth;
-        
-        // Apply the default width
-        this.applyColumnWidth(colIndex, defaultWidth);
-        
+
+        // Apply the default width without resize indicator
+        this.applyColumnWidth(colIndex, defaultWidth, false);
+
         console.log('ColumnResizeManager: Reset column width', colIndex, 'to default');
     },
-    
+
     /**
      * Reset all column widths to default
      */
-    resetAllColumnWidths: function() {
+    resetAllColumnWidths: function () {
         const state = window.TableEditor.state;
         const data = state.displayData || state.tableData;
-        
+
         if (!data || !data.headers) return;
-        
+
         // Reset all column widths
         data.headers.forEach((_, index) => {
             this.resetColumnWidth(index);
         });
-        
+
         console.log('ColumnResizeManager: Reset all column widths to default');
     },
-    
+
     /**
      * Auto-fit all columns
      */
-    autoFitAllColumns: function() {
+    autoFitAllColumns: function () {
         const state = window.TableEditor.state;
         const data = state.displayData || state.tableData;
-        
+
         if (!data || !data.headers) return;
-        
+
         // Auto-fit each column
         data.headers.forEach((_, index) => {
             this.autoFitColumn(index);
         });
-        
+
         console.log('ColumnResizeManager: Auto-fitted all columns');
     },
-    
+
     /**
      * Get current column width
      */
-    getColumnWidth: function(colIndex) {
+    getColumnWidth: function (colIndex) {
         const state = window.TableEditor.state;
         return state.columnWidths[colIndex] || 150; // Default width
     },
-    
+
     /**
      * Set column width programmatically
      */
-    setColumnWidth: function(colIndex, width) {
+    setColumnWidth: function (colIndex, width) {
         const state = window.TableEditor.state;
-        
+
         // Validate width using config values
         const config = window.TableEditor.config;
         const minWidth = config ? config.columnWidth.min : 50;
         const maxWidth = config ? config.columnWidth.max : 800;
         width = Math.max(minWidth, Math.min(maxWidth, width));
-        
-        // Store and apply the width
+
+        // Store and apply the width without resize indicator
         state.columnWidths[colIndex] = width;
-        this.applyColumnWidth(colIndex, width);
-        
+        this.applyColumnWidth(colIndex, width, false);
+
         console.log('ColumnResizeManager: Set column', colIndex, 'width to', width);
     },
-    
+
     /**
      * Restore all column widths after table re-render
      */
-    restoreColumnWidths: function() {
+    restoreColumnWidths: function () {
         const state = window.TableEditor.state;
-        
+
         if (!state.columnWidths) return;
-        
-        // Apply stored widths to all columns
+
+        // Apply stored widths to all columns without resize indicator
         Object.keys(state.columnWidths).forEach(colIndex => {
             const width = state.columnWidths[colIndex];
             if (width && width !== 150) { // Only apply if not default width
-                this.applyColumnWidth(parseInt(colIndex), width);
+                this.applyColumnWidth(parseInt(colIndex), width, false);
             }
         });
-        
+
         console.log('ColumnResizeManager: Restored column widths after re-render');
     },
-    
+
     /**
      * Update table total width to prevent window resize effects
      */
-    updateTableTotalWidth: function() {
+    updateTableTotalWidth: function () {
         const state = window.TableEditor.state;
         const data = state.displayData || state.tableData;
         const table = document.getElementById('tableEditor');
-        
+
         if (!table || !data || !data.headers) return;
-        
+
         // Calculate total width based on column widths
         let totalWidth = 80; // Row header width (updated to 80px)
-        
+
         data.headers.forEach((_, index) => {
             const columnWidth = state.columnWidths[index] || 150; // Default width
             totalWidth += columnWidth;
         });
-        
+
         // Set table width explicitly
         table.style.width = totalWidth + 'px';
-        
+
         console.log('ColumnResizeManager: Updated table total width to', totalWidth + 'px');
     },
-    
+
     /**
      * Cleanup resources when module is being disposed
      */
-    cleanup: function() {
+    cleanup: function () {
         console.log('ColumnResizeManager: Starting cleanup...');
-        
+
         // Clear any pending timeouts
         if (this.resizeCleanupTimeout) {
             clearTimeout(this.resizeCleanupTimeout);
             this.resizeCleanupTimeout = null;
         }
-        
+
         // Remove any remaining event listeners
         if (this.boundHandleColumnResize) {
             document.removeEventListener('mousemove', this.boundHandleColumnResize);
@@ -424,11 +431,11 @@ const ColumnResizeManager = {
             document.removeEventListener('mouseup', this.boundStopColumnResize);
             this.boundStopColumnResize = null;
         }
-        
+
         // Restore body styles
         document.body.style.userSelect = '';
         document.body.style.cursor = '';
-        
+
         console.log('ColumnResizeManager: Cleanup completed');
     }
 };
