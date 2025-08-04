@@ -205,9 +205,8 @@ const TableRenderer = {
             const state = window.TableEditor.state;
             const storedWidth = state.columnWidths[index] || 150;
             const widthStyle = `style="width: ${storedWidth}px; min-width: ${storedWidth}px; max-width: ${storedWidth}px;"`;
-            const userResizedClass = state.columnWidths[index] && state.columnWidths[index] !== 150 ? 'user-resized' : '';
             
-            html += `<th data-col="${index}" class="column-header sortable ${userResizedClass}" 
+            html += `<th data-col="${index}" class="column-header sortable" 
                         ${widthStyle}
                         oncontextmenu="TableEditor.callModule('ContextMenuManager', 'showColumnContextMenu', event, ${index}); return false;"
                         draggable="true"
@@ -256,9 +255,8 @@ const TableRenderer = {
                 const state = window.TableEditor.state;
                 const storedWidth = state.columnWidths[colIndex] || 150;
                 const widthStyle = `style="width: ${storedWidth}px; min-width: ${storedWidth}px; max-width: ${storedWidth}px;"`;
-                const userResizedClass = state.columnWidths[colIndex] && state.columnWidths[colIndex] !== 150 ? 'user-resized' : '';
                 
-                html += `<td data-row="${rowIndex}" data-col="${colIndex}" class="editable-cell ${userResizedClass}" ${multilineAttr}
+                html += `<td data-row="${rowIndex}" data-col="${colIndex}" class="editable-cell" ${multilineAttr}
                             ${widthStyle}
                             onclick="TableEditor.callModule('SelectionManager', 'selectCell', ${rowIndex}, ${colIndex}, event)"
                             ondblclick="TableEditor.callModule('CellEditor', 'startCellEdit', ${rowIndex}, ${colIndex})"
