@@ -425,7 +425,93 @@ const TableEditor = {
                 saveIndicator.className = 'save-indicator failed';
             }
         }
-    }};
+    },
+
+    /**
+     * Unified scroll position management
+     */
+    scrollManager: {
+        /**
+         * Save current scroll position
+         */
+        saveScrollPosition: function() {
+            const tableContainer = document.querySelector('.table-container');
+            const scrollState = {
+                top: tableContainer ? tableContainer.scrollTop : 0,
+                left: tableContainer ? tableContainer.scrollLeft : 0
+            };
+            console.log('ScrollManager: Saved scroll position:', scrollState);
+            return scrollState;
+        },
+
+        /**
+         * Restore scroll position with multiple fallback mechanisms
+         */
+        restoreScrollPosition: function(scrollState, context = 'unknown') {
+            if (!scrollState || (scrollState.top === 0 && scrollState.left === 0)) {
+                console.log('ScrollManager: No scroll position to restore for context:', context);
+                return;
+            }
+
+            console.log('ScrollManager: Attempting to restore scroll position for context:', context, scrollState);
+
+            const attemptRestore = (attempt = 1) => {
+                const tableContainer = document.querySelector('.table-container');
+                if (!tableContainer) {
+                    console.warn('ScrollManager: Table container not found for scroll restoration, attempt:', attempt);
+                    if (attempt < 5) {
+                        setTimeout(() => attemptRestore(attempt + 1), 100 * attempt);
+                    }
+                    return;
+                }
+
+                tableContainer.scrollTop = scrollState.top;
+                tableContainer.scrollLeft = scrollState.left;
+
+                // Verify restoration
+                setTimeout(() => {
+                    const actualTop = tableContainer.scrollTop;
+                    const actualLeft = tableContainer.scrollLeft;
+                    
+                    if ((actualTop !== scrollState.top || actualLeft !== scrollState.left) && attempt < 5) {
+                        console.log(`ScrollManager: Attempt ${attempt} failed, retrying...`, {
+                            expected: scrollState,
+                            actual: { top: actualTop, left: actualLeft }
+                        });
+                        setTimeout(() => attemptRestore(attempt + 1), 100 * attempt);
+                    } else {
+                        console.log('ScrollManager: Final scroll position for context:', context, {
+                            top: actualTop,
+                            left: actualLeft,
+                            expected: scrollState,
+                            success: actualTop === scrollState.top && actualLeft === scrollState.left
+                        });
+                    }
+                }, 50);
+            };
+
+            // Start restoration attempts
+            attemptRestore();
+        },
+
+        /**
+         * Execute function with scroll preservation
+         */
+        withScrollPreservation: function(operation, context = 'unknown') {
+            const scrollState = this.saveScrollPosition();
+            
+            // Execute the operation
+            const result = operation();
+            
+            // Restore scroll position after operation
+            setTimeout(() => {
+                this.restoreScrollPosition(scrollState, context);
+            }, 10);
+            
+            return result;
+        }
+    }
+};
 
 // Make TableEditor globally available
 window.TableEditor = TableEditor;

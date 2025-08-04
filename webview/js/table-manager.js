@@ -20,6 +20,10 @@ const TableManager = {
         console.log('TableManager: handleUpdateTableData called with data:', data, 'fileInfo:', fileInfo);
         console.log('TableManager: Current table index before update:', TableEditor.state.currentTableIndex);
 
+        // Save current scroll position before processing update
+        const scrollState = TableEditor.scrollManager.saveScrollPosition();
+        console.log('TableManager: Saved scroll position before VSCode update:', scrollState);
+
         // Support both single table and multiple tables data structure
         if (Array.isArray(data)) {
             // Multiple tables
@@ -73,14 +77,19 @@ const TableManager = {
         // Show auto-saved status when table data is updated from server
         TableEditor.showAutoSavedStatus();
 
-        // Render table with tabs if multiple tables exist
+        // Render table with tabs if multiple tables exist, preserving scroll position
         console.log('TableManager: Calling renderApplicationWithTabs...');
         TableEditor.callModule('UIRenderer', 'renderApplicationWithTabs');
+
+        // Restore scroll position after rendering
+        setTimeout(() => {
+            TableEditor.scrollManager.restoreScrollPosition(scrollState, 'TableManager.handleUpdateTableData');
+        }, 100);
 
         // Update status bar after rendering
         setTimeout(() => {
             TableEditor.callModule('StatusBarManager', 'updateTableDimensions');
-        }, 100);
+        }, 200);
     },
 
     /**
@@ -179,29 +188,37 @@ const TableManager = {
      * Add a new row to the table
      */
     addRow: function (index) {
-        const data = TableEditor.state.displayData || TableEditor.state.tableData;
-        if (!data || !data.headers) {
-            console.error('TableManager: No table data available');
-            return;
-        }
+        TableEditor.scrollManager.withScrollPreservation(() => {
+            const data = TableEditor.state.displayData || TableEditor.state.tableData;
+            if (!data || !data.headers) {
+                console.error('TableManager: No table data available');
+                return;
+            }
 
-        // Create new empty row
-        const newRow = new Array(data.headers.length).fill('');
+            // Create new empty row
+            const newRow = new Array(data.headers.length).fill('');
 
-        // Insert at specified index
-        if (index >= 0 && index <= data.rows.length) {
-            data.rows.splice(index, 0, newRow);
-        } else {
-            data.rows.push(newRow);
-            index = data.rows.length - 1;
-        }
+            // Insert at specified index
+            if (index >= 0 && index <= data.rows.length) {
+                data.rows.splice(index, 0, newRow);
+            } else {
+                data.rows.push(newRow);
+                index = data.rows.length - 1;
+            }
 
-        // Update table data
-        TableEditor.state.tableData = data;
-        TableEditor.state.displayData = data;
+            // Create a new data object (like sorting does) instead of modifying in place
+            const newData = {
+                headers: [...data.headers],
+                rows: data.rows.map(row => [...row])
+            };
 
-        // Re-render table
-        TableEditor.callModule('TableRenderer', 'renderTable', data);
+            // Update table data
+            TableEditor.state.tableData = newData;
+            TableEditor.state.displayData = newData;
+
+            // Re-render table with scroll preservation (same method as sorting)
+            TableEditor.callModule('UIRenderer', 'renderTableInContainer', newData);
+        }, 'TableManager.addRow');
 
         // Send addRow command to extension with current table index
         TableEditor.callModule('VSCodeCommunication', 'sendMessage', {
@@ -217,26 +234,34 @@ const TableManager = {
      * Delete a row from the table
      */
     deleteRow: function (index) {
-        const data = TableEditor.state.displayData || TableEditor.state.tableData;
-        if (!data || !data.rows || index < 0 || index >= data.rows.length) {
-            console.error('TableManager: Invalid row index');
-            return;
-        }
+        TableEditor.scrollManager.withScrollPreservation(() => {
+            const data = TableEditor.state.displayData || TableEditor.state.tableData;
+            if (!data || !data.rows || index < 0 || index >= data.rows.length) {
+                console.error('TableManager: Invalid row index');
+                return;
+            }
 
-        if (data.rows.length <= 1) {
-            TableEditor.showError('Cannot delete the last row');
-            return;
-        }
+            if (data.rows.length <= 1) {
+                TableEditor.showError('Cannot delete the last row');
+                return;
+            }
 
-        // Remove row
-        data.rows.splice(index, 1);
+            // Remove row
+            data.rows.splice(index, 1);
 
-        // Update table data
-        TableEditor.state.tableData = data;
-        TableEditor.state.displayData = data;
+            // Create a new data object (like sorting does) instead of modifying in place
+            const newData = {
+                headers: [...data.headers],
+                rows: data.rows.map(row => [...row])
+            };
 
-        // Re-render table
-        TableEditor.callModule('TableRenderer', 'renderTable', data);
+            // Update table data
+            TableEditor.state.tableData = newData;
+            TableEditor.state.displayData = newData;
+
+            // Re-render table with scroll preservation (same method as sorting)
+            TableEditor.callModule('UIRenderer', 'renderTableInContainer', newData);
+        }, 'TableManager.deleteRow');
 
         // Send deleteRow command to extension with current table index
         TableEditor.callModule('VSCodeCommunication', 'sendMessage', {
@@ -252,37 +277,45 @@ const TableManager = {
      * Add a new column to the table
      */
     addColumn: function (index, headerName) {
-        const data = TableEditor.state.displayData || TableEditor.state.tableData;
-        if (!data || !data.headers) {
-            console.error('TableManager: No table data available');
-            return;
-        }
-
-        headerName = headerName || `Column ${index + 1}`;
-
-        // Insert header
-        if (index >= 0 && index <= data.headers.length) {
-            data.headers.splice(index, 0, headerName);
-        } else {
-            data.headers.push(headerName);
-            index = data.headers.length - 1;
-        }
-
-        // Insert empty cells in all rows
-        data.rows.forEach(row => {
-            if (index >= 0 && index <= row.length) {
-                row.splice(index, 0, '');
-            } else {
-                row.push('');
+        TableEditor.scrollManager.withScrollPreservation(() => {
+            const data = TableEditor.state.displayData || TableEditor.state.tableData;
+            if (!data || !data.headers) {
+                console.error('TableManager: No table data available');
+                return;
             }
-        });
 
-        // Update table data
-        TableEditor.state.tableData = data;
-        TableEditor.state.displayData = data;
+            headerName = headerName || `Column ${index + 1}`;
 
-        // Re-render table
-        TableEditor.callModule('TableRenderer', 'renderTable', data);
+            // Insert header
+            if (index >= 0 && index <= data.headers.length) {
+                data.headers.splice(index, 0, headerName);
+            } else {
+                data.headers.push(headerName);
+                index = data.headers.length - 1;
+            }
+
+            // Insert empty cells in all rows
+            data.rows.forEach(row => {
+                if (index >= 0 && index <= row.length) {
+                    row.splice(index, 0, '');
+                } else {
+                    row.push('');
+                }
+            });
+
+            // Create a new data object (like sorting does) instead of modifying in place
+            const newData = {
+                headers: [...data.headers],
+                rows: data.rows.map(row => [...row])
+            };
+
+            // Update table data
+            TableEditor.state.tableData = newData;
+            TableEditor.state.displayData = newData;
+
+            // Re-render table with scroll preservation (same method as sorting)
+            TableEditor.callModule('UIRenderer', 'renderTableInContainer', newData);
+        }, 'TableManager.addColumn');
 
         // Send addColumn command to extension with current table index
         TableEditor.callModule('VSCodeCommunication', 'sendMessage', {
@@ -299,33 +332,41 @@ const TableManager = {
      * Delete a column from the table
      */
     deleteColumn: function (index) {
-        const data = TableEditor.state.displayData || TableEditor.state.tableData;
-        if (!data || !data.headers || index < 0 || index >= data.headers.length) {
-            console.error('TableManager: Invalid column index');
-            return;
-        }
-
-        if (data.headers.length <= 1) {
-            TableEditor.showError('Cannot delete the last column');
-            return;
-        }
-
-        // Remove header
-        data.headers.splice(index, 1);
-
-        // Remove cells from all rows
-        data.rows.forEach(row => {
-            if (index < row.length) {
-                row.splice(index, 1);
+        TableEditor.scrollManager.withScrollPreservation(() => {
+            const data = TableEditor.state.displayData || TableEditor.state.tableData;
+            if (!data || !data.headers || index < 0 || index >= data.headers.length) {
+                console.error('TableManager: Invalid column index');
+                return;
             }
-        });
 
-        // Update table data
-        TableEditor.state.tableData = data;
-        TableEditor.state.displayData = data;
+            if (data.headers.length <= 1) {
+                TableEditor.showError('Cannot delete the last column');
+                return;
+            }
 
-        // Re-render table
-        TableEditor.callModule('TableRenderer', 'renderTable', data);
+            // Remove header
+            data.headers.splice(index, 1);
+
+            // Remove cells from all rows
+            data.rows.forEach(row => {
+                if (index < row.length) {
+                    row.splice(index, 1);
+                }
+            });
+
+            // Create a new data object (like sorting does) instead of modifying in place
+            const newData = {
+                headers: [...data.headers],
+                rows: data.rows.map(row => [...row])
+            };
+
+            // Update table data
+            TableEditor.state.tableData = newData;
+            TableEditor.state.displayData = newData;
+
+            // Re-render table with scroll preservation (same method as sorting)
+            TableEditor.callModule('UIRenderer', 'renderTableInContainer', newData);
+        }, 'TableManager.deleteColumn');
 
         // Send deleteColumn command to extension with current table index
         TableEditor.callModule('VSCodeCommunication', 'sendMessage', {
