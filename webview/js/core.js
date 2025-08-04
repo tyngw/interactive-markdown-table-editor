@@ -216,8 +216,8 @@ const TableEditor = {
         });
 
         // Debug: Log all available window objects that might be modules
-        console.log('TableEditor: Available window objects:', Object.keys(window).filter(key => 
-            key.includes('Manager') || key.includes('Handler') || key.includes('Renderer') || 
+        console.log('TableEditor: Available window objects:', Object.keys(window).filter(key =>
+            key.includes('Manager') || key.includes('Handler') || key.includes('Renderer') ||
             key.includes('Communication') || key.includes('Exporter') || key.includes('Editor')
         ));
 
@@ -434,7 +434,7 @@ const TableEditor = {
         /**
          * Save current scroll position
          */
-        saveScrollPosition: function() {
+        saveScrollPosition: function () {
             const tableContainer = document.querySelector('.table-container');
             const scrollState = {
                 top: tableContainer ? tableContainer.scrollTop : 0,
@@ -445,9 +445,9 @@ const TableEditor = {
         },
 
         /**
-         * Restore scroll position with multiple fallback mechanisms
+         * Restore scroll position immediately without flickering
          */
-        restoreScrollPosition: function(scrollState, context = 'unknown') {
+        restoreScrollPosition: function (scrollState, context = 'unknown') {
             if (!scrollState || (scrollState.top === 0 && scrollState.left === 0)) {
                 console.log('ScrollManager: No scroll position to restore for context:', context);
                 return;
@@ -455,59 +455,80 @@ const TableEditor = {
 
             console.log('ScrollManager: Attempting to restore scroll position for context:', context, scrollState);
 
-            const attemptRestore = (attempt = 1) => {
+            const tableContainer = document.querySelector('.table-container');
+            if (!tableContainer) {
+                console.warn('ScrollManager: Table container not found for scroll restoration');
+                return;
+            }
+
+            // Immediately set scroll position to prevent flickering
+            tableContainer.scrollTop = scrollState.top;
+            tableContainer.scrollLeft = scrollState.left;
+
+            console.log('ScrollManager: Scroll position restored for context:', context, {
+                top: tableContainer.scrollTop,
+                left: tableContainer.scrollLeft
+            });
+        },
+
+        /**
+         * Restore scroll position with DOM ready check (for cases where DOM might not be ready)
+         */
+        restoreScrollPositionSafe: function (scrollState, context = 'unknown') {
+            if (!scrollState || (scrollState.top === 0 && scrollState.left === 0)) {
+                console.log('ScrollManager: No scroll position to restore for context:', context);
+                return;
+            }
+
+            const attemptRestore = () => {
                 const tableContainer = document.querySelector('.table-container');
                 if (!tableContainer) {
-                    console.warn('ScrollManager: Table container not found for scroll restoration, attempt:', attempt);
-                    if (attempt < 5) {
-                        setTimeout(() => attemptRestore(attempt + 1), 100 * attempt);
-                    }
+                    // Use requestAnimationFrame for better timing
+                    requestAnimationFrame(attemptRestore);
                     return;
                 }
 
                 tableContainer.scrollTop = scrollState.top;
                 tableContainer.scrollLeft = scrollState.left;
 
-                // Verify restoration
-                setTimeout(() => {
-                    const actualTop = tableContainer.scrollTop;
-                    const actualLeft = tableContainer.scrollLeft;
-                    
-                    if ((actualTop !== scrollState.top || actualLeft !== scrollState.left) && attempt < 5) {
-                        console.log(`ScrollManager: Attempt ${attempt} failed, retrying...`, {
-                            expected: scrollState,
-                            actual: { top: actualTop, left: actualLeft }
-                        });
-                        setTimeout(() => attemptRestore(attempt + 1), 100 * attempt);
-                    } else {
-                        console.log('ScrollManager: Final scroll position for context:', context, {
-                            top: actualTop,
-                            left: actualLeft,
-                            expected: scrollState,
-                            success: actualTop === scrollState.top && actualLeft === scrollState.left
-                        });
-                    }
-                }, 50);
+                console.log('ScrollManager: Safe scroll position restored for context:', context, {
+                    top: tableContainer.scrollTop,
+                    left: tableContainer.scrollLeft
+                });
             };
 
-            // Start restoration attempts
             attemptRestore();
         },
 
         /**
-         * Execute function with scroll preservation
+         * Execute function with scroll preservation (immediate restoration)
          */
-        withScrollPreservation: function(operation, context = 'unknown') {
+        withScrollPreservation: function (operation, context = 'unknown') {
             const scrollState = this.saveScrollPosition();
-            
+
             // Execute the operation
             const result = operation();
-            
-            // Restore scroll position after operation
-            setTimeout(() => {
-                this.restoreScrollPosition(scrollState, context);
-            }, 10);
-            
+
+            // Immediately restore scroll position to prevent flickering
+            this.restoreScrollPosition(scrollState, context);
+
+            return result;
+        },
+
+        /**
+         * Execute function with scroll preservation (safe restoration for async operations)
+         */
+        withScrollPreservationSafe: function (operation, context = 'unknown') {
+            const scrollState = this.saveScrollPosition();
+
+            // Execute the operation
+            const result = operation();
+
+            // Use safe restoration for cases where DOM might be modified asynchronously
+            requestAnimationFrame(() => {
+                this.restoreScrollPositionSafe(scrollState, context);
+            });
+
             return result;
         }
     }

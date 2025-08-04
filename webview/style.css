@@ -43,6 +43,8 @@ body {
     position: relative;
     overflow: auto;
     min-height: 0;
+    /* Prevent scroll flickering during position restoration */
+    scroll-behavior: auto;
 }
 
 .loading {

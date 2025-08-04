@@ -81,10 +81,8 @@ const TableManager = {
         console.log('TableManager: Calling renderApplicationWithTabs...');
         TableEditor.callModule('UIRenderer', 'renderApplicationWithTabs');
 
-        // Restore scroll position after rendering
-        setTimeout(() => {
-            TableEditor.scrollManager.restoreScrollPosition(scrollState, 'TableManager.handleUpdateTableData');
-        }, 100);
+        // Restore scroll position immediately to prevent flickering
+        TableEditor.scrollManager.restoreScrollPosition(scrollState, 'TableManager.handleUpdateTableData');
 
         // Update status bar after rendering
         setTimeout(() => {

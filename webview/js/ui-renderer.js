@@ -59,10 +59,8 @@ const UIRenderer = {
             // Create a custom render method that targets table-content
             this.renderTableInContainer(TableEditor.state.tableData);
             
-            // Restore scroll position after rendering
-            setTimeout(() => {
-                TableEditor.scrollManager.restoreScrollPosition(scrollState, 'UIRenderer.renderApplicationWithTabs');
-            }, 50);
+            // Restore scroll position immediately to prevent flickering
+            TableEditor.scrollManager.restoreScrollPosition(scrollState, 'UIRenderer.renderApplicationWithTabs');
         } else if (!TableEditor.state.tableData) {
             console.log('UIRenderer: No table data, showing no-data message');
             document.getElementById('table-content').innerHTML = '<div class="no-data">テーブルデータがありません</div>';
@@ -215,10 +213,8 @@ const UIRenderer = {
             // Set table width to sum of column widths to prevent window resize effects
             renderer.setTableWidth();
 
-            // Restore scroll position using unified scroll manager
-            setTimeout(() => {
-                TableEditor.scrollManager.restoreScrollPosition(scrollState, 'UIRenderer.renderTableInContainer');
-            }, 10);
+            // Restore scroll position immediately to prevent flickering
+            TableEditor.scrollManager.restoreScrollPosition(scrollState, 'UIRenderer.renderTableInContainer');
 
             // Update sort actions visibility after rendering
             TableEditor.callModule('SortingManager', 'updateSortActionsVisibility');
