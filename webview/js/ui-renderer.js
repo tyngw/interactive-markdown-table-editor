@@ -26,6 +26,9 @@ const UIRenderer = {
 
         console.log('UIRenderer: App element found, allTables count:', TableEditor.state.allTables.length);
 
+        // Save current scroll position before rendering tabs
+        const scrollState = TableEditor.scrollManager.saveScrollPosition();
+
         let html = '';
 
         // Render tabs (always show for consistency)
@@ -55,6 +58,11 @@ const UIRenderer = {
             console.log('UIRenderer: Rendering table with TableRenderer');
             // Create a custom render method that targets table-content
             this.renderTableInContainer(TableEditor.state.tableData);
+            
+            // Restore scroll position after rendering
+            setTimeout(() => {
+                TableEditor.scrollManager.restoreScrollPosition(scrollState, 'UIRenderer.renderApplicationWithTabs');
+            }, 50);
         } else if (!TableEditor.state.tableData) {
             console.log('UIRenderer: No table data, showing no-data message');
             document.getElementById('table-content').innerHTML = '<div class="no-data">テーブルデータがありません</div>';
@@ -76,10 +84,8 @@ const UIRenderer = {
             return;
         }
 
-        // Save current scroll position
-        const tableContainer = tableContent.querySelector('.table-container');
-        const scrollTop = tableContainer ? tableContainer.scrollTop : 0;
-        const scrollLeft = tableContainer ? tableContainer.scrollLeft : 0;
+        // Save current scroll position using unified scroll manager
+        const scrollState = TableEditor.scrollManager.saveScrollPosition();
 
         const renderer = TableEditor.getModule('TableRenderer');
         if (!renderer) {
@@ -209,12 +215,10 @@ const UIRenderer = {
             // Set table width to sum of column widths to prevent window resize effects
             renderer.setTableWidth();
 
-            // Restore scroll position
-            const newTableContainer = tableContent.querySelector('.table-container');
-            if (newTableContainer) {
-                newTableContainer.scrollTop = scrollTop;
-                newTableContainer.scrollLeft = scrollLeft;
-            }
+            // Restore scroll position using unified scroll manager
+            setTimeout(() => {
+                TableEditor.scrollManager.restoreScrollPosition(scrollState, 'UIRenderer.renderTableInContainer');
+            }, 10);
 
             // Update sort actions visibility after rendering
             TableEditor.callModule('SortingManager', 'updateSortActionsVisibility');

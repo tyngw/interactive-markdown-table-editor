@@ -353,21 +353,31 @@
             }
         };
 
-        // Set up CSS and script URIs for the webview system
+        // Set up CSS and script URIs for the webview system (same order as webviewManager.ts)
         window.cssUri = '/webview/style.css';
         window.scriptUris = [
+            // Core system must be loaded first
             '/webview/js/core.js',
+
+            // Core modules (order matters for dependencies)
+            '/webview/js/error-handler.js',
+            '/webview/js/vscode-communication.js',
+            '/webview/js/ui-renderer.js',
+            '/webview/js/table-manager.js',
+
+            // Feature modules
             '/webview/js/table-renderer.js',
-            '/webview/js/cell-editor.js',
             '/webview/js/selection.js',
-            '/webview/js/keyboard-navigation.js',
-            '/webview/js/context-menu.js',
-            '/webview/js/column-resize.js',
-            '/webview/js/drag-drop.js',
+            '/webview/js/cell-editor.js',
             '/webview/js/sorting.js',
-            '/webview/js/status-bar.js',
+            '/webview/js/keyboard-navigation.js',
             '/webview/js/clipboard.js',
+            '/webview/js/column-resize.js',
+            '/webview/js/context-menu.js',
+            '/webview/js/drag-drop.js',
+            '/webview/js/status-bar.js',
             '/webview/js/csv-exporter.js'
+            // '/webview/js/test-module.js'
         ];
 
         // Initialize when page loads
@@ -450,19 +460,29 @@
         </button>
     </div>
 
-    <!-- Load modular JavaScript files in the same order as the webview -->
+    <!-- Load modular JavaScript files in the same order as webviewManager.ts -->
+    <!-- Core system must be loaded first -->
     <script src="/webview/js/core.js"></script>
+
+    <!-- Core modules (order matters for dependencies) -->
+    <script src="/webview/js/error-handler.js"></script>
+    <script src="/webview/js/vscode-communication.js"></script>
+    <script src="/webview/js/ui-renderer.js"></script>
+    <script src="/webview/js/table-manager.js"></script>
+
+    <!-- Feature modules -->
     <script src="/webview/js/table-renderer.js"></script>
-    <script src="/webview/js/cell-editor.js"></script>
     <script src="/webview/js/selection.js"></script>
-    <script src="/webview/js/keyboard-navigation.js"></script>
-    <script src="/webview/js/context-menu.js"></script>
-    <script src="/webview/js/column-resize.js"></script>
-    <script src="/webview/js/drag-drop.js"></script>
+    <script src="/webview/js/cell-editor.js"></script>
     <script src="/webview/js/sorting.js"></script>
-    <script src="/webview/js/status-bar.js"></script>
+    <script src="/webview/js/keyboard-navigation.js"></script>
     <script src="/webview/js/clipboard.js"></script>
+    <script src="/webview/js/column-resize.js"></script>
+    <script src="/webview/js/context-menu.js"></script>
+    <script src="/webview/js/drag-drop.js"></script>
+    <script src="/webview/js/status-bar.js"></script>
     <script src="/webview/js/csv-exporter.js"></script>
+    <!-- <script src="/webview/js/test-module.js"></script> -->
 
     <script>
         // Initialize the table editor after all modules are loaded

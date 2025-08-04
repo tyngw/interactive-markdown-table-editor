@@ -89,8 +89,7 @@ export class WebviewManager {
             'js/context-menu.js',
             'js/drag-drop.js',
             'js/status-bar.js',
-            'js/csv-exporter.js',
-            'js/test-module.js'
+            'js/csv-exporter.js'
         ];
 
         const scriptUris = scriptFiles.map(file => {
