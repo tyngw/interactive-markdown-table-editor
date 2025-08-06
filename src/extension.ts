@@ -6,9 +6,6 @@ import { getFileHandler } from './fileHandler';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Markdown Table Editor extension is now active!');
-    
-    // Show activation message
-    vscode.window.showInformationMessage('Markdown Table Editor activated!');
 
     // Initialize managers
     const webviewManager = WebviewManager.getInstance(context);
@@ -815,7 +812,6 @@ export function activate(context: vscode.ExtensionContext) {
     );
     
     console.log('All commands registered successfully!');
-    vscode.window.showInformationMessage('Markdown Table Editor commands registered!');
 }
 
 export function deactivate() {
