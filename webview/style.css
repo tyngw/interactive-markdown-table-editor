@@ -32,6 +32,7 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    background-color: var(--vscode-editor-background);
 }
 
 .table-container {
@@ -106,7 +107,7 @@ body {
 }
 
 .table-editor thead {
-    background-color: var(--vscode-editor-background);
+    background-color: var(--vscode-panelSectionHeader-background, var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editorWidget-background, var(--vscode-editor-background))));
 }
 
 .table-editor tbody tr:hover {
@@ -133,7 +134,7 @@ body {
 
 /* ====== 4. テーブルヘッダー関連 ====== */
 .table-editor th {
-    background-color: var(--vscode-editor-lineHighlightBackground);
+    background-color: var(--vscode-panelSectionHeader-background, var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editorWidget-background, var(--vscode-editor-background))));
     border: 1px solid var(--vscode-panel-border);
     border-top: 2px solid var(--vscode-focusBorder);
     padding: 10px 12px;
@@ -571,11 +572,11 @@ textarea.cell-input[data-multiline="true"] {
 }
 
 .sort-indicator.view-only {
-    color: var(--vscode-statusBarItem-warningForeground);
+    color: var(--vscode-editorWarning-foreground);
 }
 
 .sort-indicator.committed {
-    color: var(--vscode-statusBarItem-prominentForeground);
+    color: var(--vscode-editorInfo-foreground);
 }
 
 .sort-asc::after {
@@ -703,8 +704,8 @@ textarea.cell-input[data-multiline="true"] {
 }
 
 .context-menu-item:hover:not(.disabled) {
-    background-color: var(--vscode-menu-selectionBackground);
-    color: var(--vscode-menu-selectionForeground);
+    background-color: var(--vscode-list-hoverBackground);
+    color: var(--vscode-menu-foreground);
     opacity: 1;
 }
 
@@ -912,23 +913,26 @@ textarea.cell-input[data-multiline="true"] {
 
 .save-indicator.saved {
     color: var(--vscode-charts-green);
-    background-color: var(--vscode-charts-green);
-    background-color: rgba(var(--vscode-charts-green), 0.1);
+    background-color: var(--vscode-editor-lineHighlightBackground);
+    box-shadow: inset 0 0 0 1px var(--vscode-charts-green);
 }
 
 .save-indicator.saving {
     color: var(--vscode-charts-orange);
-    background-color: rgba(var(--vscode-charts-orange), 0.1);
+    background-color: var(--vscode-editor-lineHighlightBackground);
+    box-shadow: inset 0 0 0 1px var(--vscode-charts-orange);
 }
 
 .save-indicator.error {
     color: var(--vscode-charts-red);
-    background-color: rgba(var(--vscode-charts-red), 0.1);
+    background-color: var(--vscode-inputValidation-errorBackground);
+    box-shadow: inset 0 0 0 1px var(--vscode-inputValidation-errorBorder);
 }
 
 .save-indicator.failed {
     color: var(--vscode-charts-red);
-    background-color: rgba(var(--vscode-charts-red), 0.1);
+    background-color: var(--vscode-inputValidation-errorBackground);
+    box-shadow: inset 0 0 0 1px var(--vscode-inputValidation-errorBorder);
 }
 
 /* ====== 16. ダイアログ ====== */
