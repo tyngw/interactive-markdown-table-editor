@@ -28,6 +28,11 @@
         "command": "markdownTableEditor.openEditor",
         "title": "Open Table Editor",
         "category": "Markdown Table Editor"
+      },
+      {
+        "command": "markdownTableEditor.selectTheme",
+        "title": "Select Table Editor Theme",
+        "category": "Markdown Table Editor"
       }
     ],
     "menus": {
@@ -38,6 +43,16 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "title": "Markdown Table Editor",
+      "properties": {
+        "markdownTableEditor.theme": {
+          "type": "string",
+          "default": "inherit",
+          "markdownDescription": "Table Editor のテーマ。`inherit` で VS Code の現在のテーマに追従。その他は 'extensionId:path' 形式のテーマID。コマンド 'Markdown Table Editor: Select Table Editor Theme' から選択できます。"
+        }
+      }
     }
   },
   "scripts": {

@@ -3,6 +3,7 @@ import { WebviewManager } from './webviewManager';
 import { TableDataManager, TableData } from './tableDataManager';
 import { MarkdownParser } from './markdownParser';
 import { getFileHandler } from './fileHandler';
+import { buildThemeVariablesCss, getInstalledColorThemes } from './themeUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Markdown Table Editor extension is now active!');
@@ -13,6 +14,18 @@ export function activate(context: vscode.ExtensionContext) {
     const fileHandler = getFileHandler();
 
     console.log('Managers initialized, registering commands...');
+
+    // Helper: apply current configured theme to all open panels
+    const applyConfiguredThemeToPanels = async () => {
+        try {
+            const config = vscode.workspace.getConfiguration('markdownTableEditor');
+            const selectedTheme = config.get<string>('theme', 'inherit');
+            const themeVars = await buildThemeVariablesCss(selectedTheme);
+            webviewManager.broadcastMessage('applyThemeVariables', { cssText: themeVars.cssText });
+        } catch (err) {
+            console.warn('Failed to apply theme to panels:', err);
+        }
+    };
 
     // Register commands
     const openEditorCommand = vscode.commands.registerCommand('markdownTableEditor.openEditor', async (uri?: vscode.Uri) => {
@@ -87,6 +100,9 @@ export function activate(context: vscode.ExtensionContext) {
             // Create and show the webview panel with all tables
             const panel = webviewManager.createTableEditorPanel(allTableData, uri);
             
+            // Apply configured theme to the panel (async, after panel is ready)
+            applyConfiguredThemeToPanels();
+            
             // Wait a moment to ensure panel is stable before showing success message
             setTimeout(() => {
                 console.log('Webview panel created successfully');
@@ -98,6 +114,29 @@ export function activate(context: vscode.ExtensionContext) {
         } catch (error) {
             console.error('Error opening table editor:', error);
             vscode.window.showErrorMessage(`Failed to open table editor: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    });
+
+    // Select theme command
+    const selectThemeCommand = vscode.commands.registerCommand('markdownTableEditor.selectTheme', async () => {
+        try {
+            const themes = getInstalledColorThemes();
+            const items: vscode.QuickPickItem[] = [
+                { label: '$(color-mode) Inherit VS Code Theme', description: 'inherit' }
+            ].concat(
+                themes.map(t => ({ label: t.label, description: t.id }))
+            );
+            const picked = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Select Table Editor Theme',
+                matchOnDescription: true
+            });
+            if (!picked) return;
+            const themeId = picked.description === 'inherit' ? 'inherit' : picked.description || 'inherit';
+            await vscode.workspace.getConfiguration('markdownTableEditor').update('theme', themeId, true);
+            await applyConfiguredThemeToPanels();
+            vscode.window.showInformationMessage('Markdown Table Editor theme updated.');
+        } catch (err) {
+            vscode.window.showErrorMessage(`Failed to update Table Editor theme: ${err instanceof Error ? err.message : String(err)}`);
         }
     });
 
@@ -168,6 +207,14 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    // 設定変更監視
+    const configWatcher = vscode.workspace.onDidChangeConfiguration(async (e) => {
+        if (e.affectsConfiguration('markdownTableEditor.theme')) {
+            await applyConfiguredThemeToPanels();
+        }
+    });
+
+    // Register more internal commands
     const updateCellCommand = vscode.commands.registerCommand('markdownTableEditor.internal.updateCell', async (data: any) => {
         try {
             console.log('Internal command: updateCell', data);
@@ -798,7 +845,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         openEditorCommand,
+        selectThemeCommand,
         requestTableDataCommand,
+        configWatcher,
         updateCellCommand,
         updateHeaderCommand,
         addRowCommand,
