@@ -89,6 +89,22 @@ const TableEditor = {
     modules: {},
 
     /**
+     * Dynamically load and register a module
+     */
+    loadModule: function (name, module) {
+        try {
+            if (!name || !module) {
+                throw new Error('Invalid arguments for loadModule');
+            }
+            this.registerModule(name, module);
+            return true;
+        } catch (error) {
+            this.handleModuleError(name, error);
+            return false;
+        }
+    },
+
+    /**
      * Initialize the TableEditor core system
      */
     init: function () {
@@ -105,6 +121,13 @@ const TableEditor = {
             }
         } catch (error) {
             console.error('TableEditor: Failed to access VSCode API:', error);
+        }
+
+        // Setup global error handling hooks
+        try {
+            this.setupErrorHandling();
+        } catch (error) {
+            console.error('TableEditor: Failed to setup error handling:', error);
         }
 
         try {
@@ -152,8 +175,10 @@ const TableEditor = {
                 // Mark module as initialized
                 module.isInitialized = true;
                 console.log('TableEditor: Module', name, 'initialized successfully');
+                this.state.loadingState.loaded.add(name);
             } catch (error) {
-                console.error('TableEditor: Failed to initialize module', name, error);
+                this.state.loadingState.failed.add(name);
+                this.handleModuleError(name, error);
             }
         } else {
             console.log('TableEditor: Module', name, 'has no init method, skipping initialization');
@@ -165,6 +190,13 @@ const TableEditor = {
      */
     getModule: function (name) {
         return this.modules[name];
+    },
+
+    /**
+     * Check whether a module is loaded
+     */
+    isModuleLoaded: function (name) {
+        return !!this.modules[name];
     },
 
     /**
@@ -274,13 +306,72 @@ const TableEditor = {
             try {
                 return module[methodName](...args);
             } catch (error) {
-                console.error(`TableEditor: Error calling ${moduleName}.${methodName}:`, error);
+                this.handleModuleError(`${moduleName}.${methodName}`, error);
                 this.showError(`Module error: ${moduleName}.${methodName}`);
             }
         } else {
             console.warn(`TableEditor: Module method ${moduleName}.${methodName} not available`);
         }
         return null;
+    },
+
+    /**
+     * Error handling helpers for modules and critical failures
+     */
+    setupErrorHandling: function () {
+        const onError = (event) => {
+            try {
+                const message = event && event.message ? event.message : 'Unknown error';
+                this.handleCriticalError(message, event && event.error);
+            } catch (e) {
+                // ignore
+            }
+        };
+        const onRejection = (event) => {
+            try {
+                const reason = event && event.reason ? event.reason : 'Unhandled rejection';
+                this.handleCriticalError(String(reason), event && event.reason);
+            } catch (e) {
+                // ignore
+            }
+        };
+        window.addEventListener('error', onError);
+        window.addEventListener('unhandledrejection', onRejection);
+    },
+
+    handleModuleError: function (moduleName, error) {
+        console.error('TableEditor: Module error in', moduleName, error);
+    },
+
+    handleCriticalError: function (message, error) {
+        console.error('TableEditor: Critical error:', message, error);
+        this.showCriticalErrorUI(message);
+    },
+
+    showFallbackMessage: function (message) {
+        const app = document.getElementById('app');
+        if (app) {
+            app.innerHTML = `<div class="loading">${message || '読み込み中...'}</div>`;
+        }
+    },
+
+    showCriticalErrorUI: function (message) {
+        const app = document.getElementById('app');
+        if (app) {
+            app.innerHTML = `<div style="padding:16px;color:var(--vscode-errorForeground)">致命的なエラー: ${message}</div>`;
+        }
+    },
+
+    getDiagnostics: function () {
+        return {
+            modules: Object.keys(this.modules),
+            loadedCount: Object.keys(this.modules).length,
+            loadingState: {
+                loaded: Array.from(this.state.loadingState.loaded),
+                failed: Array.from(this.state.loadingState.failed),
+                loading: Array.from(this.state.loadingState.loading)
+            }
+        };
     },
 
     /**

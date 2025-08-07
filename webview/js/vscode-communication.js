@@ -57,6 +57,38 @@ const VSCodeCommunication = {
             case 'validationError':
                 TableEditor.showValidationError(message.field, message.message);
                 break;
+            case 'applyThemeVariables':
+                try {
+                    const cssText = (message.data && message.data.cssText) || '';
+                    // 1) スタイルタグ（後方互換）
+                    let styleEl = document.getElementById('mte-theme-override');
+                    if (!styleEl) {
+                        styleEl = document.createElement('style');
+                        styleEl.id = 'mte-theme-override';
+                        document.head.appendChild(styleEl);
+                    }
+                    styleEl.textContent = cssText;
+
+                    // 2) 可能なら :root に inline style として直接適用（優先度を上げる）
+                    if (cssText && cssText.includes(':root')) {
+                        const match = cssText.match(/:root\s*\{([^}]*)\}/);
+                        if (match && match[1]) {
+                            const block = match[1];
+                            const decls = block.split(';');
+                            decls.forEach(d => {
+                                const [name, value] = d.split(':');
+                                const varName = name && name.trim();
+                                const varValue = value && value.trim();
+                                if (varName && varValue && varName.startsWith('--vscode-')) {
+                                    document.documentElement.style.setProperty(varName, varValue);
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error('VSCodeCommunication: Failed to apply theme variables', e);
+                }
+                break;
             case 'ping':
                 // Respond to health check
                 this.sendMessage({

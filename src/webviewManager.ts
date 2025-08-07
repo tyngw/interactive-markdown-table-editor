@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { TableData } from './tableDataManager';
+import * as fs from 'fs';
 
 export interface WebviewMessage {
     command: 'requestTableData' | 'updateCell' | 'updateHeader' | 'addRow' | 'deleteRow' | 'addColumn' | 'deleteColumn' | 'sort' | 'moveRow' | 'moveColumn' | 'exportCSV' | 'pong' | 'switchTable';
@@ -89,7 +90,8 @@ export class WebviewManager {
             'js/context-menu.js',
             'js/drag-drop.js',
             'js/status-bar.js',
-            'js/csv-exporter.js'
+            'js/csv-exporter.js',
+            'js/test-module.js'
         ];
 
         const scriptUris = scriptFiles.map(file => {
@@ -101,13 +103,15 @@ export class WebviewManager {
         let html = this.getWebviewContent();
 
         // Inject CSS URI and script URIs into HTML
+        const themeCssText = this.buildInitialThemeCssSync();
         const injectionScript = `
 <script>
 window.cssUri = '${cssUri}';
 window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 </script>`;
 
-        html = html.replace(/<head>/i, `<head>${injectionScript}`);
+        const themeStyleTag = themeCssText ? `<style id="mte-theme-override">${themeCssText}</style>` : '';
+        html = html.replace(/<head>/i, `<head>${injectionScript}${themeStyleTag}`);
         panel.webview.html = html;
 
         console.log('HTML content set, storing panel reference...');
@@ -705,6 +709,37 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             </body>
             </html>
         `;
+    }
+
+    /**
+     * 初期表示用に同期的にテーマCSSを構築（colors.* → --vscode-* へ変換）
+     * 設定が inherit の場合は空文字。
+     */
+    private buildInitialThemeCssSync(): string {
+        try {
+            const selected = vscode.workspace.getConfiguration('markdownTableEditor').get<string>('theme', 'inherit');
+            if (!selected || selected === 'inherit') return '';
+            const [extId, ...rest] = selected.split(':');
+            const relPath = rest.join(':');
+            const ext = vscode.extensions.all.find(e => e.id === extId);
+            if (!ext || !relPath) return '';
+            const themeUri = vscode.Uri.joinPath(ext.extensionUri, relPath);
+            const filePath = themeUri.fsPath;
+            const content = fs.readFileSync(filePath, 'utf8');
+            const json = JSON.parse(content);
+            const colors = json.colors || {};
+            const entries: string[] = [];
+            for (const key of Object.keys(colors)) {
+                const val = colors[key];
+                if (typeof val !== 'string') continue;
+                const varName = `--vscode-${key.replace(/\./g, '-')}`;
+                entries.push(`${varName}:${val}`);
+            }
+            return entries.length ? `:root{${entries.join(';')}}` : '';
+        } catch (e) {
+            console.warn('Failed to build initial theme CSS:', e);
+            return '';
+        }
     }
 
     /**
