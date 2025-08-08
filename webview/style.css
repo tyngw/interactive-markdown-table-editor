@@ -66,17 +66,17 @@ body {
 .table-tabs {
     display: flex;
     border-bottom: 1px solid var(--vscode-panel-border);
-    background-color: var(--vscode-editor-background);
+    background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-panelSectionHeader-background, var(--vscode-editor-background)));
     margin-bottom: 10px;
     overflow-x: auto;
 }
 
 .tab-button {
-    background: none;
+    background: var(--vscode-tab-inactiveBackground, transparent);
     border: none;
     padding: 8px 16px;
     cursor: pointer;
-    color: var(--vscode-foreground);
+    color: var(--vscode-tab-inactiveForeground, var(--vscode-foreground));
     border-bottom: 2px solid transparent;
     font-size: var(--vscode-font-size);
     font-family: var(--vscode-font-family);
@@ -85,13 +85,13 @@ body {
 }
 
 .tab-button:hover {
-    background-color: var(--vscode-list-hoverBackground);
+    background-color: var(--vscode-tab-hoverBackground, var(--vscode-list-hoverBackground));
 }
 
 .tab-button.active {
-    color: var(--vscode-focusBorder);
-    border-bottom-color: var(--vscode-focusBorder);
-    background-color: var(--vscode-editor-lineHighlightBackground);
+    color: var(--vscode-tab-activeForeground, var(--vscode-foreground));
+    border-bottom-color: var(--vscode-tab-activeBorderTop, var(--vscode-focusBorder));
+    background-color: var(--vscode-tab-activeBackground, var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background)));
 }
 
 /* ====== 3. テーブル基本構造 ====== */
@@ -124,7 +124,7 @@ body {
 /* Grid lines enhancement */
 .table-editor tr:nth-child(even) td.data-cell,
 .table-editor tr:nth-child(even) td.editable-cell {
-    background-color: var(--vscode-editor-lineHighlightBackground);
+    background-color: var(--vscode-editor-hoverHighlightBackground, var(--vscode-editor-selectionHighlightBackground, var(--vscode-editor-lineHighlightBackground)));
 }
 
 .table-editor tr:nth-child(even) td.data-cell:hover,
@@ -266,7 +266,7 @@ body {
 
 /* ====== 5. 行番号セル ====== */
 .table-editor td.row-number {
-    background-color: var(--vscode-editor-lineHighlightBackground);
+    background-color: var(--vscode-panelSectionHeader-background, var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editorWidget-background, var(--vscode-editor-background))));
     border: 1px solid var(--vscode-panel-border);
     border-left: 2px solid var(--vscode-focusBorder);
     font-weight: 700;
@@ -277,7 +277,7 @@ body {
     min-width: 60px;
     max-width: 60px;
     user-select: none;
-    color: var(--vscode-descriptionForeground);
+    color: var(--vscode-foreground);
     cursor: pointer;
     transition: background-color 0.15s ease;
     position: sticky !important;
@@ -286,7 +286,6 @@ body {
     box-sizing: border-box;
     opacity: 1 !important;
     background-clip: padding-box;
-    background-color: var(--vscode-editor-lineHighlightBackground) !important;
 }
 
 .table-editor td.row-number:hover {
