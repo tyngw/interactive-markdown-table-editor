@@ -232,9 +232,7 @@ body {
 
 /* Header corner cell */
 .header-corner {
-    background: linear-gradient(135deg,
-            var(--vscode-editor-lineHighlightBackground) 0%,
-            var(--vscode-list-hoverBackground) 100%) !important;
+    background-color: var(--vscode-panelSectionHeader-background, var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editorWidget-background, var(--vscode-editor-background)))) !important;
     border: 2px solid var(--vscode-focusBorder);
     border-bottom: 1px solid var(--vscode-panel-border);
     border-right: 1px solid var(--vscode-panel-border);
@@ -249,7 +247,7 @@ body {
     text-align: center;
     vertical-align: middle;
     font-size: 16px;
-    color: var(--vscode-descriptionForeground);
+    color: var(--vscode-foreground);
     padding: 4px;
     background-clip: padding-box;
     opacity: 1 !important;
