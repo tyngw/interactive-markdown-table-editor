@@ -128,6 +128,106 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    // Open editor in new panel command
+    const openEditorNewPanelCommand = vscode.commands.registerCommand('markdownTableEditor.openEditorNewPanel', async (uri?: vscode.Uri) => {
+        try {
+            console.log('Opening table editor in new panel...');
+
+            // Get the active editor if no URI provided
+            if (!uri) {
+                const activeEditor = vscode.window.activeTextEditor;
+                if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
+                    vscode.window.showErrorMessage('Please open a Markdown file first.');
+                    return;
+                }
+                uri = activeEditor.document.uri;
+            }
+
+            if (!uri) {
+                throw new Error('No valid URI available');
+            }
+
+            console.log('Reading markdown file:', uri.toString());
+
+            // Read the markdown file
+            const content = await fileHandler.readMarkdownFile(uri);
+            const ast = markdownParser.parseDocument(content);
+            const tables = markdownParser.findTablesInDocument(ast);
+
+            console.log('Found tables:', tables.length);
+
+            if (tables.length === 0) {
+                vscode.window.showInformationMessage('No tables found in this Markdown file.');
+                return;
+            }
+
+            let selectedTableNode;
+            let selectedTableIndex = 0;
+
+            if (tables.length === 1) {
+                // Only one table, use it directly
+                selectedTableNode = tables[0];
+                selectedTableIndex = 0;
+            } else {
+                // Multiple tables, don't prompt user - show all in webview with tabs
+                selectedTableNode = tables[0]; // Default to first table for backward compatibility
+                selectedTableIndex = 0;
+            }
+
+            console.log('Using table:', selectedTableNode);
+
+            // Create TableDataManager instances for all tables
+            const allTableData: TableData[] = [];
+            const tableManagersMap = new Map<number, TableDataManager>();
+
+            tables.forEach((table, index) => {
+                const manager = new TableDataManager(table, uri!.toString(), index);
+                const tableData = manager.getTableData();
+                allTableData.push(tableData);
+                tableManagersMap.set(index, manager);
+            });
+
+            console.log('Creating webview panel in new panel...');
+
+            // Create webview panel in new panel with actual data
+            const { panel, panelId: uniquePanelId } = webviewManager.createTableEditorPanelNewPanel(allTableData, uri);
+
+            // Update the managers to use the unique panel ID
+            const updatedTableManagersMap = new Map<number, TableDataManager>();
+            tables.forEach((table, index) => {
+                const manager = new TableDataManager(table, uniquePanelId, index);
+                const tableData = manager.getTableData();
+                updatedTableManagersMap.set(index, manager);
+            });
+
+            // Store managers for all tables with unique panel ID
+            activeMultiTableManagers.set(uniquePanelId, updatedTableManagersMap);
+
+            // Also store the primary manager for backward compatibility
+            const primaryManager = updatedTableManagersMap.get(selectedTableIndex);
+            if (primaryManager) {
+                activeTableManagers.set(uniquePanelId, primaryManager);
+            }
+
+            console.log('Webview panel created with data for unique ID:', uniquePanelId);
+
+            // Apply configured theme to the panel (async, after panel is ready)
+            applyConfiguredThemeToPanels();
+
+            // Wait a moment to ensure panel is stable before showing success message
+            setTimeout(() => {
+                console.log('Webview panel created successfully in new panel');
+            }, 100);
+
+            const tableCount = allTableData.length;
+            const primaryTable = allTableData[selectedTableIndex];
+            vscode.window.showInformationMessage(`Table editor opened in new panel with ${tableCount} table${tableCount > 1 ? 's' : ''} (${primaryTable.rows.length} rows, ${primaryTable.headers.length} columns).`);
+        } catch (error) {
+            console.error('Error opening table editor in new panel:', error);
+            vscode.window.showErrorMessage(`Failed to open table editor in new panel: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    });
+
     // Select theme command
     const selectThemeCommand = vscode.commands.registerCommand('markdownTableEditor.selectTheme', async () => {
         try {
@@ -160,22 +260,34 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             console.log('Internal command: requestTableData', data);
             const { uri, panelId, forceRefresh } = data;
-            
-            // Get the URI string to use for manager lookup
-            const uriString = uri || webviewManager.getActivePanelUri();
+
+            // Get the URI string and panel ID to use for manager lookup
+            let uriString: string;
+            let actualPanelId: string;
+
+            if (uri) {
+                // Handle both string URIs and URI objects
+                uriString = typeof uri === 'string' ? uri : (uri.external || uri.toString());
+            } else {
+                uriString = webviewManager.getActivePanelUri() || '';
+            }
+
+            // Use provided panelId or fall back to uriString
+            actualPanelId = panelId || uriString;
+
             if (!uriString) {
                 console.error('No URI available for requestTableData command');
                 return;
             }
-            
-            const panel = webviewManager.getPanel(uriString);
+
+            const panel = webviewManager.getPanel(actualPanelId);
             if (!panel) {
-                console.error('Panel not found for URI:', uriString);
+                console.error('Panel not found for panel ID:', actualPanelId);
                 return;
             }
 
             // Always re-read file to get all tables
-            console.log('Reading fresh data from file for:', uriString, forceRefresh ? '(forced refresh)' : '(request)');
+            console.log('Reading fresh data from file for:', uriString, 'panel:', actualPanelId, forceRefresh ? '(forced refresh)' : '(request)');
 
             // Read and parse the file
             const fileUri = vscode.Uri.parse(uriString);
@@ -184,24 +296,24 @@ export function activate(context: vscode.ExtensionContext) {
             const tables = markdownParser.findTablesInDocument(ast);
 
             if (tables.length > 0) {
-                // Create managers for all tables
+                // Create managers for all tables using the actual panel ID
                 const allTableData: TableData[] = [];
                 const tableManagersMap = new Map<number, TableDataManager>();
 
                 tables.forEach((table, index) => {
-                    const manager = new TableDataManager(table, uriString, index);
+                    const manager = new TableDataManager(table, actualPanelId, index);
                     const tableData = manager.getTableData();
                     allTableData.push(tableData);
                     tableManagersMap.set(index, manager);
                 });
 
-                // Store managers for all tables
-                activeMultiTableManagers.set(uriString, tableManagersMap);
+                // Store managers for all tables using the actual panel ID
+                activeMultiTableManagers.set(actualPanelId, tableManagersMap);
 
                 // Also store the primary manager for backward compatibility (first table)
                 const primaryManager = tableManagersMap.get(0);
                 if (primaryManager) {
-                    activeTableManagers.set(uriString, primaryManager);
+                    activeTableManagers.set(actualPanelId, primaryManager);
                 }
 
                 // Send all table data to webview
@@ -212,17 +324,77 @@ export function activate(context: vscode.ExtensionContext) {
                     webviewManager.sendSuccess(panel, `Loaded ${tables.length} table${tables.length > 1 ? 's' : ''} successfully`);
                 }
 
-                console.log(`Table data refreshed: ${tables.length} tables loaded`);
+                console.log(`Table data refreshed for panel ${actualPanelId}: ${tables.length} tables loaded`);
             } else {
                 webviewManager.sendError(panel, 'No tables found in the file');
                 return;
             }
         } catch (error) {
             console.error('Error in requestTableData:', error);
-            const uriString = data.uri || webviewManager.getActivePanelUri();
-            const panel = uriString ? webviewManager.getPanel(uriString) : null;
+            const actualPanelId = data.panelId || data.uri || webviewManager.getActivePanelUri();
+            const panel = actualPanelId ? webviewManager.getPanel(actualPanelId) : null;
             if (panel) {
                 webviewManager.sendError(panel, `Failed to load table data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+        }
+    });
+
+    // ファイル変更監視 - VSCodeエディタでの変更を全パネルに反映
+    const fileWatcher = vscode.workspace.onDidChangeTextDocument(async (event) => {
+        const changedUri = event.document.uri;
+
+        // Markdownファイルの変更のみを監視
+        if (event.document.languageId !== 'markdown') {
+            return;
+        }
+
+        // 変更されたファイルに対応するパネルを全て取得
+        const filePanels = webviewManager.getPanelsForFile(changedUri.toString());
+
+        if (filePanels.size > 0) {
+            console.log(`File changed: ${changedUri.toString()}, updating ${filePanels.size} panel(s)`);
+
+            try {
+                // ファイルを再読み込みしてテーブルデータを更新
+                const content = await fileHandler.readMarkdownFile(changedUri);
+                const ast = markdownParser.parseDocument(content);
+                const tables = markdownParser.findTablesInDocument(ast);
+
+                if (tables.length > 0) {
+                    // 各パネルに対してデータを更新
+                    for (const [panelId, panel] of filePanels.entries()) {
+                        // Create managers for all tables using the panel ID
+                        const allTableData: TableData[] = [];
+                        const tableManagersMap = new Map<number, TableDataManager>();
+
+                        tables.forEach((table, index) => {
+                            const manager = new TableDataManager(table, panelId, index);
+                            const tableData = manager.getTableData();
+                            allTableData.push(tableData);
+                            tableManagersMap.set(index, manager);
+                        });
+
+                        // Store managers for all tables using the panel ID
+                        activeMultiTableManagers.set(panelId, tableManagersMap);
+
+                        // Also store the primary manager for backward compatibility
+                        const primaryManager = tableManagersMap.get(0);
+                        if (primaryManager) {
+                            activeTableManagers.set(panelId, primaryManager);
+                        }
+
+                        // Send updated table data to webview
+                        webviewManager.updateTableData(panel, allTableData, changedUri);
+
+                        console.log(`Updated panel ${panelId} with ${tables.length} tables from file change`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating panels after file change:', error);
+                // Send error to all affected panels
+                for (const panel of filePanels.values()) {
+                    webviewManager.sendError(panel, `Failed to update from file change: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                }
             }
         }
     });
@@ -244,22 +416,34 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             console.log('Internal command: updateCell', data);
             const { uri, panelId, row, col, value, tableIndex } = data;
-            
-            // Get the URI string to use for manager lookup
-            const uriString = uri || webviewManager.getActivePanelUri();
+
+            // Get the URI string and panel ID to use for manager lookup
+            let uriString: string;
+            let actualPanelId: string;
+
+            if (uri) {
+                // Handle both string URIs and URI objects
+                uriString = typeof uri === 'string' ? uri : (uri.external || uri.toString());
+            } else {
+                uriString = webviewManager.getActivePanelUri() || '';
+            }
+
+            // Use provided panelId or fall back to uriString
+            actualPanelId = panelId || uriString;
+
             if (!uriString) {
                 console.error('No URI available for updateCell command');
                 return;
             }
-            
-            const panel = webviewManager.getPanel(uriString);
+
+            const panel = webviewManager.getPanel(actualPanelId);
             if (!panel) {
-                console.error('Panel not found for URI:', uriString);
+                console.error('Panel not found for panel ID:', actualPanelId);
                 return;
             }
 
-            // Get the specific table manager by index
-            const tableManagersMap = activeMultiTableManagers.get(uriString);
+            // Get the specific table manager by index using the actual panel ID
+            const tableManagersMap = activeMultiTableManagers.get(actualPanelId);
             if (!tableManagersMap) {
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
@@ -288,8 +472,8 @@ export function activate(context: vscode.ExtensionContext) {
                         const tables = markdownParser.findTablesInDocument(ast);
 
                         if (targetTableIndex < tables.length) {
-                            // Create new manager with fresh data
-                            const newManager = new TableDataManager(tables[targetTableIndex], uriString, targetTableIndex);
+                            // Create new manager with fresh data using the actual panel ID
+                            const newManager = new TableDataManager(tables[targetTableIndex], actualPanelId, targetTableIndex);
                             tableManagersMap.set(targetTableIndex, newManager);
                             tableDataManager = newManager;
                             console.log('Table data refreshed successfully');
@@ -326,8 +510,8 @@ export function activate(context: vscode.ExtensionContext) {
             console.log('Cell update completed successfully without triggering webview re-render');
         } catch (error) {
             console.error('Error in updateCell:', error);
-            const uriString = data.uri || webviewManager.getActivePanelUri();
-            const panel = uriString ? webviewManager.getPanel(uriString) : null;
+            const actualPanelId = data.panelId || data.uri || webviewManager.getActivePanelUri();
+            const panel = actualPanelId ? webviewManager.getPanel(actualPanelId) : null;
             if (panel) {
                 // Send error with original position information for potential rollback
                 webviewManager.sendError(panel, `Failed to update cell: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -344,22 +528,34 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             console.log('Internal command: updateHeader', data);
             const { uri, panelId, col, value, tableIndex } = data;
-            
-            // Get the URI string to use for manager lookup
-            const uriString = uri || webviewManager.getActivePanelUri();
+
+            // Get the URI string and panel ID to use for manager lookup
+            let uriString: string;
+            let actualPanelId: string;
+
+            if (uri) {
+                // Handle both string URIs and URI objects
+                uriString = typeof uri === 'string' ? uri : (uri.external || uri.toString());
+            } else {
+                uriString = webviewManager.getActivePanelUri() || '';
+            }
+
+            // Use provided panelId or fall back to uriString
+            actualPanelId = panelId || uriString;
+
             if (!uriString) {
                 console.error('No URI available for updateHeader command');
                 return;
             }
-            
-            const panel = webviewManager.getPanel(uriString);
+
+            const panel = webviewManager.getPanel(actualPanelId);
             if (!panel) {
-                console.error('Panel not found for URI:', uriString);
+                console.error('Panel not found for panel ID:', actualPanelId);
                 return;
             }
 
-            // Get the specific table manager by index
-            const tableManagersMap = activeMultiTableManagers.get(uriString);
+            // Get the specific table manager by index using the actual panel ID
+            const tableManagersMap = activeMultiTableManagers.get(actualPanelId);
             if (!tableManagersMap) {
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
@@ -388,8 +584,8 @@ export function activate(context: vscode.ExtensionContext) {
                         const tables = markdownParser.findTablesInDocument(ast);
 
                         if (targetTableIndex < tables.length) {
-                            // Create new manager with fresh data
-                            const newManager = new TableDataManager(tables[targetTableIndex], uriString, targetTableIndex);
+                            // Create new manager with fresh data using the actual panel ID
+                            const newManager = new TableDataManager(tables[targetTableIndex], actualPanelId, targetTableIndex);
                             tableManagersMap.set(targetTableIndex, newManager);
                             tableDataManager = newManager;
                             console.log('Table data refreshed successfully');
@@ -426,8 +622,8 @@ export function activate(context: vscode.ExtensionContext) {
             console.log('Header update completed successfully without triggering webview re-render');
         } catch (error) {
             console.error('Error in updateHeader:', error);
-            const uriString = data.uri || webviewManager.getActivePanelUri();
-            const panel = uriString ? webviewManager.getPanel(uriString) : null;
+            const actualPanelId = data.panelId || data.uri || webviewManager.getActivePanelUri();
+            const panel = actualPanelId ? webviewManager.getPanel(actualPanelId) : null;
             if (panel) {
                 // Send error with original position information for potential rollback
                 webviewManager.sendError(panel, `Failed to update header: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -890,8 +1086,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         openEditorCommand,
+        openEditorNewPanelCommand,
         selectThemeCommand,
         requestTableDataCommand,
+        fileWatcher,
         configWatcher,
         colorThemeWatcher,
         updateCellCommand,
