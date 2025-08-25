@@ -5,7 +5,138 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2025-01-25
+## [0.5.3] - 2025-08-26
+
+### Enhanced
+- **Theme Color Improvements**: 
+  - Fixed transparent color issues in row numbers, column headers, and header corner
+  - Changed color definitions to use `--vscode-sideBar-background` and `--vscode-activityBar-background` for more reliable non-transparent colors
+  - Enhanced theme compatibility across different VSCode themes
+  - Improved visual consistency with solid background colors
+
+### Technical Improvements
+- **Color Definition Strategy**: Replaced potentially transparent color tokens with more reliable alternatives
+- **Theme Integration**: Better integration with VSCode's color system for consistent appearance
+- **CSS Optimization**: Streamlined color fallback system for better performance
+
+## [0.5.2] - 2025-08-25
+
+### Enhanced
+- **Scroll Navigation Improvements**: 
+  - Enhanced scroll behavior when navigating to the first cell
+  - Improved scroll position handling for better user experience
+  - Optimized navigation performance
+
+### Fixed
+- **Panel Management**: Fixed issue where webview wasn't updating when opening the same panel
+- **Multi-Panel Display**: Resolved display and save issues when multiple panels are open
+- **Panel Reuse**: Fixed existing panel reuse functionality for better resource management
+
+### Improved
+- **Panel Icon**: Added proper icon display for table editor panels
+- **Theme Persistence**: Theme settings are now properly maintained across sessions
+- **Resource Management**: Better handling of panel lifecycle and resource cleanup
+
+## [0.5.1] - 2025-08-08
+
+### Added
+- **Theme Selection Feature**: 
+  - Added comprehensive theme selection functionality
+  - Support for all installed VSCode color themes
+  - Real-time theme preview and application
+  - Theme persistence across sessions
+
+### Enhanced
+- **Startup Experience**: Removed unnecessary startup messages for cleaner initialization
+- **Scroll Performance**: Improved scroll position restoration with reduced flickering
+- **Visual Stability**: Enhanced rendering stability during scroll operations
+
+### Fixed
+- **Row/Column Operations**: Fixed scroll position preservation after add/delete operations
+- **Selection Styling**: Resolved blue outline issue when adding rows
+- **Column Resizing**: Fixed persistent drag styling after column width changes
+
+### Technical Improvements
+- **Core Module Refactoring**: Split core functionality into separate modules for better maintainability
+- **Theme System**: Implemented robust theme management with fallback support
+- **Performance Optimization**: Reduced unnecessary re-renders and improved responsiveness
+
+## [0.5.0] - 2025-08-05
+
+### Major Features
+- **Column Width Adjustment**: 
+  - Added interactive column resizing with drag handles
+  - Visual feedback during resize operations
+  - Persistent column width settings
+  - Minimum and maximum width constraints
+
+### Enhanced UI/UX
+- **Improved Table Interaction**:
+  - Better visual feedback for column operations
+  - Enhanced drag and drop experience
+  - Improved table layout stability
+  - Professional resize handles with hover effects
+
+### Technical Improvements
+- **Modular Architecture**: Comprehensive refactoring of core modules
+- **Event Handling**: Enhanced mouse and keyboard event management
+- **State Management**: Better tracking of table state and user interactions
+- **Performance**: Optimized rendering and interaction performance
+
+## [0.4.0] - 2025-08-01
+
+### Enhanced
+- **Multi-Cell Selection and Operations**:
+  - Shift+Click for range selection
+  - Improved paste operations for multiple cells
+  - Enhanced clipboard integration with tab-delimited format
+  - Better visual feedback for selected ranges
+
+### Improved
+- **Editing Experience**:
+  - Unified text alignment (top-aligned)
+  - Improved header editing functionality
+  - Better keyboard interaction handling
+  - Enhanced IME support for international users
+
+### Fixed
+- **Selection Management**: Fixed text selection behavior during cell editing
+- **Header Styling**: Improved header z-index and visual hierarchy
+- **Multi-line Content**: Better handling of content with line breaks
+
+### Technical Improvements
+- **Code Organization**: Refactored duplicate definitions and improved maintainability
+- **Style System**: Comprehensive stylesheet refactoring
+- **Event Management**: Enhanced event handling for complex interactions
+
+## [0.3.0] - 2025-07-26
+
+### Major Features
+- **Advanced Cell Operations**:
+  - Copy/Cut/Paste functionality with Ctrl+C/X/V
+  - Multi-cell selection support
+  - Tab-delimited clipboard format
+  - Excel-like operation patterns
+
+### Enhanced
+- **Export Capabilities**:
+  - CSV export with proper encoding (including Shift-JIS)
+  - Multi-line content support in exports
+  - Improved field escaping and formatting
+  - Better file naming conventions
+
+### Improved
+- **Error Handling**: Comprehensive error handling for cell updates
+- **UI Feedback**: Enhanced user interface feedback and messaging
+- **Height Calculation**: Improved cell height calculation for better layout
+- **Context Menu**: Updated context menu styles and functionality
+
+### Fixed
+- **IME Input**: Resolved IME input issues for international users
+- **Multi-table Support**: Fixed various multi-table handling problems
+- **Rendering**: Resolved table rendering errors and improved stability
+
+## [0.2.0] - 2025-08-01
 
 ### Major Features
 - **Multiple Table Support with Tabs**: 
@@ -32,7 +163,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance**: Optimized rendering and data management
 - **Code Quality**: Removed debug logging and improved maintainability
 
-## [0.1.23] - 2025-01-27
+## [0.1.23] - 2025-07-23
 
 ### Enhanced
 - **CSV Export Improvements**: 
@@ -55,7 +186,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Proper Multi-line Support**: Complex cell content with line breaks exports correctly to CSV
 - **Standards Compliance**: CSV output follows industry standards for maximum compatibility with Excel, Google Sheets, etc.
 
-## [0.1.22] - 2025-01-27
+## [0.1.22] - 2025-07-23
 
 ### Fixed
 - **CSV Export Error**: Fixed "Invalid message format received from webview" error by adding proper message validation for exportCSV command
@@ -84,7 +215,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Better Message Visibility**: Central positioning makes status messages more noticeable
 - **Professional Appearance**: Clean, organized status bar matching VSCode's design language
 
-## [0.1.21] - 2025-01-27
+## [0.1.21] - 2025-07-23
 
 ### Enhanced
 - **Excel-like Copy/Paste Operations**: Added Ctrl+C/Ctrl+V for copying and pasting cell content in non-editing mode
@@ -116,7 +247,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced README.md with comprehensive feature descriptions and keyboard shortcuts
 - Added detailed release notes covering all new functionality
 
-## [0.1.20] - 2025-01-27
+## [0.1.20] - 2025-07-23
 
 ### Fixed
 - **Data Synchronization**: Fixed issue where VSCode editor changes weren't reflected in Table Editor when using cached panels
@@ -140,7 +271,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **No Manual Refresh**: Eliminates need for manual refresh or reopening Table Editor after external changes
 - **Consistent State**: Table Editor always shows the current state of the file, regardless of edit source
 
-## [0.1.19] - 2025-01-27
+## [0.1.19] - 2025-07-23
 
 ### Enhanced
 - **Save Status Improvement**: Fixed Auto-saved label positioning and replaced success messages with status transitions
@@ -171,7 +302,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added test-smart-navigation.md with comprehensive test scenarios
 - Enhanced test coverage for both save status and navigation features
 
-## [0.1.18] - 2025-01-27
+## [0.1.18] - 2025-07-23
 
 ### Fixed
 - **Japanese IME Input Support**: Fixed critical issue where Japanese IME confirmation Enter would exit edit mode
@@ -195,7 +326,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added test-ime-input.md with comprehensive Japanese IME testing scenarios
 - Enhanced test coverage for multi-language input methods and edge cases
 
-## [0.1.17] - 2025-01-27
+## [0.1.17] - 2025-07-23
 
 ### Enhanced
 - **Tab Navigation Improvement**: Fixed cell selection state clearing when exiting edit mode via Tab key
@@ -220,7 +351,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added test-keyboard-interactions.md for comprehensive interaction testing
 - Enhanced test coverage for keyboard navigation and column auto-sizing scenarios
 
-## [0.1.16] - 2025-01-27
+## [0.1.16] - 2025-07-23
 
 ### Fixed
 - **Long URL Content Width Issue**: Fixed critical issue where long URLs and non-breaking strings would expand cell width beyond set limits
@@ -244,7 +375,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added test-long-url.md with various long URL and string scenarios
 - Enhanced test coverage for edge cases with non-breaking content
 
-## [0.1.15] - 2025-01-27
+## [0.1.15] - 2025-07-23
 
 ### Fixed
 - **Critical Width Control Issue**: Fixed cell width changing during VSCode window resize by implementing fixed-width table layout
@@ -268,7 +399,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced columnWidths state management to always contain width values
 - Improved window resize event handler to maintain all column widths
 
-## [0.1.14] - 2025-01-27
+## [0.1.14] - 2025-07-23
 
 ### Changed
 - **Column-Based Width Control**: Modified default minimum width control from table-level to column-level for more granular control
@@ -288,7 +419,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced window resize event handling to preserve cell dimensions
 - Improved column width state management in rendering functions
 
-## [0.1.13] - 2025-01-27
+## [0.1.13] - 2025-07-22
 
 ### Fixed
 - **Scroll Position Preservation**: Fixed critical issue where scroll position was reset to top after cell editing completion
