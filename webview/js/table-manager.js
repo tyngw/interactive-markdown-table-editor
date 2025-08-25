@@ -16,9 +16,19 @@ const TableManager = {
     /**
      * Handle table data update from VSCode
      */
-    handleUpdateTableData: function (data, fileInfo) {
-        console.log('TableManager: handleUpdateTableData called with data:', data, 'fileInfo:', fileInfo);
+    handleUpdateTableData: function (data, fileInfo, forceUpdate) {
+        console.log('TableManager: handleUpdateTableData called with data:', data, 'fileInfo:', fileInfo, 'forceUpdate:', forceUpdate);
         console.log('TableManager: Current table index before update:', TableEditor.state.currentTableIndex);
+
+        // Check if this is a file change or force update
+        const isFileChange = forceUpdate || (fileInfo && TableEditor.state.fileInfo && 
+            fileInfo.uri !== TableEditor.state.fileInfo.uri);
+        
+        if (isFileChange) {
+            console.log('TableManager: File change detected or force update requested');
+            // Reset table index for new file
+            TableEditor.state.currentTableIndex = 0;
+        }
 
         // Save current scroll position before processing update
         const scrollState = TableEditor.scrollManager.saveScrollPosition();
@@ -61,7 +71,12 @@ const TableManager = {
 
         TableEditor.state.displayData = TableEditor.state.tableData;
         TableEditor.state.originalData = TableEditor.state.tableData ? JSON.parse(JSON.stringify(TableEditor.state.tableData)) : null;
-        TableEditor.state.fileInfo = fileInfo;
+        
+        // Update file info
+        if (fileInfo) {
+            TableEditor.state.fileInfo = fileInfo;
+            console.log('TableManager: Updated file info:', fileInfo);
+        }
 
         // Debug state after update
         this.debugCurrentState();
@@ -81,8 +96,12 @@ const TableManager = {
         console.log('TableManager: Calling renderApplicationWithTabs...');
         TableEditor.callModule('UIRenderer', 'renderApplicationWithTabs');
 
-        // Restore scroll position immediately to prevent flickering
-        TableEditor.scrollManager.restoreScrollPosition(scrollState, 'TableManager.handleUpdateTableData');
+        // Restore scroll position only if it's not a file change
+        if (!isFileChange) {
+            TableEditor.scrollManager.restoreScrollPosition(scrollState, 'TableManager.handleUpdateTableData');
+        } else {
+            console.log('TableManager: File change detected, not restoring scroll position');
+        }
 
         // Update status bar after rendering
         setTimeout(() => {
