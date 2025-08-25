@@ -31,6 +31,24 @@ export class WebviewManager {
     }
 
     /**
+     * Check if there is any active panel
+     */
+    public hasActivePanel(): boolean {
+        return this.panels.size > 0;
+    }
+
+    /**
+     * Get the URI of the currently active panel
+     */
+    public getActivePanelUri(): string | null {
+        if (this.panels.size === 0) {
+            return null;
+        }
+        // Return the first (and likely only) panel's URI
+        return Array.from(this.panels.keys())[0];
+    }
+
+    /**
      * Create a new table editor panel
      */
     public createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri): vscode.WebviewPanel {
@@ -38,10 +56,29 @@ export class WebviewManager {
 
         console.log('Creating webview panel for:', panelId);
 
-        // If panel already exists, reveal it
+        // If panel already exists for the same file, reveal it
         if (this.panels.has(panelId)) {
-            console.log('Panel already exists, revealing...');
+            console.log('Panel already exists for same file, revealing...');
             const existingPanel = this.panels.get(panelId)!;
+            existingPanel.reveal();
+            this.updateTableData(existingPanel, tableData, uri);
+            return existingPanel;
+        }
+
+        // If any table editor panel is already open, reuse it for the new file
+        if (this.panels.size > 0) {
+            console.log('Existing table editor panel found, reusing for new file...');
+            const existingPanelEntry = Array.from(this.panels.entries())[0];
+            const [oldPanelId, existingPanel] = existingPanelEntry;
+            
+            // Remove old panel reference and add new one
+            this.panels.delete(oldPanelId);
+            this.panels.set(panelId, existingPanel);
+            
+            // Update panel title
+            existingPanel.title = `${path.basename(uri.fsPath)} - Table Editor`;
+            
+            // Reveal and update with new data
             existingPanel.reveal();
             this.updateTableData(existingPanel, tableData, uri);
             return existingPanel;
@@ -126,8 +163,14 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         // Handle panel disposal
         panel.onDidDispose(() => {
             console.log('Panel disposed for:', panelId);
-            this.panels.delete(panelId);
-            this.connectionHealthMap.delete(panelId);
+            // Remove the panel reference by finding the entry that matches the panel object
+            for (const [key, panelRef] of this.panels.entries()) {
+                if (panelRef === panel) {
+                    this.panels.delete(key);
+                    this.connectionHealthMap.delete(key);
+                    break;
+                }
+            }
         }, null, this.context.subscriptions);
 
         // Handle panel view state changes (when tab becomes active/inactive)

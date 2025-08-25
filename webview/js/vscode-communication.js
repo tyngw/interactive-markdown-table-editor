@@ -137,6 +137,14 @@ const VSCodeCommunication = {
     sendMessage: function (message) {
         try {
             if (TableEditor.vscode) {
+                // Include current file info if available and not already present
+                if (TableEditor.state && TableEditor.state.fileInfo && !message.fileInfo) {
+                    message.fileInfo = TableEditor.state.fileInfo;
+                }
+                // Include current URI for proper routing
+                if (TableEditor.state && TableEditor.state.fileInfo && TableEditor.state.fileInfo.uri && !message.uri) {
+                    message.uri = TableEditor.state.fileInfo.uri;
+                }
                 TableEditor.vscode.postMessage(message);
             } else {
                 console.error('VSCodeCommunication: VSCode API not available');
