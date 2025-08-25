@@ -170,8 +170,10 @@ const KeyboardNavigationManager = {
                 event.preventDefault();
                 if (event.ctrlKey || event.metaKey) {
                     this.navigateCell(0, 0); // Top-left corner
+                    this.scrollToCell(0, 0); // Ensure headers are visible
                 } else {
                     this.navigateCell(currentRow, 0); // Start of row
+                    this.scrollToCell(currentRow, 0); // Ensure row number is visible
                 }
                 break;
 
@@ -385,7 +387,11 @@ const KeyboardNavigationManager = {
                 break;
         }
 
+        // Navigate to the target cell
         this.navigateCell(targetRow, targetCol);
+        
+        // Ensure proper scrolling for first row/column to show headers
+        this.scrollToCell(targetRow, targetCol);
     },
 
     /**
@@ -454,15 +460,25 @@ const KeyboardNavigationManager = {
         let newScrollTop = scrollTop;
         let newScrollLeft = scrollLeft;
 
+        // Special handling for first row/column to show headers completely
+        const isFirstRow = row === 0;
+        const isFirstCol = col === 0;
+
         // Vertical scrolling
-        if (cellRect.top < containerRect.top) {
+        if (isFirstRow) {
+            // For first row, scroll to top to show header completely
+            newScrollTop = 0;
+        } else if (cellRect.top < containerRect.top) {
             newScrollTop = scrollTop - (containerRect.top - cellRect.top) - 10;
         } else if (cellRect.bottom > containerRect.bottom) {
             newScrollTop = scrollTop + (cellRect.bottom - containerRect.bottom) + 10;
         }
 
         // Horizontal scrolling
-        if (cellRect.left < containerRect.left) {
+        if (isFirstCol) {
+            // For first column, scroll to left to show row numbers completely
+            newScrollLeft = 0;
+        } else if (cellRect.left < containerRect.left) {
             newScrollLeft = scrollLeft - (containerRect.left - cellRect.left) - 10;
         } else if (cellRect.right > containerRect.right) {
             newScrollLeft = scrollLeft + (cellRect.right - containerRect.right) + 10;
