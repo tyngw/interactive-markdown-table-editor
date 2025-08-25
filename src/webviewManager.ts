@@ -49,15 +49,108 @@ export class WebviewManager {
     }
 
     /**
+     * Get panel by panel ID or URI
+     */
+    public getPanel(panelId: string): vscode.WebviewPanel | null;
+    public getPanel(uri: vscode.Uri): vscode.WebviewPanel | null;
+    public getPanel(panelIdOrUri: string | vscode.Uri): vscode.WebviewPanel | null {
+        const panelId = typeof panelIdOrUri === 'string' ? panelIdOrUri : panelIdOrUri.toString();
+        return this.panels.get(panelId) || null;
+    }
+
+    /**
+     * Get panel ID from URI (for backward compatibility)
+     */
+    public getPanelId(uri: vscode.Uri): string {
+        return uri.toString();
+    }
+
+    /**
+     * Find the actual panel ID for a given panel instance
+     */
+    private findPanelId(panel: vscode.WebviewPanel): string {
+        for (const [panelId, panelInstance] of this.panels.entries()) {
+            if (panelInstance === panel) {
+                return panelId;
+            }
+        }
+        // Fallback - should not happen in normal operation
+        return '';
+    }
+
+    /**
+     * Get all panels for a specific file URI
+     */
+    public getPanelsForFile(fileUri: string): Map<string, vscode.WebviewPanel> {
+        const filePanels = new Map<string, vscode.WebviewPanel>();
+        for (const [panelId, panel] of this.panels.entries()) {
+            if (panelId.startsWith(fileUri)) {
+                filePanels.set(panelId, panel);
+            }
+        }
+        return filePanels;
+    }
+
+    /**
+     * Broadcast message to all panels
+     */
+    public broadcastMessage(command: string, data?: any): void {
+        const message = { command, data };
+        for (const panel of this.panels.values()) {
+            panel.webview.postMessage(message);
+        }
+    }
+
+    /**
+     * Send success message to webview
+     */
+    public sendSuccess(panel: vscode.WebviewPanel, message: string, data?: any): void {
+        panel.webview.postMessage({
+            command: 'success',
+            message: message,
+            data: data
+        });
+    }
+
+    /**
      * Create a new table editor panel
      */
     public createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri): vscode.WebviewPanel {
-        const panelId = uri.toString();
+        return this._createTableEditorPanel(tableData, uri, false);
+    }
 
-        console.log('Creating webview panel for:', panelId);
+    /**
+     * Create a new table editor panel, always in a new panel
+     * Returns both the panel and the unique panel ID used internally
+     */
+    public createTableEditorPanelNewPanel(tableData: TableData | TableData[], uri: vscode.Uri): { panel: vscode.WebviewPanel; panelId: string } {
+        const result = this._createTableEditorPanel(tableData, uri, true);
+        // Find the panel ID that was actually used
+        const panelId = Array.from(this.panels.entries()).find(([_, p]) => p === result)?.[0] || uri.toString();
+        return { panel: result, panelId };
+    }
 
-        // If panel already exists for the same file, reveal it
-        if (this.panels.has(panelId)) {
+    /**
+     * Internal method to create table editor panel with option to force new panel
+     */
+    private _createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri, forceNewPanel: boolean): vscode.WebviewPanel {
+        let panelId = uri.toString();
+
+        // If forcing new panel, create unique panel ID
+        if (forceNewPanel) {
+            let timestamp = Date.now();
+            panelId = `${uri.toString()}_${timestamp}`;
+            // Ensure uniqueness by incrementing timestamp if needed
+            while (this.panels.has(panelId)) {
+                timestamp++;
+                panelId = `${uri.toString()}_${timestamp}`;
+            }
+        }
+
+        console.log('Creating webview panel for:', panelId, forceNewPanel ? '(forced new panel)' : '');
+
+        // If panel already exists for the same file and not forcing new panel, reveal it
+        if (!forceNewPanel && this.panels.has(panelId)) {
             console.log('Panel already exists for same file, revealing...');
             const existingPanel = this.panels.get(panelId)!;
             existingPanel.reveal();
@@ -65,8 +158,8 @@ export class WebviewManager {
             return existingPanel;
         }
 
-        // If any table editor panel is already open, reuse it for the new file
-        if (this.panels.size > 0) {
+        // If any table editor panel is already open and not forcing new panel, reuse it for the new file
+        if (!forceNewPanel && this.panels.size > 0) {
             console.log('Existing table editor panel found, reusing for new file...');
             const existingPanelEntry = Array.from(this.panels.entries())[0];
             const [oldPanelId, existingPanel] = existingPanelEntry;
@@ -86,10 +179,19 @@ export class WebviewManager {
 
         console.log('Creating new webview panel...');
 
+        // Generate appropriate title
+        let panelTitle = `${path.basename(uri.fsPath)} - Table Editor`;
+        if (forceNewPanel) {
+            // Add panel number for new panels to distinguish them
+            const existingPanelsForFile = Array.from(this.panels.keys()).filter(id => id.startsWith(uri.toString()));
+            const panelNumber = existingPanelsForFile.length + 1;
+            panelTitle = `${path.basename(uri.fsPath)} - Table Editor (${panelNumber})`;
+        }
+
         // Create new panel
         const panel = vscode.window.createWebviewPanel(
             'markdownTableEditor',
-            `${path.basename(uri.fsPath)} - Table Editor`,
+            panelTitle,
             vscode.ViewColumn.Two,
             {
                 enableScripts: true,
@@ -251,10 +353,13 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     private refreshPanelData(panel: vscode.WebviewPanel, uri: vscode.Uri): void {
         console.log('Refreshing panel data for:', uri.toString());
 
+        const actualPanelId = this.findPanelId(panel);
+        console.log('Using panel ID for refresh:', actualPanelId);
+
         // Request fresh table data from the file
         vscode.commands.executeCommand('markdownTableEditor.internal.requestTableData', {
             uri,
-            panelId: this.getPanelId(uri),
+            panelId: actualPanelId,
             forceRefresh: true // Flag to indicate this is a forced refresh
         });
     }
@@ -292,7 +397,8 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     private async handleMessage(message: WebviewMessage, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         try {
             // Mark connection as healthy when we receive a message
-            this.markConnectionHealthy(this.getPanelId(uri));
+            const panelId = this.findPanelId(panel);
+            this.markConnectionHealthy(panelId);
 
             // Basic message structure validation
             if (!this.validateBasicMessageStructure(message)) {
@@ -361,7 +467,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
                 case 'pong':
                     // Handle pong response from webview
                     console.log(`Received pong from webview, response time: ${message.responseTime ? message.responseTime - (message.timestamp || 0) : 'unknown'}ms`);
-                    this.markConnectionHealthy(this.getPanelId(uri));
+                    this.markConnectionHealthy(panelId);
                     break;
 
                 case 'switchTable':
@@ -541,10 +647,12 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     private async handleRequestTableData(panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Table data requested for:', uri.toString());
 
+        const actualPanelId = this.findPanelId(panel);
+
         // Emit custom event that can be handled by the extension
         vscode.commands.executeCommand('markdownTableEditor.internal.requestTableData', {
-            uri,
-            panelId: this.getPanelId(uri)
+            uri: uri.toString(), // Convert URI to string
+            panelId: actualPanelId
         });
     }
 
@@ -555,9 +663,11 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         console.log('Cell update:', data, 'for file:', uri.toString());
         console.log('Cell update tableIndex:', data.tableIndex);
 
+        const actualPanelId = this.findPanelId(panel);
+
         const commandData = {
-            uri,
-            panelId: this.getPanelId(uri),
+            uri: uri.toString(), // Convert URI to string
+            panelId: actualPanelId,
             row: data.row,
             col: data.col,
             value: data.value,
@@ -577,9 +687,11 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         console.log('Header update:', data, 'for file:', uri.toString());
         console.log('Header update tableIndex:', data.tableIndex);
 
+        const actualPanelId = this.findPanelId(panel);
+
         const commandData = {
-            uri,
-            panelId: this.getPanelId(uri),
+            uri: uri.toString(), // Convert URI to string
+            panelId: actualPanelId,
             col: data.col,
             value: data.value,
             tableIndex: data.tableIndex
@@ -597,9 +709,11 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     private async handleAddRow(data: { index?: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Add row:', data, 'for file:', uri.toString());
 
+        const actualPanelId = this.findPanelId(panel);
+
         vscode.commands.executeCommand('markdownTableEditor.internal.addRow', {
-            uri,
-            panelId: this.getPanelId(uri),
+            uri: uri.toString(),
+            panelId: actualPanelId,
             index: data?.index,
             tableIndex: data?.tableIndex
         });
@@ -611,25 +725,28 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     private async handleDeleteRow(data: { index: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Delete row:', data, 'for file:', uri.toString());
 
+        const actualPanelId = this.findPanelId(panel);
+
         vscode.commands.executeCommand('markdownTableEditor.internal.deleteRow', {
-            uri,
-            panelId: this.getPanelId(uri),
+            uri: uri.toString(),
+            panelId: actualPanelId,
             index: data.index,
-            tableIndex: data.tableIndex
+            tableIndex: data?.tableIndex
         });
     }
 
     /**
      * Handle add column
      */
-    private async handleAddColumn(data: { index?: number; header?: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+    private async handleAddColumn(data: { index?: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Add column:', data, 'for file:', uri.toString());
 
+        const actualPanelId = this.findPanelId(panel);
+
         vscode.commands.executeCommand('markdownTableEditor.internal.addColumn', {
-            uri,
-            panelId: this.getPanelId(uri),
+            uri: uri.toString(),
+            panelId: actualPanelId,
             index: data?.index,
-            header: data?.header,
             tableIndex: data?.tableIndex
         });
     }
@@ -640,72 +757,101 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     private async handleDeleteColumn(data: { index: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Delete column:', data, 'for file:', uri.toString());
 
+        const actualPanelId = this.findPanelId(panel);
+
         vscode.commands.executeCommand('markdownTableEditor.internal.deleteColumn', {
-            uri,
-            panelId: this.getPanelId(uri),
+            uri: uri.toString(),
+            panelId: actualPanelId,
             index: data.index,
-            tableIndex: data.tableIndex
+            tableIndex: data?.tableIndex
         });
     }
 
     /**
      * Handle sort
      */
-    private async handleSort(data: { column: number; direction: 'asc' | 'desc'; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+    private async handleSort(data: { column: number; direction: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Sort:', data, 'for file:', uri.toString());
 
+        const actualPanelId = this.findPanelId(panel);
+
         vscode.commands.executeCommand('markdownTableEditor.internal.sort', {
-            uri,
-            panelId: this.getPanelId(uri),
+            uri: uri.toString(),
+            panelId: actualPanelId,
             column: data.column,
             direction: data.direction,
-            tableIndex: data.tableIndex
+            tableIndex: data?.tableIndex
         });
     }
 
     /**
      * Handle move row
      */
-    private async handleMoveRow(data: { from: number; to: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+    private async handleMoveRow(data: { fromIndex: number; toIndex: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Move row:', data, 'for file:', uri.toString());
 
+        const actualPanelId = this.findPanelId(panel);
+
         vscode.commands.executeCommand('markdownTableEditor.internal.moveRow', {
-            uri,
-            panelId: this.getPanelId(uri),
-            from: data.from,
-            to: data.to,
-            tableIndex: data.tableIndex
+            uri: uri.toString(),
+            panelId: actualPanelId,
+            fromIndex: data.fromIndex,
+            toIndex: data.toIndex,
+            tableIndex: data?.tableIndex
         });
     }
 
     /**
      * Handle move column
      */
-    private async handleMoveColumn(data: { from: number; to: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+    private async handleMoveColumn(data: { fromIndex: number; toIndex: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Move column:', data, 'for file:', uri.toString());
 
+        const actualPanelId = this.findPanelId(panel);
+
         vscode.commands.executeCommand('markdownTableEditor.internal.moveColumn', {
-            uri,
-            panelId: this.getPanelId(uri),
-            from: data.from,
-            to: data.to,
-            tableIndex: data.tableIndex
+            uri: uri.toString(),
+            panelId: actualPanelId,
+            fromIndex: data.fromIndex,
+            toIndex: data.toIndex,
+            tableIndex: data?.tableIndex
         });
     }
 
     /**
-     * Handle CSV export
+     * Handle export CSV
      */
-    private async handleExportCSV(data: { csvContent: string; filename: string; encoding?: string }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Export CSV:', data.filename, 'encoding:', data.encoding || 'utf8', 'for file:', uri.toString());
+    private async handleExportCSV(data: { tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('Export CSV:', data, 'for file:', uri.toString());
+
+        const actualPanelId = this.findPanelId(panel);
 
         vscode.commands.executeCommand('markdownTableEditor.internal.exportCSV', {
-            uri,
-            panelId: this.getPanelId(uri),
-            csvContent: data.csvContent,
-            filename: data.filename,
-            encoding: data.encoding || 'utf8'
+            uri: uri.toString(),
+            panelId: actualPanelId,
+            tableIndex: data?.tableIndex
         });
+    }
+
+    /**
+     * Build initial theme CSS synchronously for faster panel startup
+     */
+    private buildInitialThemeCssSync(): string {
+        // Simplified synchronous theme building for faster startup
+        return `
+            :root {
+                --primary-color: var(--vscode-button-background, #007acc);
+                --primary-hover: var(--vscode-button-hoverBackground, #005a9e);
+                --secondary-color: var(--vscode-button-secondaryBackground, #5f6a79);
+                --border-color: var(--vscode-panel-border, #454545);
+                --text-color: var(--vscode-foreground, #cccccc);
+                --background-color: var(--vscode-editor-background, #1e1e1e);
+                --selected-background: var(--vscode-list-activeSelectionBackground, #094771);
+                --hover-background: var(--vscode-list-hoverBackground, #2a2d2e);
+                --input-background: var(--vscode-input-background, #3c3c3c);
+                --input-border: var(--vscode-input-border, #464647);
+            }
+        `;
     }
 
     /**
@@ -719,6 +865,34 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         } catch (error) {
             console.warn('Failed to send theme variables to panel:', error);
         }
+    }
+
+    /**
+     * Dispose all resources
+     */
+    public dispose(): void {
+        console.log('WebviewManager: Disposing resources...');
+        
+        // Stop health monitoring
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval);
+            this.healthCheckInterval = null;
+        }
+
+        // Dispose all panels
+        for (const panel of this.panels.values()) {
+            try {
+                panel.dispose();
+            } catch (error) {
+                console.error('Error disposing panel:', error);
+            }
+        }
+
+        // Clear all maps
+        this.panels.clear();
+        this.connectionHealthMap.clear();
+
+        console.log('WebviewManager: Resources disposed');
     }
 
     /**
@@ -794,43 +968,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         `;
     }
 
-    /**
-     * 初期表示用に同期的にテーマCSSを構築（colors.* → --vscode-* へ変換）
-     * 設定が inherit の場合は空文字。
-     */
-    private buildInitialThemeCssSync(): string {
-        try {
-            const selected = vscode.workspace.getConfiguration('markdownTableEditor').get<string>('theme', 'inherit');
-            if (!selected || selected === 'inherit') return '';
-            const [extId, ...rest] = selected.split(':');
-            const relPath = rest.join(':');
-            const ext = vscode.extensions.all.find(e => e.id === extId);
-            if (!ext || !relPath) return '';
-            const themeUri = vscode.Uri.joinPath(ext.extensionUri, relPath);
-            const filePath = themeUri.fsPath;
-            const content = fs.readFileSync(filePath, 'utf8');
-            const json = JSON.parse(content);
-            const colors = json.colors || {};
-            const entries: string[] = [];
-            for (const key of Object.keys(colors)) {
-                const val = colors[key];
-                if (typeof val !== 'string') continue;
-                const varName = `--vscode-${key.replace(/\./g, '-')}`;
-                entries.push(`${varName}:${val}`);
-            }
-            return entries.length ? `:root{${entries.join(';')}}` : '';
-        } catch (e) {
-            console.warn('Failed to build initial theme CSS:', e);
-            return '';
-        }
-    }
 
-    /**
-     * Get panel by URI
-     */
-    public getPanel(uri: vscode.Uri): vscode.WebviewPanel | undefined {
-        return this.panels.get(uri.toString());
-    }
 
     /**
      * Close panel by URI
@@ -852,23 +990,9 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         this.panels.clear();
     }
 
-    /**
-     * Get panel ID from URI
-     */
-    private getPanelId(uri: vscode.Uri): string {
-        return uri.toString();
-    }
 
-    /**
-     * Send success message to webview
-     */
-    public sendSuccess(panel: vscode.WebviewPanel, message: string, data?: any): void {
-        panel.webview.postMessage({
-            command: 'success',
-            message: message,
-            data: data
-        });
-    }
+
+
 
     /**
      * Send status update to webview
@@ -892,17 +1016,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         });
     }
 
-    /**
-     * Broadcast message to all panels
-     */
-    public broadcastMessage(command: string, data?: any): void {
-        for (const panel of this.panels.values()) {
-            panel.webview.postMessage({
-                command: command,
-                data: data
-            });
-        }
-    }
+
 
     /**
      * Get all active panel URIs
@@ -1040,28 +1154,5 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         });
     }
 
-    /**
-     * Cleanup resources
-     */
-    public dispose(): void {
-        console.log('WebviewManager: Starting disposal...');
 
-        try {
-            // Stop health monitoring first
-            this.stopHealthMonitoring();
-
-            // Close all panels (this will trigger their onDidDispose handlers)
-            this.closeAllPanels();
-
-            // Clear connection health map
-            this.connectionHealthMap.clear();
-
-            // Clear panels map
-            this.panels.clear();
-
-            console.log('WebviewManager: Disposal completed successfully');
-        } catch (error) {
-            console.error('WebviewManager: Error during disposal:', error);
-        }
-    }
 }

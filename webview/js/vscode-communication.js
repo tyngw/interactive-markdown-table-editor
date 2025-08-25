@@ -141,9 +141,11 @@ const VSCodeCommunication = {
                 if (TableEditor.state && TableEditor.state.fileInfo && !message.fileInfo) {
                     message.fileInfo = TableEditor.state.fileInfo;
                 }
-                // Include current URI for proper routing
+                // Include current URI for proper routing (ensure it's a string)
                 if (TableEditor.state && TableEditor.state.fileInfo && TableEditor.state.fileInfo.uri && !message.uri) {
-                    message.uri = TableEditor.state.fileInfo.uri;
+                    // Ensure URI is a string, not an object
+                    const uri = TableEditor.state.fileInfo.uri;
+                    message.uri = typeof uri === 'string' ? uri : uri.toString();
                 }
                 TableEditor.vscode.postMessage(message);
             } else {

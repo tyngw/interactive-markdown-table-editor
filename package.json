@@ -35,6 +35,11 @@
         "category": "Markdown Table Editor"
       },
       {
+        "command": "markdownTableEditor.openEditorNewPanel",
+        "title": "Open Table Editor (New Panel)",
+        "category": "Markdown Table Editor"
+      },
+      {
         "command": "markdownTableEditor.selectTheme",
         "title": "Select Table Editor Theme",
         "category": "Markdown Table Editor"
@@ -44,6 +49,11 @@
       "editor/context": [
         {
           "command": "markdownTableEditor.openEditor",
+          "when": "editorLangId == markdown",
+          "group": "navigation"
+        },
+        {
+          "command": "markdownTableEditor.openEditorNewPanel",
           "when": "editorLangId == markdown",
           "group": "navigation"
         }
