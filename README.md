@@ -157,91 +157,7 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.1.20
-
-**Data Synchronization & Excel-like Enhancements**
-
-- **Real-time Data Sync**: Table Editor now automatically refreshes when switching tabs, ensuring VSCode editor changes are always reflected
-- **Smart Navigation**: Excel-like Ctrl+Arrow key navigation for efficient movement through data regions
-- **Japanese IME Support**: Full support for Japanese input with proper Enter key handling during text conversion
-- **Enhanced Save Status**: Seamless status transitions (Saving... → Auto-saved) without layout shifts
-- **Column Width Intelligence**: Auto-fit functionality with double-click on resize handles
-- **Scroll Position Preservation**: Edit position maintained during cell operations
-
-### 0.1.19
-
-**Smart Navigation & Save Status Improvements**
-
-- **Excel-like Navigation**: Ctrl+Arrow keys for intelligent data boundary detection and movement
-- **Improved Save Feedback**: Clean status indicator transitions without disruptive success messages
-- **Enhanced User Experience**: More intuitive navigation patterns matching spreadsheet applications
-
-### 0.1.18
-
-**Japanese Input Method Support**
-
-- **IME Compatibility**: Full support for Japanese and other input method editors
-- **Smart Enter Key**: Distinguishes between IME text confirmation and edit completion
-- **Multi-language Support**: Enhanced keyboard handling for international users
-
-### 0.1.17
-
-**Keyboard Interaction Enhancements**
-
-- **Excel-like Enter Behavior**: Enter key confirms edit and moves to next row
-- **Shift+Enter for Line Breaks**: More intuitive text input with proper line break handling
-- **Tab Navigation Improvements**: Clean selection state management during cell transitions
-- **Auto-fit Column Width**: Double-click resize handles to automatically fit content
-
-### 0.1.13
-
-**Enhanced Keyboard Interactions & Spreadsheet-like UI**
-
-- **Improved Keyboard Navigation**: 
-  - Enter key now starts editing mode (instead of moving to next cell)
-  - Esc key confirms changes (instead of canceling)
-- **Standard Copy/Paste Support**: Full support for Ctrl+C, Ctrl+V, Ctrl+X, and other editing shortcuts during cell editing
-- **Always-Visible Headers**: Row numbers and column headers now remain visible when scrolling (sticky positioning)
-- **Spreadsheet-like Experience**: More intuitive interactions matching standard spreadsheet applications
-
-### 0.1.7
-
-**Enhanced Precision & User Experience**
-
-- **Fixed Resize vs Sort Conflict**: リサイズハンドルクリック時にソートが発火する問題を修正
-- **Separated Operations**: ヘッダードラッグで移動、リサイズハンドルで幅変更の完全分離
-- **Improved Cell Editing**: 入力フィールド内クリック時の編集継続（他セルクリック時のみ終了）
-- **Enhanced Event Handling**: より精密なイベント処理で操作の誤発火を防止
-
-### 0.1.6
-
-**UI/UX Improvements & Bug Fixes**
-
-- **Status Bar at Bottom**: エラーメッセージと保存状況を下部に表示
-- **Simplified Toolbar**: 不要なボタンを削除し、右クリックメニューに集約
-- **Enhanced Focus Management**: セル編集時のフォーカス改善
-- **Bug Fix**: "Loading table data..." ハング問題を修正（JSyntaxエラー）
-- **Multi-Cell Selection**: Ctrl/Cmd + クリックでの複数セル選択機能
-
-### 0.1.5
-
-**Multi-Table Support & Robustness**
-
-- **Multiple Tables**: 単一文書内の複数テーブル対応
-- **Table Selection Dialog**: 複数テーブル時の選択インターフェース
-- **Mixed Content Support**: コードブロック、リスト等との共存
-- **Index-Based Updates**: テーブルインデックスによる正確な更新
-- **Enhanced Error Handling**: 堅牢なエラー処理機能
-
-### 0.1.0
-
-Initial release of Markdown Table Editor
-
-- Basic table editing functionality
-- Spreadsheet-like interface
-- Row/column manipulation
-- Sorting and drag & drop
-- Auto-save
+See [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version history.
 
 ## Development Mode
 
@@ -293,7 +209,14 @@ This development mode significantly speeds up the development cycle for UI and f
 
 ## Contributing
 
-This extension is open source. Feel free to contribute improvements or report issues.
+This extension is open source. We welcome contributions! 
+
+Please see our [Contributing Guidelines](.github/CONTRIBUTING.md) for information on:
+- How to update the changelog
+- Development workflow
+- Code contribution guidelines
+
+Feel free to contribute improvements or report issues.
 
 ## License
 
