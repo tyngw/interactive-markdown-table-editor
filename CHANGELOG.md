@@ -5,6 +5,20 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] - 2025-09-01
+
+### Fixed
+- **Column Deletion Bug**: Fixed critical issue where column deletion from header context menu failed with "File does not exist: undefined" error
+  - Root cause: URI string vs URI object mismatch between WebviewManager and extension commands
+  - Fixed URI handling in all internal commands (deleteColumn, deleteRow, addRow, addColumn, sort, moveRow, moveColumn, exportCSV)
+  - Columns can now be successfully deleted from Markdown files via header context menu
+  - Improved error handling and debugging for file operations
+
+### Technical Improvements
+- **URI Processing**: Standardized URI string parsing across all internal commands
+- **Error Prevention**: Added proper URI conversion from string to vscode.Uri object
+- **Code Consistency**: Unified parameter destructuring pattern across command handlers
+
 ## [0.5.3] - 2025-08-26
 
 ### Enhanced

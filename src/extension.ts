@@ -638,16 +638,17 @@ export function activate(context: vscode.ExtensionContext) {
     const addRowCommand = vscode.commands.registerCommand('markdownTableEditor.internal.addRow', async (data: any) => {
         try {
             console.log('Internal command: addRow', data);
-            const { uri, panelId, index, tableIndex } = data;
-            const panel = webviewManager.getPanel(uri);
+            const { uri: uriString, panelId, index, tableIndex } = data;
+            const uri = vscode.Uri.parse(uriString);
+            const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {
-                console.error('Panel not found for URI:', uri.toString());
+                console.error('Panel not found for URI:', uriString);
                 return;
             }
 
             // Get the specific table manager by index
-            const tableManagersMap = activeMultiTableManagers.get(uri.toString());
+            const tableManagersMap = activeMultiTableManagers.get(uriString);
             if (!tableManagersMap) {
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
@@ -692,16 +693,17 @@ export function activate(context: vscode.ExtensionContext) {
     const deleteRowCommand = vscode.commands.registerCommand('markdownTableEditor.internal.deleteRow', async (data: any) => {
         try {
             console.log('Internal command: deleteRow', data);
-            const { uri, panelId, index, tableIndex } = data;
-            const panel = webviewManager.getPanel(uri);
+            const { uri: uriString, panelId, index, tableIndex } = data;
+            const uri = vscode.Uri.parse(uriString);
+            const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {
-                console.error('Panel not found for URI:', uri.toString());
+                console.error('Panel not found for URI:', uriString);
                 return;
             }
 
             // Get the specific table manager by index
-            const tableManagersMap = activeMultiTableManagers.get(uri.toString());
+            const tableManagersMap = activeMultiTableManagers.get(uriString);
             if (!tableManagersMap) {
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
@@ -746,16 +748,17 @@ export function activate(context: vscode.ExtensionContext) {
     const addColumnCommand = vscode.commands.registerCommand('markdownTableEditor.internal.addColumn', async (data: any) => {
         try {
             console.log('Internal command: addColumn', data);
-            const { uri, panelId, index, header, tableIndex } = data;
-            const panel = webviewManager.getPanel(uri);
+            const { uri: uriString, panelId, index, header, tableIndex } = data;
+            const uri = vscode.Uri.parse(uriString);
+            const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {
-                console.error('Panel not found for URI:', uri.toString());
+                console.error('Panel not found for URI:', uriString);
                 return;
             }
 
             // Get the specific table manager by index
-            const tableManagersMap = activeMultiTableManagers.get(uri.toString());
+            const tableManagersMap = activeMultiTableManagers.get(uriString);
             if (!tableManagersMap) {
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
@@ -800,16 +803,17 @@ export function activate(context: vscode.ExtensionContext) {
     const deleteColumnCommand = vscode.commands.registerCommand('markdownTableEditor.internal.deleteColumn', async (data: any) => {
         try {
             console.log('Internal command: deleteColumn', data);
-            const { uri, panelId, index, tableIndex } = data;
-            const panel = webviewManager.getPanel(uri);
+            const { uri: uriString, panelId, index, tableIndex } = data;
+            const uri = vscode.Uri.parse(uriString);
+            const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {
-                console.error('Panel not found for URI:', uri.toString());
+                console.error('Panel not found for URI:', uriString);
                 return;
             }
 
             // Get the specific table manager by index
-            const tableManagersMap = activeMultiTableManagers.get(uri.toString());
+            const tableManagersMap = activeMultiTableManagers.get(uriString);
             if (!tableManagersMap) {
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
@@ -854,16 +858,17 @@ export function activate(context: vscode.ExtensionContext) {
     const sortCommand = vscode.commands.registerCommand('markdownTableEditor.internal.sort', async (data: any) => {
         try {
             console.log('Internal command: sort', data);
-            const { uri, panelId, column, direction, tableIndex } = data;
-            const panel = webviewManager.getPanel(uri);
+            const { uri: uriString, panelId, column, direction, tableIndex } = data;
+            const uri = vscode.Uri.parse(uriString);
+            const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {
-                console.error('Panel not found for URI:', uri.toString());
+                console.error('Panel not found for URI:', uriString);
                 return;
             }
 
             // Get the specific table manager by index
-            const tableManagersMap = activeMultiTableManagers.get(uri.toString());
+            const tableManagersMap = activeMultiTableManagers.get(uriString);
             if (!tableManagersMap) {
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
@@ -908,16 +913,17 @@ export function activate(context: vscode.ExtensionContext) {
     const moveRowCommand = vscode.commands.registerCommand('markdownTableEditor.internal.moveRow', async (data: any) => {
         try {
             console.log('Internal command: moveRow', data);
-            const { uri, panelId, from, to, tableIndex } = data;
-            const panel = webviewManager.getPanel(uri);
+            const { uri: uriString, panelId, from, to, tableIndex } = data;
+            const uri = vscode.Uri.parse(uriString);
+            const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {
-                console.error('Panel not found for URI:', uri.toString());
+                console.error('Panel not found for URI:', uriString);
                 return;
             }
 
             // Get the specific table manager by index
-            const tableManagersMap = activeMultiTableManagers.get(uri.toString());
+            const tableManagersMap = activeMultiTableManagers.get(uriString);
             if (!tableManagersMap) {
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
@@ -962,16 +968,17 @@ export function activate(context: vscode.ExtensionContext) {
     const moveColumnCommand = vscode.commands.registerCommand('markdownTableEditor.internal.moveColumn', async (data: any) => {
         try {
             console.log('Internal command: moveColumn', data);
-            const { uri, panelId, from, to, tableIndex } = data;
-            const panel = webviewManager.getPanel(uri);
+            const { uri: uriString, panelId, from, to, tableIndex } = data;
+            const uri = vscode.Uri.parse(uriString);
+            const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {
-                console.error('Panel not found for URI:', uri.toString());
+                console.error('Panel not found for URI:', uriString);
                 return;
             }
 
             // Get the specific table manager by index
-            const tableManagersMap = activeMultiTableManagers.get(uri.toString());
+            const tableManagersMap = activeMultiTableManagers.get(uriString);
             if (!tableManagersMap) {
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
@@ -1016,16 +1023,17 @@ export function activate(context: vscode.ExtensionContext) {
     const exportCSVCommand = vscode.commands.registerCommand('markdownTableEditor.internal.exportCSV', async (data: any) => {
         try {
             console.log('Internal command: exportCSV', data);
-            const { uri, panelId, csvContent, filename, encoding = 'utf8' } = data;
-            const panel = webviewManager.getPanel(uri);
+            const { uri: uriString, panelId, csvContent, filename, encoding = 'utf8' } = data;
+            const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {
-                console.error('Panel not found for URI:', uri.toString());
+                console.error('Panel not found for URI:', uriString);
                 return;
             }
 
             // Generate default filename based on the current markdown file
             let defaultFilename = filename;
+            const uri = vscode.Uri.parse(uriString);
             if (uri && uri.fsPath) {
                 const path = require('path');
                 const baseName = path.basename(uri.fsPath, path.extname(uri.fsPath));
