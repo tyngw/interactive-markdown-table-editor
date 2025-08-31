@@ -154,7 +154,7 @@ export class WebviewManager {
             console.log('Panel already exists for same file, revealing...');
             const existingPanel = this.panels.get(panelId)!;
             existingPanel.reveal();
-            this.updateTableData(existingPanel, tableData, uri, true);
+            this.updateTableData(existingPanel, tableData, uri);
             return existingPanel;
         }
 
@@ -171,26 +171,9 @@ export class WebviewManager {
             // Update panel title
             existingPanel.title = `${path.basename(uri.fsPath)} - Table Editor`;
             
-            // Reveal panel first
+            // Reveal and update with new data
             existingPanel.reveal();
-            
-            // Clear any existing data and update with new data
-            console.log('Updating existing panel with new file data...');
-            
-            // Send multiple updates to ensure the webview receives the new data
-            this.updateTableData(existingPanel, tableData, uri, true);
-            
-            // Send additional updates with delays to ensure webview is ready
-            setTimeout(() => {
-                console.log('Sending delayed update to existing panel...');
-                this.updateTableData(existingPanel, tableData, uri, true);
-            }, 100);
-            
-            setTimeout(() => {
-                console.log('Sending final update to existing panel...');
-                this.updateTableData(existingPanel, tableData, uri, true);
-            }, 500);
-            
+            this.updateTableData(existingPanel, tableData, uri);
             return existingPanel;
         }
 
@@ -335,11 +318,10 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     /**
      * Update table data in the webview
      */
-    public updateTableData(panel: vscode.WebviewPanel, tableData: TableData | TableData[], uri?: vscode.Uri, forceUpdate: boolean = false): void {
+    public updateTableData(panel: vscode.WebviewPanel, tableData: TableData | TableData[], uri?: vscode.Uri): void {
         const message: any = {
             command: 'updateTableData',
-            data: tableData,
-            forceUpdate: forceUpdate
+            data: tableData
         };
 
         // Include file information if URI is provided
@@ -351,13 +333,6 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
                 fileNameWithoutExt: path.basename(uri.fsPath, path.extname(uri.fsPath))
             };
         }
-
-        console.log('Sending updateTableData message:', {
-            command: message.command,
-            dataLength: Array.isArray(tableData) ? tableData.length : 1,
-            fileInfo: message.fileInfo,
-            forceUpdate: message.forceUpdate
-        });
 
         panel.webview.postMessage(message);
     }
