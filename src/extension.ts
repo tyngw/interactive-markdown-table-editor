@@ -801,15 +801,34 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             console.log('Internal command: deleteColumn', data);
             const { uri, panelId, index, tableIndex } = data;
-            const panel = webviewManager.getPanel(uri);
 
-            if (!panel) {
-                console.error('Panel not found for URI:', uri.toString());
+            // Get the URI string and panel ID to use for manager lookup (same as updateHeader)
+            let uriString: string;
+            let actualPanelId: string;
+
+            if (uri) {
+                // Handle both string URIs and URI objects
+                uriString = typeof uri === 'string' ? uri : (uri.external || uri.toString());
+            } else {
+                uriString = webviewManager.getActivePanelUri() || '';
+            }
+
+            // Use provided panelId or fall back to uriString
+            actualPanelId = panelId || uriString;
+
+            if (!uriString) {
+                console.error('No URI available for deleteColumn command');
                 return;
             }
 
-            // Get the specific table manager by index
-            const tableManagersMap = activeMultiTableManagers.get(uri.toString());
+            const panel = webviewManager.getPanel(actualPanelId);
+            if (!panel) {
+                console.error('Panel not found for panel ID:', actualPanelId);
+                return;
+            }
+
+            // Get the specific table manager by index using the actual panel ID
+            const tableManagersMap = activeMultiTableManagers.get(actualPanelId);
             if (!tableManagersMap) {
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
@@ -829,7 +848,7 @@ export function activate(context: vscode.ExtensionContext) {
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
             await fileHandler.updateTableByIndex(
-                uri,
+                vscode.Uri.parse(uriString),
                 tableData.metadata.tableIndex,
                 updatedMarkdown
             );
@@ -840,11 +859,12 @@ export function activate(context: vscode.ExtensionContext) {
                 allTableData[index] = manager.getTableData();
             });
 
-            webviewManager.updateTableData(panel, allTableData, uri);
+            webviewManager.updateTableData(panel, allTableData, vscode.Uri.parse(uriString));
             webviewManager.sendSuccess(panel, 'Column deleted successfully');
         } catch (error) {
             console.error('Error in deleteColumn:', error);
-            const panel = webviewManager.getPanel(data.uri);
+            const actualPanelId = data.panelId || data.uri || webviewManager.getActivePanelUri();
+            const panel = actualPanelId ? webviewManager.getPanel(actualPanelId) : null;
             if (panel) {
                 webviewManager.sendError(panel, `Failed to delete column: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
