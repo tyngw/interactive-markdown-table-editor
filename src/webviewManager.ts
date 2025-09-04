@@ -633,9 +633,23 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 
     private validateExportCSVData(data: any): boolean {
         if (!data) return false;
-        return typeof data.csvContent === 'string' &&
-            typeof data.filename === 'string' && data.filename.length > 0 &&
-            (data.encoding === undefined || typeof data.encoding === 'string');
+        
+        // csvContent is required and must be a non-empty string
+        if (typeof data.csvContent !== 'string' || data.csvContent.length === 0) {
+            return false;
+        }
+        
+        // filename is optional (can be auto-generated), but if provided must be a string
+        if (data.filename !== undefined && (typeof data.filename !== 'string' || data.filename.length === 0)) {
+            return false;
+        }
+        
+        // encoding is optional (defaults to utf8), but if provided must be a string
+        if (data.encoding !== undefined && typeof data.encoding !== 'string') {
+            return false;
+        }
+        
+        return true;
     }
 
     private validateSwitchTableData(data: any): boolean {
