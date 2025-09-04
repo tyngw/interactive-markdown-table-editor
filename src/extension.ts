@@ -1023,7 +1023,14 @@ export function activate(context: vscode.ExtensionContext) {
     const exportCSVCommand = vscode.commands.registerCommand('markdownTableEditor.internal.exportCSV', async (data: any) => {
         try {
             console.log('Internal command: exportCSV', data);
-            const { uri: uriString, panelId, csvContent, filename, encoding = 'utf8' } = data;
+            const { uri: uriString, panelId, data: exportData } = data;
+            const { csvContent, filename, encoding = 'utf8' } = exportData || {};
+            
+            if (!csvContent) {
+                console.error('CSV content is missing or undefined');
+                return;
+            }
+            
             const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {

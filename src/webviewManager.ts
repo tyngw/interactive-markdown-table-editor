@@ -823,7 +823,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     /**
      * Handle export CSV
      */
-    private async handleExportCSV(data: { tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+    private async handleExportCSV(data: { tableIndex?: number; csvContent?: string; filename?: string; encoding?: string }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Export CSV:', data, 'for file:', uri.toString());
 
         const actualPanelId = this.findPanelId(panel);
@@ -831,6 +831,11 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         vscode.commands.executeCommand('markdownTableEditor.internal.exportCSV', {
             uri: uri.toString(),
             panelId: actualPanelId,
+            data: {
+                csvContent: data?.csvContent,
+                filename: data?.filename,
+                encoding: data?.encoding
+            },
             tableIndex: data?.tableIndex
         });
     }

@@ -5,6 +5,22 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2025-01-15
+
+### Fixed
+- **CSV Export Error**: Fixed critical TypeError where `Buffer.from` received undefined value during CSV export
+  - Root cause: Data structure mismatch between webview message and extension command handler
+  - Fixed data transmission from webview CSVExporter to VSCode extension
+  - Added proper error handling for missing CSV content
+  - Enhanced webviewManager.handleExportCSV to correctly pass csvContent, filename, and encoding data
+  - CSV export functionality now works correctly with all encoding options (UTF-8 and Shift_JIS)
+
+### Technical Improvements
+- **Data Flow Validation**: Added validation for CSV export data transmission
+- **Error Prevention**: Enhanced error handling to prevent Buffer.from receiving undefined values
+- **Message Structure**: Standardized data structure between webview and extension communication
+- **Debug Logging**: Improved logging for CSV export troubleshooting
+
 ## [0.6.0] - 2025-01-15
 
 ### Added
