@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import { buildThemeVariablesCss } from './themeUtils';
 
 export interface WebviewMessage {
-    command: 'requestTableData' | 'updateCell' | 'updateHeader' | 'addRow' | 'deleteRow' | 'addColumn' | 'deleteColumn' | 'sort' | 'moveRow' | 'moveColumn' | 'exportCSV' | 'pong' | 'switchTable' | 'requestThemeVariables';
+    command: 'requestTableData' | 'updateCell' | 'updateHeader' | 'addRow' | 'deleteRows' | 'addColumn' | 'deleteColumns' | 'sort' | 'moveRow' | 'moveColumn' | 'exportCSV' | 'pong' | 'switchTable' | 'requestThemeVariables';
     data?: any;
     timestamp?: number;
     responseTime?: number;
@@ -436,16 +436,16 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
                     await this.handleAddRow(message.data, panel, uri);
                     break;
 
-                case 'deleteRow':
-                    await this.handleDeleteRow(message.data, panel, uri);
+                case 'deleteRows':
+                    await this.handleDeleteRows(message.data, panel, uri);
                     break;
 
                 case 'addColumn':
                     await this.handleAddColumn(message.data, panel, uri);
                     break;
 
-                case 'deleteColumn':
-                    await this.handleDeleteColumn(message.data, panel, uri);
+                case 'deleteColumns':
+                    await this.handleDeleteColumns(message.data, panel, uri);
                     break;
 
                 case 'sort':
@@ -519,8 +519,8 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     public validateMessageCommand(message: any): boolean {
         const validCommands = [
-            'requestTableData', 'updateCell', 'updateHeader', 'addRow', 'deleteRow',
-            'addColumn', 'deleteColumn', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'pong', 'switchTable', 'requestThemeVariables'
+            'requestTableData', 'updateCell', 'updateHeader', 'addRow', 'deleteRows',
+            'addColumn', 'deleteColumns', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'pong', 'switchTable', 'requestThemeVariables'
         ];
 
         return validCommands.includes(message.command);
@@ -544,14 +544,14 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             case 'addRow':
                 return this.validateAddRowData(message.data);
 
-            case 'deleteRow':
-                return this.validateDeleteRowData(message.data);
+            case 'deleteRows':
+                return this.validateDeleteRowsData(message.data);
 
             case 'addColumn':
                 return this.validateAddColumnData(message.data);
 
-            case 'deleteColumn':
-                return this.validateDeleteColumnData(message.data);
+            case 'deleteColumns':
+                return this.validateDeleteColumnsData(message.data);
 
             case 'sort':
                 return this.validateSortData(message.data);
@@ -595,9 +595,10 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0)));
     }
 
-    private validateDeleteRowData(data: any): boolean {
+    private validateDeleteRowsData(data: any): boolean {
         if (!data) return false;
-        return typeof data.index === 'number' && data.index >= 0 &&
+        return Array.isArray(data.indices) && data.indices.length > 0 &&
+            data.indices.every((index: any) => typeof index === 'number' && index >= 0) &&
             (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
 
@@ -608,9 +609,10 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0)));
     }
 
-    private validateDeleteColumnData(data: any): boolean {
+    private validateDeleteColumnsData(data: any): boolean {
         if (!data) return false;
-        return typeof data.index === 'number' && data.index >= 0 &&
+        return Array.isArray(data.indices) && data.indices.length > 0 &&
+            data.indices.every((index: any) => typeof index === 'number' && index >= 0) &&
             (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
 
@@ -720,17 +722,17 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     }
 
     /**
-     * Handle delete row
+     * Handle delete multiple rows
      */
-    private async handleDeleteRow(data: { index: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Delete row:', data, 'for file:', uri.toString());
+    private async handleDeleteRows(data: { indices: number[]; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('Delete rows:', data, 'for file:', uri.toString());
 
         const actualPanelId = this.findPanelId(panel);
 
-        vscode.commands.executeCommand('markdownTableEditor.internal.deleteRow', {
+        vscode.commands.executeCommand('markdownTableEditor.internal.deleteRows', {
             uri: uri.toString(),
             panelId: actualPanelId,
-            index: data.index,
+            indices: data.indices,
             tableIndex: data?.tableIndex
         });
     }
@@ -752,17 +754,17 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     }
 
     /**
-     * Handle delete column
+     * Handle delete multiple columns
      */
-    private async handleDeleteColumn(data: { index: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Delete column:', data, 'for file:', uri.toString());
+    private async handleDeleteColumns(data: { indices: number[]; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('Delete columns:', data, 'for file:', uri.toString());
 
         const actualPanelId = this.findPanelId(panel);
 
-        vscode.commands.executeCommand('markdownTableEditor.internal.deleteColumn', {
+        vscode.commands.executeCommand('markdownTableEditor.internal.deleteColumns', {
             uri: uri.toString(),
             panelId: actualPanelId,
-            index: data.index,
+            indices: data.indices,
             tableIndex: data?.tableIndex
         });
     }
