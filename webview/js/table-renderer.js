@@ -210,7 +210,7 @@ const TableRenderer = {
                         ${widthStyle}
                         oncontextmenu="TableEditor.callModule('ContextMenuManager', 'showColumnContextMenu', event, ${index}); return false;"
                         draggable="true"
-                        onmousedown="TableEditor.callModule('SelectionManager', 'startColumnSelect', ${index})"
+                        onmousedown="TableEditor.callModule('SelectionManager', 'startColumnSelect', ${index}, event)"
                         ondragstart="TableEditor.callModule('DragDropManager', 'handleDragStart', event)"
                         ondragover="TableEditor.callModule('DragDropManager', 'handleDragOver', event)"
                         ondrop="TableEditor.callModule('DragDropManager', 'handleDrop', event)">
@@ -238,7 +238,7 @@ const TableRenderer = {
             html += `<td class="row-number" data-row="${rowIndex}" data-col="-1"
                         oncontextmenu="TableEditor.callModule('ContextMenuManager', 'showRowContextMenu', event, ${rowIndex}); return false;"
                         draggable="true"
-                        onmousedown="TableEditor.callModule('SelectionManager', 'startRowSelect', ${rowIndex})"
+                        onmousedown="TableEditor.callModule('SelectionManager', 'startRowSelect', ${rowIndex}, event)"
                         ondragstart="TableEditor.callModule('DragDropManager', 'handleDragStart', event)"
                         ondragover="TableEditor.callModule('DragDropManager', 'handleDragOver', event)"
                         ondrop="TableEditor.callModule('DragDropManager', 'handleDrop', event)">

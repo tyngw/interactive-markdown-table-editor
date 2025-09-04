@@ -5,6 +5,52 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-01-15
+
+### Added
+- **Multi-Row Selection and Deletion**: 
+  - Added support for selecting multiple rows using Ctrl+Click and Shift+Click on row numbers
+  - Added support for selecting multiple columns using Ctrl+Click and Shift+Click on column headers
+  - Enhanced context menu to show appropriate delete options based on selection count
+  - Single row: "行を削除" (Delete Row)
+  - Multiple rows: "選択した3行を削除" (Delete Selected 3 Rows)
+  - Single column: "列を削除" (Delete Column) 
+  - Multiple columns: "選択した2列を削除" (Delete Selected 2 Columns)
+
+### Enhanced
+- **Selection System Improvements**:
+  - Right-click on already selected rows/columns now preserves multi-selection
+  - Improved visual feedback for selected rows and columns with proper highlighting
+  - Enhanced row number and column header highlighting for fully selected rows/columns
+  - Better keyboard navigation support for multi-selection scenarios
+
+- **Custom Confirmation Dialogs**:
+  - Replaced browser confirm() dialogs with custom VSCode-themed confirmation dialogs
+  - Fixed sandbox security issues preventing modal dialogs
+  - Added proper keyboard support (Escape to cancel, Enter to confirm)
+  - Improved accessibility with focus management and hover effects
+  - Confirmation dialogs now show for multiple row/column deletions with detailed messages
+
+### Technical Improvements
+- **Unified Delete Commands**:
+  - Consolidated single and multiple deletion operations into unified `deleteRows` and `deleteColumns` commands
+  - Removed redundant `deleteRow` and `deleteColumn` commands for cleaner codebase
+  - Improved batch processing for multiple deletions with proper index sorting
+  - Enhanced error handling and status messages for deletion operations
+
+- **Selection State Management**:
+  - Improved selection preservation during right-click context menu operations
+  - Enhanced event handling for mouse interactions (mousedown, contextmenu)
+  - Better state synchronization between selection manager and context menu
+  - Fixed selection clearing issues during context menu operations
+
+### Fixed
+- **Context Menu Issues**:
+  - Fixed multi-row selection being cleared when right-clicking for context menu
+  - Resolved sandbox security errors with confirm() and alert() dialogs
+  - Improved context menu positioning and display logic
+  - Fixed dynamic menu item generation based on current selection state
+
 ## [0.5.4] - 2025-09-01
 
 ### Fixed
