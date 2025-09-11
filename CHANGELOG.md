@@ -5,6 +5,14 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2025-01-15
+
+### Fixed
+- **Cell Selection State During Save**: Fixed issue where cell selection border disappeared when save processing occurred
+  - Preserved CSS classes (including selection states) when updating cell content after edit commit/cancel
+  - Fixed both regular cell editing and header editing to maintain selection visualization
+  - Enhanced edit state management to prevent selection state loss during DOM updates
+
 ## [0.6.2] - 2025-01-15
 
 ### Fixed

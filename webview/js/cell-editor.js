@@ -232,10 +232,16 @@ const CellEditor = {
         cell.style.maxHeight = '';
         cell.style.verticalAlign = '';
         cell.style.textAlign = '';
+        // セルのCSSクラスを保存（選択状態などを維持するため）
+        const cellClasses = cell.className;
+        
         cell.removeAttribute('style'); // すべてのインラインスタイルを削除
 
         const processedContent = window.TableEditor.callModule('TableRenderer', 'processCellContent', processedValue);
         cell.innerHTML = `<div class="cell-content">${processedContent}</div>`;
+
+        // セルのCSSクラスを復元（選択状態を維持）
+        cell.className = cellClasses;
 
         // セルの属性を更新（単一行か複数行かを判定）
         const hasMultipleLines = processedValue && String(processedValue).includes('<br');
@@ -294,7 +300,12 @@ const CellEditor = {
             if (data && data.rows && data.rows[row]) {
                 const originalValue = data.rows[row][col] || '';
                 const processedContent = window.TableEditor.callModule('TableRenderer', 'processCellContent', originalValue);
+                
+                // セルのCSSクラスを保存（選択状態などを維持するため）
+                const cellClasses = cell.className;
                 cell.innerHTML = `<div class="cell-content">${processedContent}</div>`;
+                // セルのCSSクラスを復元（選択状態を維持）
+                cell.className = cellClasses;
 
                 // セルの属性を更新（単一行か複数行かを判定）
                 const hasMultipleLines = originalValue && String(originalValue).includes('<br');
@@ -708,7 +719,12 @@ const CellEditor = {
 
         // Restore column title content with new value（セルと同様にHTML化）
         const processedContent = window.TableEditor.callModule('TableRenderer', 'processCellContent', newValue);
+        
+        // ヘッダーセルのCSSクラスを保存（選択状態などを維持するため）
+        const headerClasses = headerCell.className;
         columnTitleDiv.innerHTML = processedContent;
+        // ヘッダーセルのCSSクラスを復元（選択状態を維持）
+        headerCell.className = headerClasses;
 
         // Clear editing state
         state.currentEditingCell = null;
@@ -742,7 +758,12 @@ const CellEditor = {
                 if (data && data.headers && data.headers[col] !== undefined) {
                     const originalValue = data.headers[col] || '';
                     const processedContent = window.TableEditor.callModule('TableRenderer', 'escapeHtml', originalValue);
+                    
+                    // ヘッダーセルのCSSクラスを保存（選択状態などを維持するため）
+                    const headerClasses = headerCell.className;
                     columnTitleDiv.innerHTML = processedContent;
+                    // ヘッダーセルのCSSクラスを復元（選択状態を維持）
+                    headerCell.className = headerClasses;
                 }
             }
         }
