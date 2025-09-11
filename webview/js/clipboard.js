@@ -165,8 +165,8 @@ const ClipboardManager = {
     convertToClipboardFormat: function(data) {
         return data.map(row => 
             row.map(cell => {
-                // Convert <br> tags to newlines for clipboard
-                const cellText = String(cell || '').replace(/<br\s*\/?>/gi, '\n');
+                // Convert <br> tags to newlines for clipboard using centralized converter
+                const cellText = window.TableEditor.callModule('ContentConverter', 'processForClipboard', cell || '');
                 
                 // If cell contains tabs, newlines, or quotes, we need to quote it
                 if (cellText.includes('\t') || cellText.includes('\n') || cellText.includes('"')) {
@@ -209,7 +209,7 @@ const ClipboardManager = {
             if (pasteData.length === 1 && pasteData[0].length === 1) {
                 // Single cell data - paste to all selected cells
                 const singleValue = pasteData[0][0];
-                const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', singleValue);
+                const processedValue = window.TableEditor.callModule('ContentConverter', 'processForStorage', singleValue);
                 
                 state.selectedCells.forEach(cellKey => {
                     const [row, col] = cellKey.split('-').map(Number);
@@ -266,7 +266,7 @@ const ClipboardManager = {
                             
                             if (targetRow < data.rows.length && targetCol < data.headers.length) {
                                 // Convert newlines back to <br> tags for storage
-                                const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', cellValue);
+                                const processedValue = window.TableEditor.callModule('ContentConverter', 'processForStorage', cellValue);
                                 data.rows[targetRow][targetCol] = processedValue;
                                 updatedCells++;
                                 
@@ -316,7 +316,7 @@ const ClipboardManager = {
                     
                     if (targetRow < data.rows.length && targetCol < data.headers.length) {
                         // Convert newlines back to <br> tags for storage
-                        const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', cellValue);
+                        const processedValue = window.TableEditor.callModule('ContentConverter', 'processForStorage', cellValue);
                         data.rows[targetRow][targetCol] = processedValue;
                         updatedCells++;
                         

@@ -104,11 +104,8 @@ const CSVExporter = {
             return '';
         }
         
-        // Convert to string
-        let str = String(field);
-        
-        // Convert <br> tags to newlines (case-insensitive, with or without closing tag)
-        str = str.replace(/<br\s*\/?>/gi, '\n');
+        // Convert to string and convert <br> tags to newlines using centralized converter
+        let str = window.TableEditor.callModule('ContentConverter', 'processForClipboard', field);
         
         // If field contains comma, quote, or newline, wrap in quotes and escape quotes
         if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
