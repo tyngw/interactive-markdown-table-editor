@@ -855,6 +855,116 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    const deleteRowsCommand = vscode.commands.registerCommand('markdownTableEditor.internal.deleteRows', async (data: any) => {
+        try {
+            console.log('Internal command: deleteRows', data);
+            const { uri: uriString, panelId, indices, tableIndex } = data;
+            const uri = vscode.Uri.parse(uriString);
+            const panel = webviewManager.getPanel(uriString);
+
+            if (!panel) {
+                console.error('Panel not found for URI:', uriString);
+                return;
+            }
+
+            // Get the specific table manager by index
+            const tableManagersMap = activeMultiTableManagers.get(uriString);
+            if (!tableManagersMap) {
+                webviewManager.sendError(panel, 'Table managers not found');
+                return;
+            }
+
+            const targetTableIndex = tableIndex !== undefined ? tableIndex : 0;
+            const tableDataManager = tableManagersMap.get(targetTableIndex);
+            if (!tableDataManager) {
+                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);
+                return;
+            }
+
+            // Delete the rows
+            tableDataManager.deleteRows(indices);
+
+            // Update the file using table index for more accurate positioning
+            const updatedMarkdown = tableDataManager.serializeToMarkdown();
+            const tableData = tableDataManager.getTableData();
+            await fileHandler.updateTableByIndex(
+                uri,
+                tableData.metadata.tableIndex,
+                updatedMarkdown
+            );
+
+            // Refresh all table data and send back to webview
+            const allTableData: TableData[] = [];
+            tableManagersMap.forEach((manager, index) => {
+                allTableData[index] = manager.getTableData();
+            });
+
+            webviewManager.updateTableData(panel, allTableData, uri);
+            webviewManager.sendSuccess(panel, `${indices.length} row(s) deleted successfully`);
+        } catch (error) {
+            console.error('Error in deleteRows:', error);
+            const panel = webviewManager.getPanel(data.uri);
+            if (panel) {
+                webviewManager.sendError(panel, `Failed to delete rows: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+        }
+    });
+
+    const deleteColumnsCommand = vscode.commands.registerCommand('markdownTableEditor.internal.deleteColumns', async (data: any) => {
+        try {
+            console.log('Internal command: deleteColumns', data);
+            const { uri: uriString, panelId, indices, tableIndex } = data;
+            const uri = vscode.Uri.parse(uriString);
+            const panel = webviewManager.getPanel(uriString);
+
+            if (!panel) {
+                console.error('Panel not found for URI:', uriString);
+                return;
+            }
+
+            // Get the specific table manager by index
+            const tableManagersMap = activeMultiTableManagers.get(uriString);
+            if (!tableManagersMap) {
+                webviewManager.sendError(panel, 'Table managers not found');
+                return;
+            }
+
+            const targetTableIndex = tableIndex !== undefined ? tableIndex : 0;
+            const tableDataManager = tableManagersMap.get(targetTableIndex);
+            if (!tableDataManager) {
+                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);
+                return;
+            }
+
+            // Delete the columns
+            tableDataManager.deleteColumns(indices);
+
+            // Update the file using table index for more accurate positioning
+            const updatedMarkdown = tableDataManager.serializeToMarkdown();
+            const tableData = tableDataManager.getTableData();
+            await fileHandler.updateTableByIndex(
+                uri,
+                tableData.metadata.tableIndex,
+                updatedMarkdown
+            );
+
+            // Refresh all table data and send back to webview
+            const allTableData: TableData[] = [];
+            tableManagersMap.forEach((manager, index) => {
+                allTableData[index] = manager.getTableData();
+            });
+
+            webviewManager.updateTableData(panel, allTableData, uri);
+            webviewManager.sendSuccess(panel, `${indices.length} column(s) deleted successfully`);
+        } catch (error) {
+            console.error('Error in deleteColumns:', error);
+            const panel = webviewManager.getPanel(data.uri);
+            if (panel) {
+                webviewManager.sendError(panel, `Failed to delete columns: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+        }
+    });
+
     const sortCommand = vscode.commands.registerCommand('markdownTableEditor.internal.sort', async (data: any) => {
         try {
             console.log('Internal command: sort', data);
@@ -1023,14 +1133,7 @@ export function activate(context: vscode.ExtensionContext) {
     const exportCSVCommand = vscode.commands.registerCommand('markdownTableEditor.internal.exportCSV', async (data: any) => {
         try {
             console.log('Internal command: exportCSV', data);
-            const { uri: uriString, panelId, data: exportData } = data;
-            const { csvContent, filename, encoding = 'utf8' } = exportData || {};
-            
-            if (!csvContent) {
-                console.error('CSV content is missing or undefined');
-                return;
-            }
-            
+            const { uri: uriString, panelId, csvContent, filename, encoding = 'utf8' } = data;
             const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {
@@ -1111,8 +1214,10 @@ export function activate(context: vscode.ExtensionContext) {
         updateHeaderCommand,
         addRowCommand,
         deleteRowCommand,
+        deleteRowsCommand,
         addColumnCommand,
         deleteColumnCommand,
+        deleteColumnsCommand,
         sortCommand,
         moveRowCommand,
         moveColumnCommand,
