@@ -223,6 +223,7 @@ export class WebviewManager {
             'js/table-manager.js',
 
             // Feature modules
+            'js/content-converter.js',
             'js/table-renderer.js',
             'js/selection.js',
             'js/cell-editor.js',

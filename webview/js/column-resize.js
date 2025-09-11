@@ -196,7 +196,7 @@ const ColumnResizeManager = {
                 if (hasBrTags) {
                     // For <br> tags, convert to newlines first, then strip any remaining tags
                     console.log(`ColumnResizeManager: Processing <br> tags in: "${cellHTML}"`);
-                    const htmlWithNewlines = cellHTML.replace(/<br\s*\/?>/gi, '\n');
+                    const htmlWithNewlines = window.TableEditor.callModule('ContentConverter', 'brTagsToNewlines', cellHTML);
                     console.log(`ColumnResizeManager: After <br> to newline conversion: "${htmlWithNewlines}"`);
                     const textFromHTML = htmlWithNewlines.replace(/<[^>]*>/g, '');
                     console.log(`ColumnResizeManager: After tag removal: "${textFromHTML}"`);

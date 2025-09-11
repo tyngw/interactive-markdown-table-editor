@@ -17,7 +17,7 @@ const CellEditor = {
      */
     createEditingTextarea: function (content, className) {
         // <br>→\n変換
-        const editableContent = window.TableEditor.callModule('TableRenderer', 'processCellContentForEditing', content || '');
+        const editableContent = window.TableEditor.callModule('ContentConverter', 'processForEditing', content || '');
         const textarea = document.createElement('textarea');
         textarea.className = className;
         textarea.value = editableContent;
@@ -199,7 +199,7 @@ const CellEditor = {
         const newValue = input.value;
 
         // Process content for storage
-        const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', newValue);
+        const processedValue = window.TableEditor.callModule('ContentConverter', 'processForStorage', newValue);
 
         // Update data model locally first
         const data = state.tableData;
@@ -690,7 +690,7 @@ const CellEditor = {
         // Get new value
         const rawValue = input.value;
         // セルと同様に改行→<br>変換
-        const newValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', rawValue.trim());
+        const newValue = window.TableEditor.callModule('ContentConverter', 'processForStorage', rawValue.trim());
 
         // Update data model locally first
         const data = state.tableData;

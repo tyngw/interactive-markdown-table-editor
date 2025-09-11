@@ -28,7 +28,21 @@ suite('CSV Exporter Webview Tests', () => {
                     StatusBarManager: {
                         showError: (message: string) => console.log('Error:', message),
                         showSuccess: (message: string) => console.log('Success:', message)
+                    },
+                    ContentConverter: {
+                        processForClipboard: function(content: any) {
+                            if (!content) return '';
+                            // Convert <br> tags to newlines (case-insensitive, with or without closing tag)
+                            return String(content).replace(/<br\s*\/?>/gi, '\n');
+                        }
                     }
+                } as any,
+                callModule: function(moduleName: string, methodName: string, ...args: any[]) {
+                    const module = (this.modules as any)[moduleName];
+                    if (module && typeof module[methodName] === 'function') {
+                        return module[methodName](...args);
+                    }
+                    throw new Error(`Module ${moduleName} or method ${methodName} not found`);
                 },
                 vscode: {
                     postMessage: (message: any) => {
@@ -132,11 +146,8 @@ suite('CSV Exporter Webview Tests', () => {
                     return '';
                 }
                 
-                // Convert to string
-                let str = String(field);
-                
-                // Convert <br> tags to newlines (case-insensitive, with or without closing tag)
-                str = str.replace(/<br\s*\/?>/gi, '\n');
+                // Convert to string and convert <br> tags to newlines using centralized converter
+                let str = mockWindow.TableEditor.callModule('ContentConverter', 'processForClipboard', field);
                 
                 // If field contains comma, quote, or newline, wrap in quotes and escape quotes
                 if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {

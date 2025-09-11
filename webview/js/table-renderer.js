@@ -342,20 +342,14 @@ const TableRenderer = {
      * Process cell content specifically for editing mode
      */
     processCellContentForEditing: function(content) {
-        if (!content) return '';
-        
-        // Convert <br> tags back to newlines for editing
-        return String(content).replace(/<br\s*\/?>/gi, '\n');
+        return window.TableEditor.callModule('ContentConverter', 'processForEditing', content);
     },
     
     /**
      * Process cell content for storage (convert newlines to <br> tags)
      */
     processCellContentForStorage: function(content) {
-        if (!content) return '';
-        
-        // Convert newlines to <br> tags for storage
-        return String(content).replace(/\n/g, '<br/>');
+        return window.TableEditor.callModule('ContentConverter', 'processForStorage', content);
     },
     
     /**
