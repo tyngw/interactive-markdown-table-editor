@@ -507,6 +507,37 @@ const SelectionManager = {
         });
 
         console.log('SelectionManager: Cleanup completed');
+    },
+
+    /**
+     * Save current selection state for later restoration
+     */
+    saveSelectionState: function () {
+        const state = window.TableEditor.state;
+        return {
+            selectedCells: new Set(state.selectedCells),
+            lastSelectedCell: state.lastSelectedCell ? { ...state.lastSelectedCell } : null,
+            rangeSelectionAnchor: state.rangeSelectionAnchor ? { ...state.rangeSelectionAnchor } : null
+        };
+    },
+
+    /**
+     * Restore selection state from saved state
+     */
+    restoreSelectionState: function (savedState) {
+        if (!savedState) return;
+
+        const state = window.TableEditor.state;
+        state.selectedCells = new Set(savedState.selectedCells);
+        state.lastSelectedCell = savedState.lastSelectedCell ? { ...savedState.lastSelectedCell } : null;
+        state.rangeSelectionAnchor = savedState.rangeSelectionAnchor ? { ...savedState.rangeSelectionAnchor } : null;
+
+        // Update visual selection after restoration
+        this.updateCellSelection();
+        console.log('SelectionManager: Selection state restored', {
+            selectedCells: state.selectedCells.size,
+            lastSelectedCell: state.lastSelectedCell
+        });
     }
 };
 

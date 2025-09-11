@@ -5,6 +5,18 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2025-01-15
+
+### Fixed
+- **Selection State Preservation**: Fixed issue where cell selection was cleared after save operations due to view refresh
+  - Added selection state save/restore mechanism in SelectionManager
+  - Preserved selection state during table re-rendering after save operations
+  - Only preserves selection for save operations, not for file changes
+- **Status Bar Layout**: Improved status bar message display to prevent line wrapping
+  - Enhanced status bar layout with flexible width allocation
+  - Added text overflow handling with ellipsis for long error messages
+  - Improved visual feedback for file save errors and other status messages
+
 ## [0.6.3] - 2025-01-15
 
 ### Fixed

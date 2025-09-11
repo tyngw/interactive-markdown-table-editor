@@ -89,12 +89,27 @@ const TableManager = {
             originalData: null
         };
 
+        // Save current selection state before re-rendering (only if not a file change)
+        let savedSelectionState = null;
+        if (!isFileChange) {
+            savedSelectionState = window.TableEditor.callModule('SelectionManager', 'saveSelectionState');
+            console.log('TableManager: Saved selection state before re-render');
+        }
+
         // Show auto-saved status when table data is updated from server
         TableEditor.showAutoSavedStatus();
 
         // Render table with tabs if multiple tables exist, preserving scroll position
         console.log('TableManager: Calling renderApplicationWithTabs...');
         TableEditor.callModule('UIRenderer', 'renderApplicationWithTabs');
+
+        // Restore selection state after re-rendering (only if not a file change)
+        if (!isFileChange && savedSelectionState) {
+            setTimeout(() => {
+                window.TableEditor.callModule('SelectionManager', 'restoreSelectionState', savedSelectionState);
+                console.log('TableManager: Restored selection state after re-render');
+            }, 100); // Allow DOM to settle before restoring selection
+        }
 
         // Restore scroll position only if it's not a file change
         if (!isFileChange) {

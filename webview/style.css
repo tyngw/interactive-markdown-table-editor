@@ -856,11 +856,32 @@ textarea.cell-input[data-multiline="true"] {
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0; /* Allow flex items to shrink */
+}
+
+.status-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.status-center {
+    flex: 2;
+    min-width: 0;
+    justify-content: center;
+}
+
+.status-right {
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-end;
 }
 
 .status-item {
     color: var(--vscode-statusBar-foreground);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .status-info {
@@ -876,6 +897,10 @@ textarea.cell-input[data-multiline="true"] {
 .status-message {
     color: var(--vscode-statusBar-foreground);
     font-weight: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
 .status-message.success {
