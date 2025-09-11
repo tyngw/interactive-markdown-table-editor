@@ -133,7 +133,10 @@ suite('CSV Exporter Webview Tests', () => {
                 }
                 
                 // Convert to string
-                const str = String(field);
+                let str = String(field);
+                
+                // Convert <br> tags to newlines (case-insensitive, with or without closing tag)
+                str = str.replace(/<br\s*\/?>/gi, '\n');
                 
                 // If field contains comma, quote, or newline, wrap in quotes and escape quotes
                 if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
@@ -263,6 +266,31 @@ suite('CSV Exporter Webview Tests', () => {
         test('should not escape simple fields', () => {
             const result = CSVExporter.escapeCSVField('SimpleText');
             assert.strictEqual(result, 'SimpleText', 'Simple fields should not be quoted');
+        });
+
+        test('should convert br tags to newlines', () => {
+            const result = CSVExporter.escapeCSVField('Line 1<br>Line 2');
+            assert.strictEqual(result, '"Line 1\nLine 2"', 'BR tags should be converted to newlines and quoted');
+        });
+
+        test('should convert various br tag formats to newlines', () => {
+            const testCases = [
+                { input: 'Line 1<br>Line 2', expected: '"Line 1\nLine 2"' },
+                { input: 'Line 1<br/>Line 2', expected: '"Line 1\nLine 2"' },
+                { input: 'Line 1<BR>Line 2', expected: '"Line 1\nLine 2"' },
+                { input: 'Line 1<BR/>Line 2', expected: '"Line 1\nLine 2"' },
+                { input: 'Line 1<br />Line 2', expected: '"Line 1\nLine 2"' }
+            ];
+            
+            testCases.forEach(testCase => {
+                const result = CSVExporter.escapeCSVField(testCase.input);
+                assert.strictEqual(result, testCase.expected, `${testCase.input} should be converted correctly`);
+            });
+        });
+
+        test('should handle multiple br tags', () => {
+            const result = CSVExporter.escapeCSVField('Line 1<br>Line 2<br/>Line 3');
+            assert.strictEqual(result, '"Line 1\nLine 2\nLine 3"', 'Multiple BR tags should all be converted');
         });
 
         test('should handle null and undefined', () => {

@@ -97,7 +97,7 @@ const CSVExporter = {
     },
     
     /**
-     * Escape CSV field (handle commas, quotes, newlines)
+     * Escape CSV field (handle commas, quotes, newlines, and convert br tags)
      */
     escapeCSVField: function(field) {
         if (field === null || field === undefined) {
@@ -105,7 +105,10 @@ const CSVExporter = {
         }
         
         // Convert to string
-        const str = String(field);
+        let str = String(field);
+        
+        // Convert <br> tags to newlines (case-insensitive, with or without closing tag)
+        str = str.replace(/<br\s*\/?>/gi, '\n');
         
         // If field contains comma, quote, or newline, wrap in quotes and escape quotes
         if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
