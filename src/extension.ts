@@ -1133,11 +1133,21 @@ export function activate(context: vscode.ExtensionContext) {
     const exportCSVCommand = vscode.commands.registerCommand('markdownTableEditor.internal.exportCSV', async (data: any) => {
         try {
             console.log('Internal command: exportCSV', data);
-            const { uri: uriString, panelId, csvContent, filename, encoding = 'utf8' } = data;
+            const { uri: uriString, panelId, data: exportData } = data;
+            const csvContent = exportData?.csvContent;
+            const filename = exportData?.filename;
+            const encoding = exportData?.encoding || 'utf8';
             const panel = webviewManager.getPanel(uriString);
 
             if (!panel) {
                 console.error('Panel not found for URI:', uriString);
+                return;
+            }
+
+            // Validate csvContent
+            if (!csvContent || typeof csvContent !== 'string' || csvContent.length === 0) {
+                console.error('Invalid or empty CSV content');
+                webviewManager.sendError(panel, 'Invalid or empty CSV content');
                 return;
             }
 
