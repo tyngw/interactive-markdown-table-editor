@@ -250,6 +250,11 @@ const CellEditor = {
         state.isComposing = false;
         state.imeJustEnded = false;
 
+        // DOM更新後に選択状態を確実に更新
+        setTimeout(() => {
+            window.TableEditor.callModule('SelectionManager', 'updateCellSelection');
+        }, 0);
+
         console.log('CellEditor: Committed cell edit', row, col);
     },
 
@@ -400,8 +405,11 @@ const CellEditor = {
                 // 編集確定
                 this.commitEdit();
                 // セルの場合のみ次行へ移動
+                // DOM更新完了後にナビゲーションを実行
                 if (currentEditingCell && currentEditingCell.row !== -1) {
-                    window.TableEditor.callModule('KeyboardNavigationManager', 'navigateCell', currentEditingCell.row + 1, currentEditingCell.col);
+                    setTimeout(() => {
+                        window.TableEditor.callModule('KeyboardNavigationManager', 'navigateCell', currentEditingCell.row + 1, currentEditingCell.col);
+                    }, 0);
                 }
             } else if (event.key === 'Tab') {
                 event.preventDefault();
@@ -410,8 +418,11 @@ const CellEditor = {
                 const currentEditingCell = state.currentEditingCell;
                 this.commitEdit();
                 // セル・ヘッダー共通: 次/前のセル・ヘッダーへ
+                // DOM更新完了後にナビゲーションを実行
                 if (currentEditingCell) {
-                    window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', currentEditingCell.row, currentEditingCell.col, !event.shiftKey);
+                    setTimeout(() => {
+                        window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', currentEditingCell.row, currentEditingCell.col, !event.shiftKey);
+                    }, 0);
                 }
             } else if (event.key === 'Escape') {
                 event.preventDefault();
