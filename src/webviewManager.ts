@@ -115,16 +115,16 @@ export class WebviewManager {
     /**
      * Create a new table editor panel
      */
-    public createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri): vscode.WebviewPanel {
-        return this._createTableEditorPanel(tableData, uri, false);
+    public async createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri): Promise<vscode.WebviewPanel> {
+        return await this._createTableEditorPanel(tableData, uri, false);
     }
 
     /**
      * Create a new table editor panel, always in a new panel
      * Returns both the panel and the unique panel ID used internally
      */
-    public createTableEditorPanelNewPanel(tableData: TableData | TableData[], uri: vscode.Uri): { panel: vscode.WebviewPanel; panelId: string } {
-        const result = this._createTableEditorPanel(tableData, uri, true);
+    public async createTableEditorPanelNewPanel(tableData: TableData | TableData[], uri: vscode.Uri): Promise<{ panel: vscode.WebviewPanel; panelId: string }> {
+        const result = await this._createTableEditorPanel(tableData, uri, true);
         // Find the panel ID that was actually used
         const panelId = Array.from(this.panels.entries()).find(([_, p]) => p === result)?.[0] || uri.toString();
         return { panel: result, panelId };
@@ -133,7 +133,7 @@ export class WebviewManager {
     /**
      * Internal method to create table editor panel with option to force new panel
      */
-    private _createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri, forceNewPanel: boolean): vscode.WebviewPanel {
+    private async _createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri, forceNewPanel: boolean): Promise<vscode.WebviewPanel> {
         let panelId = uri.toString();
 
         // If forcing new panel, create unique panel ID
@@ -197,6 +197,7 @@ export class WebviewManager {
                 enableScripts: true,
                 retainContextWhenHidden: true,
                 localResourceRoots: [
+                    vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webview'),
                     vscode.Uri.joinPath(this.context.extensionUri, 'webview')
                 ]
             }
@@ -207,55 +208,62 @@ export class WebviewManager {
 
         console.log('Webview panel created, setting HTML content...');
 
-        // Generate vscode-resource URIs for CSS and JavaScript files
-        const cssPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'style.css');
-        const cssUri = panel.webview.asWebviewUri(cssPath);
+        // Use React build for webview
+        const reactBuildPath = vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webview');
+        
+        // Check if React build exists, fallback to original if not
+        const indexHtmlPath = vscode.Uri.joinPath(reactBuildPath, 'index.html');
+        let html: string;
+        
+        try {
+            // Try to read React build HTML
+            const htmlBuffer = await vscode.workspace.fs.readFile(indexHtmlPath);
+            html = Buffer.from(htmlBuffer).toString('utf8');
+            
+            // Convert relative paths to webview URIs
+            const assetsPath = vscode.Uri.joinPath(reactBuildPath, 'assets');
+            const assetsUri = panel.webview.asWebviewUri(assetsPath);
+            
+            console.log('React build path:', reactBuildPath.toString());
+            console.log('Assets path:', assetsPath.toString());
+            console.log('Assets URI:', assetsUri.toString());
+            console.log('Original HTML:', html);
+            
+            // Replace asset paths with webview URIs (be careful not to double-replace)
+            const originalHtml = html;
+            // First replace relative paths
+            html = html.replace(/src="\.\/assets\//g, `src="${assetsUri.toString()}/`);
+            html = html.replace(/href="\.\/assets\//g, `href="${assetsUri.toString()}/`);
+            // Then replace any remaining absolute paths that weren't already replaced
+            html = html.replace(/src="\/assets\//g, `src="${assetsUri.toString()}/`);
+            html = html.replace(/href="\/assets\//g, `href="${assetsUri.toString()}/`);
+            
+            console.log('HTML after asset path replacement:', html);
+            console.log('Asset path replacements made:', originalHtml !== html);
+            
+            // Update CSP to allow React and webview resources
+            const cspContent = `default-src 'none'; style-src 'unsafe-inline' ${panel.webview.cspSource}; script-src 'unsafe-inline' 'unsafe-eval' ${panel.webview.cspSource}; img-src ${panel.webview.cspSource} https: data:; font-src ${panel.webview.cspSource} https:;`;
+            
+            if (html.includes('Content-Security-Policy')) {
+                html = html.replace(
+                    /content="[^"]*"/,
+                    `content="${cspContent}"`
+                );
+            } else {
+                html = html.replace(
+                    '<head>',
+                    `<head>\n    <meta http-equiv="Content-Security-Policy" content="${cspContent}">`
+                );
+            }
+            
+            console.log('Using React build for webview');
+            console.log('Modified HTML length:', html.length);
+        } catch (error) {
+            console.error('Failed to load React build:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`React webview build not found: ${errorMessage}`);
+        }
 
-        // Generate script URIs for modular JavaScript files
-        const scriptFiles = [
-            // Core system must be loaded first
-            'js/core.js',
-
-            // Core modules (order matters for dependencies)
-            'js/error-handler.js',
-            'js/vscode-communication.js',
-            'js/ui-renderer.js',
-            'js/table-manager.js',
-
-            // Feature modules
-            'js/content-converter.js',
-            'js/table-renderer.js',
-            'js/selection.js',
-            'js/cell-editor.js',
-            'js/sorting.js',
-            'js/keyboard-navigation.js',
-            'js/clipboard.js',
-            'js/column-resize.js',
-            'js/context-menu.js',
-            'js/drag-drop.js',
-            'js/status-bar.js',
-            'js/csv-exporter.js',
-            'js/test-module.js'
-        ];
-
-        const scriptUris = scriptFiles.map(file => {
-            const scriptPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview', file);
-            return panel.webview.asWebviewUri(scriptPath);
-        });
-
-        // Get HTML content and inject URIs
-        let html = this.getWebviewContent();
-
-        // Inject CSS URI and script URIs into HTML
-        const themeCssText = this.buildInitialThemeCssSync();
-        const injectionScript = `
-<script>
-window.cssUri = '${cssUri}';
-window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
-</script>`;
-
-        const themeStyleTag = themeCssText ? `<style id="mte-theme-override">${themeCssText}</style>` : '';
-        html = html.replace(/<head>/i, `<head>${injectionScript}${themeStyleTag}`);
         panel.webview.html = html;
 
         console.log('HTML content set, storing panel reference...');
@@ -569,6 +577,9 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 
             case 'switchTable':
                 return this.validateSwitchTableData(message.data);
+
+            case 'requestThemeVariables':
+                return true; // No data required
 
             default:
                 return false;

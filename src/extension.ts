@@ -109,7 +109,7 @@ export function activate(context: vscode.ExtensionContext) {
             console.log('Creating webview panel...');
 
             // Create and show the webview panel with all tables
-            const panel = webviewManager.createTableEditorPanel(allTableData, uri);
+            const panel = await webviewManager.createTableEditorPanel(allTableData, uri);
 
             // Apply configured theme to the panel (async, after panel is ready)
             applyConfiguredThemeToPanels();
@@ -190,7 +190,7 @@ export function activate(context: vscode.ExtensionContext) {
             console.log('Creating webview panel in new panel...');
 
             // Create webview panel in new panel with actual data
-            const { panel, panelId: uniquePanelId } = webviewManager.createTableEditorPanelNewPanel(allTableData, uri);
+            const { panel, panelId: uniquePanelId } = await webviewManager.createTableEditorPanelNewPanel(allTableData, uri);
 
             // Update the managers to use the unique panel ID
             const updatedTableManagersMap = new Map<number, TableDataManager>();

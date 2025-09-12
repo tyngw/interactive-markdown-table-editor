@@ -73,18 +73,20 @@ async function buildCssFromThemeColors(themeUri: vscode.Uri): Promise<string> {
     const bytes = await vscode.workspace.fs.readFile(themeUri);
     const json = JSON.parse(Buffer.from(bytes).toString('utf8'));
     const colors = json.colors || {};
-    const entries: string[] = [];
+  const entries: string[] = [];
     for (const key of Object.keys(colors)) {
       const val = colors[key];
       if (typeof val !== 'string') continue;
-      // VS Code Webview の CSS 変数名に合わせる（. を - に置換）
+  // VS Code Webview の CSS 変数名に合わせる（. を - に置換）
       const varName = `--vscode-${key.replace(/\./g, '-')}`;
-      entries.push(`${varName}:${val}`);
+  entries.push(`${varName}:${val}`);
     }
     // 拡張で使用する重要トークンのフォールバック上書きを追加
     const ensure = buildEnsureOverrides(colors);
-    const base = entries.length ? `:root{${entries.join(';')}}` : '';
-    return base + (ensure ? `:root{${ensure}}` : '');
+  // テーブルエディタのルート要素配下だけに作用させる
+  const selector = '#mte-root';
+  const base = entries.length ? `${selector}{${entries.join(';')}}` : '';
+  return base + (ensure ? `${selector}{${ensure}}` : '');
   } catch {
     return '';
   }
@@ -108,9 +110,10 @@ export async function buildThemeVariablesCss(selectedThemeId: string | undefined
 
   const themeKind = vscode.window.activeColorTheme.kind;
   const isDark = themeKind === vscode.ColorThemeKind.Dark || themeKind === vscode.ColorThemeKind.HighContrast;
+  const selector = '#mte-root';
   const fallback = isDark
-    ? `:root{--vscode-editor-background:#1e1e1e;--vscode-foreground:#cccccc;--vscode-panel-border:#3c3c3c;--vscode-focusBorder:#007acc;--vscode-list-hoverBackground:#2a2d2e;--vscode-editor-lineHighlightBackground:#2a2d2e;--vscode-descriptionForeground:#9d9d9d;--vscode-input-background:#3c3c3c;--vscode-inputOption-activeBorder:#007acc;--vscode-list-activeSelectionBackground:#094771;--vscode-list-activeSelectionForeground:#ffffff;}`
-    : `:root{--vscode-editor-background:#ffffff;--vscode-foreground:#333333;--vscode-panel-border:#e5e5e5;--vscode-focusBorder:#007acc;--vscode-list-hoverBackground:#f2f2f2;--vscode-editor-lineHighlightBackground:#f7f7f7;--vscode-descriptionForeground:#6e6e6e;--vscode-input-background:#f3f3f3;--vscode-inputOption-activeBorder:#007acc;--vscode-list-activeSelectionBackground:#0078d4;--vscode-list-activeSelectionForeground:#ffffff;}`;
+    ? `${selector}{--vscode-editor-background:#1e1e1e;--vscode-foreground:#cccccc;--vscode-panel-border:#3c3c3c;--vscode-focusBorder:#007acc;--vscode-list-hoverBackground:#2a2d2e;--vscode-editor-lineHighlightBackground:#2a2d2e;--vscode-descriptionForeground:#9d9d9d;--vscode-input-background:#3c3c3c;--vscode-inputOption-activeBorder:#007acc;--vscode-list-activeSelectionBackground:#094771;--vscode-list-activeSelectionForeground:#ffffff;}`
+    : `${selector}{--vscode-editor-background:#ffffff;--vscode-foreground:#333333;--vscode-panel-border:#e5e5e5;--vscode-focusBorder:#007acc;--vscode-list-hoverBackground:#f2f2f2;--vscode-editor-lineHighlightBackground:#f7f7f7;--vscode-descriptionForeground:#6e6e6e;--vscode-input-background:#f3f3f3;--vscode-inputOption-activeBorder:#007acc;--vscode-list-activeSelectionBackground:#0078d4;--vscode-list-activeSelectionForeground:#ffffff;}`;
   return { cssText: fallback };
 }
 
@@ -120,7 +123,7 @@ export async function buildThemeVariablesCss(selectedThemeId: string | undefined
 export function createThemeStyleTag(theme: ThemeVariables): string {
   if (!theme.cssText) return '';
   const nonce = Date.now().toString();
-  return `<style id="mte-theme-override" nonce="${nonce}">${theme.cssText}</style>`;
+  return `<style id="mte-theme-override" data-scope="#mte-root" nonce="${nonce}">${theme.cssText}</style>`;
 }
 
 /**
