@@ -27,7 +27,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     position: { x: 0, y: 0 }
   })
 
-  const { updateStatus, updateTableInfo, updateSaveStatus } = useStatus()
+  const { updateStatus, updateTableInfo, updateSaveStatus, updateSortViewOnly } = useStatus()
 
   const {
     tableData: currentTableData,
@@ -68,7 +68,13 @@ const TableEditor: React.FC<TableEditorProps> = ({
   useEffect(() => {
     onTableUpdate(currentTableData)
     updateTableInfo(currentTableData.rows.length, currentTableData.headers.length)
+  updateSortViewOnly(editorState.sortState.isViewOnly)
   }, [currentTableData, onTableUpdate])
+
+  // Track sort view-only state changes
+  useEffect(() => {
+    updateSortViewOnly(editorState.sortState.isViewOnly)
+  }, [editorState.sortState.isViewOnly])
 
   // セル更新時にVSCodeに保存を通知
   const handleCellUpdate = useCallback((row: number, col: number, value: string) => {
@@ -152,6 +158,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
   // ソート実行
   const handleSort = useCallback((col: number) => {
     sortColumn(col)
+  // Update view-only flag after toggling sort state (asc/desc/none)
+  setTimeout(() => updateSortViewOnly(editorState.sortState.isViewOnly), 0)
   }, [sortColumn])
 
   // ソートをファイルに保存
@@ -166,6 +174,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
         }
       })
       updateStatus('success', 'Sort committed to file')
+  updateSortViewOnly(false)
     }
   }, [onSendMessage, editorState.sortState, commitSortToFile])
 
@@ -173,6 +182,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
   const handleRestoreOriginal = useCallback(() => {
     restoreOriginalView()
     updateStatus('success', 'Original view restored')
+  updateSortViewOnly(false)
   }, [restoreOriginalView])
 
   // 全選択
@@ -429,13 +439,12 @@ const TableEditor: React.FC<TableEditorProps> = ({
       <div className="export-actions">
         {editorState.sortState.isViewOnly && (
           <div className="inline-sort-actions">
-            <button className="sort-action-btn secondary" onClick={handleRestoreOriginal}>
+            <button className="export-btn" onClick={handleRestoreOriginal}>
               📄 Restore Original
             </button>
-            <button className="sort-action-btn" onClick={handleCommitSort}>
+            <button className="export-btn" onClick={handleCommitSort}>
               💾 Save Sort to File
             </button>
-            <span className="sort-status-badge">📊 Viewing sorted data</span>
           </div>
         )}
         <select 

@@ -2,20 +2,18 @@ import { useStatus } from '../contexts/StatusContext'
 import { useTheme } from '../contexts/ThemeContext'
 
 const StatusBar: React.FC = () => {
-  const { status, tableInfo, saveStatus } = useStatus()
+  const { status, tableInfo, saveStatus, sortViewOnly } = useStatus()
   const { getStyle } = useTheme()
 
   return (
     <div className="status-bar">
       <div className="status-left">
         <div className="status-item" id="statusSelection">
-          {saveStatus && (
-            <span className={`save-indicator ${saveStatus}`}>
-              {saveStatus === 'saved' && '✓ Saved'}
-              {saveStatus === 'saving' && '⏳ Saving...'}
-              {saveStatus === 'error' && '❌ Error'}
-            </span>
-          )}
+          <span className={`save-indicator ${saveStatus ?? 'saved'}`}>
+            {saveStatus === 'saving' && '⏳ Saving...'}
+            {saveStatus === 'error' && '❌ Error'}
+            {(!saveStatus || saveStatus === 'saved') && '✓ Auto-saved'}
+          </span>
           {status.selection && (
             <span className="status-selection">
               {status.selection}
@@ -25,6 +23,9 @@ const StatusBar: React.FC = () => {
       </div>
       <div className="status-center">
         <div className="status-message" id="statusMessage">
+          {sortViewOnly && (
+            <span className="status-message info">📊 Viewing sorted data</span>
+          )}
           {status.message && (
             <span className={`status-message ${status.type}`}>
               {status.message}

@@ -17,10 +17,12 @@ interface StatusContextType {
   status: StatusState
   tableInfo: TableInfo | null
   saveStatus: SaveStatus
+  sortViewOnly: boolean
   updateStatus: (type: StatusState['type'], message: string) => void
   updateSelection: (selection: string) => void
   updateTableInfo: (rows: number, columns: number) => void
   updateSaveStatus: (status: SaveStatus) => void
+  updateSortViewOnly: (isViewOnly: boolean) => void
   clearStatus: () => void
 }
 
@@ -34,6 +36,7 @@ export const StatusProvider: React.FC<StatusProviderProps> = ({ children }) => {
   const [status, setStatus] = useState<StatusState>({})
   const [tableInfo, setTableInfo] = useState<TableInfo | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>(null)
+  const [sortViewOnly, setSortViewOnly] = useState<boolean>(false)
 
   const updateStatus = (type: StatusState['type'], message: string) => {
     setStatus({ type, message })
@@ -59,9 +62,14 @@ export const StatusProvider: React.FC<StatusProviderProps> = ({ children }) => {
     }
   }
 
+  const updateSortViewOnly = (isViewOnly: boolean) => {
+    setSortViewOnly(isViewOnly)
+  }
+
   const clearStatus = () => {
     setStatus({})
     setSaveStatus(null)
+  setSortViewOnly(false)
   }
 
   return (
@@ -69,10 +77,12 @@ export const StatusProvider: React.FC<StatusProviderProps> = ({ children }) => {
       status,
       tableInfo,
       saveStatus,
+  sortViewOnly,
       updateStatus,
       updateSelection,
       updateTableInfo,
       updateSaveStatus,
+  updateSortViewOnly,
       clearStatus
     }}>
       {children}
