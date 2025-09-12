@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import TableEditor from './components/TableEditor'
 import TableTabs from './components/TableTabs'
 import StatusBar from './components/StatusBar'
@@ -14,32 +14,71 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null)
   const [themeRequested, setThemeRequested] = useState(false)
   const { theme, isLoaded, applyThemeVariables } = useTheme()
+  const lastUpdateRef = useRef<{hash: string, time: number} | null>(null)
+  const currentIndexRef = useRef(0)
+  const pendingTabSwitchRef = useRef<{index: number, time: number} | null>(null)
 
   // Debug theme loading
   useEffect(() => {
-    console.log('=== APP DEBUG: Theme state changed ===')
-    console.log('Theme loaded:', isLoaded)
-    console.log('Theme object keys:', Object.keys(theme))
-    console.log('Sample theme values:', {
-      'editor.background': theme['editor.background'],
-      'sideBar.background': theme['sideBar.background'],
-      'panel.border': theme['panel.border']
-    })
+    // Theme state tracking disabled for production
   }, [theme, isLoaded])
 
   const currentTableData = allTables[currentTableIndex] || null
 
+  // Debug: Current table index
+  useEffect(() => {
+    console.log('📊 App: currentTableIndex updated to:', currentTableIndex);
+    console.log('📊 App: Total tables:', allTables.length);
+  }, [currentTableIndex, allTables.length])
+
+  // Debug: Log when currentTableData changes to track rendering
+  useEffect(() => {
+    // currentTableData change tracking disabled for production
+  }, [currentTableData, currentTableIndex, allTables.length])
+
   const { sendMessage } = useVSCodeCommunication({
     onTableData: (data: TableData | TableData[]) => {
+      // Logging disabled for production
+      // If too many updates arrive while a pending tab switch is stale, ignore
+      const pend = pendingTabSwitchRef.current
+      if (pend && Date.now() - pend.time > 2000) {
+        pendingTabSwitchRef.current = null
+      }
+      // Debounce/ignore duplicate updates to avoid flicker
+      try {
+        const payload = Array.isArray(data) ? data : [data]
+        const hash = JSON.stringify(payload)
+        const now = Date.now()
+        const last = lastUpdateRef.current
+        if (last && last.hash === hash) {
+          setLoading(false)
+          return
+        }
+        lastUpdateRef.current = { hash, time: now }
+      } catch (e) {
+        console.warn('[MTE][React] Failed to compute payload hash', e)
+      }
       if (Array.isArray(data)) {
         setAllTables(data)
-        // 現在のインデックスが範囲外の場合は0にリセット
-        if (currentTableIndex >= data.length) {
-          setCurrentTableIndex(0)
+        const len = data.length
+        const now = Date.now()
+        const pending = pendingTabSwitchRef.current
+        if (pending && (now - pending.time) < 600 && pending.index >= 0 && pending.index < len) {
+          setCurrentTableIndex(pending.index)
+          currentIndexRef.current = pending.index
+        } else {
+          if (currentIndexRef.current >= len) {
+            setCurrentTableIndex(0)
+            currentIndexRef.current = 0
+          } else {
+            // Keep current index stable to avoid oscillation
+            setCurrentTableIndex(currentIndexRef.current)
+          }
         }
       } else {
         setAllTables([data])
         setCurrentTableIndex(0)
+        currentIndexRef.current = 0
       }
       setLoading(false)
     },
@@ -48,72 +87,61 @@ function AppContent() {
       setLoading(false)
     },
     onThemeVariables: (data: any) => {
-      console.log('=== APP DEBUG: Received theme variables from VSCode ===', data)
+      // Theme variables logging disabled for production
       applyThemeVariables(data)
+    },
+    onSetActiveTable: (index: number) => {
+      // Immediately update the index to avoid flicker
+      if (index !== currentIndexRef.current) {
+        setCurrentTableIndex(index)
+        currentIndexRef.current = index
+        // Clear any pending tab switch since this is authoritative
+        pendingTabSwitchRef.current = null
+      }
     }
   })
 
   // タブ変更時の処理
   const handleTabChange = (index: number) => {
+    console.log('🔄 App: Tab change to index:', index);
     setCurrentTableIndex(index)
+    currentIndexRef.current = index
+    pendingTabSwitchRef.current = { index, time: Date.now() }
     sendMessage({ command: 'switchTable', data: { index } })
   }
 
   useEffect(() => {
     // Debug: Check window properties when React app starts
-    console.log('=== REACT APP DEBUG: App started ===')
-    console.log('window.cssUri:', (window as any).cssUri)
-    console.log('All window properties containing "css":', 
-      Object.keys(window).filter(key => key.toLowerCase().includes('css')))
-    
     // 初期データをリクエスト
     sendMessage({ command: 'requestTableData' })
     
     // テーマ変数をリクエスト（一度だけ）
     if (!themeRequested) {
-      console.log('=== REACT APP DEBUG: Requesting theme variables (initial) ===')
       sendMessage({ command: 'requestThemeVariables' })
       setThemeRequested(true)
       
       // VSCodeの初期化遅延に対応するため、少し遅延してもう一度リクエスト
       setTimeout(() => {
-        console.log('=== REACT APP DEBUG: Requesting theme variables (backup) ===')
         sendMessage({ command: 'requestThemeVariables' })
       }, 500)
     }
   }, [sendMessage, themeRequested, setThemeRequested])
 
-  // Debug: Periodically check CSS variables
+  // keep ref in sync when state changes (covers programmatic changes)
   useEffect(() => {
-    const checkCSSVariables = () => {
-      const computedStyle = getComputedStyle(document.documentElement)
-      const vars = [
-        '--vscode-editor-background',
-        '--vscode-sideBar-background',
-        '--vscode-panel-border',
-        '--vscode-list-activeSelectionBackground'
-      ]
-      
-      console.log('=== PERIODIC CSS CHECK ===')
-      vars.forEach(varName => {
-        const value = computedStyle.getPropertyValue(varName).trim()
-        console.log(`${varName}: "${value}"`)
-      })
-      
-      // Also check if external CSS is loaded
-      const links = document.querySelectorAll('link[rel="stylesheet"]')
-      console.log('Loaded stylesheets:', Array.from(links).map(link => (link as HTMLLinkElement).href))
-    }
-    
-    // Check immediately and then every 5 seconds for the first minute
-    checkCSSVariables()
-    const interval = setInterval(checkCSSVariables, 5000)
-    
-    // Stop checking after 1 minute
-    setTimeout(() => clearInterval(interval), 60000)
-    
-    return () => clearInterval(interval)
-  }, [])
+    currentIndexRef.current = currentTableIndex
+  }, [currentTableIndex])
+
+  // Debug: log index and table list changes to catch oscillation
+  useEffect(() => {
+    // State change tracking disabled for production
+  }, [currentTableIndex])
+
+  useEffect(() => {
+    // Table count tracking disabled for production  
+  }, [allTables.length])
+
+
 
   if (loading) {
     return (
@@ -150,6 +178,7 @@ function AppContent() {
         />
         <TableEditor 
           tableData={currentTableData}
+          currentTableIndex={currentTableIndex}
           onTableUpdate={(updatedData) => {
             const newTables = [...allTables]
             newTables[currentTableIndex] = updatedData

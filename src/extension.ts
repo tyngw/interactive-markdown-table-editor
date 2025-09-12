@@ -414,7 +414,9 @@ export function activate(context: vscode.ExtensionContext) {
     // Register more internal commands
     const updateCellCommand = vscode.commands.registerCommand('markdownTableEditor.internal.updateCell', async (data: any) => {
         try {
-            console.log('Internal command: updateCell', data);
+            console.log('🎯 Extension: Internal command updateCell received');
+            console.log('📋 Raw data:', JSON.stringify(data, null, 2));
+            
             const { uri, panelId, row, col, value, tableIndex } = data;
 
             // Get the URI string and panel ID to use for manager lookup
@@ -432,26 +434,45 @@ export function activate(context: vscode.ExtensionContext) {
             actualPanelId = panelId || uriString;
 
             if (!uriString) {
-                console.error('No URI available for updateCell command');
+                console.error('❌ No URI available for updateCell command');
                 return;
             }
 
+            console.log('🔍 Using URI:', uriString);
+            console.log('🔍 Using Panel ID:', actualPanelId);
+            console.log('🎯 Target table index:', tableIndex);
+
             const panel = webviewManager.getPanel(actualPanelId);
             if (!panel) {
-                console.error('Panel not found for panel ID:', actualPanelId);
+                console.error('❌ Panel not found for panel ID:', actualPanelId);
                 return;
             }
 
             // Get the specific table manager by index using the actual panel ID
             const tableManagersMap = activeMultiTableManagers.get(actualPanelId);
             if (!tableManagersMap) {
+                console.error('❌ Table managers not found for panel ID:', actualPanelId);
+                console.log('📊 Available panel IDs:', Array.from(activeMultiTableManagers.keys()));
                 webviewManager.sendError(panel, 'Table managers not found');
                 return;
             }
 
+            console.log('✅ Found table managers map');
+            console.log('📊 Available table indices:', Array.from(tableManagersMap.keys()));
+
             // Use tableIndex from data, or fall back to 0
             const targetTableIndex = tableIndex !== undefined ? tableIndex : 0;
             let tableDataManager = tableManagersMap.get(targetTableIndex);
+
+            if (!tableDataManager) {
+                console.error(`❌ Table manager not found for table ${targetTableIndex}`);
+                console.log('📊 Available managers:', Array.from(tableManagersMap.keys()));
+                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);
+                return;
+            }
+
+            console.log(`✅ Found table manager for table ${targetTableIndex}`);
+            console.log(`🔧 Updating cell [${row}, ${col}] = "${value}" in table ${targetTableIndex}`);
 
             if (!tableDataManager) {
                 webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);

@@ -1,5 +1,4 @@
 import { TableData } from '../types'
-import { useTheme } from '../contexts/ThemeContext'
 
 interface TableTabsProps {
   tables: TableData[]
@@ -12,18 +11,19 @@ const TableTabs: React.FC<TableTabsProps> = ({
   currentTableIndex,
   onTabChange
 }) => {
-  const { getStyle } = useTheme()
   if (tables.length <= 1) {
     return null
   }
 
   return (
     <div className="table-tabs">
-      {tables.map((table, index) => (
+  {tables.map((_, index) => (
         <button
           key={index}
           className={`tab-button ${index === currentTableIndex ? 'active' : ''}`}
-          onClick={() => onTabChange(index)}
+          onClick={() => {
+            onTabChange(index)
+          }}
         >
           表 {index + 1}
         </button>

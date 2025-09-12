@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { TableData, VSCodeMessage } from '../types'
 import { useTableEditor } from '../hooks/useTableEditor'
 import { useClipboard } from '../hooks/useClipboard'
@@ -12,12 +12,14 @@ import ContextMenu, { ContextMenuState } from './ContextMenu'
 
 interface TableEditorProps {
   tableData: TableData
+  currentTableIndex: number // 現在のテーブルインデックス
   onTableUpdate: (data: TableData) => void
   onSendMessage: (message: VSCodeMessage) => void
 }
 
 const TableEditor: React.FC<TableEditorProps> = ({
   tableData,
+  currentTableIndex,
   onTableUpdate,
   onSendMessage
 }) => {
@@ -65,10 +67,23 @@ const TableEditor: React.FC<TableEditorProps> = ({
   })
 
   // テーブルデータが変更されたらVSCodeに通知
+  const previousTableDataRef = useRef<TableData | null>(null)
   useEffect(() => {
-    onTableUpdate(currentTableData)
+    // Only call onTableUpdate if the data actually changed from the previous external update
+    const prev = previousTableDataRef.current
+    const hasChanged = !prev || 
+      prev.rows.length !== currentTableData.rows.length ||
+      prev.headers.length !== currentTableData.headers.length ||
+      JSON.stringify(prev.rows) !== JSON.stringify(currentTableData.rows) ||
+      JSON.stringify(prev.headers) !== JSON.stringify(currentTableData.headers)
+    
+    if (hasChanged) {
+      onTableUpdate(currentTableData)
+    }
+    
+    previousTableDataRef.current = { ...currentTableData, rows: [...currentTableData.rows.map(row => [...row])], headers: [...currentTableData.headers] }
     updateTableInfo(currentTableData.rows.length, currentTableData.headers.length)
-  updateSortViewOnly(editorState.sortState.isViewOnly)
+    updateSortViewOnly(editorState.sortState.isViewOnly)
   }, [currentTableData, onTableUpdate])
 
   // Track sort view-only state changes
@@ -78,42 +93,50 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
   // セル更新時にVSCodeに保存を通知
   const handleCellUpdate = useCallback((row: number, col: number, value: string) => {
+    console.log('🔧 TableEditor: Cell update triggered');
+    console.log(`   Row: ${row}, Col: ${col}, Value: "${value}"`);
+    console.log(`   Current Table Index: ${currentTableIndex}`);
+    
     updateCell(row, col, value)
     updateSaveStatus('saving')
+    
+    const messageData = { row, col, value, tableIndex: currentTableIndex };
+    console.log('📤 TableEditor: Sending message data:', JSON.stringify(messageData, null, 2));
+    
     onSendMessage({
       command: 'updateCell',
-      data: { row, col, value }
+      data: messageData
     })
     // Auto-saved status will be updated when VSCode responds
     setTimeout(() => updateSaveStatus('saved'), 500)
-  }, [updateCell, onSendMessage])
+  }, [updateCell, onSendMessage, currentTableIndex])
 
   // ヘッダー更新時にVSCodeに保存を通知
   const handleHeaderUpdate = useCallback((col: number, value: string) => {
     updateHeader(col, value)
     onSendMessage({
       command: 'updateHeader',
-      data: { col, value }
+      data: { col, value, tableIndex: currentTableIndex }
     })
-  }, [updateHeader, onSendMessage])
+  }, [updateHeader, onSendMessage, currentTableIndex])
 
   // 行追加
   const handleAddRow = useCallback((index?: number) => {
     addRow(index)
     onSendMessage({
       command: 'addRow',
-      data: { index }
+      data: { index, tableIndex: currentTableIndex }
     })
-  }, [addRow, onSendMessage])
+  }, [addRow, onSendMessage, currentTableIndex])
 
   // 行削除
   const handleDeleteRow = useCallback((index: number) => {
     deleteRow(index)
     onSendMessage({
       command: 'deleteRows',
-      data: { indices: [index] }
+      data: { indices: [index], tableIndex: currentTableIndex }
     })
-  }, [deleteRow, onSendMessage])
+  }, [deleteRow, onSendMessage, currentTableIndex])
 
   // 複数行削除
   const handleDeleteRows = useCallback((indices: number[]) => {
@@ -122,27 +145,27 @@ const TableEditor: React.FC<TableEditorProps> = ({
     sortedIndices.forEach(index => deleteRow(index))
     onSendMessage({
       command: 'deleteRows',
-      data: { indices }
+      data: { indices, tableIndex: currentTableIndex }
     })
-  }, [deleteRow, onSendMessage])
+  }, [deleteRow, onSendMessage, currentTableIndex])
 
   // 列追加
   const handleAddColumn = useCallback((index?: number) => {
     addColumn(index)
     onSendMessage({
       command: 'addColumn',
-      data: { index }
+      data: { index, tableIndex: currentTableIndex }
     })
-  }, [addColumn, onSendMessage])
+  }, [addColumn, onSendMessage, currentTableIndex])
 
   // 列削除
   const handleDeleteColumn = useCallback((index: number) => {
     deleteColumn(index)
     onSendMessage({
       command: 'deleteColumns',
-      data: { indices: [index] }
+      data: { indices: [index], tableIndex: currentTableIndex }
     })
-  }, [deleteColumn, onSendMessage])
+  }, [deleteColumn, onSendMessage, currentTableIndex])
 
   // 複数列削除
   const handleDeleteColumns = useCallback((indices: number[]) => {
@@ -151,9 +174,9 @@ const TableEditor: React.FC<TableEditorProps> = ({
     sortedIndices.forEach(index => deleteColumn(index))
     onSendMessage({
       command: 'deleteColumns',
-      data: { indices }
+      data: { indices, tableIndex: currentTableIndex }
     })
-  }, [deleteColumn, onSendMessage])
+  }, [deleteColumn, onSendMessage, currentTableIndex])
 
   // ソート実行
   const handleSort = useCallback((col: number) => {
@@ -170,13 +193,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
         command: 'sort',
         data: { 
           column: editorState.sortState.column, 
-          direction: editorState.sortState.direction 
+          direction: editorState.sortState.direction,
+          tableIndex: currentTableIndex
         }
       })
       updateStatus('success', 'Sort committed to file')
   updateSortViewOnly(false)
     }
-  }, [onSendMessage, editorState.sortState, commitSortToFile])
+  }, [onSendMessage, editorState.sortState, commitSortToFile, currentTableIndex])
 
   // 元の表示に戻す
   const handleRestoreOriginal = useCallback(() => {
@@ -272,7 +296,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
         // VSCodeに一括更新を通知
         onSendMessage({
           command: 'bulkUpdateCells',
-          data: { updates }
+          data: { updates, tableIndex: currentTableIndex }
         })
       }
       
@@ -313,7 +337,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
         // VSCodeに一括更新を通知
         onSendMessage({
           command: 'bulkUpdateCells',
-          data: { updates }
+          data: { updates, tableIndex: currentTableIndex }
         })
       }
       
@@ -343,7 +367,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
       // VSCodeに一括更新を通知
       onSendMessage({
         command: 'bulkUpdateCells',
-        data: { updates }
+        data: { updates, tableIndex: currentTableIndex }
       })
       
       updateStatus('success', '選択されたセルをクリアしました')

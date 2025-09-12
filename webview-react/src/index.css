@@ -9,7 +9,7 @@
     /* Match table container background */
     background-color: var(--vscode-editor-background);
     /* reserve space for fixed export toolbar and status bar */
-    padding-bottom: 24px; /* status bar height */
+    padding-bottom: 64px; /* 24px status + ~40px export bar */
 }
 
 /* ====== 2. テーブルタブ ====== */
@@ -77,6 +77,15 @@ body {
     padding-bottom: 64px; /* 24px status + ~40px export bar */
 }
 
+/* Content wrapper to allow scrolling large tables while keeping fixed bars */
+#table-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* allow child to shrink */
+    overflow: hidden; /* prevent outer scroll, use inner container */
+}
+
 .table-editor-container {
     flex: 1;
     display: flex;
@@ -91,12 +100,14 @@ body {
     border-radius: 6px;
     background-color: var(--vscode-editor-background);
     box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.1));
-    flex: 1;
+    flex: 1 1 auto;
     position: relative;
-    overflow: auto;
+    overflow: auto; /* show inner scrollbars */
     min-height: 0;
     /* Prevent scroll flickering during position restoration */
     scroll-behavior: auto;
+    /* space for fixed export/status bars */
+    padding-bottom: 64px;
 }
 
 .loading {

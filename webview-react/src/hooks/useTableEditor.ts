@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { TableData, CellPosition, SelectionRange, SortState, ColumnWidths, EditorState } from '../types'
 
 export function useTableEditor(initialData: TableData) {
@@ -14,6 +14,17 @@ export function useTableEditor(initialData: TableData) {
     isViewOnly: false,
     originalData: null
   })
+
+  // Sync state when the incoming table changes (e.g., tab switch)
+  useEffect(() => {
+    setTableData(initialData)
+    setCurrentEditingCell(null)
+    setSelectedCells(new Set())
+    setSelectionRange(null)
+    setIsSelecting(false)
+    setColumnWidths({})
+    setSortState({ column: -1, direction: 'none', isViewOnly: false, originalData: null })
+  }, [initialData])
 
   // セルの値を更新
   const updateCell = useCallback((row: number, col: number, value: string) => {
@@ -277,7 +288,6 @@ export function useTableEditor(initialData: TableData) {
   const sortColumn = useCallback((col: number) => {
     setSortState(prev => {
       let direction: 'asc' | 'desc' | 'none' = 'asc'
-      let newTableData = tableData
       
       if (prev.column === col) {
         // Same column clicked - cycle through states
@@ -298,7 +308,6 @@ export function useTableEditor(initialData: TableData) {
       
       if (direction === 'none') {
         // Restore original data
-        newTableData = originalData
         setTableData(originalData)
         return {
           column: -1,
@@ -309,7 +318,6 @@ export function useTableEditor(initialData: TableData) {
       } else {
         // Apply sort to display data
         const sortedData = sortTableData(originalData, col, direction)
-        newTableData = sortedData
         setTableData(sortedData)
         return {
           column: col,

@@ -6,13 +6,17 @@ interface VSCodeCommunicationCallbacks {
   onError?: (error: string) => void
   onSuccess?: (message: string) => void
   onThemeVariables?: (data: any) => void
+  onSetActiveTable?: (index: number) => void
 }
 
 export function useVSCodeCommunication(callbacks: VSCodeCommunicationCallbacks) {
-  const { onTableData, onError, onSuccess, onThemeVariables } = callbacks
+  const { onTableData, onError, onSuccess, onThemeVariables, onSetActiveTable } = callbacks
 
   // VSCodeにメッセージを送信
   const sendMessage = useCallback((message: VSCodeMessage) => {
+    console.log('🚀 React: Sending message to VSCode:', message.command);
+    console.log('📦 React: Message data:', JSON.stringify(message.data, null, 2));
+    
     if (window.vscode) {
       window.vscode.postMessage(message)
     } else {
@@ -65,18 +69,14 @@ export function useVSCodeCommunication(callbacks: VSCodeCommunicationCallbacks) 
           break
 
         case 'applyThemeVariables':
-          console.log('=== VSCODE DEBUG: Received theme variables ===')
-          console.log('Message data:', message.data)
-          console.log('Message data type:', typeof message.data)
-          console.log('Message data keys:', message.data ? Object.keys(message.data) : 'NO DATA')
-          console.log('onThemeVariables callback exists:', !!onThemeVariables)
-          
           if (onThemeVariables && message.data) {
-            console.log('=== VSCODE DEBUG: Calling onThemeVariables ===')
             onThemeVariables(message.data)
-          } else {
-            console.log('=== VSCODE DEBUG: NOT calling onThemeVariables ===')
-            console.log('Reason - onThemeVariables:', !!onThemeVariables, 'message.data:', !!message.data)
+          }
+          break
+
+        case 'setActiveTable':
+          if (onSetActiveTable && message.data && typeof message.data.index === 'number') {
+            onSetActiveTable(message.data.index)
           }
           break
 
@@ -90,7 +90,7 @@ export function useVSCodeCommunication(callbacks: VSCodeCommunicationCallbacks) 
     return () => {
       window.removeEventListener('message', handleMessage)
     }
-  }, [onTableData, onError, onSuccess, onThemeVariables])
+  }, [onTableData, onError, onSuccess, onThemeVariables, onSetActiveTable])
 
   return { sendMessage }
 }
