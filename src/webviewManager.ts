@@ -287,11 +287,13 @@ export class WebviewManager {
         // Handle panel view state changes (when tab becomes active/inactive)
         panel.onDidChangeViewState((e) => {
             if (e.webviewPanel.active && e.webviewPanel.visible) {
-                console.log('Panel became active, refreshing data for:', panelId);
+                console.log('[MTE][Ext] Panel became active, refreshing data for:', panelId);
                 // Request fresh data when panel becomes active
                 this.refreshPanelData(panel, uri);
                 // Ensure theme is applied when panel becomes active
                 this.applyThemeToPanel(panel);
+            } else {
+                console.log('[MTE][Ext] Panel state changed (inactive or hidden):', { active: e.webviewPanel.active, visible: e.webviewPanel.visible, panelId });
             }
         }, null, this.context.subscriptions);
 
@@ -328,6 +330,7 @@ export class WebviewManager {
      * Update table data in the webview
      */
     public updateTableData(panel: vscode.WebviewPanel, tableData: TableData | TableData[], uri?: vscode.Uri): void {
+    const start = Date.now();
         const message: any = {
             command: 'updateTableData',
             data: tableData
@@ -343,7 +346,14 @@ export class WebviewManager {
             };
         }
 
+        try {
+            const tables = Array.isArray(tableData) ? tableData.length : 1;
+            console.log('[MTE][Ext] Sending updateTableData', { tables, hasUri: !!uri, panelActive: panel.active, panelVisible: panel.visible });
+        } catch {}
         panel.webview.postMessage(message);
+        try {
+            console.log('[MTE][Ext] updateTableData posted in', Date.now() - start, 'ms');
+        } catch {}
     }
 
     /**
@@ -481,8 +491,9 @@ export class WebviewManager {
 
                 case 'switchTable':
                     // Handle table switch notification from webview
-                    console.log('Table switch notification:', message.data);
-                    // This is just a notification, no action needed
+                    console.log('[MTE][Ext] Table switch notification from webview:', message.data);
+                    // Send setActiveTable to synchronize the index explicitly
+                    await this.handleSwitchTable(message.data, panel, uri);
                     break;
 
                 case 'requestThemeVariables':
@@ -688,8 +699,9 @@ export class WebviewManager {
      * Handle cell update
      */
     private async handleCellUpdate(data: { row: number; col: number; value: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Cell update:', data, 'for file:', uri.toString());
-        console.log('Cell update tableIndex:', data.tableIndex);
+        console.log('🔧 WebviewManager: Cell update received from React:');
+        console.log('📦 Raw React Data:', JSON.stringify(data, null, 2));
+        console.log('📊 Cell update tableIndex from React:', data.tableIndex);
 
         const actualPanelId = this.findPanelId(panel);
 
@@ -702,7 +714,7 @@ export class WebviewManager {
             tableIndex: data.tableIndex
         };
 
-        console.log('Sending command data:', commandData);
+        console.log('📤 Sending command data to Extension:', JSON.stringify(commandData, null, 2));
 
         // Emit custom event that can be handled by the extension
         vscode.commands.executeCommand('markdownTableEditor.internal.updateCell', commandData);
@@ -843,6 +855,25 @@ export class WebviewManager {
             fromIndex: data.fromIndex,
             toIndex: data.toIndex,
             tableIndex: data?.tableIndex
+        });
+    }
+
+    /**
+     * Handle switch table request
+     */
+    private async handleSwitchTable(data: { index: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('[MTE][Ext] Handling switchTable to index:', data.index);
+        
+        // Send setActiveTable to ensure React side is synchronized
+        this.setActiveTable(panel, data.index);
+        
+        // Also request fresh table data to ensure consistency
+        const actualPanelId = this.findPanelId(panel);
+        vscode.commands.executeCommand('markdownTableEditor.internal.requestTableData', {
+            uri: uri.toString(),
+            panelId: actualPanelId,
+            forceRefresh: false,
+            switchToIndex: data.index // Hint for which table to show
         });
     }
 

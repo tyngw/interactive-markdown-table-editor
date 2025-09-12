@@ -32,8 +32,8 @@ export function useKeyboardNavigation({
     if (row < 0 || row >= tableData.rows.length || col < 0 || col >= tableData.headers.length) {
       return false
     }
-    const cellValue = tableData.rows[row][col]
-    return cellValue && String(cellValue).trim() !== ''
+  const cellValue = tableData.rows[row][col]
+  return String(cellValue ?? '').trim() !== ''
   }, [tableData])
 
   // Smart navigation (Excel-like Ctrl+Arrow behavior)
@@ -194,6 +194,19 @@ export function useKeyboardNavigation({
 
   // キーボードイベントハンドラー
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    // If focus is inside any input/textarea/contenteditable (e.g., header editor),
+    // don't trigger table keyboard navigation.
+    const activeEl = (document.activeElement as HTMLElement | null)
+    if (activeEl) {
+      const tag = activeEl.tagName?.toLowerCase()
+      const isFormField = tag === 'input' || tag === 'textarea' || activeEl.isContentEditable
+      const isHeaderEditing = activeEl.classList?.contains('header-input')
+      const isCellEditing = activeEl.classList?.contains('cell-input')
+      if (isFormField || isHeaderEditing || isCellEditing) {
+        return
+      }
+    }
+
     // 編集中は特定のキー以外を無効化
     if (currentEditingCell) {
       // Allow certain shortcuts even while editing
@@ -220,6 +233,33 @@ export function useKeyboardNavigation({
     const { key, shiftKey, ctrlKey, metaKey } = event
     const cmdKey = ctrlKey || metaKey
 
+    const scrollCellIntoView = (row: number, col: number) => {
+      const container = document.querySelector('.table-container') as HTMLElement | null
+      if (!container) return
+      const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`) as HTMLElement | null
+      if (!cell) return
+
+      const cRect = container.getBoundingClientRect()
+      const rRect = cell.getBoundingClientRect()
+
+      let newTop = container.scrollTop
+      let newLeft = container.scrollLeft
+
+      if (rRect.top < cRect.top) {
+        newTop += rRect.top - cRect.top - 8
+      } else if (rRect.bottom > cRect.bottom) {
+        newTop += rRect.bottom - cRect.bottom + 8
+      }
+
+      if (rRect.left < cRect.left) {
+        newLeft += rRect.left - cRect.left - 8
+      } else if (rRect.right > cRect.right) {
+        newLeft += rRect.right - cRect.right + 8
+      }
+
+      container.scrollTo({ top: Math.max(0, newTop), left: Math.max(0, newLeft), behavior: 'auto' })
+    }
+
     switch (key) {
       case 'ArrowUp':
       case 'ArrowDown':
@@ -229,6 +269,8 @@ export function useKeyboardNavigation({
         const direction = key.replace('Arrow', '').toLowerCase() as 'up' | 'down' | 'left' | 'right'
         const nextPos = getNextCellPosition(currentPos, direction, cmdKey)
         onCellSelect(nextPos.row, nextPos.col, shiftKey)
+        // ensure visibility
+        setTimeout(() => scrollCellIntoView(nextPos.row, nextPos.col), 0)
         break
       }
 
@@ -260,6 +302,7 @@ export function useKeyboardNavigation({
         event.preventDefault()
         const nextRow = Math.max(0, currentPos.row - 10)
         onCellSelect(nextRow, currentPos.col, false)
+  setTimeout(() => scrollCellIntoView(nextRow, currentPos.col), 0)
         break
       }
 
@@ -267,6 +310,7 @@ export function useKeyboardNavigation({
         event.preventDefault()
         const nextRow = Math.min(tableData.rows.length - 1, currentPos.row + 10)
         onCellSelect(nextRow, currentPos.col, false)
+  setTimeout(() => scrollCellIntoView(nextRow, currentPos.col), 0)
         break
       }
 
@@ -274,6 +318,7 @@ export function useKeyboardNavigation({
         event.preventDefault()
         const nextPos = getTabNextPosition(currentPos, shiftKey)
         onCellSelect(nextPos.row, nextPos.col, false)
+  setTimeout(() => scrollCellIntoView(nextPos.row, nextPos.col), 0)
         break
       }
 
@@ -283,10 +328,12 @@ export function useKeyboardNavigation({
           // Shift+Enter: 上のセルへ移動
           const nextPos = getNextCellPosition(currentPos, 'up')
           onCellSelect(nextPos.row, nextPos.col, false)
+          setTimeout(() => scrollCellIntoView(nextPos.row, nextPos.col), 0)
         } else {
           // Enter: 編集開始
           if (currentPos.row >= 0) {
             onCellEdit(currentPos)
+            setTimeout(() => scrollCellIntoView(currentPos.row, currentPos.col), 0)
           }
         }
         break
