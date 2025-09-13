@@ -47,6 +47,49 @@ body {
     padding: 0;
 }
 
+/* 全体のスクロールバー設定 */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--vscode-scrollbarSlider-background, 
+                          var(--vscode-button-secondaryBackground, 
+                              rgba(90, 93, 94, 0.31))) 
+                     var(--vscode-editor-background, transparent);
+}
+
+*::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+}
+
+*::-webkit-scrollbar-track {
+    background: var(--vscode-editor-background, transparent);
+    border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background, 
+                var(--vscode-button-secondaryBackground, 
+                    rgba(90, 93, 94, 0.31)));
+    border-radius: 4px;
+    border: 2px solid var(--vscode-editor-background, transparent);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--vscode-scrollbarSlider-hoverBackground, 
+                var(--vscode-button-secondaryHoverBackground, 
+                    rgba(90, 93, 94, 0.50)));
+}
+
+*::-webkit-scrollbar-thumb:active {
+    background: var(--vscode-scrollbarSlider-activeBackground, 
+                var(--vscode-button-background, 
+                    rgba(90, 93, 94, 0.80)));
+}
+
+*::-webkit-scrollbar-corner {
+    background: var(--vscode-editor-background, transparent);
+}
+
 body {
     font-family: var(--vscode-editor-font-family, var(--vscode-font-family, 'Consolas', 'Monaco', 'Courier New', monospace));
     font-size: var(--vscode-editor-font-size, var(--vscode-font-size, 14px));
@@ -56,6 +99,51 @@ body {
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
+}
+
+/* ====== スクロールバーのテーマ対応 ====== */
+/* WebKit browsers (Chrome, Safari, Edge) */
+.table-container::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: var(--vscode-editor-background, transparent);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background, 
+                var(--vscode-button-secondaryBackground, 
+                    rgba(90, 93, 94, 0.31)));
+    border-radius: 4px;
+    border: 2px solid var(--vscode-editor-background, transparent);
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: var(--vscode-scrollbarSlider-hoverBackground, 
+                var(--vscode-button-secondaryHoverBackground, 
+                    rgba(90, 93, 94, 0.50)));
+}
+
+.table-container::-webkit-scrollbar-thumb:active {
+    background: var(--vscode-scrollbarSlider-activeBackground, 
+                var(--vscode-button-background, 
+                    rgba(90, 93, 94, 0.80)));
+}
+
+.table-container::-webkit-scrollbar-corner {
+    background: var(--vscode-editor-background, transparent);
+}
+
+/* Firefox */
+.table-container {
+    scrollbar-width: thin;
+    scrollbar-color: var(--vscode-scrollbarSlider-background, 
+                          var(--vscode-button-secondaryBackground, 
+                              rgba(90, 93, 94, 0.31))) 
+                     var(--vscode-editor-background, transparent);
 }
 
 #root {
