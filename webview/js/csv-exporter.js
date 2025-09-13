@@ -97,15 +97,15 @@ const CSVExporter = {
     },
     
     /**
-     * Escape CSV field (handle commas, quotes, newlines)
+     * Escape CSV field (handle commas, quotes, newlines, and convert br tags)
      */
     escapeCSVField: function(field) {
         if (field === null || field === undefined) {
             return '';
         }
         
-        // Convert to string
-        const str = String(field);
+        // Convert to string and convert <br> tags to newlines using centralized converter
+        let str = window.TableEditor.callModule('ContentConverter', 'processForClipboard', field);
         
         // If field contains comma, quote, or newline, wrap in quotes and escape quotes
         if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {

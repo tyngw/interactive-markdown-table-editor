@@ -45,7 +45,7 @@ const VSCodeCommunication = {
         switch (message.command) {
             case 'updateTableData':
                 console.log('VSCodeCommunication: Processing updateTableData message with data:', message.data);
-                TableEditor.callModule('TableManager', 'handleUpdateTableData', message.data, message.fileInfo, message.forceUpdate);
+                TableEditor.callModule('TableManager', 'handleUpdateTableData', message.data, message.fileInfo);
                 break;
             case 'cellUpdateError':
                 console.log('VSCodeCommunication: Cell update error received:', message.data);

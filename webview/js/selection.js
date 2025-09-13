@@ -47,6 +47,16 @@ const SelectionManager = {
     selectCell: function (row, col, event = null) {
         const state = window.TableEditor.state;
 
+        // If this is a right-click (context menu) and the cell is already selected,
+        // don't change the selection to preserve multi-selection
+        if (event && event.button === 2) { // Right mouse button
+            const cellKey = `${row}-${col}`;
+            if (state.selectedCells.has(cellKey) && state.selectedCells.size > 1) {
+                console.log('SelectionManager: Right-click on already selected cell, preserving multi-selection');
+                return; // Don't change selection
+            }
+        }
+
         // Handle multi-selection with Ctrl/Cmd key
         if (event && (event.ctrlKey || event.metaKey)) {
             const cellKey = `${row}-${col}`;
@@ -324,18 +334,16 @@ const SelectionManager = {
             }
         });
 
-        // Highlight row numbers and column headers ONLY if all cells are selected (本当の全選択時のみ)
+        // Highlight row numbers for fully selected rows and column headers for fully selected columns
         const data = state.displayData || state.tableData;
-        let allSelected = false;
+        
+        // 行番号のハイライト処理
         if (data && data.rows && data.headers) {
-            allSelected = (state.selectedCells.size === data.rows.length * data.headers.length);
-        }
-        // 行番号
-        if (data && data.rows) {
             for (let row = 0; row < data.rows.length; row++) {
                 const rowNumber = document.querySelector(`td[data-row="${row}"][data-col="-1"]`);
                 if (rowNumber) {
-                    if (allSelected) {
+                    const isRowFullySelected = this.isRowFullySelected(row);
+                    if (isRowFullySelected) {
                         rowNumber.classList.add('row-selected');
                     } else {
                         rowNumber.classList.remove('row-selected');
@@ -343,12 +351,13 @@ const SelectionManager = {
                 }
             }
         }
-        // 列ヘッダー
+        // 列ヘッダーのハイライト処理
         if (data && data.headers) {
             for (let col = 0; col < data.headers.length; col++) {
                 const columnHeader = document.querySelector(`th[data-col="${col}"]`);
                 if (columnHeader) {
-                    if (allSelected) {
+                    const isColumnFullySelected = this.isColumnFullySelected(col);
+                    if (isColumnFullySelected) {
                         columnHeader.classList.add('col-selected');
                     } else {
                         columnHeader.classList.remove('col-selected');
@@ -433,27 +442,47 @@ const SelectionManager = {
     /**
      * Start row selection
      */
-    startRowSelect: function (rowIndex) {
+    startRowSelect: function (rowIndex, event) {
         const state = window.TableEditor.state;
 
         // Set row selection state
         state.isSelecting = false; // Not drag selecting
 
-        // Select the row
-        this.selectRow(rowIndex);
+        // If this is a right-click (context menu) and the row is already selected,
+        // don't change the selection to preserve multi-selection
+        if (event && event.button === 2) { // Right mouse button
+            const isRowAlreadySelected = this.isRowFullySelected(rowIndex);
+            if (isRowAlreadySelected && state.selectedCells.size > 1) {
+                console.log('SelectionManager: Right-click on already selected row, preserving multi-selection');
+                return; // Don't change selection
+            }
+        }
+
+        // Select the row with event information for multi-selection support
+        this.selectRow(rowIndex, event);
     },
 
     /**
      * Start column selection
      */
-    startColumnSelect: function (colIndex) {
+    startColumnSelect: function (colIndex, event) {
         const state = window.TableEditor.state;
 
         // Set column selection state
         state.isSelecting = false; // Not drag selecting
 
-        // Select the column
-        this.selectColumn(colIndex);
+        // If this is a right-click (context menu) and the column is already selected,
+        // don't change the selection to preserve multi-selection
+        if (event && event.button === 2) { // Right mouse button
+            const isColumnAlreadySelected = this.isColumnFullySelected(colIndex);
+            if (isColumnAlreadySelected && state.selectedCells.size > 1) {
+                console.log('SelectionManager: Right-click on already selected column, preserving multi-selection');
+                return; // Don't change selection
+            }
+        }
+
+        // Select the column with event information for multi-selection support
+        this.selectColumn(colIndex, event);
     },
 
     /**
@@ -478,6 +507,37 @@ const SelectionManager = {
         });
 
         console.log('SelectionManager: Cleanup completed');
+    },
+
+    /**
+     * Save current selection state for later restoration
+     */
+    saveSelectionState: function () {
+        const state = window.TableEditor.state;
+        return {
+            selectedCells: new Set(state.selectedCells),
+            lastSelectedCell: state.lastSelectedCell ? { ...state.lastSelectedCell } : null,
+            rangeSelectionAnchor: state.rangeSelectionAnchor ? { ...state.rangeSelectionAnchor } : null
+        };
+    },
+
+    /**
+     * Restore selection state from saved state
+     */
+    restoreSelectionState: function (savedState) {
+        if (!savedState) return;
+
+        const state = window.TableEditor.state;
+        state.selectedCells = new Set(savedState.selectedCells);
+        state.lastSelectedCell = savedState.lastSelectedCell ? { ...savedState.lastSelectedCell } : null;
+        state.rangeSelectionAnchor = savedState.rangeSelectionAnchor ? { ...savedState.rangeSelectionAnchor } : null;
+
+        // Update visual selection after restoration
+        this.updateCellSelection();
+        console.log('SelectionManager: Selection state restored', {
+            selectedCells: state.selectedCells.size,
+            lastSelectedCell: state.lastSelectedCell
+        });
     }
 };
 
