@@ -285,7 +285,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     console.log('🔍 selectionRange:', editorState.selectionRange)
     
     const pastedData = await pasteFromClipboard(editorState.currentEditingCell)
-    console.log('🔍 pastedData:', pastedData)
+    
     
     // セルが選択されていない場合のフォールバック処理
     if (!editorState.selectionRange) {
