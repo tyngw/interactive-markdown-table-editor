@@ -12,3 +12,11 @@
 1. `vsce package`
 2. `code --uninstall extension tyngw.markdown-table-editor`
 3. `code --install-extension markdown-table-editor-<version>.vsix`
+
+## CHANGELOG の更新
+変更内容に応じて、CHANGELOG.md と package.json の version を更新してください
+1. bugfix: x.x.x → x.x.x+1
+2. minor: x.x.x → x.x+1.0
+3. major: x.x.x → x+1.0.0
+
+ただし、修正が不十分で追加の指示を受けた場合は、バージョンは更新しないでください
