@@ -239,20 +239,29 @@ export function useKeyboardNavigation({
       const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`) as HTMLElement | null
       if (!cell) return
 
+      const header = document.querySelector('.table-editor > thead') as HTMLElement | null;
+      const headerHeight = header ? header.offsetHeight : 50;
+
+      const rowNumberCol = document.querySelector('.table-editor td.row-number') as HTMLElement | null;
+      const rowNumberColWidth = rowNumberCol ? rowNumberCol.offsetWidth : 60;
+
       const cRect = container.getBoundingClientRect()
       const rRect = cell.getBoundingClientRect()
 
       let newTop = container.scrollTop
       let newLeft = container.scrollLeft
 
-      if (rRect.top < cRect.top) {
-        newTop += rRect.top - cRect.top - 8
+      const topBoundary = cRect.top + headerHeight;
+      const leftBoundary = cRect.left + rowNumberColWidth;
+
+      if (rRect.top < topBoundary) {
+        newTop += rRect.top - topBoundary - 8
       } else if (rRect.bottom > cRect.bottom) {
         newTop += rRect.bottom - cRect.bottom + 8
       }
 
-      if (rRect.left < cRect.left) {
-        newLeft += rRect.left - cRect.left - 8
+      if (rRect.left < leftBoundary) {
+        newLeft += rRect.left - leftBoundary - 8
       } else if (rRect.right > cRect.right) {
         newLeft += rRect.right - cRect.right + 8
       }
@@ -279,9 +288,11 @@ export function useKeyboardNavigation({
         if (cmdKey) {
           // Ctrl+Home: Top-left corner
           onCellSelect(0, 0, false)
+          setTimeout(() => scrollCellIntoView(0, 0), 0)
         } else {
           // Home: Start of row
           onCellSelect(currentPos.row, 0, false)
+          setTimeout(() => scrollCellIntoView(currentPos.row, 0), 0)
         }
         break
       }
@@ -290,10 +301,15 @@ export function useKeyboardNavigation({
         event.preventDefault()
         if (cmdKey) {
           // Ctrl+End: Bottom-right corner
-          onCellSelect(tableData.rows.length - 1, tableData.headers.length - 1, false)
+          const nextRow = tableData.rows.length - 1
+          const nextCol = tableData.headers.length - 1
+          onCellSelect(nextRow, nextCol, false)
+          setTimeout(() => scrollCellIntoView(nextRow, nextCol), 0)
         } else {
           // End: End of row
-          onCellSelect(currentPos.row, tableData.headers.length - 1, false)
+          const nextCol = tableData.headers.length - 1
+          onCellSelect(currentPos.row, nextCol, false)
+          setTimeout(() => scrollCellIntoView(currentPos.row, nextCol), 0)
         }
         break
       }

@@ -173,6 +173,11 @@ const TableRenderer = {
             window.TableEditor.callModule('DragDropManager', 'setupDragAndDrop');
         }, 10);
         
+        // Set up cell event listeners for proper multi-selection support
+        setTimeout(() => {
+            this.setupCellEventListeners();
+        }, 20);
+        
         // Update sort actions visibility
         window.TableEditor.callModule('SortingManager', 'updateSortActionsVisibility');
         
@@ -258,8 +263,6 @@ const TableRenderer = {
                 
                 html += `<td data-row="${rowIndex}" data-col="${colIndex}" class="editable-cell" ${multilineAttr}
                             ${widthStyle}
-                            onclick="TableEditor.callModule('SelectionManager', 'selectCell', ${rowIndex}, ${colIndex}, event)"
-                            ondblclick="TableEditor.callModule('CellEditor', 'startCellEdit', ${rowIndex}, ${colIndex})"
                             ondragover="TableEditor.callModule('DragDropManager', 'handleDragOver', event)"
                             ondragenter="TableEditor.callModule('DragDropManager', 'handleDragEnter', event)"
                             ondragleave="TableEditor.callModule('DragDropManager', 'handleDragLeave', event)"
@@ -441,6 +444,35 @@ const TableRenderer = {
         table.style.width = totalWidth + 'px';
         
         console.log('TableRenderer: Set table width to', totalWidth + 'px');
+    },
+
+    /**
+     * Setup proper event listeners for cells
+     */
+    setupCellEventListeners: function() {
+        // Remove existing listeners
+        document.querySelectorAll('.editable-cell').forEach(cell => {
+            const newCell = cell.cloneNode(true);
+            cell.parentNode.replaceChild(newCell, cell);
+        });
+
+        // Add new event listeners
+        document.querySelectorAll('.editable-cell').forEach(cell => {
+            const row = parseInt(cell.getAttribute('data-row'));
+            const col = parseInt(cell.getAttribute('data-col'));
+
+            // Click event for selection (preserving modifier keys)
+            cell.addEventListener('click', (event) => {
+                window.TableEditor.callModule('SelectionManager', 'selectCell', row, col, event);
+            });
+
+            // Double-click event for editing
+            cell.addEventListener('dblclick', (event) => {
+                window.TableEditor.callModule('CellEditor', 'startCellEdit', row, col);
+            });
+        });
+
+        console.log('TableRenderer: Cell event listeners setup complete');
     }
 };
 

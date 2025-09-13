@@ -453,6 +453,12 @@ const KeyboardNavigationManager = {
         const cellRect = cell.getBoundingClientRect();
         const containerRect = container.getBoundingClientRect();
 
+        // Get header heights for better positioning
+        const headerRow = document.querySelector('.table-editor th');
+        const rowNumberCell = document.querySelector('.table-editor td.row-number');
+        const headerHeight = headerRow ? headerRow.offsetHeight : 40;
+        const rowNumberWidth = rowNumberCell ? rowNumberCell.offsetWidth : 60;
+
         // Calculate if scrolling is needed
         const scrollTop = container.scrollTop;
         const scrollLeft = container.scrollLeft;
@@ -460,36 +466,46 @@ const KeyboardNavigationManager = {
         let newScrollTop = scrollTop;
         let newScrollLeft = scrollLeft;
 
-        // Special handling for first row/column to show headers completely
-        const isFirstRow = row === 0;
-        const isFirstCol = col === 0;
+        // Calculate visible area considering sticky headers
+        const visibleTop = containerRect.top + headerHeight;
+        const visibleBottom = containerRect.bottom;
+        const visibleLeft = containerRect.left + rowNumberWidth;
+        const visibleRight = containerRect.right;
 
-        // Vertical scrolling
-        if (isFirstRow) {
-            // For first row, scroll to top to show header completely
-            newScrollTop = 0;
-        } else if (cellRect.top < containerRect.top) {
-            newScrollTop = scrollTop - (containerRect.top - cellRect.top) - 10;
-        } else if (cellRect.bottom > containerRect.bottom) {
-            newScrollTop = scrollTop + (cellRect.bottom - containerRect.bottom) + 10;
+        // Check if cell is fully visible
+        const isVerticallyVisible = cellRect.top >= visibleTop && cellRect.bottom <= visibleBottom;
+        const isHorizontallyVisible = cellRect.left >= visibleLeft && cellRect.right <= visibleRight;
+
+        // Vertical scrolling - only adjust if cell is not visible
+        if (!isVerticallyVisible) {
+            if (cellRect.top < visibleTop) {
+                // Cell is above visible area, scroll up
+                newScrollTop = scrollTop - (visibleTop - cellRect.top) - 10;
+            } else if (cellRect.bottom > visibleBottom) {
+                // Cell is below visible area, scroll down
+                newScrollTop = scrollTop + (cellRect.bottom - visibleBottom) + 10;
+            }
         }
 
-        // Horizontal scrolling
-        if (isFirstCol) {
-            // For first column, scroll to left to show row numbers completely
-            newScrollLeft = 0;
-        } else if (cellRect.left < containerRect.left) {
-            newScrollLeft = scrollLeft - (containerRect.left - cellRect.left) - 10;
-        } else if (cellRect.right > containerRect.right) {
-            newScrollLeft = scrollLeft + (cellRect.right - containerRect.right) + 10;
+        // Horizontal scrolling - only adjust if cell is not visible
+        if (!isHorizontallyVisible) {
+            if (cellRect.left < visibleLeft) {
+                // Cell is left of visible area, scroll left
+                newScrollLeft = scrollLeft - (visibleLeft - cellRect.left) - 10;
+            } else if (cellRect.right > visibleRight) {
+                // Cell is right of visible area, scroll right
+                newScrollLeft = scrollLeft + (cellRect.right - visibleRight) + 10;
+            }
         }
 
-        // Apply smooth scrolling
-        container.scrollTo({
-            top: Math.max(0, newScrollTop),
-            left: Math.max(0, newScrollLeft),
-            behavior: 'smooth'
-        });
+        // Only scroll if necessary
+        if (newScrollTop !== scrollTop || newScrollLeft !== scrollLeft) {
+            container.scrollTo({
+                top: Math.max(0, newScrollTop),
+                left: Math.max(0, newScrollLeft),
+                behavior: 'smooth'
+            });
+        }
     },
 
     /**

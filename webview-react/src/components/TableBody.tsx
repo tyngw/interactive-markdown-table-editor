@@ -402,6 +402,9 @@ const CellEditor: React.FC<CellEditorProps> = ({ value, onCommit, onCancel, rowI
   }, [])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+      return;
+    }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       // Ctrl+Enter / Cmd+Enter で編集確定
       e.preventDefault()

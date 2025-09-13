@@ -42,8 +42,6 @@ export function useTableEditor(initialData: TableData) {
     console.log('🔍 Resetting table state due to initialData change')
     setTableData(initialData)
     setCurrentEditingCell(null)
-    setSelectedCells(new Set())
-    setSelectionRange(null)
     setIsSelecting(false)
     setColumnWidths({})
     setSortState({ column: -1, direction: 'none', isViewOnly: false, originalData: null })
