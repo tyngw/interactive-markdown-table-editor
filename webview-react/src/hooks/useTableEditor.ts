@@ -202,10 +202,19 @@ export function useTableEditor(initialData: TableData) {
   }, [])
 
   // セルを選択（既存機能を保持、通常クリック用）
-  const selectCell = useCallback((row: number, col: number, extend = false) => {
+  const selectCell = useCallback((row: number, col: number, extend = false, toggle = false) => {
     const cellKey = `${row}-${col}`
-    
-    if (extend && selectionRange) {
+
+    if (toggle) {
+      const newSelectedCells = new Set(selectedCells)
+      if (newSelectedCells.has(cellKey)) {
+        newSelectedCells.delete(cellKey)
+      } else {
+        newSelectedCells.add(cellKey)
+      }
+      setSelectedCells(newSelectedCells)
+      setSelectionRange({ start: { row, col }, end: { row, col } })
+    } else if (extend && selectionRange) {
       // 範囲選択を拡張
       const newRange: SelectionRange = {
         start: selectionRange.start,
@@ -231,7 +240,7 @@ export function useTableEditor(initialData: TableData) {
       setSelectedCells(new Set([cellKey]))
       setSelectionRange({ start: { row, col }, end: { row, col } })
     }
-  }, [selectionRange])
+  }, [selectionRange, selectedCells])
 
   // 選択をクリア
   const clearSelection = useCallback(() => {

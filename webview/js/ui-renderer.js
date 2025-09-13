@@ -213,6 +213,11 @@ const UIRenderer = {
             // Set table width to sum of column widths to prevent window resize effects
             renderer.setTableWidth();
 
+            // Setup cell event listeners for proper multi-selection support
+            setTimeout(() => {
+                renderer.setupCellEventListeners();
+            }, 10);
+
             // Restore scroll position immediately to prevent flickering
             TableEditor.scrollManager.restoreScrollPosition(scrollState, 'UIRenderer.renderTableInContainer');
 

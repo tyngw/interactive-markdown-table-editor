@@ -415,7 +415,6 @@ body {
     user-select: none;
     color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
     cursor: pointer;
-    transition: background-color 0.15s ease;
     position: sticky !important;
     left: 0 !important;
     z-index: 90 !important;

@@ -45,6 +45,15 @@ const SelectionManager = {
      * Select a single cell
      */
     selectCell: function (row, col, event = null) {
+        console.log('SelectionManager: selectCell called', {
+            row, col, 
+            hasEvent: !!event,
+            ctrlKey: event?.ctrlKey,
+            metaKey: event?.metaKey,
+            shiftKey: event?.shiftKey,
+            button: event?.button
+        });
+        
         const state = window.TableEditor.state;
 
         // If this is a right-click (context menu) and the cell is already selected,
@@ -59,15 +68,19 @@ const SelectionManager = {
 
         // Handle multi-selection with Ctrl/Cmd key
         if (event && (event.ctrlKey || event.metaKey)) {
+            console.log('SelectionManager: Multi-selection mode activated');
             const cellKey = `${row}-${col}`;
             if (state.selectedCells.has(cellKey)) {
                 state.selectedCells.delete(cellKey);
+                console.log('SelectionManager: Removed cell from selection:', cellKey);
             } else {
                 state.selectedCells.add(cellKey);
+                console.log('SelectionManager: Added cell to selection:', cellKey);
             }
         }
         // Handle range selection with Shift key
         else if (event && event.shiftKey && state.lastSelectedCell) {
+            console.log('SelectionManager: Range selection mode activated');
             // 範囲選択開始時にアンカーセルを設定
             if (!state.rangeSelectionAnchor) {
                 state.rangeSelectionAnchor = { ...state.lastSelectedCell };
@@ -81,6 +94,7 @@ const SelectionManager = {
         }
         // Regular single selection
         else {
+            console.log('SelectionManager: Single cell selection mode');
             state.selectedCells.clear();
             state.selectedCells.add(`${row}-${col}`);
             // 単一セル選択時はアンカーセルをクリア
@@ -89,6 +103,8 @@ const SelectionManager = {
 
         // Update last selected cell
         state.lastSelectedCell = { row, col };
+
+        console.log('SelectionManager: Current selection:', Array.from(state.selectedCells));
 
         // Update visual selection
         this.updateCellSelection();
