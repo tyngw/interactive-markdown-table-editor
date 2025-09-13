@@ -203,11 +203,13 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   className={`sort-indicator ${sortIndicatorClass}`}
                   onClick={(e) => {
                     e.stopPropagation()
+                    console.log('🔧 Sort icon clicked for column:', col)
+                    console.log('🔧 Current sortState:', sortState)
                     onSort(col)
                   }}
                   title="Sort column"
                 >
-                  {sortState.column === col ? (
+                  {sortState.column === col && sortState.direction !== 'none' ? (
                     sortState.direction === 'asc' ? '▲' : '▼'
                   ) : '↕'}
                 </div>

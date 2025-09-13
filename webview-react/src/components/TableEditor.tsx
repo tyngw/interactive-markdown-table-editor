@@ -88,8 +88,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
   // Track sort view-only state changes
   useEffect(() => {
+    console.log('🔍 Sort state changed:', {
+      column: editorState.sortState.column,
+      direction: editorState.sortState.direction,
+      isViewOnly: editorState.sortState.isViewOnly,
+      hasOriginalData: !!editorState.sortState.originalData
+    })
     updateSortViewOnly(editorState.sortState.isViewOnly)
-  }, [editorState.sortState.isViewOnly])
+  }, [editorState.sortState, updateSortViewOnly])
 
   // セル更新時にVSCodeに保存を通知
   const handleCellUpdate = useCallback((row: number, col: number, value: string) => {
@@ -180,10 +186,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
   // ソート実行
   const handleSort = useCallback((col: number) => {
+    console.log('🔧 Sort triggered for column:', col)
+    console.log('🔧 Current sort state before:', {
+      column: editorState.sortState.column,
+      direction: editorState.sortState.direction,
+      isViewOnly: editorState.sortState.isViewOnly
+    })
     sortColumn(col)
-  // Update view-only flag after toggling sort state (asc/desc/none)
-  setTimeout(() => updateSortViewOnly(editorState.sortState.isViewOnly), 0)
-  }, [sortColumn])
+  }, [sortColumn, editorState.sortState])
 
   // ソートをファイルに保存
   const handleCommitSort = useCallback(() => {

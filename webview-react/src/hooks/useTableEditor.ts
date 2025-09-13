@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { TableData, CellPosition, SelectionRange, SortState, ColumnWidths, EditorState } from '../types'
 
 export function useTableEditor(initialData: TableData) {
@@ -16,7 +16,17 @@ export function useTableEditor(initialData: TableData) {
   })
 
   // Sync state when the incoming table changes (e.g., tab switch)
+  // Use a ref to track if we should skip the reset due to ongoing sort operation
+  const skipResetRef = useRef(false)
+  
   useEffect(() => {
+    // Don't reset state if we're currently in a sorting operation
+    if (skipResetRef.current) {
+      console.log('🔍 Skipping state reset due to skip flag')
+      return
+    }
+    
+    console.log('🔍 Resetting table state due to initialData change')
     setTableData(initialData)
     setCurrentEditingCell(null)
     setSelectedCells(new Set())
@@ -286,9 +296,17 @@ export function useTableEditor(initialData: TableData) {
 
   // Apply view-only sort (does not modify file) - 3-state toggle: asc → desc → none
   const sortColumn = useCallback((col: number) => {
+    console.log('🔧 sortColumn called with col:', col)
+    console.log('🔧 Current tableData before sort:', tableData)
+    
+    // Set skip flag to prevent useEffect from resetting state
+    skipResetRef.current = true
+    
     setSortState(prev => {
+      console.log('🔧 setSortState callback, prev state:', prev)
       let direction: 'asc' | 'desc' | 'none' = 'asc'
       
+      // Determine new direction based on current state
       if (prev.column === col) {
         // Same column clicked - cycle through states
         if (prev.direction === 'asc') {
@@ -303,28 +321,39 @@ export function useTableEditor(initialData: TableData) {
         direction = 'asc'
       }
 
+      console.log('🔧 Determined direction:', direction)
+
       // Store original data if this is the first sort
       const originalData = prev.originalData || tableData
       
       if (direction === 'none') {
         // Restore original data
+        console.log('🔧 Restoring original data:', originalData)
         setTableData(originalData)
-        return {
+        // Clear skip flag when sort operation is complete
+        skipResetRef.current = false
+        const newState = {
           column: -1,
-          direction: 'none',
+          direction: 'none' as const,
           isViewOnly: false,
           originalData: null
         }
+        console.log('🔧 Returning new state (restore):', newState)
+        return newState
       } else {
         // Apply sort to display data
+        console.log('🔧 Sorting data with direction:', direction)
         const sortedData = sortTableData(originalData, col, direction)
+        console.log('🔧 Sorted data:', sortedData)
         setTableData(sortedData)
-        return {
+        const newState = {
           column: col,
           direction: direction,
           isViewOnly: true,
           originalData: originalData
         }
+        console.log('🔧 Returning new state (sort):', newState)
+        return newState
       }
     })
   }, [tableData])
@@ -365,6 +394,7 @@ export function useTableEditor(initialData: TableData) {
 
   // Restore original view (before any sorting)
   const restoreOriginalView = useCallback(() => {
+    skipResetRef.current = false // Clear skip flag
     setSortState(prev => {
       if (prev.originalData) {
         setTableData(prev.originalData)
@@ -381,6 +411,7 @@ export function useTableEditor(initialData: TableData) {
 
   // Commit current sort to file
   const commitSortToFile = useCallback(() => {
+    skipResetRef.current = false // Clear skip flag
     setSortState(prev => {
       if (prev.isViewOnly) {
         return {
