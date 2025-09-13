@@ -17,7 +17,7 @@ const CellEditor = {
      */
     createEditingTextarea: function (content, className) {
         // <br>→\n変換
-        const editableContent = window.TableEditor.callModule('TableRenderer', 'processCellContentForEditing', content || '');
+        const editableContent = window.TableEditor.callModule('ContentConverter', 'processForEditing', content || '');
         const textarea = document.createElement('textarea');
         textarea.className = className;
         textarea.value = editableContent;
@@ -199,7 +199,7 @@ const CellEditor = {
         const newValue = input.value;
 
         // Process content for storage
-        const processedValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', newValue);
+        const processedValue = window.TableEditor.callModule('ContentConverter', 'processForStorage', newValue);
 
         // Update data model locally first
         const data = state.tableData;
@@ -232,10 +232,16 @@ const CellEditor = {
         cell.style.maxHeight = '';
         cell.style.verticalAlign = '';
         cell.style.textAlign = '';
+        // セルのCSSクラスを保存（選択状態などを維持するため）
+        const cellClasses = cell.className;
+        
         cell.removeAttribute('style'); // すべてのインラインスタイルを削除
 
         const processedContent = window.TableEditor.callModule('TableRenderer', 'processCellContent', processedValue);
         cell.innerHTML = `<div class="cell-content">${processedContent}</div>`;
+
+        // セルのCSSクラスを復元（選択状態を維持）
+        cell.className = cellClasses;
 
         // セルの属性を更新（単一行か複数行かを判定）
         const hasMultipleLines = processedValue && String(processedValue).includes('<br');
@@ -249,6 +255,11 @@ const CellEditor = {
         state.currentEditingCell = null;
         state.isComposing = false;
         state.imeJustEnded = false;
+
+        // DOM更新後に選択状態を確実に更新
+        setTimeout(() => {
+            window.TableEditor.callModule('SelectionManager', 'updateCellSelection');
+        }, 0);
 
         console.log('CellEditor: Committed cell edit', row, col);
     },
@@ -289,7 +300,12 @@ const CellEditor = {
             if (data && data.rows && data.rows[row]) {
                 const originalValue = data.rows[row][col] || '';
                 const processedContent = window.TableEditor.callModule('TableRenderer', 'processCellContent', originalValue);
+                
+                // セルのCSSクラスを保存（選択状態などを維持するため）
+                const cellClasses = cell.className;
                 cell.innerHTML = `<div class="cell-content">${processedContent}</div>`;
+                // セルのCSSクラスを復元（選択状態を維持）
+                cell.className = cellClasses;
 
                 // セルの属性を更新（単一行か複数行かを判定）
                 const hasMultipleLines = originalValue && String(originalValue).includes('<br');
@@ -400,8 +416,11 @@ const CellEditor = {
                 // 編集確定
                 this.commitEdit();
                 // セルの場合のみ次行へ移動
+                // DOM更新完了後にナビゲーションを実行
                 if (currentEditingCell && currentEditingCell.row !== -1) {
-                    window.TableEditor.callModule('KeyboardNavigationManager', 'navigateCell', currentEditingCell.row + 1, currentEditingCell.col);
+                    setTimeout(() => {
+                        window.TableEditor.callModule('KeyboardNavigationManager', 'navigateCell', currentEditingCell.row + 1, currentEditingCell.col);
+                    }, 0);
                 }
             } else if (event.key === 'Tab') {
                 event.preventDefault();
@@ -410,8 +429,11 @@ const CellEditor = {
                 const currentEditingCell = state.currentEditingCell;
                 this.commitEdit();
                 // セル・ヘッダー共通: 次/前のセル・ヘッダーへ
+                // DOM更新完了後にナビゲーションを実行
                 if (currentEditingCell) {
-                    window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', currentEditingCell.row, currentEditingCell.col, !event.shiftKey);
+                    setTimeout(() => {
+                        window.TableEditor.callModule('KeyboardNavigationManager', 'navigateToNextCell', currentEditingCell.row, currentEditingCell.col, !event.shiftKey);
+                    }, 0);
                 }
             } else if (event.key === 'Escape') {
                 event.preventDefault();
@@ -668,7 +690,7 @@ const CellEditor = {
         // Get new value
         const rawValue = input.value;
         // セルと同様に改行→<br>変換
-        const newValue = window.TableEditor.callModule('TableRenderer', 'processCellContentForStorage', rawValue.trim());
+        const newValue = window.TableEditor.callModule('ContentConverter', 'processForStorage', rawValue.trim());
 
         // Update data model locally first
         const data = state.tableData;
@@ -697,7 +719,12 @@ const CellEditor = {
 
         // Restore column title content with new value（セルと同様にHTML化）
         const processedContent = window.TableEditor.callModule('TableRenderer', 'processCellContent', newValue);
+        
+        // ヘッダーセルのCSSクラスを保存（選択状態などを維持するため）
+        const headerClasses = headerCell.className;
         columnTitleDiv.innerHTML = processedContent;
+        // ヘッダーセルのCSSクラスを復元（選択状態を維持）
+        headerCell.className = headerClasses;
 
         // Clear editing state
         state.currentEditingCell = null;
@@ -731,7 +758,12 @@ const CellEditor = {
                 if (data && data.headers && data.headers[col] !== undefined) {
                     const originalValue = data.headers[col] || '';
                     const processedContent = window.TableEditor.callModule('TableRenderer', 'escapeHtml', originalValue);
+                    
+                    // ヘッダーセルのCSSクラスを保存（選択状態などを維持するため）
+                    const headerClasses = headerCell.className;
                     columnTitleDiv.innerHTML = processedContent;
+                    // ヘッダーセルのCSSクラスを復元（選択状態を維持）
+                    headerCell.className = headerClasses;
                 }
             }
         }

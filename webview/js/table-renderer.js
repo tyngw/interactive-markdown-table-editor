@@ -210,7 +210,7 @@ const TableRenderer = {
                         ${widthStyle}
                         oncontextmenu="TableEditor.callModule('ContextMenuManager', 'showColumnContextMenu', event, ${index}); return false;"
                         draggable="true"
-                        onmousedown="TableEditor.callModule('SelectionManager', 'startColumnSelect', ${index})"
+                        onmousedown="TableEditor.callModule('SelectionManager', 'startColumnSelect', ${index}, event)"
                         ondragstart="TableEditor.callModule('DragDropManager', 'handleDragStart', event)"
                         ondragover="TableEditor.callModule('DragDropManager', 'handleDragOver', event)"
                         ondrop="TableEditor.callModule('DragDropManager', 'handleDrop', event)">
@@ -238,7 +238,7 @@ const TableRenderer = {
             html += `<td class="row-number" data-row="${rowIndex}" data-col="-1"
                         oncontextmenu="TableEditor.callModule('ContextMenuManager', 'showRowContextMenu', event, ${rowIndex}); return false;"
                         draggable="true"
-                        onmousedown="TableEditor.callModule('SelectionManager', 'startRowSelect', ${rowIndex})"
+                        onmousedown="TableEditor.callModule('SelectionManager', 'startRowSelect', ${rowIndex}, event)"
                         ondragstart="TableEditor.callModule('DragDropManager', 'handleDragStart', event)"
                         ondragover="TableEditor.callModule('DragDropManager', 'handleDragOver', event)"
                         ondrop="TableEditor.callModule('DragDropManager', 'handleDrop', event)">
@@ -342,20 +342,14 @@ const TableRenderer = {
      * Process cell content specifically for editing mode
      */
     processCellContentForEditing: function(content) {
-        if (!content) return '';
-        
-        // Convert <br> tags back to newlines for editing
-        return String(content).replace(/<br\s*\/?>/gi, '\n');
+        return window.TableEditor.callModule('ContentConverter', 'processForEditing', content);
     },
     
     /**
      * Process cell content for storage (convert newlines to <br> tags)
      */
     processCellContentForStorage: function(content) {
-        if (!content) return '';
-        
-        // Convert newlines to <br> tags for storage
-        return String(content).replace(/\n/g, '<br/>');
+        return window.TableEditor.callModule('ContentConverter', 'processForStorage', content);
     },
     
     /**

@@ -217,6 +217,7 @@ const TableEditor = {
 
         // Initialize feature modules
         const featureModuleConfigs = [
+            { name: 'ContentConverter', object: 'ContentConverter' },
             { name: 'TableRenderer', object: 'TableRenderer' },
             { name: 'SelectionManager', object: 'SelectionManager' },
             { name: 'CellEditor', object: 'CellEditor' },

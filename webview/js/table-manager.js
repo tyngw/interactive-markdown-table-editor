@@ -89,12 +89,27 @@ const TableManager = {
             originalData: null
         };
 
+        // Save current selection state before re-rendering (only if not a file change)
+        let savedSelectionState = null;
+        if (!isFileChange) {
+            savedSelectionState = window.TableEditor.callModule('SelectionManager', 'saveSelectionState');
+            console.log('TableManager: Saved selection state before re-render');
+        }
+
         // Show auto-saved status when table data is updated from server
         TableEditor.showAutoSavedStatus();
 
         // Render table with tabs if multiple tables exist, preserving scroll position
         console.log('TableManager: Calling renderApplicationWithTabs...');
         TableEditor.callModule('UIRenderer', 'renderApplicationWithTabs');
+
+        // Restore selection state after re-rendering (only if not a file change)
+        if (!isFileChange && savedSelectionState) {
+            setTimeout(() => {
+                window.TableEditor.callModule('SelectionManager', 'restoreSelectionState', savedSelectionState);
+                console.log('TableManager: Restored selection state after re-render');
+            }, 100); // Allow DOM to settle before restoring selection
+        }
 
         // Restore scroll position only if it's not a file change
         if (!isFileChange) {
@@ -251,22 +266,50 @@ const TableManager = {
      * Delete a row from the table
      */
     deleteRow: function (index) {
+        this.deleteRows([index]);
+    },
+
+    /**
+     * Delete multiple rows from the table
+     */
+    deleteRows: function (indices) {
+        if (!Array.isArray(indices) || indices.length === 0) {
+            console.error('TableManager: Invalid indices array');
+            return;
+        }
+
         TableEditor.scrollManager.withScrollPreservation(() => {
             const data = TableEditor.state.displayData || TableEditor.state.tableData;
-            if (!data || !data.rows || index < 0 || index >= data.rows.length) {
-                console.error('TableManager: Invalid row index');
+            if (!data || !data.rows) {
+                console.error('TableManager: No table data available');
                 return;
             }
 
-            if (data.rows.length <= 1) {
-                TableEditor.showError('Cannot delete the last row');
+            // Validate all indices
+            const validIndices = indices.filter(index => 
+                index >= 0 && index < data.rows.length
+            );
+
+            if (validIndices.length === 0) {
+                console.error('TableManager: No valid row indices');
                 return;
             }
 
-            // Remove row
-            data.rows.splice(index, 1);
+            // Check if trying to delete all rows
+            if (validIndices.length >= data.rows.length) {
+                TableEditor.showError('Cannot delete all rows');
+                return;
+            }
 
-            // Create a new data object (like sorting does) instead of modifying in place
+            // Sort indices in descending order to avoid index shifting issues
+            const sortedIndices = validIndices.sort((a, b) => b - a);
+
+            // Remove rows from highest index to lowest
+            sortedIndices.forEach(index => {
+                data.rows.splice(index, 1);
+            });
+
+            // Create a new data object
             const newData = {
                 headers: [...data.headers],
                 rows: data.rows.map(row => [...row])
@@ -276,18 +319,25 @@ const TableManager = {
             TableEditor.state.tableData = newData;
             TableEditor.state.displayData = newData;
 
-            // Re-render table with scroll preservation (same method as sorting)
-            TableEditor.callModule('UIRenderer', 'renderTableInContainer', newData);
-        }, 'TableManager.deleteRow');
+            // Clear selection state after deletion
+            TableEditor.state.selectedCells.clear();
+            TableEditor.state.lastSelectedCell = null;
+            TableEditor.state.rangeSelectionAnchor = null;
 
-        // Send deleteRow command to extension with current table index
+            // Re-render table with scroll preservation
+            TableEditor.callModule('UIRenderer', 'renderTableInContainer', newData);
+        }, 'TableManager.deleteRows');
+
+        // Send deleteRows command to extension with current table index
         TableEditor.callModule('VSCodeCommunication', 'sendMessage', {
-            command: 'deleteRow',
+            command: 'deleteRows',
             data: {
-                index: index,
+                indices: indices,
                 tableIndex: TableEditor.state.currentTableIndex
             }
         });
+
+        console.log(`TableManager: Deleted ${indices.length} row(s)`);
     },
 
     /**
@@ -349,29 +399,59 @@ const TableManager = {
      * Delete a column from the table
      */
     deleteColumn: function (index) {
+        this.deleteColumns([index]);
+    },
+
+    /**
+     * Delete multiple columns from the table
+     */
+    deleteColumns: function (indices) {
+        if (!Array.isArray(indices) || indices.length === 0) {
+            console.error('TableManager: Invalid indices array');
+            return;
+        }
+
         TableEditor.scrollManager.withScrollPreservation(() => {
             const data = TableEditor.state.displayData || TableEditor.state.tableData;
-            if (!data || !data.headers || index < 0 || index >= data.headers.length) {
-                console.error('TableManager: Invalid column index');
+            if (!data || !data.headers) {
+                console.error('TableManager: No table data available');
                 return;
             }
 
-            if (data.headers.length <= 1) {
-                TableEditor.showError('Cannot delete the last column');
+            // Validate all indices
+            const validIndices = indices.filter(index => 
+                index >= 0 && index < data.headers.length
+            );
+
+            if (validIndices.length === 0) {
+                console.error('TableManager: No valid column indices');
                 return;
             }
 
-            // Remove header
-            data.headers.splice(index, 1);
+            // Check if trying to delete all columns
+            if (validIndices.length >= data.headers.length) {
+                TableEditor.showError('Cannot delete all columns');
+                return;
+            }
+
+            // Sort indices in descending order to avoid index shifting issues
+            const sortedIndices = validIndices.sort((a, b) => b - a);
+
+            // Remove headers from highest index to lowest
+            sortedIndices.forEach(index => {
+                data.headers.splice(index, 1);
+            });
 
             // Remove cells from all rows
             data.rows.forEach(row => {
-                if (index < row.length) {
-                    row.splice(index, 1);
-                }
+                sortedIndices.forEach(index => {
+                    if (index < row.length) {
+                        row.splice(index, 1);
+                    }
+                });
             });
 
-            // Create a new data object (like sorting does) instead of modifying in place
+            // Create a new data object
             const newData = {
                 headers: [...data.headers],
                 rows: data.rows.map(row => [...row])
@@ -381,18 +461,25 @@ const TableManager = {
             TableEditor.state.tableData = newData;
             TableEditor.state.displayData = newData;
 
-            // Re-render table with scroll preservation (same method as sorting)
-            TableEditor.callModule('UIRenderer', 'renderTableInContainer', newData);
-        }, 'TableManager.deleteColumn');
+            // Clear selection state after deletion
+            TableEditor.state.selectedCells.clear();
+            TableEditor.state.lastSelectedCell = null;
+            TableEditor.state.rangeSelectionAnchor = null;
 
-        // Send deleteColumn command to extension with current table index
+            // Re-render table with scroll preservation
+            TableEditor.callModule('UIRenderer', 'renderTableInContainer', newData);
+        }, 'TableManager.deleteColumns');
+
+        // Send deleteColumns command to extension with current table index
         TableEditor.callModule('VSCodeCommunication', 'sendMessage', {
-            command: 'deleteColumn',
+            command: 'deleteColumns',
             data: {
-                index: index,
+                indices: indices,
                 tableIndex: TableEditor.state.currentTableIndex
             }
         });
+
+        console.log(`TableManager: Deleted ${indices.length} column(s)`);
     },
 
     /**

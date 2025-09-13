@@ -153,6 +153,65 @@ const ContextMenuManager = {
     },
 
     /**
+     * Get the number of selected rows
+     */
+    getSelectedRowCount: function () {
+        const state = window.TableEditor.state;
+        const data = state.displayData || state.tableData;
+        
+        if (!state.selectedCells || state.selectedCells.size === 0 || !data || !data.headers) {
+            return 0;
+        }
+
+        const selectedRows = new Set();
+        state.selectedCells.forEach(cellKey => {
+            const [row] = cellKey.split('-').map(Number);
+            selectedRows.add(row);
+        });
+
+        return selectedRows.size;
+    },
+
+    /**
+     * Get the number of selected columns
+     */
+    getSelectedColumnCount: function () {
+        const state = window.TableEditor.state;
+        const data = state.displayData || state.tableData;
+        
+        if (!state.selectedCells || state.selectedCells.size === 0 || !data || !data.rows) {
+            return 0;
+        }
+
+        const selectedColumns = new Set();
+        state.selectedCells.forEach(cellKey => {
+            const [, col] = cellKey.split('-').map(Number);
+            selectedColumns.add(col);
+        });
+
+        return selectedColumns.size;
+    },
+
+    /**
+     * Check if an entire row is fully selected
+     */
+    isRowFullySelected: function (rowIndex) {
+        const state = window.TableEditor.state;
+        const data = state.displayData || state.tableData;
+
+        if (!data || !data.headers || !state.selectedCells) {
+            return false;
+        }
+
+        for (let col = 0; col < data.headers.length; col++) {
+            if (!state.selectedCells.has(`${rowIndex}-${col}`)) {
+                return false;
+            }
+        }
+        return true;
+    },
+
+    /**
      * Get context menu items based on context
      */
     getMenuItems: function (rowIndex, colIndex) {
@@ -243,11 +302,21 @@ const ContextMenuManager = {
             });
 
             if (data && data.rows && data.rows.length > 1) {
+                // Determine the number of selected rows for the delete message
+                const selectedRowCount = this.getSelectedRowCount();
+                let deleteLabel;
+                
+                if (selectedRowCount > 1) {
+                    deleteLabel = `選択した${selectedRowCount}行を削除`;
+                } else {
+                    deleteLabel = '行を削除';
+                }
+                
                 items.push({
-                    label: '行を削除',
+                    label: deleteLabel,
                     icon: '❌',
                     action: () => {
-                        this.deleteRow(rowIndex);
+                        this.deleteSelectedRows();
                     }
                 });
             }
@@ -274,11 +343,21 @@ const ContextMenuManager = {
             });
 
             if (data && data.headers && data.headers.length > 1) {
+                // Determine the number of selected columns for the delete message
+                const selectedColumnCount = this.getSelectedColumnCount();
+                let deleteLabel;
+                
+                if (selectedColumnCount > 1) {
+                    deleteLabel = `選択した${selectedColumnCount}列を削除`;
+                } else {
+                    deleteLabel = '列を削除';
+                }
+                
                 items.push({
-                    label: '列を削除',
+                    label: deleteLabel,
                     icon: '❌',
                     action: () => {
-                        this.deleteColumn(colIndex);
+                        this.deleteSelectedColumns();
                     }
                 });
             }
@@ -413,6 +492,118 @@ const ContextMenuManager = {
     },
 
     /**
+     * Delete all selected rows
+     */
+    deleteSelectedRows: function () {
+        const state = window.TableEditor.state;
+        const data = state.displayData || state.tableData;
+
+        if (!state.selectedCells || state.selectedCells.size === 0 || !data || !data.rows) {
+            console.warn('ContextMenuManager: No rows selected for deletion');
+            return;
+        }
+
+        // Get unique selected row indices
+        const selectedRows = new Set();
+        state.selectedCells.forEach(cellKey => {
+            const [row] = cellKey.split('-').map(Number);
+            selectedRows.add(row);
+        });
+
+        const selectedRowArray = Array.from(selectedRows).sort((a, b) => b - a); // Sort in descending order for safe deletion
+        const rowCount = selectedRowArray.length;
+
+        // Check if trying to delete all rows
+        if (selectedRowArray.length >= data.rows.length) {
+            console.log('ContextMenuManager: Cannot delete all rows');
+            if (window.TableEditor.callModule) {
+                window.TableEditor.callModule('StatusBarManager', 'showError', '全ての行を削除することはできません');
+            } else {
+                console.error('ContextMenuManager: Cannot delete all rows');
+            }
+            return;
+        }
+
+        // Confirm deletion for multiple rows
+        if (rowCount > 1) {
+            this.showConfirmDialog(
+                `選択した${rowCount}行を削除しますか？`,
+                'この操作は元に戻せません。',
+                () => {
+                    // Confirmed - proceed with deletion
+                    window.TableEditor.callModule('TableManager', 'deleteRows', selectedRowArray);
+                    console.log(`ContextMenuManager: Deleted ${rowCount} rows`);
+                },
+                () => {
+                    // Cancelled - do nothing
+                    console.log('ContextMenuManager: Row deletion cancelled');
+                }
+            );
+            return;
+        }
+
+        // Single row deletion - no confirmation needed
+        window.TableEditor.callModule('TableManager', 'deleteRows', selectedRowArray);
+        console.log(`ContextMenuManager: Deleted ${rowCount} rows`);
+    },
+
+    /**
+     * Delete all selected columns
+     */
+    deleteSelectedColumns: function () {
+        const state = window.TableEditor.state;
+        const data = state.displayData || state.tableData;
+
+        if (!state.selectedCells || state.selectedCells.size === 0 || !data || !data.headers) {
+            console.warn('ContextMenuManager: No columns selected for deletion');
+            return;
+        }
+
+        // Get unique selected column indices
+        const selectedColumns = new Set();
+        state.selectedCells.forEach(cellKey => {
+            const [, col] = cellKey.split('-').map(Number);
+            selectedColumns.add(col);
+        });
+
+        const selectedColumnArray = Array.from(selectedColumns).sort((a, b) => b - a); // Sort in descending order for safe deletion
+        const columnCount = selectedColumnArray.length;
+
+        // Check if trying to delete all columns
+        if (selectedColumnArray.length >= data.headers.length) {
+            console.log('ContextMenuManager: Cannot delete all columns');
+            if (window.TableEditor.callModule) {
+                window.TableEditor.callModule('StatusBarManager', 'showError', '全ての列を削除することはできません');
+            } else {
+                console.error('ContextMenuManager: Cannot delete all columns');
+            }
+            return;
+        }
+
+        // Confirm deletion for multiple columns
+        if (columnCount > 1) {
+            this.showConfirmDialog(
+                `選択した${columnCount}列を削除しますか？`,
+                'この操作は元に戻せません。',
+                () => {
+                    // Confirmed - proceed with deletion
+                    window.TableEditor.callModule('TableManager', 'deleteColumns', selectedColumnArray);
+                    console.log(`ContextMenuManager: Deleted ${columnCount} columns`);
+                },
+                () => {
+                    // Cancelled - do nothing
+                    console.log('ContextMenuManager: Column deletion cancelled');
+                }
+            );
+            return;
+        }
+
+        // Single column deletion - no confirmation needed
+        window.TableEditor.callModule('TableManager', 'deleteColumns', selectedColumnArray);
+        console.log(`ContextMenuManager: Deleted ${columnCount} columns`);
+    },
+
+    /**
      * Insert column to the left
      */
     insertColumnLeft: function (colIndex) {
@@ -452,34 +643,18 @@ const ContextMenuManager = {
             state.contextMenuState.visible = true;
         }
 
-        const menu = document.getElementById('rowContextMenu');
-
-        if (!menu) {
-            console.warn('ContextMenuManager: Row context menu element not found');
-            return;
-        }
+        // Use the dynamic context menu system instead of static HTML menu
+        const menu = this.createContextMenu(rowIndex, -1);
 
         // Position menu
-        menu.style.display = 'block';
-        menu.style.left = event.pageX + 'px';
-        menu.style.top = event.pageY + 'px';
+        this.positionMenu(menu, event.clientX, event.clientY);
 
-        // Hide column menu if visible
-        const columnMenu = document.getElementById('columnContextMenu');
-        if (columnMenu) {
-            columnMenu.style.display = 'none';
-        }
-
-        // Disable delete if only one row
-        const data = state.displayData || state.tableData;
-        const deleteBtn = menu.querySelector('[onclick*="deleteRowFromContext"]');
-        if (deleteBtn && data && data.rows && data.rows.length <= 1) {
-            deleteBtn.disabled = true;
-            deleteBtn.classList.add('disabled');
-        } else if (deleteBtn) {
-            deleteBtn.disabled = false;
-            deleteBtn.classList.remove('disabled');
-        }
+        // Store context
+        state.contextMenu = {
+            rowIndex: rowIndex,
+            colIndex: -1,
+            element: menu
+        };
 
         console.log('ContextMenuManager: Row context menu shown for row', rowIndex);
     },
@@ -503,36 +678,18 @@ const ContextMenuManager = {
             state.contextMenuState.visible = true;
         }
 
-        const menu = document.getElementById('columnContextMenu');
-
-        if (!menu) {
-            console.warn('ContextMenuManager: Column context menu element not found');
-            return;
-        }
-
-
+        // Use the dynamic context menu system instead of static HTML menu
+        const menu = this.createContextMenu(-1, columnIndex);
 
         // Position menu
-        menu.style.display = 'block';
-        menu.style.left = event.pageX + 'px';
-        menu.style.top = event.pageY + 'px';
+        this.positionMenu(menu, event.clientX, event.clientY);
 
-        // Hide row menu if visible
-        const rowMenu = document.getElementById('rowContextMenu');
-        if (rowMenu) {
-            rowMenu.style.display = 'none';
-        }
-
-        // Disable delete if only one column
-        const data = state.displayData || state.tableData;
-        const deleteBtn = menu.querySelector('[onclick*="deleteColumnFromContext"]');
-        if (deleteBtn && data && data.headers && data.headers.length <= 1) {
-            deleteBtn.disabled = true;
-            deleteBtn.classList.add('disabled');
-        } else if (deleteBtn) {
-            deleteBtn.disabled = false;
-            deleteBtn.classList.remove('disabled');
-        }
+        // Store context
+        state.contextMenu = {
+            rowIndex: -1,
+            colIndex: columnIndex,
+            element: menu
+        };
 
         console.log('ContextMenuManager: Column context menu shown for column', columnIndex);
     },
@@ -541,6 +698,7 @@ const ContextMenuManager = {
      * Hide context menus
      */
     hideContextMenus: function () {
+        // Hide static menus (legacy)
         const rowMenu = document.getElementById('rowContextMenu');
         const columnMenu = document.getElementById('columnContextMenu');
 
@@ -550,6 +708,9 @@ const ContextMenuManager = {
         if (columnMenu) {
             columnMenu.style.display = 'none';
         }
+
+        // Hide dynamic context menu (new system)
+        this.hideContextMenu();
 
         // Clear context menu state
         const state = window.TableEditor.state;
@@ -601,7 +762,7 @@ const ContextMenuManager = {
     },
 
     /**
-     * Delete row from context
+     * Delete row from context (row header right-click menu)
      */
     deleteRowFromContext: function () {
         console.log('ContextMenuManager: deleteRowFromContext called');
@@ -617,14 +778,24 @@ const ContextMenuManager = {
             if (window.TableEditor.callModule) {
                 window.TableEditor.callModule('StatusBarManager', 'showError', 'Cannot delete the last row');
             } else {
-                alert('Cannot delete the last row');
+                console.error('ContextMenuManager: Cannot delete the last row');
             }
             return;
         }
 
         if (rowIndex >= 0) {
-            console.log('ContextMenuManager: Calling TableEditor.deleteRow with index:', rowIndex);
-            window.TableEditor.callModule('TableManager', 'deleteRow', rowIndex);
+            // Check if there are multiple rows selected (including the clicked row)
+            const selectedRowCount = this.getSelectedRowCount();
+            const isRowFullySelected = this.isRowFullySelected(rowIndex);
+            
+            if (selectedRowCount > 1 && isRowFullySelected) {
+                // Multiple rows are selected, delete all selected rows
+                this.deleteSelectedRows();
+            } else {
+                // Single row deletion
+                console.log('ContextMenuManager: Calling TableEditor.deleteRow with index:', rowIndex);
+                window.TableEditor.callModule('TableManager', 'deleteRow', rowIndex);
+            }
         } else {
             console.error('ContextMenuManager: Invalid row index for deletion:', rowIndex);
         }
@@ -666,7 +837,7 @@ const ContextMenuManager = {
             if (window.TableEditor.callModule) {
                 window.TableEditor.callModule('StatusBarManager', 'showError', 'Cannot delete the last column');
             } else {
-                alert('Cannot delete the last column');
+                console.error('ContextMenuManager: Cannot delete the last column');
             }
             return;
         }
@@ -838,6 +1009,160 @@ const ContextMenuManager = {
         }
 
         console.log('ContextMenuManager: Cleanup completed');
+    },
+
+    /**
+     * Show custom confirmation dialog
+     */
+    showConfirmDialog: function (title, message, onConfirm, onCancel) {
+        // Remove existing dialog if any
+        this.hideConfirmDialog();
+
+        // Create dialog overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'confirmDialogOverlay';
+        overlay.className = 'dialog-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        `;
+
+        // Create dialog container
+        const dialog = document.createElement('div');
+        dialog.className = 'confirm-dialog';
+        dialog.style.cssText = `
+            background: var(--vscode-editor-background, #ffffff);
+            border: 1px solid var(--vscode-widget-border, #cccccc);
+            border-radius: 6px;
+            padding: 20px;
+            min-width: 300px;
+            max-width: 500px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            color: var(--vscode-editor-foreground, #000000);
+            font-family: var(--vscode-font-family, system-ui);
+            font-size: var(--vscode-font-size, 13px);
+        `;
+
+        // Create dialog content
+        const titleElement = document.createElement('h3');
+        titleElement.textContent = title;
+        titleElement.style.cssText = `
+            margin: 0 0 10px 0;
+            color: var(--vscode-editor-foreground, #000000);
+            font-size: 16px;
+            font-weight: 600;
+        `;
+
+        const messageElement = document.createElement('p');
+        messageElement.textContent = message;
+        messageElement.style.cssText = `
+            margin: 0 0 20px 0;
+            color: var(--vscode-descriptionForeground, #666666);
+            line-height: 1.4;
+        `;
+
+        // Create button container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        `;
+
+        // Create Cancel button
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'キャンセル';
+        cancelButton.style.cssText = `
+            padding: 8px 16px;
+            border: 1px solid var(--vscode-button-border, #cccccc);
+            background: var(--vscode-button-secondaryBackground, #f3f3f3);
+            color: var(--vscode-button-secondaryForeground, #000000);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+        `;
+
+        // Create Confirm button
+        const confirmButton = document.createElement('button');
+        confirmButton.textContent = '削除';
+        confirmButton.style.cssText = `
+            padding: 8px 16px;
+            border: 1px solid var(--vscode-button-border, #007acc);
+            background: var(--vscode-button-background, #007acc);
+            color: var(--vscode-button-foreground, #ffffff);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        `;
+
+        // Add hover effects
+        cancelButton.addEventListener('mouseenter', () => {
+            cancelButton.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground, #e0e0e0)';
+        });
+        cancelButton.addEventListener('mouseleave', () => {
+            cancelButton.style.backgroundColor = 'var(--vscode-button-secondaryBackground, #f3f3f3)';
+        });
+
+        confirmButton.addEventListener('mouseenter', () => {
+            confirmButton.style.backgroundColor = 'var(--vscode-button-hoverBackground, #005a9e)';
+        });
+        confirmButton.addEventListener('mouseleave', () => {
+            confirmButton.style.backgroundColor = 'var(--vscode-button-background, #007acc)';
+        });
+
+        // Add event listeners
+        cancelButton.addEventListener('click', () => {
+            this.hideConfirmDialog();
+            if (onCancel) onCancel();
+        });
+
+        confirmButton.addEventListener('click', () => {
+            this.hideConfirmDialog();
+            if (onConfirm) onConfirm();
+        });
+
+        // Handle Escape key
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                this.hideConfirmDialog();
+                if (onCancel) onCancel();
+                document.removeEventListener('keydown', handleKeyDown);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Assemble dialog
+        buttonContainer.appendChild(cancelButton);
+        buttonContainer.appendChild(confirmButton);
+        dialog.appendChild(titleElement);
+        dialog.appendChild(messageElement);
+        dialog.appendChild(buttonContainer);
+        overlay.appendChild(dialog);
+
+        // Add to DOM
+        document.body.appendChild(overlay);
+
+        // Focus on cancel button by default
+        setTimeout(() => cancelButton.focus(), 100);
+    },
+
+    /**
+     * Hide confirmation dialog
+     */
+    hideConfirmDialog: function () {
+        const overlay = document.getElementById('confirmDialogOverlay');
+        if (overlay) {
+            overlay.remove();
+        }
     }
 };
 

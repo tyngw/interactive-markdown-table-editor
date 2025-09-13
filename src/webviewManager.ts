@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import { buildThemeVariablesCss } from './themeUtils';
 
 export interface WebviewMessage {
-    command: 'requestTableData' | 'updateCell' | 'updateHeader' | 'addRow' | 'deleteRow' | 'addColumn' | 'deleteColumn' | 'sort' | 'moveRow' | 'moveColumn' | 'exportCSV' | 'pong' | 'switchTable' | 'requestThemeVariables';
+    command: 'requestTableData' | 'updateCell' | 'updateHeader' | 'addRow' | 'deleteRows' | 'addColumn' | 'deleteColumns' | 'sort' | 'moveRow' | 'moveColumn' | 'exportCSV' | 'pong' | 'switchTable' | 'requestThemeVariables';
     data?: any;
     timestamp?: number;
     responseTime?: number;
@@ -115,16 +115,16 @@ export class WebviewManager {
     /**
      * Create a new table editor panel
      */
-    public createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri): vscode.WebviewPanel {
-        return this._createTableEditorPanel(tableData, uri, false);
+    public async createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri): Promise<vscode.WebviewPanel> {
+        return await this._createTableEditorPanel(tableData, uri, false);
     }
 
     /**
      * Create a new table editor panel, always in a new panel
      * Returns both the panel and the unique panel ID used internally
      */
-    public createTableEditorPanelNewPanel(tableData: TableData | TableData[], uri: vscode.Uri): { panel: vscode.WebviewPanel; panelId: string } {
-        const result = this._createTableEditorPanel(tableData, uri, true);
+    public async createTableEditorPanelNewPanel(tableData: TableData | TableData[], uri: vscode.Uri): Promise<{ panel: vscode.WebviewPanel; panelId: string }> {
+        const result = await this._createTableEditorPanel(tableData, uri, true);
         // Find the panel ID that was actually used
         const panelId = Array.from(this.panels.entries()).find(([_, p]) => p === result)?.[0] || uri.toString();
         return { panel: result, panelId };
@@ -133,7 +133,7 @@ export class WebviewManager {
     /**
      * Internal method to create table editor panel with option to force new panel
      */
-    private _createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri, forceNewPanel: boolean): vscode.WebviewPanel {
+    private async _createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri, forceNewPanel: boolean): Promise<vscode.WebviewPanel> {
         let panelId = uri.toString();
 
         // If forcing new panel, create unique panel ID
@@ -154,7 +154,7 @@ export class WebviewManager {
             console.log('Panel already exists for same file, revealing...');
             const existingPanel = this.panels.get(panelId)!;
             existingPanel.reveal();
-            this.updateTableData(existingPanel, tableData, uri, true);
+            this.updateTableData(existingPanel, tableData, uri);
             return existingPanel;
         }
 
@@ -171,26 +171,9 @@ export class WebviewManager {
             // Update panel title
             existingPanel.title = `${path.basename(uri.fsPath)} - Table Editor`;
             
-            // Reveal panel first
+            // Reveal and update with new data
             existingPanel.reveal();
-            
-            // Clear any existing data and update with new data
-            console.log('Updating existing panel with new file data...');
-            
-            // Send multiple updates to ensure the webview receives the new data
-            this.updateTableData(existingPanel, tableData, uri, true);
-            
-            // Send additional updates with delays to ensure webview is ready
-            setTimeout(() => {
-                console.log('Sending delayed update to existing panel...');
-                this.updateTableData(existingPanel, tableData, uri, true);
-            }, 100);
-            
-            setTimeout(() => {
-                console.log('Sending final update to existing panel...');
-                this.updateTableData(existingPanel, tableData, uri, true);
-            }, 500);
-            
+            this.updateTableData(existingPanel, tableData, uri);
             return existingPanel;
         }
 
@@ -214,6 +197,7 @@ export class WebviewManager {
                 enableScripts: true,
                 retainContextWhenHidden: true,
                 localResourceRoots: [
+                    vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webview'),
                     vscode.Uri.joinPath(this.context.extensionUri, 'webview')
                 ]
             }
@@ -224,54 +208,62 @@ export class WebviewManager {
 
         console.log('Webview panel created, setting HTML content...');
 
-        // Generate vscode-resource URIs for CSS and JavaScript files
-        const cssPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'style.css');
-        const cssUri = panel.webview.asWebviewUri(cssPath);
+        // Use React build for webview
+        const reactBuildPath = vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webview');
+        
+        // Check if React build exists, fallback to original if not
+        const indexHtmlPath = vscode.Uri.joinPath(reactBuildPath, 'index.html');
+        let html: string;
+        
+        try {
+            // Try to read React build HTML
+            const htmlBuffer = await vscode.workspace.fs.readFile(indexHtmlPath);
+            html = Buffer.from(htmlBuffer).toString('utf8');
+            
+            // Convert relative paths to webview URIs
+            const assetsPath = vscode.Uri.joinPath(reactBuildPath, 'assets');
+            const assetsUri = panel.webview.asWebviewUri(assetsPath);
+            
+            console.log('React build path:', reactBuildPath.toString());
+            console.log('Assets path:', assetsPath.toString());
+            console.log('Assets URI:', assetsUri.toString());
+            console.log('Original HTML:', html);
+            
+            // Replace asset paths with webview URIs (be careful not to double-replace)
+            const originalHtml = html;
+            // First replace relative paths
+            html = html.replace(/src="\.\/assets\//g, `src="${assetsUri.toString()}/`);
+            html = html.replace(/href="\.\/assets\//g, `href="${assetsUri.toString()}/`);
+            // Then replace any remaining absolute paths that weren't already replaced
+            html = html.replace(/src="\/assets\//g, `src="${assetsUri.toString()}/`);
+            html = html.replace(/href="\/assets\//g, `href="${assetsUri.toString()}/`);
+            
+            console.log('HTML after asset path replacement:', html);
+            console.log('Asset path replacements made:', originalHtml !== html);
+            
+            // Update CSP to allow React and webview resources
+            const cspContent = `default-src 'none'; style-src 'unsafe-inline' ${panel.webview.cspSource}; script-src 'unsafe-inline' 'unsafe-eval' ${panel.webview.cspSource}; img-src ${panel.webview.cspSource} https: data:; font-src ${panel.webview.cspSource} https:;`;
+            
+            if (html.includes('Content-Security-Policy')) {
+                html = html.replace(
+                    /content="[^"]*"/,
+                    `content="${cspContent}"`
+                );
+            } else {
+                html = html.replace(
+                    '<head>',
+                    `<head>\n    <meta http-equiv="Content-Security-Policy" content="${cspContent}">`
+                );
+            }
+            
+            console.log('Using React build for webview');
+            console.log('Modified HTML length:', html.length);
+        } catch (error) {
+            console.error('Failed to load React build:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`React webview build not found: ${errorMessage}`);
+        }
 
-        // Generate script URIs for modular JavaScript files
-        const scriptFiles = [
-            // Core system must be loaded first
-            'js/core.js',
-
-            // Core modules (order matters for dependencies)
-            'js/error-handler.js',
-            'js/vscode-communication.js',
-            'js/ui-renderer.js',
-            'js/table-manager.js',
-
-            // Feature modules
-            'js/table-renderer.js',
-            'js/selection.js',
-            'js/cell-editor.js',
-            'js/sorting.js',
-            'js/keyboard-navigation.js',
-            'js/clipboard.js',
-            'js/column-resize.js',
-            'js/context-menu.js',
-            'js/drag-drop.js',
-            'js/status-bar.js',
-            'js/csv-exporter.js',
-            'js/test-module.js'
-        ];
-
-        const scriptUris = scriptFiles.map(file => {
-            const scriptPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview', file);
-            return panel.webview.asWebviewUri(scriptPath);
-        });
-
-        // Get HTML content and inject URIs
-        let html = this.getWebviewContent();
-
-        // Inject CSS URI and script URIs into HTML
-        const themeCssText = this.buildInitialThemeCssSync();
-        const injectionScript = `
-<script>
-window.cssUri = '${cssUri}';
-window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
-</script>`;
-
-        const themeStyleTag = themeCssText ? `<style id="mte-theme-override">${themeCssText}</style>` : '';
-        html = html.replace(/<head>/i, `<head>${injectionScript}${themeStyleTag}`);
         panel.webview.html = html;
 
         console.log('HTML content set, storing panel reference...');
@@ -295,11 +287,13 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         // Handle panel view state changes (when tab becomes active/inactive)
         panel.onDidChangeViewState((e) => {
             if (e.webviewPanel.active && e.webviewPanel.visible) {
-                console.log('Panel became active, refreshing data for:', panelId);
+                console.log('[MTE][Ext] Panel became active, refreshing data for:', panelId);
                 // Request fresh data when panel becomes active
                 this.refreshPanelData(panel, uri);
                 // Ensure theme is applied when panel becomes active
                 this.applyThemeToPanel(panel);
+            } else {
+                console.log('[MTE][Ext] Panel state changed (inactive or hidden):', { active: e.webviewPanel.active, visible: e.webviewPanel.visible, panelId });
             }
         }, null, this.context.subscriptions);
 
@@ -335,11 +329,11 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     /**
      * Update table data in the webview
      */
-    public updateTableData(panel: vscode.WebviewPanel, tableData: TableData | TableData[], uri?: vscode.Uri, forceUpdate: boolean = false): void {
+    public updateTableData(panel: vscode.WebviewPanel, tableData: TableData | TableData[], uri?: vscode.Uri): void {
+    const start = Date.now();
         const message: any = {
             command: 'updateTableData',
-            data: tableData,
-            forceUpdate: forceUpdate
+            data: tableData
         };
 
         // Include file information if URI is provided
@@ -352,14 +346,14 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             };
         }
 
-        console.log('Sending updateTableData message:', {
-            command: message.command,
-            dataLength: Array.isArray(tableData) ? tableData.length : 1,
-            fileInfo: message.fileInfo,
-            forceUpdate: message.forceUpdate
-        });
-
+        try {
+            const tables = Array.isArray(tableData) ? tableData.length : 1;
+            console.log('[MTE][Ext] Sending updateTableData', { tables, hasUri: !!uri, panelActive: panel.active, panelVisible: panel.visible });
+        } catch {}
         panel.webview.postMessage(message);
+        try {
+            console.log('[MTE][Ext] updateTableData posted in', Date.now() - start, 'ms');
+        } catch {}
     }
 
     /**
@@ -461,16 +455,16 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
                     await this.handleAddRow(message.data, panel, uri);
                     break;
 
-                case 'deleteRow':
-                    await this.handleDeleteRow(message.data, panel, uri);
+                case 'deleteRows':
+                    await this.handleDeleteRows(message.data, panel, uri);
                     break;
 
                 case 'addColumn':
                     await this.handleAddColumn(message.data, panel, uri);
                     break;
 
-                case 'deleteColumn':
-                    await this.handleDeleteColumn(message.data, panel, uri);
+                case 'deleteColumns':
+                    await this.handleDeleteColumns(message.data, panel, uri);
                     break;
 
                 case 'sort':
@@ -497,8 +491,9 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 
                 case 'switchTable':
                     // Handle table switch notification from webview
-                    console.log('Table switch notification:', message.data);
-                    // This is just a notification, no action needed
+                    console.log('[MTE][Ext] Table switch notification from webview:', message.data);
+                    // Send setActiveTable to synchronize the index explicitly
+                    await this.handleSwitchTable(message.data, panel, uri);
                     break;
 
                 case 'requestThemeVariables':
@@ -544,8 +539,8 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      */
     public validateMessageCommand(message: any): boolean {
         const validCommands = [
-            'requestTableData', 'updateCell', 'updateHeader', 'addRow', 'deleteRow',
-            'addColumn', 'deleteColumn', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'pong', 'switchTable', 'requestThemeVariables'
+            'requestTableData', 'updateCell', 'updateHeader', 'addRow', 'deleteRows',
+            'addColumn', 'deleteColumns', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'pong', 'switchTable', 'requestThemeVariables'
         ];
 
         return validCommands.includes(message.command);
@@ -569,14 +564,14 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             case 'addRow':
                 return this.validateAddRowData(message.data);
 
-            case 'deleteRow':
-                return this.validateDeleteRowData(message.data);
+            case 'deleteRows':
+                return this.validateDeleteRowsData(message.data);
 
             case 'addColumn':
                 return this.validateAddColumnData(message.data);
 
-            case 'deleteColumn':
-                return this.validateDeleteColumnData(message.data);
+            case 'deleteColumns':
+                return this.validateDeleteColumnsData(message.data);
 
             case 'sort':
                 return this.validateSortData(message.data);
@@ -593,6 +588,9 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 
             case 'switchTable':
                 return this.validateSwitchTableData(message.data);
+
+            case 'requestThemeVariables':
+                return true; // No data required
 
             default:
                 return false;
@@ -620,9 +618,10 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0)));
     }
 
-    private validateDeleteRowData(data: any): boolean {
+    private validateDeleteRowsData(data: any): boolean {
         if (!data) return false;
-        return typeof data.index === 'number' && data.index >= 0 &&
+        return Array.isArray(data.indices) && data.indices.length > 0 &&
+            data.indices.every((index: any) => typeof index === 'number' && index >= 0) &&
             (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
 
@@ -633,9 +632,10 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0)));
     }
 
-    private validateDeleteColumnData(data: any): boolean {
+    private validateDeleteColumnsData(data: any): boolean {
         if (!data) return false;
-        return typeof data.index === 'number' && data.index >= 0 &&
+        return Array.isArray(data.indices) && data.indices.length > 0 &&
+            data.indices.every((index: any) => typeof index === 'number' && index >= 0) &&
             (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
 
@@ -656,9 +656,23 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
 
     private validateExportCSVData(data: any): boolean {
         if (!data) return false;
-        return typeof data.csvContent === 'string' &&
-            typeof data.filename === 'string' && data.filename.length > 0 &&
-            (data.encoding === undefined || typeof data.encoding === 'string');
+        
+        // csvContent is required and must be a non-empty string
+        if (typeof data.csvContent !== 'string' || data.csvContent.length === 0) {
+            return false;
+        }
+        
+        // filename is optional (can be auto-generated), but if provided must be a string
+        if (data.filename !== undefined && (typeof data.filename !== 'string' || data.filename.length === 0)) {
+            return false;
+        }
+        
+        // encoding is optional (defaults to utf8), but if provided must be a string
+        if (data.encoding !== undefined && typeof data.encoding !== 'string') {
+            return false;
+        }
+        
+        return true;
     }
 
     private validateSwitchTableData(data: any): boolean {
@@ -685,8 +699,9 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
      * Handle cell update
      */
     private async handleCellUpdate(data: { row: number; col: number; value: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Cell update:', data, 'for file:', uri.toString());
-        console.log('Cell update tableIndex:', data.tableIndex);
+        console.log('🔧 WebviewManager: Cell update received from React:');
+        console.log('📦 Raw React Data:', JSON.stringify(data, null, 2));
+        console.log('📊 Cell update tableIndex from React:', data.tableIndex);
 
         const actualPanelId = this.findPanelId(panel);
 
@@ -699,7 +714,7 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
             tableIndex: data.tableIndex
         };
 
-        console.log('Sending command data:', commandData);
+        console.log('📤 Sending command data to Extension:', JSON.stringify(commandData, null, 2));
 
         // Emit custom event that can be handled by the extension
         vscode.commands.executeCommand('markdownTableEditor.internal.updateCell', commandData);
@@ -745,17 +760,17 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     }
 
     /**
-     * Handle delete row
+     * Handle delete multiple rows
      */
-    private async handleDeleteRow(data: { index: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Delete row:', data, 'for file:', uri.toString());
+    private async handleDeleteRows(data: { indices: number[]; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('Delete rows:', data, 'for file:', uri.toString());
 
         const actualPanelId = this.findPanelId(panel);
 
-        vscode.commands.executeCommand('markdownTableEditor.internal.deleteRow', {
+        vscode.commands.executeCommand('markdownTableEditor.internal.deleteRows', {
             uri: uri.toString(),
             panelId: actualPanelId,
-            index: data.index,
+            indices: data.indices,
             tableIndex: data?.tableIndex
         });
     }
@@ -777,17 +792,17 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     }
 
     /**
-     * Handle delete column
+     * Handle delete multiple columns
      */
-    private async handleDeleteColumn(data: { index: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Delete column:', data, 'for file:', uri.toString());
+    private async handleDeleteColumns(data: { indices: number[]; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('Delete columns:', data, 'for file:', uri.toString());
 
         const actualPanelId = this.findPanelId(panel);
 
-        vscode.commands.executeCommand('markdownTableEditor.internal.deleteColumn', {
+        vscode.commands.executeCommand('markdownTableEditor.internal.deleteColumns', {
             uri: uri.toString(),
             panelId: actualPanelId,
-            index: data.index,
+            indices: data.indices,
             tableIndex: data?.tableIndex
         });
     }
@@ -844,9 +859,28 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
     }
 
     /**
+     * Handle switch table request
+     */
+    private async handleSwitchTable(data: { index: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('[MTE][Ext] Handling switchTable to index:', data.index);
+        
+        // Send setActiveTable to ensure React side is synchronized
+        this.setActiveTable(panel, data.index);
+        
+        // Also request fresh table data to ensure consistency
+        const actualPanelId = this.findPanelId(panel);
+        vscode.commands.executeCommand('markdownTableEditor.internal.requestTableData', {
+            uri: uri.toString(),
+            panelId: actualPanelId,
+            forceRefresh: false,
+            switchToIndex: data.index // Hint for which table to show
+        });
+    }
+
+    /**
      * Handle export CSV
      */
-    private async handleExportCSV(data: { tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+    private async handleExportCSV(data: { tableIndex?: number; csvContent?: string; filename?: string; encoding?: string }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Export CSV:', data, 'for file:', uri.toString());
 
         const actualPanelId = this.findPanelId(panel);
@@ -854,6 +888,11 @@ window.scriptUris = ${JSON.stringify(scriptUris.map(uri => uri.toString()))};
         vscode.commands.executeCommand('markdownTableEditor.internal.exportCSV', {
             uri: uri.toString(),
             panelId: actualPanelId,
+            data: {
+                csvContent: data?.csvContent,
+                filename: data?.filename,
+                encoding: data?.encoding
+            },
             tableIndex: data?.tableIndex
         });
     }

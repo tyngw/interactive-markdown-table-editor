@@ -5,6 +5,94 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2025-01-15
+
+### Fixed
+- **Selection State Preservation**: Fixed issue where cell selection was cleared after save operations due to view refresh
+  - Added selection state save/restore mechanism in SelectionManager
+  - Preserved selection state during table re-rendering after save operations
+  - Only preserves selection for save operations, not for file changes
+- **Status Bar Layout**: Improved status bar message display to prevent line wrapping
+  - Enhanced status bar layout with flexible width allocation
+  - Added text overflow handling with ellipsis for long error messages
+  - Improved visual feedback for file save errors and other status messages
+
+## [0.6.3] - 2025-01-15
+
+### Fixed
+- **Cell Selection State During Save**: Fixed issue where cell selection border disappeared when save processing occurred
+  - Preserved CSS classes (including selection states) when updating cell content after edit commit/cancel
+  - Fixed both regular cell editing and header editing to maintain selection visualization
+  - Enhanced edit state management to prevent selection state loss during DOM updates
+
+## [0.6.2] - 2025-01-15
+
+### Fixed
+- **Tab Navigation Cell Selection**: Fixed issue where cell selection blue border was not displayed after pressing Tab key when text was entered in edit mode
+  - Added timing control for DOM updates to ensure proper selection state visualization
+  - Improved coordination between edit commit and cell navigation operations
+  - Enhanced selection state updates after editing operations
+
+## [0.6.0] - 2025-01-15
+
+### Added
+- **Multi-Row Selection and Deletion**: 
+  - Added support for selecting multiple rows using Ctrl+Click and Shift+Click on row numbers
+  - Added support for selecting multiple columns using Ctrl+Click and Shift+Click on column headers
+  - Enhanced context menu to show appropriate delete options based on selection count
+  - Single row: "行を削除" (Delete Row)
+  - Multiple rows: "選択した3行を削除" (Delete Selected 3 Rows)
+  - Single column: "列を削除" (Delete Column) 
+  - Multiple columns: "選択した2列を削除" (Delete Selected 2 Columns)
+
+### Enhanced
+- **Selection System Improvements**:
+  - Right-click on already selected rows/columns now preserves multi-selection
+  - Improved visual feedback for selected rows and columns with proper highlighting
+  - Enhanced row number and column header highlighting for fully selected rows/columns
+  - Better keyboard navigation support for multi-selection scenarios
+
+- **Custom Confirmation Dialogs**:
+  - Replaced browser confirm() dialogs with custom VSCode-themed confirmation dialogs
+  - Fixed sandbox security issues preventing modal dialogs
+  - Added proper keyboard support (Escape to cancel, Enter to confirm)
+  - Improved accessibility with focus management and hover effects
+  - Confirmation dialogs now show for multiple row/column deletions with detailed messages
+
+### Technical Improvements
+- **Unified Delete Commands**:
+  - Consolidated single and multiple deletion operations into unified `deleteRows` and `deleteColumns` commands
+  - Removed redundant `deleteRow` and `deleteColumn` commands for cleaner codebase
+  - Improved batch processing for multiple deletions with proper index sorting
+  - Enhanced error handling and status messages for deletion operations
+
+- **Selection State Management**:
+  - Improved selection preservation during right-click context menu operations
+  - Enhanced event handling for mouse interactions (mousedown, contextmenu)
+  - Better state synchronization between selection manager and context menu
+  - Fixed selection clearing issues during context menu operations
+
+### Fixed
+- **Context Menu Issues**:
+  - Fixed multi-row selection being cleared when right-clicking for context menu
+  - Resolved sandbox security errors with confirm() and alert() dialogs
+  - Improved context menu positioning and display logic
+  - Fixed dynamic menu item generation based on current selection state
+
+## [0.5.4] - 2025-09-01
+
+### Fixed
+- **Column Deletion Bug**: Fixed critical issue where column deletion from header context menu failed with "File does not exist: undefined" error
+  - Root cause: URI string vs URI object mismatch between WebviewManager and extension commands
+  - Fixed URI handling in all internal commands (deleteColumn, deleteRow, addRow, addColumn, sort, moveRow, moveColumn, exportCSV)
+  - Columns can now be successfully deleted from Markdown files via header context menu
+  - Improved error handling and debugging for file operations
+
+### Technical Improvements
+- **URI Processing**: Standardized URI string parsing across all internal commands
+- **Error Prevention**: Added proper URI conversion from string to vscode.Uri object
+- **Code Consistency**: Unified parameter destructuring pattern across command handlers
+
 ## [0.5.3] - 2025-08-26
 
 ### Enhanced
