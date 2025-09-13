@@ -22,50 +22,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.3] - 2025-09-13
 
-### Fixed - ROOT CAUSE RESOLUTION
-- **Multiple Cell Selection - Complete Fix**: Ctrl/Cmd + クリック と Shift + クリック による複数セル選択を完全修正
-  - **根本原因特定**: UIRendererでテーブルレンダリング後にイベントリスナーが設定されていなかった
-  - **修正内容**: 
+### バグ修正 - 根本原因の解決
+- 複数セル選択の完全な修正: Ctrl/Cmd + クリック と Shift + クリック による複数セル選択を完全修正
+  - 根本原因の特定: UIRendererでテーブルレンダリング後にイベントリスナーが設定されていなかった
+  - 修正内容: 
     - UIRenderer.renderTableInContainer関数にsetupCellEventListeners呼び出しを追加
     - TableRenderer.updateTableContentOnly関数にもイベントリスナー再設定を追加
-  - **結果**: Mac/Windows両環境で複数セル選択が確実に動作
+  - 結果: Mac/Windows両環境で複数セル選択が確実に動作
 
-### Technical Details
+### 技術的な詳細
 - テーブルが再レンダリングされる全ての箇所でイベントリスナーが適切に再設定されることを保証
 - 詳細なデバッグログによりイベント処理フローを完全に追跡可能
 - addEventListener方式によりイベントオブジェクトの修飾子キー情報を確実に取得
 
 ## [0.7.2] - 2025-09-13
 
-### Fixed
-- **Enhanced Scroll Behavior**: キーボードナビゲーション時のスクロール位置を大幅改善
+### バグ修正
+- スクロール動作の改善: キーボードナビゲーション時のスクロール位置を大幅改善
   - セルを先頭に移動した際、行番号・列名ヘッダーを考慮したスクロール位置に調整
   - ヘッダーの高さと行番号の幅を動的に計算して、セルが隠れないよう適切に表示
-- **Visual Stability Improvements**: 横スクロール時の表示ちらつき問題を修正
+- 視覚的な安定性の向上: 横スクロール時の表示ちらつき問題を修正
   - データセルのz-indexを適切に設定し、行番号より上に表示されないよう調整
   - sticky要素のレンダリング最適化により、スクロール時の視覚的安定性を向上
   - background-clipとoverflow設定を改善してちらつきを抑制
 
-### Improved
-- **Multiple Cell Selection**: 既存の複数セル選択機能（Ctrl/Cmd + クリック、Shift + クリック）の動作確認
+### 改善
+- 複数セル選択: 既存の複数セル選択機能（Ctrl/Cmd + クリック、Shift + クリック）の動作確認
   - コピー、カット、ペースト、削除操作が複数セル選択で正常に動作することを確認
 - セル編集中にCtrl/Cmd + Aで全選択ができない問題を修正
 
 ## [0.7.1] - 2025-09-13
 
-### Added
-- **Automatic Table Expansion on Paste**: テーブルの範囲外にデータを貼り付けた際、不足する行や列を自動的に追加する機能を実装
+### 追加
+- ペースト時のテーブル自動拡張: テーブルの範囲外にデータを貼り付けた際、不足する行や列を自動的に追加する機能を実装
   - Excel等からコピーした大きなデータセットを貼り付ける際、テーブルが自動で拡張される
   - 追加された行・列数をステータスメッセージで通知
   - Legacy版の動作を完全に再現
 
-### Improved
-- **Cell Selection Performance**: 複数セル選択時のUI応答性を大幅に改善
+### 改善
+- セル選択のパフォーマンス: 複数セル選択時のUI応答性を大幅に改善
   - ドラッグ中の選択状態をuseRefで管理し、高速なマウス操作に追従
   - requestAnimationFrameによる効率的な再描画処理
   - マウスの高速移動でも選択範囲ハイライトが正確に追従
 
-- **Cell Editor Height Calculation**: 編集モードのテキストボックスの高さ計算を改善
+- セルエディタの高さ計算: 編集モードのテキストボックスの高さ計算を改善
   - 同じ行の他のセルの高さも考慮した初期高さ設定
   - 編集開始時の行レイアウト変化によるガタつきを解消
   - Legacy版のstyleInputElement関数の動作を再現
@@ -75,687 +75,687 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.4] - 2025-01-15
 
-### Fixed
-- **Selection State Preservation**: Fixed issue where cell selection was cleared after save operations due to view refresh
-  - Added selection state save/restore mechanism in SelectionManager
-  - Preserved selection state during table re-rendering after save operations
-  - Only preserves selection for save operations, not for file changes
-- **Status Bar Layout**: Improved status bar message display to prevent line wrapping
-  - Enhanced status bar layout with flexible width allocation
-  - Added text overflow handling with ellipsis for long error messages
-  - Improved visual feedback for file save errors and other status messages
+### バグ修正
+- 選択状態の保持: ビューの更新により保存操作後にセルの選択がクリアされる問題を修正
+  - SelectionManagerに選択状態の保存/復元メカニズムを追加
+  - 保存操作後のテーブル再描画時に選択状態を保持
+  - ファイル変更時ではなく、保存操作時のみ選択を保持
+- ステータスバーのレイアウト: メッセージ表示を改善し、行の折り返しを防止
+  - 柔軟な幅割り当てでステータスバーのレイアウトを強化
+  - 長いエラーメッセージに対して、省略記号によるテキストオーバーフロー処理を追加
+  - ファイル保存エラーやその他のステータスメッセージの視覚的なフィードバックを改善
 
 ## [0.6.3] - 2025-01-15
 
-### Fixed
-- **Cell Selection State During Save**: Fixed issue where cell selection border disappeared when save processing occurred
-  - Preserved CSS classes (including selection states) when updating cell content after edit commit/cancel
-  - Fixed both regular cell editing and header editing to maintain selection visualization
-  - Enhanced edit state management to prevent selection state loss during DOM updates
+### バグ修正
+- 保存中のセル選択状態: 保存処理中にセルの選択ボーダーが消える問題を修正
+  - 編集のコミット/キャンセル後にセルコンテンツを更新する際に、CSSクラス（選択状態を含む）を保持
+  - 通常のセル編集とヘッダー編集の両方を修正し、選択の視覚化を維持
+  - DOM更新中の選択状態の損失を防ぐために、編集状態管理を強化
 
 ## [0.6.2] - 2025-01-15
 
-### Fixed
-- **Tab Navigation Cell Selection**: Fixed issue where cell selection blue border was not displayed after pressing Tab key when text was entered in edit mode
-  - Added timing control for DOM updates to ensure proper selection state visualization
-  - Improved coordination between edit commit and cell navigation operations
-  - Enhanced selection state updates after editing operations
+### バグ修正
+- タブナビゲーション時のセル選択: 編集モードでテキスト入力後にTabキーを押した際に、セルの選択ボーダーが表示されない問題を修正
+  - 適切な選択状態の視覚化を保証するために、DOM更新のタイミング制御を追加
+  - 編集コミットとセルナビゲーション操作間の連携を改善
+  - 編集操作後の選択状態の更新を強化
 
 ## [0.6.0] - 2025-01-15
 
-### Added
-- **Multi-Row Selection and Deletion**: 
-  - Added support for selecting multiple rows using Ctrl+Click and Shift+Click on row numbers
-  - Added support for selecting multiple columns using Ctrl+Click and Shift+Click on column headers
-  - Enhanced context menu to show appropriate delete options based on selection count
-  - Single row: "行を削除" (Delete Row)
-  - Multiple rows: "選択した3行を削除" (Delete Selected 3 Rows)
-  - Single column: "列を削除" (Delete Column) 
-  - Multiple columns: "選択した2列を削除" (Delete Selected 2 Columns)
+### 追加
+- 複数行の選択と削除:
+  - 行番号のCtrl+クリックおよびShift+クリックによる複数行選択のサポートを追加
+  - 列ヘッダーのCtrl+クリックおよびShift+クリックによる複数列選択のサポートを追加
+  - 選択数に基づいて適切な削除オプションを表示するようにコンテキストメニューを強化
+  - 単一行: "行を削除"
+  - 複数行: "選択した3行を削除"
+  - 単一列: "列を削除"
+  - 複数列: "選択した2列を削除"
 
-### Enhanced
-- **Selection System Improvements**:
-  - Right-click on already selected rows/columns now preserves multi-selection
-  - Improved visual feedback for selected rows and columns with proper highlighting
-  - Enhanced row number and column header highlighting for fully selected rows/columns
-  - Better keyboard navigation support for multi-selection scenarios
+### エンハンス
+- 選択システムの改善:
+  - すでに選択されている行/列を右クリックしても複数選択が維持されるように
+  - 適切なハイライトで、選択された行と列の視覚的なフィードバックを改善
+  - 完全選択された行/列の行番号と列ヘッダーのハイライトを強化
+  - 複数選択シナリオでのキーボードナビゲーションサポートを改善
 
-- **Custom Confirmation Dialogs**:
-  - Replaced browser confirm() dialogs with custom VSCode-themed confirmation dialogs
-  - Fixed sandbox security issues preventing modal dialogs
-  - Added proper keyboard support (Escape to cancel, Enter to confirm)
-  - Improved accessibility with focus management and hover effects
-  - Confirmation dialogs now show for multiple row/column deletions with detailed messages
+- カスタム確認ダイアログ:
+  - ブラウザのconfirm()ダイアログを、カスタムのVSCodeテーマの確認ダイアログに置き換え
+  - モーダルダイアログを妨げるサンドボックスのセキュリティ問題を修正
+  - 適切なキーボードサポート（Escapeでキャンセル、Enterで確定）を追加
+  - フォーカス管理とホバー効果でアクセシビリティを改善
+  - 複数行/列の削除時に、詳細なメッセージ付きの確認ダイアログを表示
 
-### Technical Improvements
-- **Unified Delete Commands**:
-  - Consolidated single and multiple deletion operations into unified `deleteRows` and `deleteColumns` commands
-  - Removed redundant `deleteRow` and `deleteColumn` commands for cleaner codebase
-  - Improved batch processing for multiple deletions with proper index sorting
-  - Enhanced error handling and status messages for deletion operations
+### 技術的な改善
+- 削除コマンドの統一:
+  - 単一および複数の削除操作を、統一されたdeleteRowsおよびdeleteColumnsコマンドに統合
+  - よりクリーンなコードベースのために、冗長なdeleteRowおよびdeleteColumnコマンドを削除
+  - 適切なインデックスソートによる複数削除のバッチ処理を改善
+  - 削除操作のエラーハンドリングとステータスメッセージを強化
 
-- **Selection State Management**:
-  - Improved selection preservation during right-click context menu operations
-  - Enhanced event handling for mouse interactions (mousedown, contextmenu)
-  - Better state synchronization between selection manager and context menu
-  - Fixed selection clearing issues during context menu operations
+- 選択状態管理:
+  - 右クリックのコンテキストメニュー操作中の選択保持を改善
+  - マウス操作（mousedown, contextmenu）のイベントハンドリングを強化
+  - 選択マネージャーとコンテキストメニュー間の状態同期を改善
+  - コンテキストメニュー操作中の選択クリア問題を修正
 
-### Fixed
-- **Context Menu Issues**:
-  - Fixed multi-row selection being cleared when right-clicking for context menu
-  - Resolved sandbox security errors with confirm() and alert() dialogs
-  - Improved context menu positioning and display logic
-  - Fixed dynamic menu item generation based on current selection state
+### バグ修正
+- コンテキストメニューの問題:
+  - コンテキストメニューのために右クリックした際に、複数行選択がクリアされる問題を修正
+  - confirm()およびalert()ダイアログに関するサンドボックスのセキュリティエラーを解決
+  - コンテキストメニューの配置と表示ロジックを改善
+  - 現在の選択状態に基づく動的なメニュー項目生成を修正
 
 ## [0.5.4] - 2025-09-01
 
-### Fixed
-- **Column Deletion Bug**: Fixed critical issue where column deletion from header context menu failed with "File does not exist: undefined" error
-  - Root cause: URI string vs URI object mismatch between WebviewManager and extension commands
-  - Fixed URI handling in all internal commands (deleteColumn, deleteRow, addRow, addColumn, sort, moveRow, moveColumn, exportCSV)
-  - Columns can now be successfully deleted from Markdown files via header context menu
-  - Improved error handling and debugging for file operations
+### バグ修正
+- 列削除のバグ: ヘッダーのコンテキストメニューからの列削除が "File does not exist: undefined" エラーで失敗する重大な問題を修正
+  - 根本原因: WebviewManagerと拡張機能コマンド間でのURI文字列とURIオブジェクトの不一致
+  - すべての内部コマンド（deleteColumn, deleteRow, addRow, addColumn, sort, moveRow, moveColumn, exportCSV）でのURI処理を修正
+  - ヘッダーのコンテキストメニュー経由でMarkdownファイルから列を正常に削除できるように
+  - ファイル操作のエラーハンドリングとデバッグを改善
 
-### Technical Improvements
-- **URI Processing**: Standardized URI string parsing across all internal commands
-- **Error Prevention**: Added proper URI conversion from string to vscode.Uri object
-- **Code Consistency**: Unified parameter destructuring pattern across command handlers
+### 技術的な改善
+- URI処理: すべての内部コマンドでURI文字列の解析を標準化
+- エラー防止: 文字列からvscode.Uriオブジェクトへの適切なURI変換を追加
+- コードの一貫性: コマンドハンドラ全体でパラメータの分割代入パターンを統一
 
 ## [0.5.3] - 2025-08-26
 
-### Enhanced
-- **Theme Color Improvements**: 
-  - Fixed transparent color issues in row numbers, column headers, and header corner
-  - Changed color definitions to use `--vscode-sideBar-background` and `--vscode-activityBar-background` for more reliable non-transparent colors
-  - Enhanced theme compatibility across different VSCode themes
-  - Improved visual consistency with solid background colors
+### エンハンス
+- テーマカラーの改善:
+  - 行番号、列ヘッダー、ヘッダーコーナーの透過色の問題を修正
+  - より信頼性の高い不透明色のため、色の定義を--vscode-sideBar-backgroundと--vscode-activityBar-backgroundを使用するように変更
+  - 異なるVSCodeテーマ間でのテーマ互換性を強化
+  - 単色の背景色で視覚的な一貫性を改善
 
-### Technical Improvements
-- **Color Definition Strategy**: Replaced potentially transparent color tokens with more reliable alternatives
-- **Theme Integration**: Better integration with VSCode's color system for consistent appearance
-- **CSS Optimization**: Streamlined color fallback system for better performance
+### 技術的な改善
+- 色定義戦略: 潜在的に透明なカラートークンを、より信頼性の高い代替手段に置き換え
+- テーマ統合: 一貫した外観のため、VSCodeのカラーシステムとの統合を改善
+- CSS最適化: パフォーマンス向上のため、カラーフォールバックシステムを効率化
 
 ## [0.5.2] - 2025-08-25
 
-### Enhanced
-- **Scroll Navigation Improvements**: 
-  - Enhanced scroll behavior when navigating to the first cell
-  - Improved scroll position handling for better user experience
-  - Optimized navigation performance
+### エンハンス
+- スクロールナビゲーションの改善:
+  - 最初のセルに移動する際のスクロール動作を強化
+  - ユーザーエクスペリエンス向上のため、スクロール位置の処理を改善
+  - ナビゲーションのパフォーマンスを最適化
 
-### Fixed
-- **Panel Management**: Fixed issue where webview wasn't updating when opening the same panel
-- **Multi-Panel Display**: Resolved display and save issues when multiple panels are open
-- **Panel Reuse**: Fixed existing panel reuse functionality for better resource management
+### バグ修正
+- パネル管理: 同じパネルを開いたときにwebviewが更新されない問題を修正
+- 複数パネル表示: 複数のパネルが開いている場合の表示と保存の問題を解決
+- パネルの再利用: より良いリソース管理のため、既存のパネル再利用機能を修正
 
-### Improved
-- **Panel Icon**: Added proper icon display for table editor panels
-- **Theme Persistence**: Theme settings are now properly maintained across sessions
-- **Resource Management**: Better handling of panel lifecycle and resource cleanup
+### 改善
+- パネルアイコン: テーブルエディタパネルに適切なアイコン表示を追加
+- テーマの永続性: セッションをまたいでテーマ設定が適切に維持されるように
+- リソース管理: パネルのライフサイクルとリソースクリーンアップの処理を改善
 
 ## [0.5.1] - 2025-08-08
 
-### Added
-- **Theme Selection Feature**: 
-  - Added comprehensive theme selection functionality
-  - Support for all installed VSCode color themes
-  - Real-time theme preview and application
-  - Theme persistence across sessions
+### 追加
+- テーマ選択機能:
+  - 包括的なテーマ選択機能を追加
+  - インストールされているすべてのVSCodeカラーテーマをサポート
+  - リアルタイムのテーマプレビューと適用
+  - セッションをまたいだテーマの永続性
 
-### Enhanced
-- **Startup Experience**: Removed unnecessary startup messages for cleaner initialization
-- **Scroll Performance**: Improved scroll position restoration with reduced flickering
-- **Visual Stability**: Enhanced rendering stability during scroll operations
+### エンハンス
+- 起動エクスペリエンス: よりクリーンな初期化のため、不要な起動メッセージを削除
+- スクロールパフォーマンス: ちらつきを抑え、スクロール位置の復元を改善
+- 視覚的安定性: スクロール操作中のレンダリングの安定性を強化
 
-### Fixed
-- **Row/Column Operations**: Fixed scroll position preservation after add/delete operations
-- **Selection Styling**: Resolved blue outline issue when adding rows
-- **Column Resizing**: Fixed persistent drag styling after column width changes
+### バグ修正
+- 行/列操作: 追加/削除操作後のスクロール位置保持を修正
+- 選択スタイル: 行追加時の青いアウトラインの問題を解決
+- 列リサイズ: 列幅変更後のドラッグスタイルが残る問題を修正
 
-### Technical Improvements
-- **Core Module Refactoring**: Split core functionality into separate modules for better maintainability
-- **Theme System**: Implemented robust theme management with fallback support
-- **Performance Optimization**: Reduced unnecessary re-renders and improved responsiveness
+### 技術的な改善
+- コアモジュールのリファクタリング: 保守性向上のため、コア機能を個別のモジュールに分割
+- テーマシステム: フォールバックサポート付きの堅牢なテーマ管理を実装
+- パフォーマンス最適化: 不要な再描画を削減し、応答性を向上
 
 ## [0.5.0] - 2025-08-05
 
-### Major Features
-- **Column Width Adjustment**: 
-  - Added interactive column resizing with drag handles
-  - Visual feedback during resize operations
-  - Persistent column width settings
-  - Minimum and maximum width constraints
+### 主な機能
+- 列幅調整:
+  - ドラッグハンドルによるインタラクティブな列リサイズを追加
+  - リサイズ操作中の視覚的なフィードバック
+  - 永続的な列幅設定
+  - 最小および最大の幅制約
 
-### Enhanced UI/UX
-- **Improved Table Interaction**:
-  - Better visual feedback for column operations
-  - Enhanced drag and drop experience
-  - Improved table layout stability
-  - Professional resize handles with hover effects
+### UI/UXの強化
+- テーブル操作の改善:
+  - 列操作に対するより良い視覚的フィードバック
+  - ドラッグアンドドロップ体験の強化
+  - テーブルレイアウトの安定性を改善
+  - ホバー効果付きのプロフェッショナルなリサイズハンドル
 
-### Technical Improvements
-- **Modular Architecture**: Comprehensive refactoring of core modules
-- **Event Handling**: Enhanced mouse and keyboard event management
-- **State Management**: Better tracking of table state and user interactions
-- **Performance**: Optimized rendering and interaction performance
+### 技術的な改善
+- モジュラーアーキテクチャ: コアモジュールの包括的なリファクタリング
+- イベントハンドリング: マウスおよびキーボードイベント管理の強化
+- 状態管理: テーブルの状態とユーザー操作の追跡を改善
+- パフォーマンス: レンダリングとインタラクションのパフォーマンスを最適化
 
 ## [0.4.0] - 2025-08-01
 
-### Enhanced
-- **Multi-Cell Selection and Operations**:
-  - Shift+Click for range selection
-  - Improved paste operations for multiple cells
-  - Enhanced clipboard integration with tab-delimited format
-  - Better visual feedback for selected ranges
+### エンハンス
+- 複数セル選択と操作:
+  - Shift+クリックによる範囲選択
+  - 複数セルへの貼り付け操作を改善
+  - タブ区切り形式によるクリップボード統合の強化
+  - 選択範囲に対するより良い視覚的フィードバック
 
-### Improved
-- **Editing Experience**:
-  - Unified text alignment (top-aligned)
-  - Improved header editing functionality
-  - Better keyboard interaction handling
-  - Enhanced IME support for international users
+### 改善
+- 編集体験:
+  - テキスト配置の統一（上揃え）
+  - ヘッダー編集機能の改善
+  - キーボード操作の処理を改善
+  - 国際ユーザー向けのIMEサポートを強化
 
-### Fixed
-- **Selection Management**: Fixed text selection behavior during cell editing
-- **Header Styling**: Improved header z-index and visual hierarchy
-- **Multi-line Content**: Better handling of content with line breaks
+### バグ修正
+- 選択管理: セル編集中テキスト選択の挙動を修正
+- ヘッダースタイル: ヘッダーのz-indexと視覚的な階層を改善
+- 複数行コンテンツ: 改行を含むコンテンツの処理を改善
 
-### Technical Improvements
-- **Code Organization**: Refactored duplicate definitions and improved maintainability
-- **Style System**: Comprehensive stylesheet refactoring
-- **Event Management**: Enhanced event handling for complex interactions
+### 技術的な改善
+- コード構成: 重複した定義をリファクタリングし、保守性を向上
+- スタイルシステム: 包括的なスタイルシートのリファクタリング
+- イベント管理: 複雑なインタラクションのためのイベント処理を強化
 
 ## [0.3.0] - 2025-07-26
 
-### Major Features
-- **Advanced Cell Operations**:
-  - Copy/Cut/Paste functionality with Ctrl+C/X/V
-  - Multi-cell selection support
-  - Tab-delimited clipboard format
-  - Excel-like operation patterns
+### 主な機能
+- 高度なセル操作:
+  - Ctrl+C/X/Vによるコピー/カット/ペースト機能
+  - 複数セル選択のサポート
+  - タブ区切り形式のクリップボード
+  - Excelライクな操作パターン
 
-### Enhanced
-- **Export Capabilities**:
-  - CSV export with proper encoding (including Shift-JIS)
-  - Multi-line content support in exports
-  - Improved field escaping and formatting
-  - Better file naming conventions
+### エンハンス
+- エクスポート機能:
+  - 適切なエンコーディング（Shift-JISを含む）でのCSVエクスポート
+  - エクスポートにおける複数行コンテンツのサポート
+  - フィールドのエスケープとフォーマットを改善
+  - ファイル命名規則の改善
 
-### Improved
-- **Error Handling**: Comprehensive error handling for cell updates
-- **UI Feedback**: Enhanced user interface feedback and messaging
-- **Height Calculation**: Improved cell height calculation for better layout
-- **Context Menu**: Updated context menu styles and functionality
+### 改善
+- エラーハンドリング: セル更新のための包括的なエラーハンドリング
+- UIフィードバック: ユーザーインターフェースのフィードバックとメッセージングを強化
+- 高さ計算: より良いレイアウトのためのセル高さ計算を改善
+- コンテキストメニュー: コンテキストメニューのスタイルと機能を更新
 
-### Fixed
-- **IME Input**: Resolved IME input issues for international users
-- **Multi-table Support**: Fixed various multi-table handling problems
-- **Rendering**: Resolved table rendering errors and improved stability
+### バグ修正
+- IME入力: 国際ユーザー向けのIME入力問題を解決
+- 複数テーブルサポート: 様々な複数テーブル処理の問題を修正
+- レンダリング: テーブルレンダリングエラーを解決し、安定性を向上
 
 ## [0.2.0] - 2025-08-01
 
-### Major Features
-- **Multiple Table Support with Tabs**: 
-  - Added tab-based interface for documents with multiple tables
-  - Seamless switching between tables without losing data
-  - Improved table selection and management
+### 主な機能
+- タブによる複数テーブルのサポート:
+  - 複数テーブルを持つドキュメントのためのタブベースのインターフェースを追加
+  - データを失うことなくテーブル間をシームレスに切り替え
+  - テーブルの選択と管理を改善
 
-### Enhanced UI/UX
-- **Improved Editing Experience**:
-  - Fixed cell height issues in editing mode
-  - Better textarea handling and auto-resizing
-  - Cleaner interface with reduced debug messages
-  - Responsive tab design matching VSCode theme
+### UI/UXの強化
+- 編集体験の改善:
+  - 編集モードでのセルの高さの問題を修正
+  - textareaの処理と自動リサイズを改善
+  - デバッグメッセージを削減し、よりクリーンなインターフェースに
+  - VSCodeテーマに合わせたレスポンシブなタブデザイン
 
-### Critical Bug Fixes
-- **Row/Column Operations**: Fixed immediate file synchronization for add/delete operations
-- **Cell Editing**: Resolved position validation errors after table structure changes
-- **JavaScript Modules**: Fixed syntax errors in module loading system
-- **Data Synchronization**: Improved webview-extension communication reliability
+### 重大なバグ修正
+- 行/列操作: 追加/削除操作の即時ファイル同期を修正
+- セル編集: テーブル構造変更後の位置検証エラーを解決
+- JavaScriptモジュール: モジュール読み込みシステムの構文エラーを修正
+- データ同期: webviewと拡張機能間の通信の信頼性を向上
 
-### Technical Improvements
-- **Modular Architecture**: Completed transition to modular JavaScript system
-- **Error Handling**: Enhanced error recovery and user feedback
-- **Performance**: Optimized rendering and data management
-- **Code Quality**: Removed debug logging and improved maintainability
+### 技術的な改善
+- モジュラーアーキテクチャ: モジュラーJavaScriptシステムへの移行を完了
+- エラーハンドリング: エラー回復とユーザーフィードバックを強化
+- パフォーマンス: レンダリングとデータ管理を最適化
+- コード品質: デバッグログを削除し、保守性を向上
 
 ## [0.1.23] - 2025-07-23
 
-### Enhanced
-- **CSV Export Improvements**: 
-  - Enhanced CSV field escaping with RFC 4180 compliance for multi-line text
-  - Improved quote handling for fields containing commas, quotes, newlines, or whitespace
-  - Smart filename generation using original Markdown filename (e.g., "document.md" → "document.csv")
-  - Fallback to timestamp-based naming if original filename unavailable
+### エンハンス
+- CSVエクスポートの改善:
+  - 複数行テキストに対してRFC 4180に準拠したCSVフィールドエスケープを強化
+  - カンマ、引用符、改行、または空白を含むフィールドの引用符処理を改善
+  - 元のMarkdownファイル名を使用したスマートなファイル名生成（例: "document.md" → "document.csv"）
+  - 元のファイル名が利用できない場合は、タイムスタンプベースの命名にフォールバック
 
-### Technical Improvements
-- **File Information Passing**: Extended webview communication to include file metadata
-- **Enhanced Field Escaping**: Comprehensive CSV field escaping for all edge cases:
-  - Multi-line text with proper newline handling
-  - Leading/trailing whitespace detection and quoting
-  - Double quote escaping following RFC 4180 standard
-  - Comma and special character handling
-- **Webview-Extension Communication**: Enhanced message protocol to pass file information for better user experience
+### 技術的な改善
+- ファイル情報の受け渡し: ファイルメタデータを含むようにwebview通信を拡張
+- フィールドエスケープの強化: すべてのエッジケースに対応する包括的なCSVフィールドエスケープ:
+  - 適切な改行処理を伴う複数行テキスト
+  - 先頭/末尾の空白の検出と引用符付け
+  - RFC 4180標準に準拠した二重引用符のエスケープ
+  - カンマと特殊文字の処理
+- Webview-拡張機能間通信: より良いユーザーエクスペリエンスのためにファイル情報を渡すメッセージプロトコルを強化
 
-### User Experience
-- **Intuitive Filenames**: CSV exports now suggest meaningful filenames based on source document
-- **Proper Multi-line Support**: Complex cell content with line breaks exports correctly to CSV
-- **Standards Compliance**: CSV output follows industry standards for maximum compatibility with Excel, Google Sheets, etc.
+### ユーザーエクスペリエンス
+- 直感的なファイル名: CSVエクスポートがソースドキュメントに基づいて意味のあるファイル名を提案するように
+- 適切な複数行サポート: 改行を含む複雑なセルコンテンツがCSVに正しくエクスポートされるように
+- 標準準拠: CSV出力がExcel、Google Sheetsなどとの最大限の互換性のために業界標準に従うように
 
 ## [0.1.22] - 2025-07-23
 
-### Fixed
-- **CSV Export Error**: Fixed "Invalid message format received from webview" error by adding proper message validation for exportCSV command
-- **Status Bar Layout**: Redesigned status bar with fixed height to prevent layout shifts when messages appear/disappear
-- **Message Positioning**: Status messages now appear in the center of the status bar for better visibility and organization
+### バグ修正
+- CSVエクスポートエラー: exportCSVコマンドに適切なメッセージ検証を追加することで "Invalid message format received from webview" エラーを修正
+- ステータスバーのレイアウト: メッセージの表示/非表示時にレイアウトがずれるのを防ぐため、固定高さのステータスバーに再設計
+- メッセージの配置: 視認性と整理のため、ステータスメッセージがステータスバーの中央に表示されるように
 
-### Improved
-- **Status Bar Structure**: 
-  - Left: Auto-saved/Saving indicator in fixed position
-  - Center: Error and success messages with proper styling
-  - Right: Table information (rows/columns count)
-- **Layout Stability**: Status bar maintains consistent 32px height regardless of message content
-- **Visual Hierarchy**: Clear separation of permanent status indicators and temporary messages
-- **Message Styling**: Improved styling for status messages with proper theming and text overflow handling
+### 改善
+- ステータスバーの構造:
+  - 左: 固定位置に自動保存/保存中インジケータ
+  - 中央: 適切なスタイリングのエラーおよび成功メッセージ
+  - 右: テーブル情報（行/列数）
+- レイアウトの安定性: メッセージの内容に関わらず、ステータスバーが一貫した32pxの高さを維持
+- 視覚的な階層: 永続的なステータスインジケータと一時的なメッセージの明確な分離
+- メッセージのスタイリング: 適切なテーマ設定とテキストオーバーフロー処理でステータスメッセージのスタイリングを改善
 
-### Technical Improvements
-- Added `validateExportCSVData()` method to properly validate CSV export messages
-- Updated `validCommands` array to include 'exportCSV' command
-- Implemented grid-based status bar layout with three distinct sections
-- Enhanced CSS with fixed height and proper alignment for all status elements
-- Improved message lifecycle management with proper DOM manipulation
+### 技術的な改善
+- CSVエクスポートメッセージを適切に検証するためにvalidateExportCSVData()メソッドを追加
+- 'exportCSV'コマンドを含むようにvalidCommands配列を更新
+- 3つの異なるセクションを持つグリッドベースのステータスバーレイアウトを実装
+- すべてのステータス要素に固定高さと適切な配置を持つようにCSSを強化
+- 適切なDOM操作でメッセージのライフサイクル管理を改善
 
-### User Experience
-- **Consistent Layout**: Status bar no longer shifts when messages appear
-- **Clear Information Hierarchy**: Permanent indicators stay in fixed positions
-- **Better Message Visibility**: Central positioning makes status messages more noticeable
-- **Professional Appearance**: Clean, organized status bar matching VSCode's design language
+### ユーザーエクスペリエンス
+- 一貫したレイアウト: メッセージが表示されてもステータスバーがずれなくなる
+- 明確な情報階層: 永続的なインジケータが固定位置に留まる
+- メッセージの視認性向上: 中央配置によりステータスメッセージがより目立つように
+- プロフェッショナルな外観: VSCodeのデザイン言語に合わせた、クリーンで整理されたステータスバー
 
 ## [0.1.21] - 2025-07-23
 
-### Enhanced
-- **Excel-like Copy/Paste Operations**: Added Ctrl+C/Ctrl+V for copying and pasting cell content in non-editing mode
-- **Cut and Paste Functionality**: Added Ctrl+X/Ctrl+V for cutting and pasting cell content
-- **Multi-cell Selection Support**: Copy/paste operations work with multiple selected cells using tab-delimited format
-- **CSV Export Feature**: Export table data to CSV format with proper escaping for commas, quotes, and newlines
+### エンハンス
+- Excelライクなコピー/ペースト操作: 非編集モードでのセルコンテンツのコピー＆ペーストにCtrl+C/Ctrl+Vを追加
+- カット＆ペースト機能: セルコンテンツのカット＆ペーストにCtrl+X/Ctrl+Vを追加
+- 複数セル選択のサポート: タブ区切り形式を使用して、複数選択セルでのコピー/ペースト操作が機能するように
+- CSVエクスポート機能: カンマ、引用符、改行を適切にエスケープしてテーブルデータをCSV形式にエクスポート
 
-### Improved
-- **Clipboard Integration**: Modern clipboard API with fallback support for older browsers
-- **Data Format Handling**: Automatic conversion between Markdown <br/> tags and newlines for clipboard operations
-- **File Export Dialog**: Native file save dialog with CSV filter for easy file management
-- **Error Handling**: Comprehensive error handling for clipboard and export operations
+### 改善
+- クリップボード統合: 古いブラウザ向けのフォールバックサポート付きのモダンなクリップボードAPI
+- データ形式の処理: クリップボード操作のためのMarkdownの<br/>タグと改行の自動変換
+- ファイルエクスポートダイアログ: 簡単なファイル管理のためのCSVフィルタ付きのネイティブファイル保存ダイアログ
+- エラーハンドリング: クリップボードおよびエクスポート操作のための包括的なエラーハンドリング
 
-### Technical Improvements
-- Added `copySelectedCells()`, `pasteToSelectedCells()`, and `cutSelectedCells()` functions
-- Implemented `generateCSVContent()` with proper CSV field escaping
-- Enhanced keyboard event handling for Ctrl+C, Ctrl+V, and Ctrl+X in non-editing mode
-- Added `exportCSV` command with VSCode file system integration
-- Modern clipboard API with graceful degradation to legacy methods
+### 技術的な改善
+- copySelectedCells()、pasteToSelectedCells()、cutSelectedCells()関数を追加
+- 適切なCSVフィールドエスケープを持つgenerateCSVContent()を実装
+- 非編集モードでのCtrl+C、Ctrl+V、Ctrl+Xのキーボードイベント処理を強化
+- VSCodeファイルシステム統合付きのexportCSVコマンドを追加
+- レガシーメソッドへのグレースフルデグラデーション付きのモダンなクリップボードAPI
 
-### User Experience
-- **Familiar Shortcuts**: Standard Ctrl+C/V/X shortcuts work as expected outside of edit mode
-- **Multi-format Support**: Seamless data exchange between Table Editor and external applications
-- **Export Convenience**: One-click CSV export with timestamp-based default filenames
-- **Visual Feedback**: Clear success/error messages for all clipboard and export operations
+### ユーザーエクスペリエンス
+- 使い慣れたショートカット: 標準のCtrl+C/V/Xショートカットが編集モード外で期待通りに機能
+- マルチフォーマットサポート: テーブルエディタと外部アプリケーション間のシームレスなデータ交換
+- エクスポートの利便性: タイムスタンプベースのデフォルトファイル名でのワンクリックCSVエクスポート
+- 視覚的フィードバック: すべてのクリップボードおよびエクスポート操作に対する明確な成功/エラーメッセージ
 
-### Documentation Updates
-- Updated requirements.md with new Excel-like operation requirements
-- Enhanced README.md with comprehensive feature descriptions and keyboard shortcuts
-- Added detailed release notes covering all new functionality
+### ドキュメントの更新
+- requirements.mdを新しいExcelライクな操作要件で更新
+- README.mdを包括的な機能説明とキーボードショートカットで強化
+- すべての新機能をカバーする詳細なリリースノートを追加
 
 ## [0.1.20] - 2025-07-23
 
-### Fixed
-- **Data Synchronization**: Fixed issue where VSCode editor changes weren't reflected in Table Editor when using cached panels
-- **Tab Activation Refresh**: Table Editor now automatically refreshes data when its tab becomes active
-- **Cache Invalidation**: Implemented force refresh mechanism to ensure data consistency between editor and Table Editor
+### バグ修正
+- データ同期: キャッシュされたパネルを使用している際に、VSCodeエディタの変更がテーブルエディタに反映されない問題を修正
+- タブアクティベーション時の更新: タブがアクティブになったときにテーブルエディタが自動的にデータを更新するように
+- キャッシュ無効化: エディタとテーブルエディタ間のデータ一貫性を確保するための強制更新メカニズムを実装
 
-### Enhanced
-- **Real-time Sync**: Table Editor panels now stay synchronized with file changes made in VSCode editor
-- **Panel State Management**: Added `onDidChangeViewState` event listener to detect when panels become active
-- **Data Freshness**: Automatic data refresh when switching back to Table Editor tab ensures latest content is always displayed
+### エンハンス
+- リアルタイム同期: テーブルエディタパネルがVSCodeエディタで行われたファイルの変更と同期を保つように
+- パネル状態管理: パネルがアクティブになったことを検出するためにonDidChangeViewStateイベントリスナーを追加
+- データの鮮度: テーブルエディタタブに切り替えた際の自動データ更新により、常に最新のコンテンツが表示されることを保証
 
-### Technical Improvements
-- Added `refreshPanelData()` method to WebviewManager for forced data refresh
-- Enhanced `requestTableData` command with `forceRefresh` flag for cache invalidation  
-- Improved table data manager lifecycle to handle file content changes
-- Added panel activation detection with automatic data synchronization
-- Reduced success message spam during automatic refreshes
+### 技術的な改善
+- 強制データ更新のためにWebviewManagerにrefreshPanelData()メソッドを追加
+- キャッシュ無効化のためにforceRefreshフラグ付きのrequestTableDataコマンドを強化
+- ファイルコンテンツの変更を処理するためにテーブルデータマネージャーのライフサイクルを改善
+- 自動データ同期付きのパネルアクティベーション検出を追加
+- 自動更新中の成功メッセージのスパムを削減
 
-### User Experience
-- **Seamless Editing**: Users can now edit in VSCode editor and see changes immediately when switching to Table Editor
-- **No Manual Refresh**: Eliminates need for manual refresh or reopening Table Editor after external changes
-- **Consistent State**: Table Editor always shows the current state of the file, regardless of edit source
+### ユーザーエクスペリエンス
+- シームレスな編集: ユーザーがVSCodeエディタで編集し、テーブルエディタに切り替えるとすぐに変更を確認できるように
+- 手動更新不要: 外部での変更後にテーブルエディタを手動で更新または再オープンする必要をなくす
+- 一貫した状態: 編集元に関わらず、テーブルエディタが常にファイルの現在の状態を表示
 
 ## [0.1.19] - 2025-07-23
 
-### Enhanced
-- **Save Status Improvement**: Fixed Auto-saved label positioning and replaced success messages with status transitions
-- **Smart Navigation**: Added Excel-like Ctrl+Arrow key navigation for intelligent cell movement
-- **Status Display**: Saving... → Auto-saved status transitions without layout shifts
-- **Cell Navigation**: Ctrl+Arrow keys now move to data boundaries like Excel
+### エンハンス
+- 保存ステータスの改善: 「自動保存済み」ラベルの配置を修正し、成功メッセージをステータスの遷移に置き換え
+- スマートナビゲーション: インテリジェントなセル移動のためのExcelライクなCtrl+矢印キーナビゲーションを追加
+- ステータス表示: レイアウトのずれなしに「保存中...」→「自動保存済み」のステータス遷移
+- セルナビゲーション: Ctrl+矢印キーがExcelのようにデータの境界に移動するように
 
-### Improved
-- **Save Indicator**: Replaced "Cell update successfully" messages with seamless status label updates
-- **Navigation Logic**: Smart movement based on cell content - jumps to data edges or next data regions
-- **User Experience**: More intuitive navigation patterns matching spreadsheet applications
-- **Visual Feedback**: Consistent save status display without position changes
+### 改善
+- 保存インジケータ: 「セルの更新に成功しました」メッセージをシームレスなステータスラベルの更新に置き換え
+- ナビゲーションロジック: セルの内容に基づいたスマートな移動 - データの端や次のデータ領域にジャンプ
+- ユーザーエクスペリエンス: スプレッドシートアプリケーションに合わせた、より直感的なナビゲーションパターン
+- 視覚的フィードバック: 位置の変更なしに一貫した保存ステータス表示
 
-### Technical Improvements
-- Added `showSavingStatus()` and `showAutoSavedStatus()` functions for seamless status updates
-- Implemented `navigateCellSmart()` with Excel-compatible navigation logic
-- Enhanced `showSuccess()` to filter out cell update messages and show auto-saved status instead
-- Added `hasContent()` helper for intelligent data boundary detection
-- Ctrl+Arrow key handlers now call smart navigation functions with direction parameters
+### 技術的な改善
+- シームレスなステータス更新のためにshowSavingStatus()とshowAutoSavedStatus()関数を追加
+- Excel互換のナビゲーションロジックを持つnavigateCellSmart()を実装
+- セルの更新メッセージを除外し、代わりに自動保存ステータスを表示するようにshowSuccess()を強化
+- インテリジェントなデータ境界検出のためにhasContent()ヘルパーを追加
+- Ctrl+矢印キーハンドラが方向パラメータ付きでスマートナビゲーション関数を呼び出すように
 
-### Navigation Features
-- **Ctrl+Up/Down**: Move to data region boundaries or jump to next data cell
-- **Ctrl+Left/Right**: Navigate horizontally through data regions intelligently
-- **Data-aware**: Distinguishes between cells with content and empty cells
-- **Boundary Detection**: Stops at appropriate data boundaries like Excel
+### ナビゲーション機能
+- Ctrl+上/下: データ領域の境界に移動、または次のデータセルにジャンプ
+- Ctrl+左/右: データ領域を水平方向にインテリジェントにナビゲート
+- データ認識: 内容のあるセルと空のセルを区別
+- 境界検出: Excelのように適切なデータ境界で停止
 
-### Testing
-- Added test-smart-navigation.md with comprehensive test scenarios
-- Enhanced test coverage for both save status and navigation features
+### テスト
+- 包括的なテストシナリオを持つtest-smart-navigation.mdを追加
+- 保存ステータスとナビゲーション機能の両方のテストカバレッジを強化
 
 ## [0.1.18] - 2025-07-23
 
-### Fixed
-- **Japanese IME Input Support**: Fixed critical issue where Japanese IME confirmation Enter would exit edit mode
-- **IME Composition Detection**: Added proper IME state tracking to distinguish between text confirmation and edit completion
-- **Enter Key Behavior**: Enter key during IME composition now only confirms text input without exiting edit mode
-- **Multi-language Input**: Enhanced support for all IME-based input methods (Japanese, Chinese, Korean, etc.)
+### バグ修正
+- 日本語IME入力サポート: 日本語IMEの確定Enterで編集モードを終了してしまう重大な問題を修正
+- IME変換検出: テキスト確定と編集完了を区別するための適切なIME状態追跡を追加
+- Enterキーの挙動: IME変換中のEnterキーが、編集モードを終了せずにテキスト入力のみを確定するように
+- 多言語入力: すべてのIMEベースの入力メソッド（日本語、中国語、韓国語など）のサポートを強化
 
-### Improved
-- **Input Method Compatibility**: Better handling of complex text input scenarios with proper event separation
-- **User Experience**: Japanese and other IME users can now input text naturally without unexpected edit mode exits
-- **Event Handling**: More sophisticated keyboard event processing with IME state awareness
+### 改善
+- 入力メソッドの互換性: 適切なイベント分離による複雑なテキスト入力シナリオの処理を改善
+- ユーザーエクスペリエンス: 日本語およびその他のIMEユーザーが、予期しない編集モードの終了なしに自然にテキストを入力できるように
+- イベントハンドリング: IME状態を認識する、より洗練されたキーボードイベント処理
 
-### Technical Improvements
-- Added `compositionstart`, `compositionupdate`, and `compositionend` event listeners for IME tracking
-- Implemented `isComposing` state variable to track IME input status
-- Enhanced Enter key handler to check IME state before triggering edit completion
-- Added comprehensive logging for IME state debugging
-- Improved input event handling with IME-aware processing
+### 技術的な改善
+- IME追跡のためにcompositionstart、compositionupdate、compositionendイベントリスナーを追加
+- IME入力状態を追跡するためにisComposing状態変数を実装
+- 編集完了をトリガーする前にIME状態をチェックするようにEnterキーハンドラを強化
+- IME状態デバッグのための包括的なロギングを追加
+- IMEを意識した処理で入力イベントハンドリングを改善
 
-### Testing
-- Added test-ime-input.md with comprehensive Japanese IME testing scenarios
-- Enhanced test coverage for multi-language input methods and edge cases
+### テスト
+- 包括的な日本語IMEテストシナリオを持つtest-ime-input.mdを追加
+- 多言語入力メソッドとエッジケースのテストカバレッジを強化
 
 ## [0.1.17] - 2025-07-23
 
-### Enhanced
-- **Tab Navigation Improvement**: Fixed cell selection state clearing when exiting edit mode via Tab key
-- **Enter Key Behavior**: Changed Enter key to confirm edit and move to next row (Excel-like behavior)
-- **Shift+Enter for Line Breaks**: Shift+Enter now inserts line breaks while continuing edit mode
-- **Auto-Fit Column Width**: Added double-click on resize handle to auto-fit column width to content (Excel-like)
+### エンハンス
+- タブナビゲーションの改善: Tabキーで編集モードを終了する際のセル選択状態のクリアを修正
+- Enterキーの挙動: Enterキーを編集を確定して次の行に移動するように変更（Excelライクな挙動）
+- Shift+Enterによる改行: Shift+Enterが編集モードを継続したまま改行を挿入するように
+- 列幅の自動調整: リサイズハンドルをダブルクリックして列幅をコンテンツに自動調整する機能を追加（Excelライク）
 
-### Improved
-- **Keyboard Interactions**: More intuitive and Excel-like keyboard navigation in edit mode
-- **Cell Selection Management**: Proper selection state cleanup during navigation transitions
-- **Column Width Intelligence**: Smart auto-sizing based on actual content width with min/max limits
-- **User Experience**: Consistent behavior patterns matching spreadsheet applications
+### 改善
+- キーボード操作: 編集モードでのより直感的でExcelライクなキーボードナビゲーション
+- セル選択管理: ナビゲーション遷移中の適切な選択状態のクリーンアップ
+- 列幅のインテリジェンス: 最小/最大制限付きの実際のコンテンツ幅に基づくスマートな自動サイジング
+- ユーザーエクスペリエンス: スプレッドシートアプリケーションに合わせた一貫した挙動パターン
 
-### Technical Improvements
-- Enhanced Tab key handler to clear previous cell selection before navigation
-- Separated Enter (confirm + move down) from Shift+Enter (line break) functionality
-- Implemented content-based width calculation with temporary DOM measurement
-- Added auto-fit functionality with 80px minimum and 400px maximum width constraints
-- Improved edit mode transitions with proper selection state management
+### 技術的な改善
+- ナビゲーション前に前のセル選択をクリアするようにTabキーハンドラを強化
+- Enter（確定+下に移動）とShift+Enter（改行）機能を分離
+- 一時的なDOM測定によるコンテンツベースの幅計算を実装
+- 80pxの最小幅と400pxの最大幅制約を持つ自動調整機能を追加
+- 適切な選択状態管理で編集モードの遷移を改善
 
-### Testing
-- Added test-keyboard-interactions.md for comprehensive interaction testing
-- Enhanced test coverage for keyboard navigation and column auto-sizing scenarios
+### テスト
+- 包括的なインタラクションテストのためにtest-keyboard-interactions.mdを追加
+- キーボードナビゲーションと列の自動サイジングシナリオのテストカバレッジを強化
 
 ## [0.1.16] - 2025-07-23
 
-### Fixed
-- **Long URL Content Width Issue**: Fixed critical issue where long URLs and non-breaking strings would expand cell width beyond set limits
-- **Cell Width Enforcement**: Added max-width constraints to prevent content overflow from breaking column width settings
-- **Text Wrapping for Long Content**: Enhanced text wrapping with word-break:break-all to handle URLs and long strings properly
-- **Column Resize Functionality**: Fixed column resizing to work correctly even with long content present
+### バグ修正
+- 長いURLコンテンツの幅の問題: 長いURLや改行されない文字列が設定された制限を超えてセルの幅を広げてしまう重大な問題を修正
+- セル幅の強制: コンテンツのオーバーフローが列幅設定を壊すのを防ぐためにmax-width制約を追加
+- 長いコンテンツのテキスト折り返し: URLや長い文字列を適切に処理するためにword-break:break-allでテキスト折り返しを強化
+- 列リサイズ機能: 長いコンテンツが存在する場合でも列リサイズが正しく機能するように修正
 
-### Improved
-- **Content Overflow Handling**: Long URLs and non-breaking strings now wrap properly within cell boundaries
-- **Width Stability**: Cell widths remain stable regardless of content length or type
-- **User Experience**: Column resizing works consistently with all content types
-- **Layout Integrity**: Table layout maintains structure even with challenging content
+### 改善
+- コンテンツのオーバーフロー処理: 長いURLや改行されない文字列がセルの境界内で適切に折り返されるように
+- 幅の安定性: コンテンツの長さや種類に関わらず、セルの幅が安定して維持されるように
+- ユーザーエクスペリエンス: すべてのコンテンツタイプで列リサイズが一貫して機能
+- レイアウトの整合性: 困難なコンテンツがあってもテーブルレイアウトが構造を維持
 
-### Technical Improvements
-- Added max-width CSS property to both th and td elements to enforce width limits
-- Enhanced .cell-content with word-break:break-all and overflow:hidden for content containment
-- Updated JavaScript width setting to include max-width in all resize operations
-- Added comprehensive width constraints (width, min-width, max-width) throughout rendering pipeline
+### 技術的な改善
+- 幅の制限を強制するためにthとtdの両方の要素にmax-width CSSプロパティを追加
+- コンテンツを収めるために.cell-contentをword-break:break-allとoverflow:hiddenで強化
+- すべてのリサイズ操作にmax-widthを含むようにJavaScriptの幅設定を更新
+- レンダリングパイプライン全体に包括的な幅制約（width, min-width, max-width）を追加
 
-### Testing
-- Added test-long-url.md with various long URL and string scenarios
-- Enhanced test coverage for edge cases with non-breaking content
+### テスト
+- 様々な長いURLと文字列のシナリオを持つtest-long-url.mdを追加
+- 改行されないコンテンツのエッジケースのテストカバレッジを強化
 
 ## [0.1.15] - 2025-07-23
 
-### Fixed
-- **Critical Width Control Issue**: Fixed cell width changing during VSCode window resize by implementing fixed-width table layout
-- **Table Layout Optimization**: Changed from `table-layout: fixed` to `table-layout: auto` with explicit cell widths to prevent automatic resizing
-- **Width Persistence**: All cell widths now remain constant regardless of window size changes
-- **Default Width Management**: Improved default column width initialization and management
+### バグ修正
+- 重大な幅制御の問題: 固定幅のテーブルレイアウトを実装することで、VSCodeウィンドウのリサイズ中にセルの幅が変わる問題を修正
+- テーブルレイアウトの最適化: 自動リサイズを防ぐために、table-layout: fixedから明示的なセル幅を持つtable-layout: autoに変更
+- 幅の永続性: ウィンドウサイズの変更に関わらず、すべてのセルの幅が一定に保たれるように
+- デフォルト幅の管理: デフォルトの列幅の初期化と管理を改善
 
-### Changed
-- **Table Width Behavior**: Changed table width from 100% to auto-calculated based on cell widths
-- **Cell Width Strategy**: All cells now have explicit width values instead of relying on CSS min-width only
-- **Resize Logic**: Enhanced window resize handling to preserve all column widths consistently
+### 変更
+- テーブル幅の挙動: テーブルの幅を100%からセル幅に基づく自動計算に変更
+- セル幅戦略: すべてのセルがCSSのmin-widthのみに依存するのではなく、明示的な幅の値を持つように
+- リサイズロジック: すべての列幅を一貫して保持するようにウィンドウリサイズ処理を強化
 
-### Improved
-- **Stable Layout**: Table layout no longer responds to window size changes unless explicitly resized by user
-- **Better Width Control**: More predictable and stable column width behavior across all scenarios
-- **Performance**: Reduced unnecessary layout recalculations during window resize events
+### 改善
+- 安定したレイアウト: ユーザーによって明示的にリサイズされない限り、テーブルレイアウトがウィンドウサイズの変更に反応しないように
+- より良い幅制御: すべてのシナリオでより予測可能で安定した列幅の挙動
+- パフォーマンス: ウィンドウリサイズイベント中の不要なレイアウト再計算を削減
 
-### Technical Improvements
-- Modified table CSS from `width: 100%` and `table-layout: fixed` to `width: auto` and `table-layout: auto`
-- Added explicit width initialization for all columns with 150px default
-- Enhanced columnWidths state management to always contain width values
-- Improved window resize event handler to maintain all column widths
+### 技術的な改善
+- テーブルのCSSをwidth: 100%およびtable-layout: fixedからwidth: autoおよびtable-layout: autoに変更
+- すべての列に150pxのデフォルトで明示的な幅の初期化を追加
+- 常に幅の値を含むようにcolumnWidthsの状態管理を強化
+- すべての列幅を維持するようにウィンドウリサイズイベントハンドラを改善
 
 ## [0.1.14] - 2025-07-23
 
-### Changed
-- **Column-Based Width Control**: Modified default minimum width control from table-level to column-level for more granular control
-- **Enhanced Column Minimum Width**: Increased default column minimum width from 120px to 150px for better readability
-- **Improved Width Management**: Individual columns can now be resized below default minimum width after user interaction
-- **Window Resize Behavior**: VSCode window resizing now preserves existing cell widths instead of resetting them
+### 変更
+- 列ベースの幅制御: より詳細な制御のため、デフォルトの最小幅制御をテーブルレベルから列レベルに変更
+- 列の最小幅の強化: 読みやすさ向上のため、デフォルトの列の最小幅を120pxから150pxに増加
+- 幅管理の改善: ユーザーの操作後、個々の列をデフォルトの最小幅以下にリサイズできるように
+- ウィンドウリサイズの挙動: VSCodeウィンドウのリサイズ時に、既存のセル幅をリセットせずに保持するように
 
-### Improved
-- **Better Default Layout**: Wider default column widths provide better initial viewing experience
-- **Flexible Resizing**: Users can resize columns to smaller widths (80px minimum) after initial interaction
-- **Width Persistence**: Column widths are maintained during window resize operations
-- **Per-Column Control**: Each column can have different minimum width constraints based on user interaction
+### 改善
+- より良いデフォルトレイアウト: より広いデフォルトの列幅が、より良い初期表示体験を提供
+- 柔軟なリサイズ: ユーザーが初期操作後に列をより小さい幅（最小80px）にリサイズできるように
+- 幅の永続性: ウィンドウリサイズ操作中に列幅が維持される
+- 列ごとの制御: ユーザーの操作に基づいて、各列が異なる最小幅制約を持つことができるように
 
-### Technical Improvements
-- Replaced table-level min-width with column-level min-width controls
-- Added `user-resized` class management for individual columns
-- Enhanced window resize event handling to preserve cell dimensions
-- Improved column width state management in rendering functions
+### 技術的な改善
+- テーブルレベルのmin-widthを列レベルのmin-width制御に置き換え
+- 個々の列のためのuser-resizedクラス管理を追加
+- セルの寸法を保持するようにウィンドウリサイズイベント処理を強化
+- レンダリング関数での列幅の状態管理を改善
 
 ## [0.1.13] - 2025-07-22
 
-### Fixed
-- **Scroll Position Preservation**: Fixed critical issue where scroll position was reset to top after cell editing completion
-- **Table Re-rendering Optimization**: Implemented intelligent partial updates to avoid unnecessary full DOM reconstruction
-- **Sort View Scroll Maintenance**: Fixed scroll position reset when applying or restoring sort views
-- **Editing Position Visibility**: Added automatic scroll to edited cell position after completion to maintain user context
+### バグ修正
+- スクロール位置の保持: セル編集完了後にスクロール位置が一番上にリセットされる重大な問題を修正
+- テーブル再描画の最適化: 不要な完全なDOM再構築を避けるためのインテリジェントな部分更新を実装
+- ソートビューのスクロール維持: ソートビューを適用または復元する際のスクロール位置のリセットを修正
+- 編集位置の可視性: 完了後に編集されたセルの位置に自動スクロールし、ユーザーのコンテキストを維持する機能を追加
 
-### Improved
-- **Performance Optimization**: Reduced DOM manipulation by implementing content-only updates for unchanged table structure
-- **User Experience**: Enhanced editing workflow by maintaining visual context throughout the editing process
-- **Smart Rendering**: Introduced conditional rendering logic to distinguish between structural and content-only changes
+### 改善
+- パフォーマンス最適化: 変更されていないテーブル構造に対してコンテンツのみの更新を実装することで、DOM操作を削減
+- ユーザーエクスペリエンス: 編集プロセス全体で視覚的なコンテキストを維持することにより、編集ワークフローを強化
+- スマートレンダリング: 構造的な変更とコンテンツのみの変更を区別するための条件付きレンダリングロジックを導入
 
-### Technical Improvements
-- Added `renderTableWithScrollPreservation()` function for scroll-aware table updates
-- Implemented `updateTableContentOnly()` for efficient partial content updates
-- Enhanced sort functions with scroll position preservation
-- Added automatic scroll-to-cell functionality after editing completion
+### 技術的な改善
+- スクロールを意識したテーブル更新のためにrenderTableWithScrollPreservation()関数を追加
+- 効率的な部分的なコンテンツ更新のためにupdateTableContentOnly()を実装
+- スクロール位置保持機能付きのソート関数を強化
+- 編集完了後のセルへの自動スクロール機能を追加
 
-### Testing
-- Enhanced test coverage for scroll position preservation scenarios
-- Added test cases for sort operations with scroll maintenance
+### テスト
+- スクロール位置保持シナリオのテストカバレッジを強化
+- スクロール維持を伴うソート操作のテストケースを追加
 
 ## [0.1.12] - 2025-07-22
 
-### Fixed
-- **Cell Editing Alignment**: Fixed text alignment in editing mode to be top-aligned instead of center-aligned
-- **Auto-wrap in Edit Mode**: Enabled automatic text wrapping during cell editing for better user experience
-- **Width Preservation**: Fixed issue where cell and column widths were reset after editing completion
-- **Column Width Consistency**: Ensured column headers maintain the same width as their corresponding cells after editing
+### バグ修正
+- セル編集の配置: 編集モードでのテキスト配置を中央揃えから上揃えに修正
+- 編集モードでの自動折り返し: より良いユーザーエクスペリエンスのため、セル編集中に自動テキスト折り返しを有効化
+- 幅の保持: 編集完了後にセルと列の幅がリセットされる問題を修正
+- 列幅の一貫性: 編集後、列ヘッダーが対応するセルと同じ幅を維持するように保証
 
-### Improved
-- **Text Input Alignment**: Cell input fields now properly align text to the top-left, matching the display mode
-- **Textarea Handling**: Enhanced textarea configuration for multi-line content with proper wrapping
-- **Dimension Persistence**: Cell and column dimensions are now maintained throughout the editing process
+### 改善
+- テキスト入力の配置: セル入力フィールドが、表示モードに合わせてテキストを左上に正しく配置するように
+- Textareaの処理: 適切な折り返しを持つ複数行コンテンツのためのtextarea設定を強化
+- 寸法の永続性: 編集プロセス全体を通じてセルと列の寸法が維持されるように
 
-### Technical Improvements
-- Updated CSS for proper text alignment in editing mode
-- Enhanced `startCellEdit()` function to preserve cell dimensions
-- Improved `commitCellEdit()` and `cancelCellEdit()` to maintain width settings
-- Added proper vertical alignment and text wrapping for input fields
+### 技術的な改善
+- 編集モードでの適切なテキスト配置のためにCSSを更新
+- セルの寸法を保持するためにstartCellEdit()関数を強化
+- 幅設定を維持するためにcommitCellEdit()とcancelCellEdit()を改善
+- 入力フィールドに適切な垂直方向の配置とテキスト折り返しを追加
 
-### Testing
-- Added new test file for cell editing alignment and wrapping
-- Enhanced existing test suite with alignment and dimension preservation tests
+### テスト
+- セル編集の配置と折り返しのための新しいテストファイルを追加
+- 配置と寸法の保持テストで既存のテストスイートを強化
 
 ## [0.1.11] - 2025-07-22
 
-### Fixed
-- **HTML Break Tag Display**: Fixed issue where `<br/>` tags were not properly converted to line breaks in display
-- **Break Tag Processing**: Improved `processCellContent()` function to correctly handle HTML break tag conversion
-- **HTML Escaping**: Enhanced `escapeHtmlExceptBreaks()` to preserve break tags while escaping other HTML content
-- **Debug Logging**: Added temporary debug logging to troubleshoot break tag processing
+### バグ修正
+- HTML改行タグの表示: <br/>タグが表示時に改行に正しく変換されない問題を修正
+- 改行タグの処理: HTML改行タグの変換を正しく処理するようにprocessCellContent()関数を改善
+- HTMLエスケープ: 他のHTMLコンテンツをエスケープしつつ改行タグを保持するようにescapeHtmlExceptBreaks()を強化
+- デバッグログ: 改行タグ処理のトラブルシューティングのために一時的なデバッグログを追加
 
-### Technical Improvements
-- Fixed HTML break tag display rendering
-- Improved cell content processing pipeline
-- Enhanced HTML escaping logic for break tags
+### 技術的な改善
+- HTML改行タグの表示レンダリングを修正
+- セルコンテンツ処理パイプラインを改善
+- 改行タグのためのHTMLエスケープ論理を強化
 
 ## [0.1.10] - 2025-07-22
 
-### Enhanced
-- **HTML Break Tag Support**: Automatic detection and conversion of `<br/>` tags to line breaks
-- **Bidirectional Tag Processing**: Seamless conversion between HTML tags and newlines for editing and storage
-- **Improved Cell Content Processing**: Enhanced display, editing, and storage format handling
-- **Better Multi-line Editing**: Natural editing experience with proper HTML tag support
-- **Enhanced Sorting**: Improved sorting behavior with HTML tag-aware comparison
+### エンハンス
+- HTML改行タグのサポート: <br/>タグの自動検出と改行への変換
+- 双方向のタグ処理: 編集と保存のためのHTMLタグと改行間のシームレスな変換
+- セルコンテンツ処理の改善: 表示、編集、保存形式の処理を強化
+- より良い複数行編集: 適切なHTMLタグサポートによる自然な編集体験
+- ソートの強化: HTMLタグを認識する比較によるソート挙動の改善
 
-### Technical Improvements
-- Added `processCellContent()` for display format conversion
-- Added `processCellContentForEditing()` for edit format conversion
-- Added `processCellContentForStorage()` for storage format conversion
-- Improved sorting algorithm to handle HTML break tags
-- Enhanced cell rendering with proper tag-to-newline conversion
+### 技術的な改善
+- 表示形式変換のためにprocessCellContent()を追加
+- 編集形式変換のためにprocessCellContentForEditing()を追加
+- 保存形式変換のためにprocessCellContentForStorage()を追加
+- HTML改行タグを処理するようにソートアルゴリズムを改善
+- 適切なタグから改行への変換でセルレンダリングを強化
 
 ## [0.1.9] - 2025-07-22
 
-### Enhanced
-- **Adaptive Cell Editing**: Text input fields now automatically adjust to cell size and content
-- **Multi-line Support**: Automatic detection and handling of multi-line content with textarea
-- **Dynamic Input Sizing**: Input fields resize dynamically based on content and cell dimensions
-- **Natural Editing Experience**: Seamless transition between single-line inputs and multi-line textareas
-- **Improved Keyboard Navigation**: Enhanced Tab navigation and Enter key handling for different input types
+### エンハンス
+- 適応的なセル編集: テキスト入力フィールドがセルのサイズと内容に自動的に調整されるように
+- 複数行サポート: textareaによる複数行コンテンツの自動検出と処理
+- 動的な入力サイズ調整: コンテンツとセルの寸法に基づいて入力フィールドが動的にリサイズ
+- 自然な編集体験: 単一行入力と複数行textarea間のシームレスな移行
+- キーボードナビゲーションの改善: 異なる入力タイプに対するTabナビゲーションとEnterキーの処理を強化
 
-### Technical Improvements
-- Input field positioning and sizing calculations for better visual alignment
-- Auto-resize functionality for textareas based on content
-- Improved CSS styling for both input and textarea elements
-- Enhanced event handling for different input types
+### 技術的な改善
+- より良い視覚的配置のための入力フィールドの配置とサイズ計算
+- コンテンツに基づくtextareaの自動リサイズ機能
+- inputとtextarea両方の要素のCSSスタイリングを改善
+- 異なる入力タイプのイベント処理を強化
 
 ## [0.1.8] - 2025-07-22
 
-### Added
-- **View-Only Sorting**: Table sorting now operates in view-only mode by default
-  - Sorting no longer modifies the file automatically
-  - Visual indicators show when data is sorted temporarily
-  - "📄 Restore Original" button to return to file order
-  - "💾 Save Sort to File" button to make sort changes permanent
-  - Status bar shows current sort state (view-only vs saved)
-- **Enhanced Sort Controls**: Sort actions panel appears when viewing sorted data
-- **Numeric Sort Support**: Improved sorting algorithm that properly handles numeric data
-- **Sort State Management**: Better tracking of original vs sorted data states
+### 追加
+- ビューのみのソート: テーブルのソートがデフォルトでビューのみモードで動作するように
+  - ソートが自動的にファイルを変更しなくなる
+  - データが一時的にソートされているときに視覚的なインジケータを表示
+  - ファイルの順序に戻るための「元の順序に戻す」ボタン
+  - ソートの変更を永続化するための「ソートをファイルに保存」ボタン
+  - ステータスバーが現在のソート状態（ビューのみ vs 保存済み）を表示
+- 強化されたソートコントロール: ソートされたデータを表示しているときにソートアクションパネルが表示される
+- 数値ソートのサポート: 数値データを適切に処理する改善されたソートアルゴリズム
+- ソート状態管理: 元のデータとソートされたデータの状態のより良い追跡
 
-### Changed
-- **Default Sort Behavior**: Column header clicks now apply view-only sorting instead of saving immediately
-- **Sort Visual Indicators**: Enhanced styling to differentiate between view-only and committed sorts
-- **Data Safety**: Original table order is preserved unless explicitly saved
+### 変更
+- デフォルトのソート挙動: 列ヘッダーのクリックが、すぐに保存するのではなく、ビューのみのソートを適用するように
+- ソートの視覚的インジケータ: ビューのみのソートとコミットされたソートを区別するための強化されたスタイリング
+- データの安全性: 明示的に保存されない限り、元のテーブルの順序が保持される
 
-### Improved
-- **User Control**: Users can now choose when to persist sort changes to the file
-- **Data Integrity**: Prevents accidental permanent sorting of table data
-- **Visual Feedback**: Clear indication of temporary vs permanent sort states
+### 改善
+- ユーザーコントロール: ユーザーがソートの変更をファイルに永続化するタイミングを選択できるように
+- データ整合性: テーブルデータの偶発的な永続的なソートを防止
+- 視覚的フィードバック: 一時的なソート状態と永続的なソート状態の明確な表示
 
 ## [0.1.7] - 2025-07-22
 
-### Fixed
-- **Column Resize Event Handling**: Improved event separation between resize and sort operations
-  - Added `event.stopPropagation()` to resize handle mousedown events
-  - Enhanced resize state management to prevent click event interference
-  - Fixed issue where resizing columns would trigger unwanted sort operations
+### バグ修正
+- 列リサイズイベントの処理: リサイズとソート操作間のイベント分離を改善
+  - リサイズハンドルのmousedownイベントにevent.stopPropagation()を追加
+  - クリックイベントの干渉を防ぐためにリサイズ状態管理を強化
+  - 列をリサイズすると不要なソート操作がトリガーされる問題を修正
 
-### Added
-- **Test Files**: Added comprehensive test files for resize and sort functionality
+### 追加
+- テストファイル: リサイズとソート機能のための包括的なテストファイルを追加
 
-### Improved
-- **Event Handling**: More precise control over mouse and click events in table headers
-- **User Experience**: Column resizing now works without interfering with other operations
+### 改善
+- イベントハンドリング: テーブルヘッダーでのマウスおよびクリックイベントのより正確な制御
+- ユーザーエクスペリエンス: 列のリサイズが他の操作と干渉せずに機能するように
 
 ## [0.1.6] - 2025-07-21
 
-### Added
-- **Enhanced UI/UX**: Major interface improvements for better usability
-  - **Bottom Status Bar**: Error and save messages now appear at the bottom
-  - **Simplified Toolbar**: Removed Save, Export, Delete Row, and Delete Column buttons
-  - **Context Menu Focus**: All row/column operations now use right-click context menus
-  - **Smart Focus Management**: Cell editing automatically commits when selecting another cell
-  - **Improved Input Handling**: Better handling of text input clicks and focus
+### 追加
+- UI/UXの強化: 使いやすさ向上のための主要なインターフェース改善
+  - 下部ステータスバー: エラーと保存メッセージが下部に表示されるように
+  - 簡素化されたツールバー: 保存、エクスポート、行削除、列削除ボタンを削除
+  - コンテキストメニュー中心: すべての行/列操作が右クリックのコンテキストメニューを使用するように
+  - スマートフォーカス管理: 別のセルを選択するとセル編集が自動的にコミットされる
+  - 入力処理の改善: テキスト入力のクリックとフォーカスの処理を改善
 
-### Changed
-- **Message System**: All status messages moved to bottom status bar for non-intrusive feedback
-- **Command Structure**: Removed "Create New Table" command for focused editing experience
-- **Interface Layout**: Cleaner workspace with minimized UI clutter
+### 変更
+- メッセージシステム: すべてのステータスメッセージを、邪魔にならないフィードバックのために下部ステータスバーに移動
+- コマンド構造: 集中した編集体験のために「新規テーブル作成」コマンドを削除
+- インターフェースレイアウト: UIの乱雑さを最小限に抑えた、よりクリーンなワークスペース
 
-### Improved
-- **Editing Experience**: Enhanced cell editing with better focus management
-- **Event Propagation**: Better control of keyboard and mouse events during editing
-- **Theme Integration**: All UI elements now properly use VSCode theme colors
+### 改善
+- 編集体験: より良いフォーカス管理でセル編集を強化
+- イベント伝播: 編集中キーボードとマウスイベントのより良い制御
+- テーマ統合: すべてのUI要素がVSCodeのテーマカラーを適切に使用するように
 
 ## [0.1.5] - 2025-07-21
 
-### Added
-- **Multi-Table Support**: Complete support for documents with multiple tables
-  - **Table Selection Dialog**: Choose which table to edit from an intuitive QuickPick dialog
-  - **Table Index Tracking**: Each table is tracked by its index for precise updates
-  - **Mixed Content Compatibility**: Safely handles documents with code blocks, lists, etc.
+### 追加
+- 複数テーブルのサポート: 複数テーブルを持つドキュメントの完全なサポート
+  - テーブル選択ダイアログ: 直感的なQuickPickダイアログから編集するテーブルを選択
+  - テーブルインデックス追跡: 正確な更新のために各テーブルをインデックスで追跡
+  - 混合コンテンツの互換性: コードブロック、リストなどを含むドキュメントを安全に処理
 
-### Enhanced
-- **Markdown Parser**: Advanced AST parsing that distinguishes actual tables from table-like content
-- **File Handler**: Index-based table updates that preserve all other document content
-- **Error Handling**: Comprehensive validation and recovery options
-- **Table Selection UI**: Shows table location, headers, size, and content preview
+### エンハンス
+- Markdownパーサー: 実際のテーブルとテーブルのようなコンテンツを区別する高度なAST解析
+- ファイルハンドラ: 他のすべてのドキュメントコンテンツを保持するインデックスベースのテーブル更新
+- エラーハンドリング: 包括的な検証と回復オプション
+- テーブル選択UI: テーブルの場所、ヘッダー、サイズ、コンテンツのプレビューを表示
 
-### Fixed
-- **Table Position Accuracy**: Precise line range calculation prevents content corruption
-- **Content Preservation**: All non-table content is preserved during updates
-- **Table Identification**: Accurate detection of table boundaries in complex documents
+### バグ修正
+- テーブル位置の精度: 正確な行範囲の計算がコンテンツの破損を防止
+- コンテンツの保持: 更新中にすべての非テーブルコンテンツが保持される
+- テーブルの識別: 複雑なドキュメントでのテーブル境界の正確な検出
 
 ## [0.1.0] - 2025-07-20
 
-### Added
-- **Initial Release**: Spreadsheet-like Markdown table editor
-- **Basic Editing**: Cell editing with keyboard navigation
-- **Table Operations**: Add/delete rows and columns
-- **Sorting**: Click column headers to sort data
-- **Drag & Drop**: Reorder rows and columns
-- **Auto-save**: Automatic saving of changes back to Markdown files
-- **VSCode Integration**: Context menu and command palette integration
+### 追加
+- 初回リリース: スプレッドシートのようなMarkdownテーブルエディタ
+- 基本編集: キーボードナビゲーションによるセル編集
+- テーブル操作: 行と列の追加/削除
+- ソート: 列ヘッダーをクリックしてデータをソート
+- ドラッグ＆ドロップ: 行と列の並べ替え
+- 自動保存: 変更をMarkdownファイルに自動的に保存
+- VSCode統合: コンテキストメニューとコマンドパレットの統合
 
-### Features
-- Excel-like grid interface for table editing
-- Keyboard navigation (arrows, Tab, Enter)
-- Context menu operations for rows and columns
-- Real-time table manipulation
-- Markdown file integration with automatic updates
+### 機能
+- テーブル編集のためのExcelのようなグリッドインターフェース
+- キーボードナビゲーション（矢印、Tab、Enter）
+- 行と列のコンテキストメニュー操作
+- リアルタイムのテーブル操作
+- 自動更新付きのMarkdownファイル統合
