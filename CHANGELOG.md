@@ -5,6 +5,21 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.4] - 2025-09-13
+
+### Enhanced - CLIPBOARD OPERATIONS
+- **Smart Multi-Cell Paste**: 複数セル選択でのペースト機能を大幅改善
+  - **新機能**: 複数セル選択状態でペーストすると、選択されたセル（のみ）に順番に貼り付け
+  - **ギャップ詰め**: Ctrlクリックで中間の未選択セルがある場合、その分を詰めて貼り付け
+  - **従来動作との併存**: 単一セル選択時は従来通り、矩形範囲でペースト
+  - **例**: A1,A3,B2を選択して3つのデータをペーストすると、A1→A3→B2の順で貼り付け
+
+### Technical Details
+- processPasteData関数で選択セルを行・列順でソートして順次ペースト処理
+- フラット化したペーストデータを選択セルにマッピング
+- テーブル拡張時も個別セルレベルで対応
+- 成功メッセージで選択位置へのペーストであることを明示
+
 ## [0.7.3] - 2025-09-13
 
 ### Fixed - ROOT CAUSE RESOLUTION
