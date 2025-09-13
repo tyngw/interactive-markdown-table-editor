@@ -6,84 +6,21 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' vscode-resource: https:; script-src 'unsafe-inline' vscode-resource:;">
     <title>Markdown Table Editor</title>
     <script>
-        // Debug: Log all available window properties
-        console.log('=== WEBVIEW DEBUG: Window Properties ===');
-        console.log('window.cssUri:', window.cssUri);
-        console.log('window.scriptUris:', window.scriptUris);
-        console.log('Available window properties:', Object.keys(window).filter(key => key.includes('css') || key.includes('uri') || key.includes('vscode')));
-        
         // VSCode拡張のwebviewで外部CSSを安全に読み込むためのvscode-resourceスキーマを使う
         // 拡張側で `webview.asWebviewUri` でCSSのパスを渡す必要がある
         if (window.cssUri) {
-            console.log('=== WEBVIEW DEBUG: Loading External CSS ===');
-            console.log('CSS URI provided:', window.cssUri);
-            
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.type = 'text/css';
             link.href = window.cssUri;
-            
-            link.onload = function() {
-                console.log('=== WEBVIEW DEBUG: External CSS Loaded Successfully ===');
-                console.log('CSS file loaded from:', window.cssUri);
-                
-                // Debug: Check if CSS variables are available after loading
-                setTimeout(() => {
-                    const computedStyle = getComputedStyle(document.documentElement);
-                    const sampleVars = [
-                        '--vscode-editor-background',
-                        '--vscode-editor-foreground',
-                        '--vscode-sideBar-background',
-                        '--vscode-panel-border'
-                    ];
-                    
-                    console.log('=== WEBVIEW DEBUG: CSS Variables After External CSS Load ===');
-                    sampleVars.forEach(varName => {
-                        const value = computedStyle.getPropertyValue(varName).trim();
-                        console.log(`${varName}:`, value || 'NOT FOUND');
-                    });
-                }, 100);
-            };
-            
-            link.onerror = function(error) {
-                console.error('=== WEBVIEW DEBUG: Failed to Load External CSS ===');
-                console.error('CSS URI:', window.cssUri);
-                console.error('Error:', error);
-            };
-            
             document.head.appendChild(link);
-        } else {
-            console.warn('=== WEBVIEW DEBUG: No External CSS URI Provided ===');
-            console.log('window.cssUri is:', window.cssUri);
         }
         
-        // Debug: Check initial CSS variables
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('=== WEBVIEW DEBUG: Initial CSS Variables Check ===');
-            const computedStyle = getComputedStyle(document.documentElement);
-            const sampleVars = [
-                '--vscode-editor-background',
-                '--vscode-editor-foreground',
-                '--vscode-sideBar-background',
-                '--vscode-panel-border',
-                '--vscode-list-activeSelectionBackground',
-                '--vscode-statusBar-background'
-            ];
-            
-            sampleVars.forEach(varName => {
-                const value = computedStyle.getPropertyValue(varName).trim();
-                console.log(`${varName}:`, value || 'NOT FOUND');
-            });
-        });
-        
         // Acquire VSCode API once at the global level
-        let globalVscode = null;
         try {
-            globalVscode = acquireVsCodeApi();
-            window.vscode = globalVscode; // Make it available globally
-            console.log('=== WEBVIEW DEBUG: VSCode API acquired successfully ===');
+            window.vscode = acquireVsCodeApi();
         } catch (error) {
-            console.warn('=== WEBVIEW DEBUG: Failed to acquire VSCode API ===', error);
+            // This is expected when not in a VSCode webview
         }
     </script>
   <script type="module" crossorigin src="./assets/index.js"></script>

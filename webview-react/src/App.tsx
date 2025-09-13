@@ -103,7 +103,7 @@ function AppContent() {
 
   // タブ変更時の処理
   const handleTabChange = (index: number) => {
-    console.log('🔄 App: Tab change to index:', index);
+    
     setCurrentTableIndex(index)
     currentIndexRef.current = index
     pendingTabSwitchRef.current = { index, time: Date.now() }

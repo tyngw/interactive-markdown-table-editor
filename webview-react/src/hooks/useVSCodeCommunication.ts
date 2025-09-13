@@ -81,7 +81,7 @@ export function useVSCodeCommunication(callbacks: VSCodeCommunicationCallbacks) 
           break
 
         default:
-          console.log('Unknown message from VSCode:', message)
+          
       }
     }
 
