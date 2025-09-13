@@ -419,6 +419,11 @@ const TableRenderer = {
         // Update just the table content
         tableElement.innerHTML = this.renderTableContent();
         
+        // Set up cell event listeners after content update
+        setTimeout(() => {
+            this.setupCellEventListeners();
+        }, 10);
+        
         // Drag and drop will be re-setup by the DragDropManager when needed
     },
     
@@ -450,8 +455,13 @@ const TableRenderer = {
      * Setup proper event listeners for cells
      */
     setupCellEventListeners: function() {
-        // Remove existing listeners
-        document.querySelectorAll('.editable-cell').forEach(cell => {
+        console.log('TableRenderer: Setting up cell event listeners...');
+        
+        // Remove existing listeners by cloning nodes
+        const cells = document.querySelectorAll('.editable-cell');
+        console.log('TableRenderer: Found', cells.length, 'editable cells');
+        
+        cells.forEach(cell => {
             const newCell = cell.cloneNode(true);
             cell.parentNode.replaceChild(newCell, cell);
         });
@@ -461,13 +471,28 @@ const TableRenderer = {
             const row = parseInt(cell.getAttribute('data-row'));
             const col = parseInt(cell.getAttribute('data-col'));
 
+            if (isNaN(row) || isNaN(col)) {
+                console.warn('TableRenderer: Invalid row or col for cell', cell);
+                return;
+            }
+
             // Click event for selection (preserving modifier keys)
             cell.addEventListener('click', (event) => {
+                console.log('TableRenderer: Cell clicked', { 
+                    row, col, 
+                    ctrlKey: event.ctrlKey, 
+                    metaKey: event.metaKey, 
+                    shiftKey: event.shiftKey,
+                    button: event.button
+                });
+                
+                // Ensure the event is properly passed to SelectionManager
                 window.TableEditor.callModule('SelectionManager', 'selectCell', row, col, event);
             });
 
             // Double-click event for editing
             cell.addEventListener('dblclick', (event) => {
+                console.log('TableRenderer: Cell double-clicked', { row, col });
                 window.TableEditor.callModule('CellEditor', 'startCellEdit', row, col);
             });
         });

@@ -5,6 +5,21 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2025-09-13
+
+### Fixed - ROOT CAUSE RESOLUTION
+- **Multiple Cell Selection - Complete Fix**: Ctrl/Cmd + クリック と Shift + クリック による複数セル選択を完全修正
+  - **根本原因特定**: UIRendererでテーブルレンダリング後にイベントリスナーが設定されていなかった
+  - **修正内容**: 
+    - UIRenderer.renderTableInContainer関数にsetupCellEventListeners呼び出しを追加
+    - TableRenderer.updateTableContentOnly関数にもイベントリスナー再設定を追加
+  - **結果**: Mac/Windows両環境で複数セル選択が確実に動作
+
+### Technical Details
+- テーブルが再レンダリングされる全ての箇所でイベントリスナーが適切に再設定されることを保証
+- 詳細なデバッグログによりイベント処理フローを完全に追跡可能
+- addEventListener方式によりイベントオブジェクトの修飾子キー情報を確実に取得
+
 ## [0.7.2] - 2025-09-13
 
 ### Fixed

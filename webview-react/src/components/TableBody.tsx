@@ -8,7 +8,7 @@ interface TableBodyProps {
   rows: string[][]
   editorState: EditorState
   onCellUpdate: (row: number, col: number, value: string) => void
-  onCellSelect: (row: number, col: number, extend?: boolean) => void
+  onCellSelect: (row: number, col: number, extend?: boolean, toggle?: boolean) => void
   onCellEdit: (position: CellPosition | null) => void
   onAddRow: (index?: number) => void
   onDeleteRow: (index: number) => void
@@ -34,7 +34,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   // 保存用: 編集開始前に測ったセルの高さを保持
   const savedHeightsRef = useRef<Map<string, { original: number; maxOther: number }>>(new Map())
   // Handle cell click - check if it's clicking on an input field
-  const handleCellClick = useCallback((row: number, col: number, event: React.MouseEvent) => {
+  const handleCellMouseDown = useCallback((row: number, col: number, event: React.MouseEvent) => {
     // Check if the click target is a cell input field
     if ((event.target as HTMLElement).classList.contains('cell-input')) {
       // Clicking on input field - don't change selection, keep editing
@@ -43,13 +43,8 @@ const TableBody: React.FC<TableBodyProps> = ({
     
     // Otherwise, proceed with normal cell selection
     const extend = event.shiftKey
-    onCellSelect(row, col, extend)
-  }, [onCellSelect])
-
-  // Handle cell mouse down for selection
-  const handleCellMouseDown = useCallback((row: number, col: number) => {
-    // Start cell selection
-    onCellSelect(row, col)
+    const toggle = event.ctrlKey || event.metaKey
+    onCellSelect(row, col, extend, toggle)
   }, [onCellSelect])
 
   // 行番号右クリック処理
@@ -233,9 +228,8 @@ const TableBody: React.FC<TableBodyProps> = ({
                 key={colIndex}
                 id={cellId}
                 className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''}`}
-                onClick={(e) => handleCellClick(rowIndex, colIndex, e)}
+                onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                 onDoubleClick={() => startCellEdit(rowIndex, colIndex)}
-                onMouseDown={() => handleCellMouseDown(rowIndex, colIndex)}
                 data-row={rowIndex}
                 data-col={colIndex}
                 style={{...widthStyle, ...selectionStyle}}
