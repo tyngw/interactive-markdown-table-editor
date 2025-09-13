@@ -11,7 +11,7 @@
     display: flex;
     border-bottom: 1px solid var(--vscode-panel-border);
     background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-panelSectionHeader-background, var(--vscode-editor-background)));
-    margin-bottom: 10px;
+    margin-bottom: 0;
     overflow-x: auto;
 }
 
@@ -57,8 +57,8 @@ body {
 }
 
 *::-webkit-scrollbar {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
 }
 
 *::-webkit-scrollbar-track {
@@ -95,7 +95,7 @@ body {
     font-size: var(--vscode-editor-font-size, var(--vscode-font-size, 14px));
     color: var(--vscode-editor-foreground, var(--vscode-foreground, #333333));
     background-color: var(--vscode-editor-background);
-    padding: 20px;
+    padding: 0;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -104,8 +104,8 @@ body {
 /* ====== スクロールバーのテーマ対応 ====== */
 /* WebKit browsers (Chrome, Safari, Edge) */
 .table-container::-webkit-scrollbar {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
 }
 
 .table-container::-webkit-scrollbar-track {
