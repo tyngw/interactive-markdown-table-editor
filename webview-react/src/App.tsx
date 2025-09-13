@@ -6,6 +6,7 @@ import { StatusProvider } from './contexts/StatusContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { useVSCodeCommunication } from './hooks/useVSCodeCommunication'
 import { TableData } from './types'
+import { generateLargeTestData, generateMediumTestData, generateSmallTestData } from './testData'
 
 function AppContent() {
   const [allTables, setAllTables] = useState<TableData[]>([])
@@ -125,7 +126,32 @@ function AppContent() {
         sendMessage({ command: 'requestThemeVariables' })
       }, 500)
     }
-  }, [sendMessage, themeRequested, setThemeRequested])
+
+    // 開発用: VSCode外でテストする場合のサンプルデータ
+    if (typeof window !== 'undefined' && !(window as any).acquireVsCodeApi && allTables.length === 0) {
+      const largeData = generateLargeTestData()
+      const mediumData = generateMediumTestData()
+      const smallData = generateSmallTestData()
+      
+      const testTables: TableData[] = [
+        {
+          headers: largeData.headers,
+          rows: largeData.rows
+        },
+        {
+          headers: mediumData.headers,
+          rows: mediumData.rows
+        },
+        {
+          headers: smallData.headers,
+          rows: smallData.rows
+        }
+      ]
+      
+      setAllTables(testTables)
+      setLoading(false)
+    }
+  }, [sendMessage, themeRequested, setThemeRequested, allTables.length])
 
   // keep ref in sync when state changes (covers programmatic changes)
   useEffect(() => {
