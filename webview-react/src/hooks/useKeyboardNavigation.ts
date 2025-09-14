@@ -5,6 +5,7 @@ interface KeyboardNavigationProps {
   tableData: TableData
   currentEditingCell: CellPosition | null
   selectionRange: SelectionRange | null
+  selectionAnchor: CellPosition | null
   onCellSelect: (row: number, col: number, extend?: boolean) => void
   onCellEdit: (position: CellPosition | null) => void
   onCopy: () => void
@@ -12,19 +13,22 @@ interface KeyboardNavigationProps {
   onCut: () => void
   onClearCells: () => void
   onSelectAll: () => void
+  onSetSelectionAnchor: (position: CellPosition | null) => void
 }
 
 export function useKeyboardNavigation({
   tableData,
   currentEditingCell,
   selectionRange,
+  selectionAnchor,
   onCellSelect,
   onCellEdit,
   onCopy,
   onPaste,
   onCut,
   onClearCells,
-  onSelectAll
+  onSelectAll,
+  onSetSelectionAnchor
 }: KeyboardNavigationProps) {
 
   // Helper function to check if a cell has content (for smart navigation)
@@ -194,6 +198,13 @@ export function useKeyboardNavigation({
 
   // キーボードイベントハンドラー
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    // Shiftキーが押された瞬間にselectionAnchorを設定（メインハンドラー内で管理）
+    if (event.key === 'Shift' && !selectionAnchor && selectionRange?.start) {
+      const anchorPos = selectionRange.end || selectionRange.start
+      console.log('🔍 [React] Shift key pressed in main handler, setting anchor:', anchorPos)
+      onSetSelectionAnchor(anchorPos)
+      return // Shiftキー単体の場合は他の処理をしない
+    }
     // If focus is inside any input/textarea/contenteditable (e.g., header editor),
     // don't trigger table keyboard navigation.
     const activeEl = (document.activeElement as HTMLElement | null)
@@ -226,8 +237,14 @@ export function useKeyboardNavigation({
       return
     }
 
-    // 現在選択されているセルを取得
-    const currentPos = selectionRange?.start
+    // 現在選択されているセルを取得（範囲選択中はendを使用）
+    const currentPos = selectionRange?.end || selectionRange?.start
+    console.log('🔍 [React] Current position calculation:', {
+      'selectionRange.start': selectionRange?.start,
+      'selectionRange.end': selectionRange?.end,
+      'currentPos': currentPos,
+      'selectionAnchor': selectionAnchor
+    })
     if (!currentPos) return
 
     const { key, shiftKey, ctrlKey, metaKey } = event
@@ -277,6 +294,7 @@ export function useKeyboardNavigation({
         event.preventDefault()
         const direction = key.replace('Arrow', '').toLowerCase() as 'up' | 'down' | 'left' | 'right'
         const nextPos = getNextCellPosition(currentPos, direction, cmdKey)
+        console.log('🔍 [React] Arrow key pressed:', direction, 'shiftKey:', shiftKey, 'currentPos:', currentPos, 'nextPos:', nextPos, 'selectionAnchor:', selectionAnchor)
         onCellSelect(nextPos.row, nextPos.col, shiftKey)
         // ensure visibility
         setTimeout(() => scrollCellIntoView(nextPos.row, nextPos.col), 0)
@@ -422,6 +440,7 @@ export function useKeyboardNavigation({
   }, [
     currentEditingCell,
     selectionRange,
+    selectionAnchor,
     tableData,
     getNextCellPosition,
     getTabNextPosition,
@@ -431,16 +450,37 @@ export function useKeyboardNavigation({
     onPaste,
     onCut,
     onClearCells,
-    onSelectAll
+    onSelectAll,
+    onSetSelectionAnchor
   ])
+
+  // キーアップイベントハンドラー（Shiftキーのクリア用）
+  const handleKeyUp = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Shift') {
+      console.log('🔍 [React] Shift key released in main handler, clearing anchor')
+      onSetSelectionAnchor(null)
+    }
+  }, [onSetSelectionAnchor])
 
   // キーボードイベントリスナーの設定
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('keyup', handleKeyUp)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('keyup', handleKeyUp)
     }
-  }, [handleKeyDown])
+  }, [handleKeyDown, handleKeyUp])
+
+  // 旧Shiftキーイベントリスナーの設定は削除
+  // useEffect(() => {
+  //   document.addEventListener('keydown', handleShiftKeyDown)
+  //   document.addEventListener('keyup', handleShiftKeyUp)
+  //   return () => {
+  //     document.removeEventListener('keydown', handleShiftKeyDown)
+  //     document.removeEventListener('keyup', handleShiftKeyUp)
+  //   }
+  // }, [handleShiftKeyDown, handleShiftKeyUp])
 
   return {
     getNextCellPosition,

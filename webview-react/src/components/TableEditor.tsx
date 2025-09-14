@@ -34,6 +34,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
   const {
     tableData: currentTableData,
     editorState,
+    selectionAnchor,
     updateCell,
     updateCells,
     updateHeader,
@@ -46,6 +47,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     selectColumn,
     selectAll,
     setCurrentEditingCell,
+    setSelectionAnchor,
     setColumnWidth,
     sortColumn,
     moveRow,
@@ -477,13 +479,15 @@ const TableEditor: React.FC<TableEditorProps> = ({
     tableData: currentTableData,
     currentEditingCell: editorState.currentEditingCell,
     selectionRange: editorState.selectionRange,
+    selectionAnchor: selectionAnchor,
     onCellSelect: selectCell,
     onCellEdit: setCurrentEditingCell,
     onCopy: handleCopy,
     onPaste: handlePaste,
     onCut: handleCut,
     onClearCells: handleClearCells,
-    onSelectAll: handleSelectAll
+    onSelectAll: handleSelectAll,
+    onSetSelectionAnchor: setSelectionAnchor
   })
 
   return (
