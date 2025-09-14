@@ -16,6 +16,7 @@ interface TableHeaderProps {
   onShowColumnContextMenu?: (event: React.MouseEvent, col: number) => void
   getDragProps?: (type: 'row' | 'column', index: number) => any
   getDropProps?: (type: 'row' | 'column', index: number) => any
+  selectedCols?: Set<number>
 }
 
 const TableHeader: React.FC<TableHeaderProps> = ({
@@ -29,7 +30,8 @@ const TableHeader: React.FC<TableHeaderProps> = ({
   onColumnSelect,
   onShowColumnContextMenu,
   getDragProps,
-  getDropProps
+  getDropProps,
+  selectedCols
 }) => {
   const { getStyle } = useTheme()
   const [editingHeader, setEditingHeader] = useState<number | null>(null)
@@ -176,7 +178,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   onShowColumnContextMenu(e, col)
                 }
               }}
-              className={`column-header ${userResizedClass}`}
+              className={`column-header ${userResizedClass} ${selectedCols?.has(col) ? 'highlighted' : ''}`}
               data-col={col}
               style={widthStyle}
               title={`Column ${columnLetter}: ${header}`}

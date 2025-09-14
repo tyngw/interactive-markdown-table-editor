@@ -45,7 +45,19 @@ export function useTableEditor(initialData: TableData) {
     setCurrentEditingCell(null)
     setIsSelecting(false)
     setColumnWidths({})
-    setSelectionAnchor(null) // Shift選択用のアンカーをクリア
+
+    // 常にA1セルを選択状態にする
+    if (initialData && initialData.rows.length > 0 && initialData.headers.length > 0) {
+      const firstCell = { row: 0, col: 0 };
+      setSelectedCells(new Set(['0-0']));
+      setSelectionRange({ start: firstCell, end: firstCell });
+      setSelectionAnchor(firstCell);
+    } else {
+      setSelectedCells(new Set());
+      setSelectionRange(null);
+      setSelectionAnchor(null);
+    }
+    
     setSortState({ column: -1, direction: 'none', isViewOnly: false, originalData: null })
   }, [initialData])
 
@@ -211,7 +223,10 @@ export function useTableEditor(initialData: TableData) {
     if (toggle) {
       const newSelectedCells = new Set(selectedCells)
       if (newSelectedCells.has(cellKey)) {
-        newSelectedCells.delete(cellKey)
+        // 最後のセルが選択解除されるのを防ぐ
+        if (newSelectedCells.size > 1) {
+          newSelectedCells.delete(cellKey)
+        }
       } else {
         newSelectedCells.add(cellKey)
       }

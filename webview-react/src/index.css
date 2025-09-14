@@ -216,11 +216,9 @@ body {
     background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background));
 }
 
-.table-editor tbody tr:hover {
-    background-color: var(--vscode-list-hoverBackground);
-}
+/* Row/column header highlighting for selection */
 
-.table-editor tbody tr:hover td.row-number {
+.table-editor td.row-number {
     background: linear-gradient(90deg,
             var(--vscode-list-hoverBackground) 0%,
             var(--vscode-list-activeSelectionBackground) 100%) !important;
@@ -233,8 +231,8 @@ body {
     background-color: var(--vscode-editor-hoverHighlightBackground, var(--vscode-editor-selectionHighlightBackground, var(--vscode-editor-lineHighlightBackground)));
 }
 
-.table-editor tr:nth-child(even) td.data-cell:hover,
-.table-editor tr:nth-child(even) td.editable-cell:hover {
+.table-editor th.column-header.highlighted,
+.table-editor td.row-number.highlighted {
     background-color: var(--vscode-list-hoverBackground);
 }
 
@@ -258,8 +256,9 @@ body {
   color: var(--vscode-errorForeground);
   padding: 20px;
   text-align: center;
-}/*
- ====== 4. テーブルヘッダー関連 ====== */
+}
+
+/* ====== 4. テーブルヘッダー関連 ====== */
 .table-editor th {
     background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background));
     border: 1px solid var(--vscode-panel-border);
@@ -300,10 +299,6 @@ body {
 
 .table-editor th.user-resized {
     min-width: 10px;
-}
-
-.table-editor th:hover {
-    opacity: 1 !important;
 }
 
 .table-editor th:first-child {
@@ -356,13 +351,6 @@ body {
     line-height: 1.2;
 }
 
-.column-title:hover {
-    background-color: var(--vscode-list-hoverBackground);
-    border-radius: 2px;
-    padding: 1px 2px;
-    margin: -1px -2px;
-}
-
 .header-text {
     font-size: 13px;
     font-weight: 600;
@@ -394,13 +382,6 @@ body {
     opacity: 1 !important;
 }
 
-.header-corner:hover {
-    background-color: var(--vscode-list-hoverBackground, var(--vscode-button-hoverBackground)) !important;
-    color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
-    background-clip: padding-box;
-    opacity: 1 !important;
-}
-
 /* ====== 5. 行番号セル ====== */
 .table-editor td.row-number {
     background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background));
@@ -421,11 +402,6 @@ body {
     box-sizing: border-box;
     opacity: 1 !important;
     background-clip: padding-box;
-}
-
-.table-editor td.row-number:hover {
-    color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
-    opacity: 1 !important;
 }
 
 .table-editor td.row-number.selected,
@@ -460,11 +436,6 @@ body {
 .table-editor td.data-cell.user-resized,
 .table-editor td.editable-cell.user-resized {
     min-width: 10px;
-}
-
-.table-editor td.data-cell:hover,
-.table-editor td.editable-cell:hover {
-    background-color: var(--vscode-list-hoverBackground);
 }
 
 .data-cell {
@@ -523,23 +494,6 @@ body {
     user-select: text;
     -webkit-user-select: text;
     -ms-user-select: text;
-}
-
-/* Enhanced hover effects */
-.table-editor th:hover {
-    background-color: var(--vscode-list-hoverBackground) !important;
-    opacity: 1 !important;
-}
-
-.table-editor td.data-cell:hover,
-.table-editor td.editable-cell:hover {
-    background-color: var(--vscode-list-hoverBackground) !important;
-}
-
-.table-editor td.row-number:hover {
-    background-color: var(--vscode-list-hoverBackground) !important;
-    color: var(--vscode-foreground) !important;
-    opacity: 1 !important;
 }
 
 /* Enhanced selection styles */
@@ -683,14 +637,6 @@ textarea.cell-input[data-multiline="true"] {
 
 .table-editor td.editable-cell.row-selected {
     background-color: var(--vscode-list-activeSelectionBackground) !important;
-}
-
-.column-highlight {
-    background-color: var(--vscode-list-hoverBackground) !important;
-}
-
-.row-highlight {
-    background-color: var(--vscode-list-hoverBackground) !important;
 }
 
 /* ====== 9. リサイズ機能 ====== */
