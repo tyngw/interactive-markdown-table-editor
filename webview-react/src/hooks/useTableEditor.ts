@@ -6,6 +6,7 @@ export function useTableEditor(initialData: TableData) {
   const [currentEditingCell, setCurrentEditingCell] = useState<CellPosition | null>(null)
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set())
   const [selectionRange, setSelectionRange] = useState<SelectionRange | null>(null)
+  const [selectionAnchor, setSelectionAnchor] = useState<CellPosition | null>(null) // Shift+矢印キー用のアンカー
   const [isSelecting, setIsSelecting] = useState(false)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
   const [sortState, setSortState] = useState<SortState>({
@@ -44,6 +45,7 @@ export function useTableEditor(initialData: TableData) {
     setCurrentEditingCell(null)
     setIsSelecting(false)
     setColumnWidths({})
+    setSelectionAnchor(null) // Shift選択用のアンカーをクリア
     setSortState({ column: -1, direction: 'none', isViewOnly: false, originalData: null })
   }, [initialData])
 
@@ -204,6 +206,7 @@ export function useTableEditor(initialData: TableData) {
   // セルを選択（既存機能を保持、通常クリック用）
   const selectCell = useCallback((row: number, col: number, extend = false, toggle = false) => {
     const cellKey = `${row}-${col}`
+    console.log('🔍 [React] selectCell called:', { row, col, extend, toggle, selectionAnchor })
 
     if (toggle) {
       const newSelectedCells = new Set(selectedCells)
@@ -214,8 +217,32 @@ export function useTableEditor(initialData: TableData) {
       }
       setSelectedCells(newSelectedCells)
       setSelectionRange({ start: { row, col }, end: { row, col } })
+    } else if (extend && selectionAnchor) {
+      // Shift+矢印キー：selectionAnchorを起点として範囲選択
+      console.log('🔍 [React] Using selectionAnchor for extend:', selectionAnchor)
+      const newRange: SelectionRange = {
+        start: selectionAnchor,
+        end: { row, col }
+      }
+      setSelectionRange(newRange)
+      
+      // 範囲内のすべてのセルを選択
+      const newSelectedCells = new Set<string>()
+      const minRow = Math.min(selectionAnchor.row, row)
+      const maxRow = Math.max(selectionAnchor.row, row)
+      const minCol = Math.min(selectionAnchor.col, col)
+      const maxCol = Math.max(selectionAnchor.col, col)
+      
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          newSelectedCells.add(`${r}-${c}`)
+        }
+      }
+      
+      setSelectedCells(newSelectedCells)
     } else if (extend && selectionRange) {
-      // 範囲選択を拡張
+      // マウス範囲選択：現在のselectionRangeを拡張
+      console.log('🔍 [React] Using selectionRange for extend:', selectionRange.start)
       const newRange: SelectionRange = {
         start: selectionRange.start,
         end: { row, col }
@@ -234,18 +261,22 @@ export function useTableEditor(initialData: TableData) {
           newSelectedCells.add(`${r}-${c}`)
         }
       }
+      
       setSelectedCells(newSelectedCells)
     } else {
-      // 単一セル選択
+      // 単一セル選択：selectionAnchorを新しく設定
+      console.log('🔍 [React] Single cell selection, setting new anchor:', { row, col })
       setSelectedCells(new Set([cellKey]))
       setSelectionRange({ start: { row, col }, end: { row, col } })
+      setSelectionAnchor({ row, col }) // 新しい選択の起点を設定
     }
-  }, [selectionRange, selectedCells])
+  }, [selectionRange, selectedCells, selectionAnchor])
 
   // 選択をクリア
   const clearSelection = useCallback(() => {
     setSelectedCells(new Set())
     setSelectionRange(null)
+    setSelectionAnchor(null) // Shift選択用のアンカーもクリア
     setCurrentEditingCell(null)
   }, [])
 
@@ -524,6 +555,7 @@ export function useTableEditor(initialData: TableData) {
   return {
     tableData,
     editorState,
+    selectionAnchor, // Shift+矢印キー用のアンカー
     setTableData,
     updateCell,
     updateCells,
@@ -539,6 +571,7 @@ export function useTableEditor(initialData: TableData) {
     clearSelection,
     setCurrentEditingCell,
     setIsSelecting,
+    setSelectionAnchor, // Shift+矢印キー用アンカーのセッター
     setColumnWidth,
     moveRow,
     moveColumn,

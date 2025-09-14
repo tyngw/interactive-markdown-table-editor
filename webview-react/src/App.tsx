@@ -8,6 +8,7 @@ import { useVSCodeCommunication } from './hooks/useVSCodeCommunication'
 import { TableData } from './types'
 
 function AppContent() {
+  console.log('🔍 [React] AppContent initializing...')
   const [allTables, setAllTables] = useState<TableData[]>([])
   const [currentTableIndex, setCurrentTableIndex] = useState(0)
   const [loading, setLoading] = useState(true)

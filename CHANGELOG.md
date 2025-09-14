@@ -5,6 +5,23 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.5] - 2025-09-13
+
+### Fixed - REACT WEBVIEW SHIFT+ARROW SELECTION
+- **React版でのShift+カーソルキー範囲選択を修正**: Legacy版と同じ挙動に統一
+  - **問題**: Shift+下→右の順に押すと、起点がずれてしまい正しい範囲選択ができなかった
+  - **修正内容**: 
+    - `selectionAnchor`状態を追加してShift選択の起点を固定
+    - Shiftキー押下時に現在位置をアンカーとして設定
+    - Shift+矢印キーでは常にアンカーを基準として範囲選択
+  - **結果**: A1を起点としてShift+下→右で、A1~B2の4セル範囲選択が正常動作
+
+### Technical Details
+- useTableEditorにselectionAnchor状態管理を追加
+- useKeyboardNavigationでShiftキーイベントを監視
+- selectCell関数でextend時はselectionAnchorを優先使用
+- Legacy版のselectionStartとrangeSelectionAnchorの仕組みをReact版に移植
+
 ## [0.7.4] - 2025-09-13
 
 ### Enhanced - CLIPBOARD OPERATIONS
