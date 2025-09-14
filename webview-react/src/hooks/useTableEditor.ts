@@ -1,67 +1,45 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { TableData, CellPosition, SelectionRange, SortState, ColumnWidths, EditorState } from '../types'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { TableData, CellPosition, ColumnWidths, EditorState } from '../types'
+import { useSelection } from './useSelection'
+import { useSort } from './useSort'
 
 export function useTableEditor(initialData: TableData) {
   const [tableData, setTableData] = useState<TableData>(initialData)
   const [currentEditingCell, setCurrentEditingCell] = useState<CellPosition | null>(null)
-  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set())
-  const [selectionRange, setSelectionRange] = useState<SelectionRange | null>(null)
-  const [selectionAnchor, setSelectionAnchor] = useState<CellPosition | null>(null) // Shift+矢印キー用のアンカー
-  const [isSelecting, setIsSelecting] = useState(false)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
-  const [sortState, setSortState] = useState<SortState>({
-    column: -1,
-    direction: 'none',
-    isViewOnly: false,
-    originalData: null
+
+  // Selection management using the separated useSelection hook
+  const selection = useSelection({
+    tableRowCount: tableData.rows.length,
+    tableColCount: tableData.headers.length
   })
 
-  // ドラッグ中の高速応答性のためのRef管理
-  const dragSelectionRef = useRef<{
-    isSelecting: boolean
-    startCell: CellPosition | null
-    currentSelectedCells: Set<string>
-    currentSelectionRange: SelectionRange | null
-  }>({
-    isSelecting: false,
-    startCell: null,
-    currentSelectedCells: new Set(),
-    currentSelectionRange: null
+  // Sort management using the separated useSort hook
+  const sort = useSort({
+    onDataUpdate: setTableData
   })
 
   // Sync state when the incoming table changes (e.g., tab switch)
-  // Use a ref to track if we should skip the reset due to ongoing sort operation
-  const skipResetRef = useRef(false)
-  
   useEffect(() => {
     // Don't reset state if we're currently in a sorting operation
-    if (skipResetRef.current) {
-      console.log('🔍 Skipping state reset due to skip flag')
+    if (sort.sortState.isViewOnly) {
+      console.log('🔍 Skipping state reset due to active sort operation')
       return
     }
     
     console.log('🔍 Resetting table state due to initialData change')
     setTableData(initialData)
     setCurrentEditingCell(null)
-    setIsSelecting(false)
     setColumnWidths({})
-
-    // 常にA1セルを選択状態にする
-    if (initialData && initialData.rows.length > 0 && initialData.headers.length > 0) {
-      const firstCell = { row: 0, col: 0 };
-      setSelectedCells(new Set(['0-0']));
-      setSelectionRange({ start: firstCell, end: firstCell });
-      setSelectionAnchor(firstCell);
-    } else {
-      setSelectedCells(new Set());
-      setSelectionRange(null);
-      setSelectionAnchor(null);
-    }
     
-    setSortState({ column: -1, direction: 'none', isViewOnly: false, originalData: null })
-  }, [initialData])
+    // Reset sort state directly to avoid infinite loops
+    sort.resetSortState()
 
-  // セルの値を更新
+    // Initialize selection directly to avoid infinite loops
+    selection.initializeSelection()
+  }, [initialData, sort.sortState.isViewOnly]) // Remove function dependencies to prevent infinite loops
+
+  // Cell operations
   const updateCell = useCallback((row: number, col: number, value: string) => {
     setTableData(prev => {
       const newRows = [...prev.rows]
@@ -73,7 +51,7 @@ export function useTableEditor(initialData: TableData) {
     })
   }, [])
 
-  // 複数セルの一括更新
+  // Batch cell updates
   const updateCells = useCallback((updates: Array<{ row: number; col: number; value: string }>) => {
     setTableData(prev => {
       const newRows = [...prev.rows]
@@ -87,7 +65,7 @@ export function useTableEditor(initialData: TableData) {
     })
   }, [])
 
-  // ヘッダーを更新
+  // Header operations
   const updateHeader = useCallback((col: number, value: string) => {
     setTableData(prev => {
       const newHeaders = [...prev.headers]
@@ -96,7 +74,7 @@ export function useTableEditor(initialData: TableData) {
     })
   }, [])
 
-  // 行を追加
+  // Row operations
   const addRow = useCallback((index?: number) => {
     setTableData(prev => {
       const newRows = [...prev.rows]
@@ -107,7 +85,6 @@ export function useTableEditor(initialData: TableData) {
     })
   }, [])
 
-  // 行を削除
   const deleteRow = useCallback((index: number) => {
     setTableData(prev => {
       const newRows = [...prev.rows]
@@ -116,7 +93,7 @@ export function useTableEditor(initialData: TableData) {
     })
   }, [])
 
-  // 列を追加
+  // Column operations
   const addColumn = useCallback((index?: number) => {
     setTableData(prev => {
       const insertIndex = index !== undefined ? index : prev.headers.length
@@ -133,7 +110,6 @@ export function useTableEditor(initialData: TableData) {
     })
   }, [])
 
-  // 列を削除
   const deleteColumn = useCallback((index: number) => {
     setTableData(prev => {
       const newHeaders = [...prev.headers]
@@ -149,250 +125,7 @@ export function useTableEditor(initialData: TableData) {
     })
   }, [])
 
-  // ドラッグ開始
-  const startDragSelection = useCallback((row: number, col: number) => {
-    dragSelectionRef.current.isSelecting = true
-    dragSelectionRef.current.startCell = { row, col }
-    const cellKey = `${row}-${col}`
-    const newSelectedCells = new Set([cellKey])
-    const newSelectionRange = { start: { row, col }, end: { row, col } }
-    
-    dragSelectionRef.current.currentSelectedCells = newSelectedCells
-    dragSelectionRef.current.currentSelectionRange = newSelectionRange
-    
-    // 即座に表示を更新
-    setSelectedCells(newSelectedCells)
-    setSelectionRange(newSelectionRange)
-    setIsSelecting(true)
-  }, [])
-
-  // ドラッグ中の選択更新（高速処理用）
-  const updateDragSelection = useCallback((row: number, col: number) => {
-    if (!dragSelectionRef.current.isSelecting || !dragSelectionRef.current.startCell) {
-      return
-    }
-    
-    const startCell = dragSelectionRef.current.startCell
-    const newRange = { start: startCell, end: { row, col } }
-    
-    // 範囲内のすべてのセルを選択
-    const newSelectedCells = new Set<string>()
-    const minRow = Math.min(newRange.start.row, newRange.end.row)
-    const maxRow = Math.max(newRange.start.row, newRange.end.row)
-    const minCol = Math.min(newRange.start.col, newRange.end.col)
-    const maxCol = Math.max(newRange.start.col, newRange.end.col)
-    
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        newSelectedCells.add(`${r}-${c}`)
-      }
-    }
-    
-    dragSelectionRef.current.currentSelectedCells = newSelectedCells
-    dragSelectionRef.current.currentSelectionRange = newRange
-    
-    // Refのみ更新、Stateの更新は間引き
-    // RequestAnimationFrameを使って適度にUIを更新
-    requestAnimationFrame(() => {
-      if (dragSelectionRef.current.isSelecting) {
-        setSelectedCells(new Set(dragSelectionRef.current.currentSelectedCells))
-        setSelectionRange(dragSelectionRef.current.currentSelectionRange)
-      }
-    })
-  }, [])
-
-  // ドラッグ終了
-  const endDragSelection = useCallback(() => {
-    if (dragSelectionRef.current.isSelecting) {
-      // 最終状態をStateに反映
-      setSelectedCells(new Set(dragSelectionRef.current.currentSelectedCells))
-      setSelectionRange(dragSelectionRef.current.currentSelectionRange)
-      setIsSelecting(false)
-      
-      // Refをリセット
-      dragSelectionRef.current.isSelecting = false
-      dragSelectionRef.current.startCell = null
-    }
-  }, [])
-
-  // セルを選択（既存機能を保持、通常クリック用）
-  const selectCell = useCallback((row: number, col: number, extend = false, toggle = false) => {
-    const cellKey = `${row}-${col}`
-    console.log('🔍 [React] selectCell called:', { row, col, extend, toggle, selectionAnchor })
-
-    if (toggle) {
-      const newSelectedCells = new Set(selectedCells)
-      if (newSelectedCells.has(cellKey)) {
-        // 最後のセルが選択解除されるのを防ぐ
-        if (newSelectedCells.size > 1) {
-          newSelectedCells.delete(cellKey)
-        }
-      } else {
-        newSelectedCells.add(cellKey)
-      }
-      setSelectedCells(newSelectedCells)
-      setSelectionRange({ start: { row, col }, end: { row, col } })
-    } else if (extend && selectionAnchor) {
-      // Shift+矢印キー：selectionAnchorを起点として範囲選択
-      console.log('🔍 [React] Using selectionAnchor for extend:', selectionAnchor)
-      const newRange: SelectionRange = {
-        start: selectionAnchor,
-        end: { row, col }
-      }
-      setSelectionRange(newRange)
-      
-      // 範囲内のすべてのセルを選択
-      const newSelectedCells = new Set<string>()
-      const minRow = Math.min(selectionAnchor.row, row)
-      const maxRow = Math.max(selectionAnchor.row, row)
-      const minCol = Math.min(selectionAnchor.col, col)
-      const maxCol = Math.max(selectionAnchor.col, col)
-      
-      for (let r = minRow; r <= maxRow; r++) {
-        for (let c = minCol; c <= maxCol; c++) {
-          newSelectedCells.add(`${r}-${c}`)
-        }
-      }
-      
-      setSelectedCells(newSelectedCells)
-    } else if (extend && selectionRange) {
-      // マウス範囲選択：現在のselectionRangeを拡張
-      console.log('🔍 [React] Using selectionRange for extend:', selectionRange.start)
-      const newRange: SelectionRange = {
-        start: selectionRange.start,
-        end: { row, col }
-      }
-      setSelectionRange(newRange)
-      
-      // 範囲内のすべてのセルを選択
-      const newSelectedCells = new Set<string>()
-      const minRow = Math.min(newRange.start.row, newRange.end.row)
-      const maxRow = Math.max(newRange.start.row, newRange.end.row)
-      const minCol = Math.min(newRange.start.col, newRange.end.col)
-      const maxCol = Math.max(newRange.start.col, newRange.end.col)
-      
-      for (let r = minRow; r <= maxRow; r++) {
-        for (let c = minCol; c <= maxCol; c++) {
-          newSelectedCells.add(`${r}-${c}`)
-        }
-      }
-      
-      setSelectedCells(newSelectedCells)
-    } else {
-      // 単一セル選択：selectionAnchorを新しく設定
-      console.log('🔍 [React] Single cell selection, setting new anchor:', { row, col })
-      setSelectedCells(new Set([cellKey]))
-      setSelectionRange({ start: { row, col }, end: { row, col } })
-      setSelectionAnchor({ row, col }) // 新しい選択の起点を設定
-    }
-  }, [selectionRange, selectedCells, selectionAnchor])
-
-  // 選択をクリア
-  const clearSelection = useCallback(() => {
-    setSelectedCells(new Set())
-    setSelectionRange(null)
-    setSelectionAnchor(null) // Shift選択用のアンカーもクリア
-    setCurrentEditingCell(null)
-  }, [])
-
-  // 行全体を選択
-  const selectRow = useCallback((rowIndex: number, extend = false) => {
-    const newSelectedCells = new Set<string>()
-    const headers = tableData.headers
-    
-    if (extend && selectionRange) {
-      // 範囲選択
-      const startRow = selectionRange.start.row
-      const endRow = rowIndex
-      const minRow = Math.min(startRow, endRow)
-      const maxRow = Math.max(startRow, endRow)
-      
-      for (let row = minRow; row <= maxRow; row++) {
-        for (let col = 0; col < headers.length; col++) {
-          newSelectedCells.add(`${row}-${col}`)
-        }
-      }
-      
-      setSelectionRange({
-        start: selectionRange.start,
-        end: { row: rowIndex, col: headers.length - 1 }
-      })
-    } else {
-      // 単一行選択
-      for (let col = 0; col < headers.length; col++) {
-        newSelectedCells.add(`${rowIndex}-${col}`)
-      }
-      
-      setSelectionRange({
-        start: { row: rowIndex, col: 0 },
-        end: { row: rowIndex, col: headers.length - 1 }
-      })
-    }
-    
-    setSelectedCells(newSelectedCells)
-  }, [tableData.headers, selectionRange])
-
-  // 列全体を選択
-  const selectColumn = useCallback((colIndex: number, extend = false) => {
-    const newSelectedCells = new Set<string>()
-    const rows = tableData.rows
-    
-    if (extend && selectionRange) {
-      // 範囲選択
-      const startCol = selectionRange.start.col
-      const endCol = colIndex
-      const minCol = Math.min(startCol, endCol)
-      const maxCol = Math.max(startCol, endCol)
-      
-      for (let row = 0; row < rows.length; row++) {
-        for (let col = minCol; col <= maxCol; col++) {
-          newSelectedCells.add(`${row}-${col}`)
-        }
-      }
-      
-      setSelectionRange({
-        start: selectionRange.start,
-        end: { row: rows.length - 1, col: colIndex }
-      })
-    } else {
-      // 単一列選択
-      for (let row = 0; row < rows.length; row++) {
-        newSelectedCells.add(`${row}-${colIndex}`)
-      }
-      
-      setSelectionRange({
-        start: { row: 0, col: colIndex },
-        end: { row: rows.length - 1, col: colIndex }
-      })
-    }
-    
-    setSelectedCells(newSelectedCells)
-  }, [tableData.rows, selectionRange])
-
-  // 全選択
-  const selectAll = useCallback(() => {
-    const newSelectedCells = new Set<string>()
-    const { headers, rows } = tableData
-    
-    for (let row = 0; row < rows.length; row++) {
-      for (let col = 0; col < headers.length; col++) {
-        newSelectedCells.add(`${row}-${col}`)
-      }
-    }
-    
-    setSelectedCells(newSelectedCells)
-    setSelectionRange({
-      start: { row: 0, col: 0 },
-      end: { row: rows.length - 1, col: headers.length - 1 }
-    })
-  }, [tableData])
-
-  // 列幅を設定
-  const setColumnWidth = useCallback((col: number, width: number) => {
-    setColumnWidths(prev => ({ ...prev, [col]: width }))
-  }, [])
-
-  // 行を移動
+  // Move operations
   const moveRow = useCallback((fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return
     
@@ -404,17 +137,16 @@ export function useTableEditor(initialData: TableData) {
     })
   }, [])
 
-  // 列を移動
   const moveColumn = useCallback((fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return
     
     setTableData(prev => {
-      // ヘッダーを移動
+      // Move header
       const newHeaders = [...prev.headers]
       const [movedHeader] = newHeaders.splice(fromIndex, 1)
       newHeaders.splice(toIndex, 0, movedHeader)
       
-      // 各行のデータを移動
+      // Move data in each row
       const newRows = prev.rows.map(row => {
         const newRow = [...row]
         const [movedCell] = newRow.splice(fromIndex, 1)
@@ -426,151 +158,30 @@ export function useTableEditor(initialData: TableData) {
     })
   }, [])
 
-  // Apply view-only sort (does not modify file) - 3-state toggle: asc → desc → none
+  // Column width management
+  const setColumnWidth = useCallback((col: number, width: number) => {
+    setColumnWidths(prev => ({ ...prev, [col]: width }))
+  }, [])
+
+  // Sort operations - delegate to useSort hook
   const sortColumn = useCallback((col: number) => {
-    console.log('🔧 sortColumn called with col:', col)
-    console.log('🔧 Current tableData before sort:', tableData)
-    
-    // Set skip flag to prevent useEffect from resetting state
-    skipResetRef.current = true
-    
-    setSortState(prev => {
-      console.log('🔧 setSortState callback, prev state:', prev)
-      let direction: 'asc' | 'desc' | 'none' = 'asc'
-      
-      // Determine new direction based on current state
-      if (prev.column === col) {
-        // Same column clicked - cycle through states
-        if (prev.direction === 'asc') {
-          direction = 'desc'
-        } else if (prev.direction === 'desc') {
-          direction = 'none'
-        } else {
-          direction = 'asc'
-        }
-      } else {
-        // Different column clicked - start with asc
-        direction = 'asc'
-      }
+    return sort.sortColumn(col, tableData)
+  }, [sort, tableData])
 
-      console.log('🔧 Determined direction:', direction)
-
-      // Store original data if this is the first sort
-      const originalData = prev.originalData || tableData
-      
-      if (direction === 'none') {
-        // Restore original data
-        console.log('🔧 Restoring original data:', originalData)
-        setTableData(originalData)
-        // Clear skip flag when sort operation is complete
-        skipResetRef.current = false
-        const newState = {
-          column: -1,
-          direction: 'none' as const,
-          isViewOnly: false,
-          originalData: null
-        }
-        console.log('🔧 Returning new state (restore):', newState)
-        return newState
-      } else {
-        // Apply sort to display data
-        console.log('🔧 Sorting data with direction:', direction)
-        const sortedData = sortTableData(originalData, col, direction)
-        console.log('🔧 Sorted data:', sortedData)
-        setTableData(sortedData)
-        const newState = {
-          column: col,
-          direction: direction,
-          isViewOnly: true,
-          originalData: originalData
-        }
-        console.log('🔧 Returning new state (sort):', newState)
-        return newState
-      }
-    })
-  }, [tableData])
-
-  // Sort table data utility function
-  const sortTableData = useCallback((data: TableData, columnIndex: number, direction: 'asc' | 'desc') => {
-    const sortedData = JSON.parse(JSON.stringify(data)) // Deep clone
-    
-    const sortedIndices = sortedData.rows.map((row: string[], index: number) => ({
-      index,
-      value: row[columnIndex] || '',
-      row
-    }))
-
-    sortedIndices.sort((a: { index: number; value: string; row: string[] }, b: { index: number; value: string; row: string[] }) => {
-      // Convert <br/> tags to spaces for sorting comparison
-      const aVal = a.value.toString().replace(/<br\s*\/?>/gi, ' ').toLowerCase().trim()
-      const bVal = b.value.toString().replace(/<br\s*\/?>/gi, ' ').toLowerCase().trim()
-      
-      // Try numeric comparison first
-      const aNum = parseFloat(aVal)
-      const bNum = parseFloat(bVal)
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        return direction === 'asc' ? aNum - bNum : bNum - aNum
-      }
-      
-      // Fall back to string comparison
-      if (direction === 'asc') {
-        return aVal.localeCompare(bVal)
-      } else {
-        return bVal.localeCompare(aVal)
-      }
-    })
-
-    sortedData.rows = sortedIndices.map((item: { index: number; value: string; row: string[] }) => item.row)
-    return sortedData
-  }, [])
-
-  // Restore original view (before any sorting)
-  const restoreOriginalView = useCallback(() => {
-    skipResetRef.current = false // Clear skip flag
-    setSortState(prev => {
-      if (prev.originalData) {
-        setTableData(prev.originalData)
-        return {
-          column: -1,
-          direction: 'none',
-          isViewOnly: false,
-          originalData: null
-        }
-      }
-      return prev
-    })
-  }, [])
-
-  // Commit current sort to file
-  const commitSortToFile = useCallback(() => {
-    skipResetRef.current = false // Clear skip flag
-    setSortState(prev => {
-      if (prev.isViewOnly) {
-        return {
-          column: prev.column,
-          direction: prev.direction,
-          isViewOnly: false,
-          originalData: null
-        }
-      }
-      return prev
-    })
-  }, [])
-
-  // エディタ状態をまとめて返す
+  // Editor state object
   const editorState: EditorState = useMemo(() => ({
     currentEditingCell,
-    selectedCells,
-    selectionRange,
-    isSelecting,
-    sortState,
+    selectedCells: selection.selectionState.selectedCells,
+    selectionRange: selection.selectionState.selectionRange,
+    isSelecting: selection.selectionState.isSelecting,
+    sortState: sort.sortState,
     columnWidths
-  }), [currentEditingCell, selectedCells, selectionRange, isSelecting, sortState, columnWidths])
+  }), [currentEditingCell, selection.selectionState, sort.sortState, columnWidths])
 
   return {
     tableData,
     editorState,
-    selectionAnchor, // Shift+矢印キー用のアンカー
+    selectionAnchor: selection.selectionState.selectionAnchor,
     setTableData,
     updateCell,
     updateCells,
@@ -579,23 +190,23 @@ export function useTableEditor(initialData: TableData) {
     deleteRow,
     addColumn,
     deleteColumn,
-    selectCell,
-    selectRow,
-    selectColumn,
-    selectAll,
-    clearSelection,
+    selectCell: selection.selectCell,
+    selectRow: selection.selectRow,
+    selectColumn: selection.selectColumn,
+    selectAll: selection.selectAll,
+    clearSelection: selection.clearSelection,
     setCurrentEditingCell,
-    setIsSelecting,
-    setSelectionAnchor, // Shift+矢印キー用アンカーのセッター
+    setIsSelecting: selection.setIsSelecting,
+    setSelectionAnchor: selection.setSelectionAnchor,
     setColumnWidth,
     moveRow,
     moveColumn,
     sortColumn,
-    restoreOriginalView,
-    commitSortToFile,
-    // 新しいドラッグ選択関数
-    startDragSelection,
-    updateDragSelection,
-    endDragSelection
+    restoreOriginalView: sort.restoreOriginalView,
+    commitSortToFile: sort.commitSortToFile,
+    // Drag selection functions
+    startDragSelection: selection.startDragSelection,
+    updateDragSelection: selection.updateDragSelection,
+    endDragSelection: selection.endDragSelection
   }
 }

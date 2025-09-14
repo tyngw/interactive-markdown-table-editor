@@ -76,7 +76,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
   const { copyToClipboard, pasteFromClipboard } = useClipboard()
 
   // CSVエクスポート機能
-  const { exportToCSV } = useCSVExport()
+  const { exportToCSV, exportToTSV } = useCSVExport()
 
   // ドラッグ&ドロップ機能
   const { getDragProps, getDropProps } = useDragDrop({
@@ -398,6 +398,10 @@ const TableEditor: React.FC<TableEditorProps> = ({
     )
     
     if (success && editorState.selectionRange) {
+      // 現在の選択状態を保存
+      const currentSelectionRange = editorState.selectionRange
+      const currentSelectedCells = new Set(editorState.selectedCells)
+      
       // 選択されたセルをクリア（一括更新）
       const { start, end } = editorState.selectionRange
       const minRow = Math.min(start.row, end.row)
@@ -423,13 +427,25 @@ const TableEditor: React.FC<TableEditorProps> = ({
           command: 'bulkUpdateCells',
           data: { updates, tableIndex: currentTableIndex }
         })
+        
+        // 切り取り後に選択状態を復元
+        // 少し遅延を入れて、セルの更新後に選択状態を設定
+        setTimeout(() => {
+          // 現在の選択を維持するために、同じ範囲を再選択
+          selectCell(currentSelectionRange.start.row, currentSelectionRange.start.col)
+          // 範囲選択の場合は、再度範囲選択を適用
+          if (currentSelectionRange.start.row !== currentSelectionRange.end.row || 
+              currentSelectionRange.start.col !== currentSelectionRange.end.col) {
+            selectCell(currentSelectionRange.end.row, currentSelectionRange.end.col, true)
+          }
+        }, 10)
       }
       
       updateStatus('success', 'セルを切り取りました')
     } else {
       updateStatus('error', '切り取りに失敗しました')
     }
-  }, [copyToClipboard, currentTableData, editorState, updateCells, onSendMessage, updateStatus])
+  }, [copyToClipboard, currentTableData, editorState, updateCells, onSendMessage, updateStatus, currentTableIndex, selectCell])
 
   // セルクリア機能（Delete/Backspaceキー用）
   const handleClearCells = useCallback(() => {
@@ -469,26 +485,17 @@ const TableEditor: React.FC<TableEditorProps> = ({
     }
   }, [exportToCSV, currentTableData, onSendMessage, updateStatus])
 
-  // TSVエクスポート
+  // TSVエクスポート（useCSVExportフックを使用）
   const handleExportTSV = useCallback((encoding: string = 'utf8') => {
-    // TSV形式でエクスポート（タブ区切り）
-    const tsvContent = [
-      currentTableData.headers.join('\t'),
-      ...currentTableData.rows.map(row => row.join('\t'))
-    ].join('\n')
-
-    onSendMessage({
-      command: 'exportFile',
-      data: {
-        content: tsvContent,
-        format: 'tsv',
-        encoding: encoding
-      }
-    })
-
-    const encodingLabel = encoding === 'sjis' ? 'Shift_JIS' : 'UTF-8'
-    updateStatus('success', `TSVエクスポートを開始しました (${encodingLabel})`)
-  }, [currentTableData, onSendMessage, updateStatus])
+    const success = exportToTSV(currentTableData, onSendMessage, undefined, encoding)
+    
+    if (success) {
+      const encodingLabel = encoding === 'sjis' ? 'Shift_JIS' : 'UTF-8'
+      updateStatus('success', `TSVエクスポートを開始しました (${encodingLabel})`)
+    } else {
+      updateStatus('error', 'TSVエクスポートに失敗しました')
+    }
+  }, [exportToTSV, currentTableData, onSendMessage, updateStatus])
 
   // キーボードナビゲーション
   useKeyboardNavigation({
