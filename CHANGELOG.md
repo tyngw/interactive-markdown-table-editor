@@ -5,6 +5,34 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.6] - 2025-09-14
+
+### Improved - ARCHITECTURE REFACTORING (DDD)
+- **React WebViewアーキテクチャの大幅改善**: ドメイン駆動設計（DDD）の原則に基づく大規模リファクタリング
+  - **責務の分離**: 
+    - `useSelection`フック: 選択状態とロジック（selectedCells, selectionRange, etc.）を分離
+    - `useSort`フック: ソート関連の状態とロジック（sortState, sortColumn, etc.）を分離
+    - `CellEditor`コンポーネント: TableBodyから独立したコンポーネントとして切り出し
+  - **冗長性の解消**:
+    - TSVエクスポートロジックの重複削除: TableEditor.tsxからuseCSVExportフックに統合
+  - **God Hook/Componentの解消**:
+    - useTableEditor（約450行）から選択・ソートロジックを分離し、合成パターンで再構築
+    - 各フックが単一責任の原則に従い、メンテナンス性・テスト性を大幅向上
+
+### Fixed - CRITICAL BUGS
+- **ソート機能の無限ループ修正**: デフォルトのソート順に戻した時に発生する無限ループを解消
+  - 原因: useTableEditorのuseEffect依存配列にresetSortStateとinitializeSelection関数が含まれていた
+  - 修正: 依存配列から関数を削除し、直接呼び出しに変更
+- **セル切り取り後の選択状態保持**: 切り取り後にセルが未選択状態になる問題を修正
+  - セル切り取り処理後に選択範囲を自動的に復元
+  - 単一セル・複数セル選択の両方に対応
+
+### Technical Benefits
+- **メンテナンス性向上**: 関心事の明確な分離により変更の影響範囲を限定
+- **拡張性向上**: 新機能追加時の適切な配置場所が明確化
+- **テスト容易性**: 各フックが独立してテスト可能
+- **コードの可読性**: ユビキタス言語の活用で意図が明確
+
 ## [0.7.5] - 2025-09-13
 
 ### Fixed - REACT WEBVIEW SHIFT+ARROW SELECTION
