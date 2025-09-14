@@ -16,6 +16,7 @@ interface TableBodyProps {
   onShowRowContextMenu?: (event: React.MouseEvent, row: number) => void
   getDragProps?: (type: 'row' | 'column', index: number) => any
   getDropProps?: (type: 'row' | 'column', index: number) => any
+  selectedRows?: Set<number>
 }
 
 const TableBody: React.FC<TableBodyProps> = ({
@@ -28,7 +29,8 @@ const TableBody: React.FC<TableBodyProps> = ({
   onRowSelect,
   onShowRowContextMenu,
   getDragProps,
-  getDropProps
+  getDropProps,
+  selectedRows
 }) => {
   const { getStyle } = useTheme()
   const savedHeightsRef = useRef<Map<string, { original: number; maxOther: number }>>(new Map())
@@ -150,7 +152,7 @@ const TableBody: React.FC<TableBodyProps> = ({
       {rows.map((row, rowIndex) => (
         <tr key={rowIndex} data-row={rowIndex}>
           <td 
-            className="row-number"
+            className={`row-number ${selectedRows?.has(rowIndex) ? 'highlighted' : ''}`}
             onClick={(e) => {
               if (onRowSelect) {
                 onRowSelect(rowIndex, e)
@@ -182,10 +184,6 @@ const TableBody: React.FC<TableBodyProps> = ({
               maxWidth: `${storedWidth}px`
             }
             
-            const selectionStyle = isSelected ? {
-              backgroundColor: getStyle('list.activeSelectionBackground', '#0078d4'),
-              color: getStyle('list.activeSelectionForeground', '#ffffff')
-            } : {}
             const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
             
             return (
@@ -197,7 +195,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                 onDoubleClick={() => startCellEdit(rowIndex, colIndex)}
                 data-row={rowIndex}
                 data-col={colIndex}
-                style={{...widthStyle, ...selectionStyle}}
+                style={{...widthStyle}}
                 title={`Cell ${getColumnLetter(colIndex)}${rowIndex + 1}`}
               >
                 {isEditing ? (

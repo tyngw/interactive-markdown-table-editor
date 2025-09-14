@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
 import { TableData, VSCodeMessage } from '../types'
 import { useTableEditor } from '../hooks/useTableEditor'
 import { useClipboard } from '../hooks/useClipboard'
@@ -55,6 +55,22 @@ const TableEditor: React.FC<TableEditorProps> = ({
     restoreOriginalView,
     commitSortToFile
   } = useTableEditor(tableData)
+
+  const selectedRows = useMemo(() => {
+    const rows = new Set<number>();
+    editorState.selectedCells.forEach(cellKey => {
+      rows.add(parseInt(cellKey.split('-')[0], 10));
+    });
+    return rows;
+  }, [editorState.selectedCells]);
+
+  const selectedCols = useMemo(() => {
+    const cols = new Set<number>();
+    editorState.selectedCells.forEach(cellKey => {
+      cols.add(parseInt(cellKey.split('-')[1], 10));
+    });
+    return cols;
+  }, [editorState.selectedCells]);
 
   // クリップボード機能
   const { copyToClipboard, pasteFromClipboard } = useClipboard()
@@ -203,7 +219,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
       commitSortToFile()
       onSendMessage({
         command: 'sort',
-        data: { 
+        data: {
           column: editorState.sortState.column, 
           direction: editorState.sortState.direction,
           tableIndex: currentTableIndex
@@ -511,6 +527,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
             onShowColumnContextMenu={handleShowColumnContextMenu}
             getDragProps={getDragProps}
             getDropProps={getDropProps}
+            selectedCols={selectedCols}
           />
           <TableBody
             headers={currentTableData.headers}
@@ -525,6 +542,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
             onShowRowContextMenu={handleShowRowContextMenu}
             getDragProps={getDragProps}
             getDropProps={getDropProps}
+            selectedRows={selectedRows}
           />
         </table>
       </div>
