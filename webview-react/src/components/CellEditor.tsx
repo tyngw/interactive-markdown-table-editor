@@ -6,6 +6,7 @@ export interface CellEditorProps {
   onCancel: () => void
   rowIndex?: number
   colIndex?: number
+  // 親からレイアウト情報を受け取る
   originalHeight?: number
   maxOtherHeight?: number
 }
@@ -14,8 +15,9 @@ const CellEditor: React.FC<CellEditorProps> = ({
   value, 
   onCommit, 
   onCancel, 
-  rowIndex, 
-  colIndex, 
+  // 位置情報は親が保持（ここでは使用しない）
+  rowIndex: _rowIndex, 
+  colIndex: _colIndex, 
   originalHeight, 
   maxOtherHeight 
 }) => {
@@ -24,86 +26,29 @@ const CellEditor: React.FC<CellEditorProps> = ({
   const [isComposing, setIsComposing] = useState(false)
 
   useEffect(() => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current
-      textarea.focus()
-      
-      const textLength = textarea.value.length
-      textarea.setSelectionRange(textLength, textLength)
-      
-      const adjustHeight = () => {
-        textarea.style.height = 'auto'
-        const contentHeight = textarea.scrollHeight
-        
-        let editingCellOriginalHeight = originalHeight ?? 0
-        let savedMaxOther = maxOtherHeight ?? 0
-        
-        if (typeof rowIndex === 'number' && typeof colIndex === 'number') {
-          try {
-            const cellElement = document.querySelector(`[data-row="${rowIndex}"][data-col="${colIndex}"]`)
-            
-            if (!editingCellOriginalHeight && cellElement instanceof HTMLElement && cellElement.dataset.originalHeight) {
-              editingCellOriginalHeight = parseInt(cellElement.dataset.originalHeight)
-            }
-            if (!savedMaxOther && cellElement instanceof HTMLElement && cellElement.dataset.maxOtherHeight) {
-              savedMaxOther = parseInt(cellElement.dataset.maxOtherHeight)
-            }
-          } catch (error) {
-            // console.warn('Failed to get original cell height:', error)
-          }
-        }
-        
-        let maxOtherCellHeight = savedMaxOther || 0
-        if (!savedMaxOther && typeof rowIndex === 'number') {
-          try {
-            const rowCells = document.querySelectorAll(`[data-row="${rowIndex}"]`)
-            rowCells.forEach((cell) => {
-              if (cell instanceof HTMLElement && !cell.classList.contains('editing')) {
-                const cellHeight = cell.offsetHeight
-                if (cellHeight > maxOtherCellHeight) {
-                  maxOtherCellHeight = cellHeight
-                }
-              }
-            })
-          } catch (error) {
-            // console.warn('Failed to get row cell heights:', error)
-          }
-        }
-        
-        const currentTextareaHeight = textarea.offsetHeight
-        
-        const minHeight = 32
-        let finalHeight
-        
-        if (editingCellOriginalHeight > maxOtherCellHeight) {
-          finalHeight = Math.max(contentHeight, currentTextareaHeight, editingCellOriginalHeight, minHeight)
-        } else {
-          finalHeight = Math.max(contentHeight, currentTextareaHeight, maxOtherCellHeight, minHeight)
-        }
+    const textarea = textareaRef.current
+    if (!textarea) return
 
-        textarea.style.setProperty('height', finalHeight + 'px', 'important')
-        
-        const cellElement = document.querySelector(`[data-row="${rowIndex}"][data-col="${colIndex}"]`)
-        if (cellElement instanceof HTMLElement) {
-          cellElement.style.setProperty('height', finalHeight + 'px', 'important')
-        }
-      }
-      
-      adjustHeight()
-      
-      const handleInput = () => {
-        if (!isComposing) {
-          adjustHeight()
-        }
-      }
-      
-      textarea.addEventListener('input', handleInput)
-      
-      return () => {
-        textarea.removeEventListener('input', handleInput)
-      }
+    textarea.focus()
+    const textLength = textarea.value.length
+    textarea.setSelectionRange(textLength, textLength)
+
+    const adjustHeight = () => {
+      textarea.style.height = 'auto'
+      const contentHeight = textarea.scrollHeight
+      const minHeight = 32
+
+      const baseOriginal = originalHeight ?? 0
+      const baseMaxOther = maxOtherHeight ?? 0
+      const finalHeight = Math.max(contentHeight, baseOriginal, baseMaxOther, minHeight)
+      textarea.style.height = `${finalHeight}px`
     }
-  }, [rowIndex, colIndex, originalHeight, maxOtherHeight, isComposing])
+
+    adjustHeight()
+    const handleInput = () => { if (!isComposing) adjustHeight() }
+    textarea.addEventListener('input', handleInput)
+    return () => textarea.removeEventListener('input', handleInput)
+  }, [originalHeight, maxOtherHeight, isComposing])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
@@ -146,7 +91,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
   }, [currentValue, onCommit])
 
   return (
-    <textarea
+  <textarea
       ref={textareaRef}
       className="cell-input"
       value={currentValue}
@@ -156,29 +101,29 @@ const CellEditor: React.FC<CellEditorProps> = ({
       onCompositionEnd={handleCompositionEnd}
       onBlur={handleBlur}
       style={{
-        border: 'none',
-        background: 'transparent',
-        color: 'inherit',
-        fontFamily: 'inherit',
-        fontSize: 'inherit',
-        outline: 'none',
-        resize: 'none',
-        boxSizing: 'border-box',
-        margin: 0,
-        whiteSpace: 'pre-wrap',
-        wordWrap: 'break-word',
-        wordBreak: 'break-word',
-        overflowWrap: 'break-word',
-        overflow: 'hidden',
-        lineHeight: '1.2',
-        verticalAlign: 'top',
-        textAlign: 'left',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        zIndex: 5,
-        padding: '4px 6px'
+    border: 'none',
+    background: 'transparent',
+    color: 'inherit',
+    fontFamily: 'inherit',
+    fontSize: 'inherit',
+    outline: 'none',
+    resize: 'none',
+    boxSizing: 'border-box',
+    margin: 0,
+    whiteSpace: 'pre-wrap',
+    wordWrap: 'break-word',
+    wordBreak: 'break-word',
+    overflowWrap: 'break-word',
+    overflow: 'hidden',
+    lineHeight: '1.2',
+    verticalAlign: 'top',
+    textAlign: 'left',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    zIndex: 5,
+    padding: '4px 6px'
       }}
     />
   )

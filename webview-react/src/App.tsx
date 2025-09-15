@@ -5,7 +5,7 @@ import StatusBar from './components/StatusBar'
 import { StatusProvider } from './contexts/StatusContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { useVSCodeCommunication } from './hooks/useVSCodeCommunication'
-import { TableData } from './types'
+import { TableData, SortState } from './types'
 
 function AppContent() {
   console.log('🔍 [React] AppContent initializing...')
@@ -14,6 +14,8 @@ function AppContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [themeRequested, setThemeRequested] = useState(false)
+  // テーブルごとのソート状態を上位で管理
+  const [sortStates, setSortStates] = useState<SortState[]>([])
   const { theme, isLoaded, applyThemeVariables } = useTheme()
   const lastUpdateRef = useRef<{hash: string, time: number} | null>(null)
   const currentIndexRef = useRef(0)
@@ -71,6 +73,14 @@ function AppContent() {
       }
       if (Array.isArray(data)) {
         setAllTables(data)
+        // テーブル数に応じて sortStates を整列
+        setSortStates((prev) => {
+          const next = [...prev]
+          for (let i = next.length; i < data.length; i++) {
+            next[i] = { column: -1, direction: 'none' }
+          }
+          return next.slice(0, data.length)
+        })
         const len = data.length
         const now = Date.now()
         const pending = pendingTabSwitchRef.current
@@ -88,6 +98,7 @@ function AppContent() {
         }
       } else {
         setAllTables([data])
+  setSortStates([{ column: -1, direction: 'none' }])
         setCurrentTableIndex(0)
         currentIndexRef.current = 0
       }
@@ -227,6 +238,15 @@ function AppContent() {
           currentTableIndex={currentTableIndex}
           onTableUpdate={handleTableUpdate}
           onSendMessage={sendMessage}
+          sortState={sortStates[currentTableIndex]}
+          setSortState={(updater) => {
+            setSortStates((prev) => {
+              const next = [...prev]
+              const current = prev[currentTableIndex] ?? { column: -1, direction: 'none' }
+              next[currentTableIndex] = typeof updater === 'function' ? (updater as any)(current) : updater
+              return next
+            })
+          }}
         />
         <StatusBar />
         </div>

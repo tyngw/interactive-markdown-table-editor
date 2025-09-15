@@ -1,8 +1,8 @@
 import { useCallback, useRef } from 'react'
 import { EditorState, CellPosition } from '../types'
 import { processCellContent, processCellContentForEditing, processCellContentForStorage } from '../utils/contentConverter'
-import { useTheme } from '../contexts/ThemeContext'
 import CellEditor from './CellEditor'
+import { getColumnLetter } from '../utils/tableUtils'
 
 interface TableBodyProps {
   headers: string[]
@@ -33,7 +33,6 @@ const TableBody: React.FC<TableBodyProps> = ({
   getDropProps,
   selectedRows
 }) => {
-  const { getStyle } = useTheme()
   const savedHeightsRef = useRef<Map<string, { original: number; maxOther: number }>>(new Map())
 
   const handleCellMouseDown = useCallback((row: number, col: number, event: React.MouseEvent) => {
@@ -52,14 +51,7 @@ const TableBody: React.FC<TableBodyProps> = ({
     }
   }, [onShowRowContextMenu])
 
-  const getColumnLetter = useCallback((index: number) => {
-    let result = ''
-    while (index >= 0) {
-      result = String.fromCharCode(65 + (index % 26)) + result
-      index = Math.floor(index / 26) - 1
-    }
-    return result
-  }, [])
+  // 列記号はユーティリティから提供
 
   const isCellSelected = useCallback((row: number, col: number) => {
     return editorState.selectedCells.has(`${row}-${col}`)
