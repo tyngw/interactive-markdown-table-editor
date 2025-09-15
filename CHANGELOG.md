@@ -5,6 +5,19 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-01-XX
+
+### Added
+- **仮想スクロール機能**: react-windowライブラリを使用した仮想スクロール機能を導入
+  - 100行を超える大型テーブルで自動的に有効化
+  - スムーズなスクロールとパフォーマンス向上
+  - 既存の全機能（セル編集、選択、コンテキストメニュー等）を完全サポート
+  - FixedSizeListとVariableSizeListの動的切り替えによる最適化
+
+### Changed
+- 大型テーブルのレンダリングパフォーマンスを大幅改善
+- テーブル描画の仕組みを仮想スクロール対応に拡張
+
 ## [0.7.11] - 2025-09-15
 
 ### Fixed

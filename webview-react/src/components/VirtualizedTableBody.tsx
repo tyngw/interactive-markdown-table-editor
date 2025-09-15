@@ -183,7 +183,15 @@ const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   selectedRows
 }) => {
   const savedHeightsRef = useRef<Map<string, { original: number; maxOther: number }>>(new Map())
-  const listRef = useRef<any>(null)
+  const listRef = useRef<any>(null) // FixedSizeList と VariableSizeList の両方に対応
+
+  // セルサイズ変更時にリストを更新
+  const resetListCache = useCallback(() => {
+    if (listRef.current && typeof listRef.current.resetAfterIndex === 'function') {
+      // VariableSizeListの場合、キャッシュをリセット
+      listRef.current.resetAfterIndex(0, true)
+    }
+  }, [])
 
   const handleCellMouseDown = useCallback((row: number, col: number, event: React.MouseEvent) => {
     if ((event.target as HTMLElement).classList.contains('cell-input')) {
@@ -213,11 +221,14 @@ const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   const startCellEdit = useCallback((row: number, col: number) => {
     onCellEdit({ row, col })
     
+    // 編集開始時にリストのキャッシュをリセット
+    resetListCache()
+    
     // 編集するセルが見えるようにスクロール
     if (listRef.current) {
       listRef.current.scrollToItem(row, 'smart')
     }
-  }, [onCellEdit])
+  }, [onCellEdit, resetListCache])
 
   const commitCellEdit = useCallback((row: number, col: number, value: string, move?: 'right' | 'left' | 'down' | 'up') => {
     const storageValue = processCellContentForStorage(value)
@@ -254,7 +265,9 @@ const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
 
   const cancelCellEdit = useCallback((row: number, col: number) => {
     onCellEdit(null)
-  }, [onCellEdit])
+    // 編集終了時にもリストのキャッシュをリセット
+    resetListCache()
+  }, [onCellEdit, resetListCache])
 
   // データをVirtualRowに渡すためのオブジェクト
   const itemData = {
@@ -282,11 +295,12 @@ const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
   const getItemSize = useCallback((index: number) => {
     // 編集中のセルがある場合は高さを拡張
     const isEditingRow = editorState.currentEditingCell?.row === index
+    // 編集中の行は少し高めに設定
     return isEditingRow ? 60 : 32
   }, [editorState.currentEditingCell])
 
-  // 動的な高さ計算のため、useVariableSizeListを使うのがより適切ですが、
-  // 今回は簡単なFixedSizeListで基本実装を行います
+  // 動的な高さ計算のため、useVariableSizeListに変更するかの判定
+  const hasEditingCell = editorState.currentEditingCell !== null
   const listHeight = Math.min(400, Math.max(200, rows.length * 32))
 
   return (
@@ -294,16 +308,29 @@ const VirtualizedTableBody: React.FC<VirtualizedTableBodyProps> = ({
       border: '1px solid var(--vscode-editorWidget-border, #ccc)',
       borderTop: 'none'
     }}>
-      <ReactWindow.FixedSizeList
-        ref={listRef}
-        height={listHeight}
-        itemCount={rows.length}
-        itemSize={32} // 固定サイズを使用。将来的にVariableSizeListに変更可能
-        itemData={itemData}
-        width="100%"
-      >
-        {VirtualRow}
-      </ReactWindow.FixedSizeList>
+      {hasEditingCell ? (
+        <ReactWindow.VariableSizeList
+          ref={listRef}
+          height={listHeight}
+          itemCount={rows.length}
+          itemSize={getItemSize}
+          itemData={itemData}
+          width="100%"
+        >
+          {VirtualRow}
+        </ReactWindow.VariableSizeList>
+      ) : (
+        <ReactWindow.FixedSizeList
+          ref={listRef}
+          height={listHeight}
+          itemCount={rows.length}
+          itemSize={32}
+          itemData={itemData}
+          width="100%"
+        >
+          {VirtualRow}
+        </ReactWindow.FixedSizeList>
+      )}
     </div>
   )
 }
