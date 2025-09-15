@@ -355,19 +355,23 @@ export class WebviewManager {
         // Handle panel view state changes (when tab becomes active/inactive)
         panel.onDidChangeViewState((e) => {
             if (e.webviewPanel.active && e.webviewPanel.visible) {
-                console.log('[MTE][Ext] Panel became active, refreshing data for:', panelId);
-                // Request fresh data when panel becomes active
-                this.refreshPanelData(panel, uri);
-                // Ensure theme is applied when panel becomes active
-                this.applyThemeToPanel(panel);
+                const currentPanelId = this.findPanelId(e.webviewPanel);
+                if (currentPanelId) {
+                    console.log('[MTE][Ext] Panel became active, refreshing data for:', currentPanelId);
+                    // Request fresh data when panel becomes active
+                    this.refreshPanelData(e.webviewPanel, vscode.Uri.parse(currentPanelId.replace(/_\d{13,}$/, '')));
+                    // Ensure theme is applied when panel becomes active
+                    this.applyThemeToPanel(e.webviewPanel);
+                }
             } else {
-                console.log('[MTE][Ext] Panel state changed (inactive or hidden):', { active: e.webviewPanel.active, visible: e.webviewPanel.visible, panelId });
+                const currentPanelId = this.findPanelId(e.webviewPanel);
+                console.log('[MTE][Ext] Panel state changed (inactive or hidden):', { active: e.webviewPanel.active, visible: e.webviewPanel.visible, panelId: currentPanelId });
             }
         }, null, this.context.subscriptions);
 
         // Handle messages from webview
         panel.webview.onDidReceiveMessage(
-            (message: WebviewMessage) => this.handleMessage(message, panel, uri),
+            (message: WebviewMessage) => this.handleMessage(message, panel),
             undefined,
             this.context.subscriptions
         );
@@ -438,10 +442,7 @@ export class WebviewManager {
      * Refresh panel data when it becomes active
      */
     private refreshPanelData(panel: vscode.WebviewPanel, uri: vscode.Uri): void {
-        console.log('Refreshing panel data for:', uri.toString());
-
         const actualPanelId = this.findPanelId(panel);
-        console.log('Using panel ID for refresh:', actualPanelId);
 
         // Request fresh table data from the file
         vscode.commands.executeCommand('markdownTableEditor.internal.requestTableData', {
@@ -481,10 +482,13 @@ export class WebviewManager {
     /**
      * Handle messages from webview
      */
-    private async handleMessage(message: WebviewMessage, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+    private async handleMessage(message: WebviewMessage, panel: vscode.WebviewPanel): Promise<void> {
         try {
             // Mark connection as healthy when we receive a message
             let panelId = this.findPanelId(panel);
+            const uriString = panelId.replace(/_\d{13,}$/, '');
+            const uri = vscode.Uri.parse(uriString);
+
             // テスト環境などでパネルが登録されていない場合はURIをフォールバックキーに使用
             if (!panelId) {
                 panelId = uri?.toString?.() || '';
