@@ -274,8 +274,6 @@ body {
     text-align: left;
     position: sticky !important;
     top: 0 !important;
-    width: 150px;
-    min-width: 150px;
     font-weight: 600;
     cursor: pointer;
     user-select: none;
@@ -289,11 +287,25 @@ body {
     overflow: hidden;
 }
 
+/* Apply 150px width only to normal column headers (not corner) */
+.table-editor th.column-header {
+    width: 150px;
+    min-width: 150px;
+}
+
 /* Specific override for header corner to ensure it's always on top */
 .table-editor th.header-corner {
     z-index: 1000 !important;
     transform: translateZ(0);
     will-change: transform;
+}
+
+/* Ensure header corner has fixed smaller width */
+.table-editor th.header-corner,
+.header-corner {
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
 }
 
 .header-content {
