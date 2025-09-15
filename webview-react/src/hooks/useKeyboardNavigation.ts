@@ -283,7 +283,15 @@ export function useKeyboardNavigation({
         newLeft += rRect.right - cRect.right + 8
       }
 
-      container.scrollTo({ top: Math.max(0, newTop), left: Math.max(0, newLeft), behavior: 'auto' })
+      const top = Math.max(0, newTop)
+      const left = Math.max(0, newLeft)
+      if (typeof (container as any).scrollTo === 'function') {
+        container.scrollTo({ top, left, behavior: 'auto' })
+      } else {
+        // jsdom 環境フォールバック
+        container.scrollTop = top
+        container.scrollLeft = left
+      }
     }
 
     switch (key) {

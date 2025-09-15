@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react'
 import { SortState } from '../types'
 
 interface StatusState {
@@ -39,51 +39,53 @@ export const StatusProvider: React.FC<StatusProviderProps> = ({ children }) => {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>(null)
   const [sortState, setSortState] = useState<SortState | null>(null)
 
-  const updateStatus = (type: StatusState['type'], message: string) => {
+  const updateStatus = useCallback((type: StatusState['type'], message: string) => {
     setStatus({ type, message })
     setTimeout(() => {
       setStatus(prev => ({ ...prev, message: undefined, type: undefined }))
     }, 3000)
-  }
+  }, [])
 
-  const updateSelection = (selection: string) => {
+  const updateSelection = useCallback((selection: string) => {
     setStatus(prev => ({ ...prev, selection }))
-  }
+  }, [])
 
-  const updateTableInfo = (rows: number, columns: number) => {
+  const updateTableInfo = useCallback((rows: number, columns: number) => {
     setTableInfo({ rows, columns })
-  }
+  }, [])
 
-  const updateSaveStatus = (status: SaveStatus) => {
+  const updateSaveStatus = useCallback((status: SaveStatus) => {
     setSaveStatus(status)
     if (status === 'saved') {
       setTimeout(() => setSaveStatus(null), 2000)
     }
-  }
+  }, [])
 
-  const updateSortState = (state: SortState) => {
+  const updateSortState = useCallback((state: SortState) => {
     setSortState(state)
-  }
+  }, [])
 
-  const clearStatus = () => {
+  const clearStatus = useCallback(() => {
     setStatus({})
     setSaveStatus(null)
     setSortState(null)
-  }
+  }, [])
+
+  const contextValue = useMemo(() => ({
+    status,
+    tableInfo,
+    saveStatus,
+    sortState,
+    updateStatus,
+    updateSelection,
+    updateTableInfo,
+    updateSaveStatus,
+    updateSortState,
+    clearStatus
+  }), [status, tableInfo, saveStatus, sortState, updateStatus, updateSelection, updateTableInfo, updateSaveStatus, updateSortState, clearStatus])
 
   return (
-    <StatusContext.Provider value={{
-      status,
-      tableInfo,
-      saveStatus,
-      sortState,
-      updateStatus,
-      updateSelection,
-      updateTableInfo,
-      updateSaveStatus,
-      updateSortState,
-      clearStatus
-    }}>
+    <StatusContext.Provider value={contextValue}>
       {children}
     </StatusContext.Provider>
   )

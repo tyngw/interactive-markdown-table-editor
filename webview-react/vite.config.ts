@@ -15,7 +15,12 @@ export default defineConfig({
     // VSCode webview用の最適化
     target: 'es2020',
     minify: 'terser',
-    sourcemap: false
+    sourcemap: false,
+    terserOptions: {
+      compress: {
+        drop_console: true,
+      }
+    }
   },
   base: './',
   // VSCode webview環境用の設定
