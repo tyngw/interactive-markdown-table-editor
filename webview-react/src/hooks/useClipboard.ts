@@ -8,7 +8,14 @@ interface ClipboardDependencies {
   updateCells: (updates: Array<{ row: number; col: number; value: string }>) => void
 }
 
-export function useClipboard({ addRow, addColumn, updateCells }: ClipboardDependencies) {
+const defaultDeps: ClipboardDependencies = {
+  addRow: () => {},
+  addColumn: () => {},
+  updateCells: () => {}
+}
+
+export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
+  const { addRow, addColumn, updateCells } = deps
   // 選択されたセルのデータを取得
   const getSelectedCellsData = useCallback((
     tableData: TableData,
