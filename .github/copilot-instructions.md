@@ -9,6 +9,14 @@
 1. `vsce package`
 2. `code --uninstall extension tyngw.markdown-table-editor`
 3. `code --install-extension markdown-table-editor-<version>.vsix`
+4. `テストに関するルール`を参照してテストを実行
+5. テストコードの追加・修正が必要ないか精査し、`テストに関するルール`を参照してテストコードを修正
+
+## テストに関するルール
+コードや挙動に変更を加えた場合は、必ず対応するテストを実行してください。
+- 変更がユニットレベルの場合は `src/test` 以下にユニットテストを追加（既存のテストフレームワークに合わせて Mocha/Jest を使用）
+- Webview や統合動作に関する変更は `src/test/suite` または `test/` の統合テストに追加
+- 追加後は `npm run compile` を実行してビルドし、`npm run test`（必要に応じて `npm run test:integration`）で全テストをパスさせること
 
 ## CHANGELOG の更新
 変更内容に応じて、CHANGELOG.md と package.json の version を更新してください
