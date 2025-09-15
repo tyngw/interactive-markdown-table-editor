@@ -5,6 +5,26 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7] - 2024-09-15
+
+### Fixed - CRITICAL TAB SWITCHING INFINITE LOOP
+- **タブ切り替え時の無限ループ問題を完全解決**:
+  - **根本原因**: `onTableUpdate`コールバックの副作用により状態更新が連鎖的に発生
+  - **解決策**: `useCallback` + `useRef` + データ比較による無限ループ防止機能を実装
+  - **技術的詳細**: 
+    - コールバック関数を`useCallback`で安定化（空の依存配列）
+    - `useRef`で最新の状態を参照し、依存配列の問題を回避
+    - `JSON.stringify`による深い比較で不要な更新をスキップ
+- **React Error #310（Hooks Rule違反）を修正**:
+  - **問題**: `useCallback`が条件分岐（if文）内で定義されていた
+  - **修正**: 全てのHooksをコンポーネントのトップレベルに移動
+  - **結果**: アプリケーションが正常に起動できるように復旧
+
+### Technical Improvements
+- **データフロー最適化**: TableEditor → App間の不要な再レンダリングを削減
+- **パフォーマンス向上**: コールバック関数の安定化により子コンポーネントの最適化
+- **コードクリーンアップ**: 重複した関数定義を削除し、保守性を向上
+
 ## [0.7.6] - 2025-09-14
 
 ### Improved - ARCHITECTURE REFACTORING (DDD)

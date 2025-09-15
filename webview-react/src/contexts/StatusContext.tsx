@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react'
+import { SortState } from '../types'
 
 interface StatusState {
   message?: string
@@ -17,12 +18,12 @@ interface StatusContextType {
   status: StatusState
   tableInfo: TableInfo | null
   saveStatus: SaveStatus
-  sortViewOnly: boolean
+  sortState: SortState | null
   updateStatus: (type: StatusState['type'], message: string) => void
   updateSelection: (selection: string) => void
   updateTableInfo: (rows: number, columns: number) => void
   updateSaveStatus: (status: SaveStatus) => void
-  updateSortViewOnly: (isViewOnly: boolean) => void
+  updateSortState: (state: SortState) => void
   clearStatus: () => void
 }
 
@@ -36,11 +37,10 @@ export const StatusProvider: React.FC<StatusProviderProps> = ({ children }) => {
   const [status, setStatus] = useState<StatusState>({})
   const [tableInfo, setTableInfo] = useState<TableInfo | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>(null)
-  const [sortViewOnly, setSortViewOnly] = useState<boolean>(false)
+  const [sortState, setSortState] = useState<SortState | null>(null)
 
   const updateStatus = (type: StatusState['type'], message: string) => {
     setStatus({ type, message })
-    // Auto-clear status after 3 seconds
     setTimeout(() => {
       setStatus(prev => ({ ...prev, message: undefined, type: undefined }))
     }, 3000)
@@ -56,20 +56,19 @@ export const StatusProvider: React.FC<StatusProviderProps> = ({ children }) => {
 
   const updateSaveStatus = (status: SaveStatus) => {
     setSaveStatus(status)
-    // Auto-clear save status after 2 seconds if it's not an error
     if (status === 'saved') {
       setTimeout(() => setSaveStatus(null), 2000)
     }
   }
 
-  const updateSortViewOnly = (isViewOnly: boolean) => {
-    setSortViewOnly(isViewOnly)
+  const updateSortState = (state: SortState) => {
+    setSortState(state)
   }
 
   const clearStatus = () => {
     setStatus({})
     setSaveStatus(null)
-  setSortViewOnly(false)
+    setSortState(null)
   }
 
   return (
@@ -77,12 +76,12 @@ export const StatusProvider: React.FC<StatusProviderProps> = ({ children }) => {
       status,
       tableInfo,
       saveStatus,
-  sortViewOnly,
+      sortState,
       updateStatus,
       updateSelection,
       updateTableInfo,
       updateSaveStatus,
-  updateSortViewOnly,
+      updateSortState,
       clearStatus
     }}>
       {children}

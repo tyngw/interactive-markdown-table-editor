@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { TableData, VSCodeMessage } from '../types'
 import { useTableEditor } from '../hooks/useTableEditor'
 import { useClipboard } from '../hooks/useClipboard'
@@ -12,7 +12,7 @@ import ContextMenu, { ContextMenuState } from './ContextMenu'
 
 interface TableEditorProps {
   tableData: TableData
-  currentTableIndex: number // 現在のテーブルインデックス
+  currentTableIndex: number
   onTableUpdate: (data: TableData) => void
   onSendMessage: (message: VSCodeMessage) => void
 }
@@ -29,10 +29,11 @@ const TableEditor: React.FC<TableEditorProps> = ({
     position: { x: 0, y: 0 }
   })
 
-  const { updateStatus, updateTableInfo, updateSaveStatus, updateSortViewOnly } = useStatus()
+  const { updateStatus, updateTableInfo, updateSaveStatus, updateSortState } = useStatus()
 
   const {
-    tableData: currentTableData,
+  tableData: displayedTableData,
+  modelTableData,
     editorState,
     selectionAnchor,
     updateCell,
@@ -52,8 +53,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
     sortColumn,
     moveRow,
     moveColumn,
-    restoreOriginalView,
-    commitSortToFile
+    commitSort,
+    resetSort
   } = useTableEditor(tableData)
 
   const selectedRows = useMemo(() => {
@@ -72,434 +73,151 @@ const TableEditor: React.FC<TableEditorProps> = ({
     return cols;
   }, [editorState.selectedCells]);
 
-  // クリップボード機能
-  const { copyToClipboard, pasteFromClipboard } = useClipboard()
+  const { copySelectedCells, pasteFromClipboard } = useClipboard({
+    addRow,
+    addColumn,
+    updateCells
+  })
 
-  // CSVエクスポート機能
   const { exportToCSV, exportToTSV } = useCSVExport()
 
-  // ドラッグ&ドロップ機能
   const { getDragProps, getDropProps } = useDragDrop({
     onMoveRow: moveRow,
     onMoveColumn: moveColumn
   })
 
-  // テーブルデータが変更されたらVSCodeに通知
-  const previousTableDataRef = useRef<TableData | null>(null)
-  useEffect(() => {
-    // Only call onTableUpdate if the data actually changed from the previous external update
-    const prev = previousTableDataRef.current
-    const hasChanged = !prev || 
-      prev.rows.length !== currentTableData.rows.length ||
-      prev.headers.length !== currentTableData.headers.length ||
-      JSON.stringify(prev.rows) !== JSON.stringify(currentTableData.rows) ||
-      JSON.stringify(prev.headers) !== JSON.stringify(currentTableData.headers)
-    
-    if (hasChanged) {
-      onTableUpdate(currentTableData)
-    }
-    
-    previousTableDataRef.current = { ...currentTableData, rows: [...currentTableData.rows.map(row => [...row])], headers: [...currentTableData.headers] }
-    updateTableInfo(currentTableData.rows.length, currentTableData.headers.length)
-    updateSortViewOnly(editorState.sortState.isViewOnly)
-  }, [currentTableData, onTableUpdate])
-
-  // Track sort view-only state changes
-  useEffect(() => {
-    console.log('🔍 Sort state changed:', {
-      column: editorState.sortState.column,
-      direction: editorState.sortState.direction,
-      isViewOnly: editorState.sortState.isViewOnly,
-      hasOriginalData: !!editorState.sortState.originalData
-    })
-    updateSortViewOnly(editorState.sortState.isViewOnly)
-  }, [editorState.sortState, updateSortViewOnly])
-
-  // セル更新時にVSCodeに保存を通知
-  const handleCellUpdate = useCallback((row: number, col: number, value: string) => {
-    console.log('🔧 TableEditor: Cell update triggered');
-    console.log(`   Row: ${row}, Col: ${col}, Value: "${value}"`);
-    console.log(`   Current Table Index: ${currentTableIndex}`);
-    
-    updateCell(row, col, value)
-    updateSaveStatus('saving')
-    
-    const messageData = { row, col, value, tableIndex: currentTableIndex };
-    console.log('📤 TableEditor: Sending message data:', JSON.stringify(messageData, null, 2));
-    
-    onSendMessage({
-      command: 'updateCell',
-      data: messageData
-    })
-    // Auto-saved status will be updated when VSCode responds
-    setTimeout(() => updateSaveStatus('saved'), 500)
-  }, [updateCell, onSendMessage, currentTableIndex])
-
-  // ヘッダー更新時にVSCodeに保存を通知
-  const handleHeaderUpdate = useCallback((col: number, value: string) => {
-    updateHeader(col, value)
-    onSendMessage({
-      command: 'updateHeader',
-      data: { col, value, tableIndex: currentTableIndex }
-    })
-  }, [updateHeader, onSendMessage, currentTableIndex])
-
-  // 行追加
-  const handleAddRow = useCallback((index?: number) => {
-    addRow(index)
-    onSendMessage({
-      command: 'addRow',
-      data: { index, tableIndex: currentTableIndex }
-    })
-  }, [addRow, onSendMessage, currentTableIndex])
-
-  // 行削除
-  const handleDeleteRow = useCallback((index: number) => {
-    deleteRow(index)
-    onSendMessage({
-      command: 'deleteRows',
-      data: { indices: [index], tableIndex: currentTableIndex }
-    })
-  }, [deleteRow, onSendMessage, currentTableIndex])
-
-  // 複数行削除
-  const handleDeleteRows = useCallback((indices: number[]) => {
-    // Sort in descending order for safe deletion
-    const sortedIndices = [...indices].sort((a, b) => b - a)
-    sortedIndices.forEach(index => deleteRow(index))
-    onSendMessage({
-      command: 'deleteRows',
-      data: { indices, tableIndex: currentTableIndex }
-    })
-  }, [deleteRow, onSendMessage, currentTableIndex])
-
-  // 列追加
-  const handleAddColumn = useCallback((index?: number) => {
-    addColumn(index)
-    onSendMessage({
-      command: 'addColumn',
-      data: { index, tableIndex: currentTableIndex }
-    })
-  }, [addColumn, onSendMessage, currentTableIndex])
-
-  // 列削除
-  const handleDeleteColumn = useCallback((index: number) => {
-    deleteColumn(index)
-    onSendMessage({
-      command: 'deleteColumns',
-      data: { indices: [index], tableIndex: currentTableIndex }
-    })
-  }, [deleteColumn, onSendMessage, currentTableIndex])
-
-  // 複数列削除
-  const handleDeleteColumns = useCallback((indices: number[]) => {
-    // Sort in descending order for safe deletion
-    const sortedIndices = [...indices].sort((a, b) => b - a)
-    sortedIndices.forEach(index => deleteColumn(index))
-    onSendMessage({
-      command: 'deleteColumns',
-      data: { indices, tableIndex: currentTableIndex }
-    })
-  }, [deleteColumn, onSendMessage, currentTableIndex])
-
-  // ソート実行
-  const handleSort = useCallback((col: number) => {
-    console.log('🔧 Sort triggered for column:', col)
-    console.log('🔧 Current sort state before:', {
-      column: editorState.sortState.column,
-      direction: editorState.sortState.direction,
-      isViewOnly: editorState.sortState.isViewOnly
-    })
-    sortColumn(col)
-  }, [sortColumn, editorState.sortState])
-
-  // ソートをファイルに保存
-  const handleCommitSort = useCallback(() => {
-    if (editorState.sortState.column >= 0 && editorState.sortState.isViewOnly) {
-      commitSortToFile()
-      onSendMessage({
-        command: 'sort',
-        data: {
-          column: editorState.sortState.column, 
-          direction: editorState.sortState.direction,
-          tableIndex: currentTableIndex
-        }
-      })
-      updateStatus('success', 'Sort committed to file')
-  updateSortViewOnly(false)
-    }
-  }, [onSendMessage, editorState.sortState, commitSortToFile, currentTableIndex])
-
-  // 元の表示に戻す
-  const handleRestoreOriginal = useCallback(() => {
-    restoreOriginalView()
-    updateStatus('success', 'Original view restored')
-  updateSortViewOnly(false)
-  }, [restoreOriginalView])
-
-  // 全選択
-  const handleSelectAll = useCallback(() => {
-    selectAll()
-  }, [selectAll])
-
-  // 行選択
-  const handleRowSelect = useCallback((rowIndex: number, event: React.MouseEvent) => {
-    event.preventDefault()
-    selectRow(rowIndex, event.shiftKey)
-  }, [selectRow])
-
-  // 列選択
-  const handleColumnSelect = useCallback((colIndex: number, event: React.MouseEvent) => {
-    event.preventDefault()
-    selectColumn(colIndex, event.shiftKey)
+  // 列/行選択をUIイベントから受け取りやすい形でラップ
+  const handleColumnSelect = useCallback((col: number, event: React.MouseEvent) => {
+    const extend = event.shiftKey
+    selectColumn(col, extend)
   }, [selectColumn])
 
-  // 行コンテキストメニュー表示
-  const handleShowRowContextMenu = useCallback((event: React.MouseEvent, rowIndex: number) => {
-    event.preventDefault()
-    setContextMenuState({
-      type: 'row',
-      index: rowIndex,
-      position: { x: event.clientX, y: event.clientY }
-    })
-  }, [])
+  const handleRowSelect = useCallback((row: number, event: React.MouseEvent) => {
+    const extend = event.shiftKey
+    selectRow(row, extend)
+  }, [selectRow])
 
-  // 列コンテキストメニュー表示
-  const handleShowColumnContextMenu = useCallback((event: React.MouseEvent, colIndex: number) => {
-    event.preventDefault()
-    setContextMenuState({
-      type: 'column',
-      index: colIndex,
-      position: { x: event.clientX, y: event.clientY }
-    })
-  }, [])
+  // 親へはモデルデータの変更のみ通知（displayedDataはソートで頻繁に変わるため通知しない）
+  useEffect(() => {
+    onTableUpdate(modelTableData)
+    updateTableInfo(modelTableData.rows.length, modelTableData.headers.length)
+  }, [modelTableData, onTableUpdate, updateTableInfo])
 
-  // コンテキストメニューを閉じる
-  const handleCloseContextMenu = useCallback(() => {
-    setContextMenuState({
-      type: null,
-      index: -1,
-      position: { x: 0, y: 0 }
-    })
-  }, [])
+  // ステータスバー等のUI用にソート状態の更新を分離
+  useEffect(() => {
+    updateSortState(editorState.sortState)
+  }, [editorState.sortState, updateSortState])
 
-  // クリップボード操作
+  const handleCellUpdate = useCallback((row: number, col: number, value: string) => {
+    updateCell(row, col, value)
+    updateSaveStatus('saving')
+    onSendMessage({ command: 'updateCell', data: { row, col, value, tableIndex: currentTableIndex } })
+    setTimeout(() => updateSaveStatus('saved'), 500)
+  }, [updateCell, onSendMessage, currentTableIndex, updateSaveStatus])
+
+  const handleHeaderUpdate = useCallback((col: number, value: string) => {
+    updateHeader(col, value)
+    onSendMessage({ command: 'updateHeader', data: { col, value, tableIndex: currentTableIndex } })
+  }, [updateHeader, onSendMessage, currentTableIndex])
+
+  const handleAddRow = useCallback((index?: number) => {
+    addRow(index)
+    onSendMessage({ command: 'addRow', data: { index, tableIndex: currentTableIndex } })
+  }, [addRow, onSendMessage, currentTableIndex])
+
+  const handleDeleteRows = useCallback((indices: number[]) => {
+    const sortedIndices = [...indices].sort((a, b) => b - a)
+    sortedIndices.forEach(index => deleteRow(index))
+    onSendMessage({ command: 'deleteRows', data: { indices, tableIndex: currentTableIndex } })
+  }, [deleteRow, onSendMessage, currentTableIndex])
+
+  const handleAddColumn = useCallback((index?: number) => {
+    addColumn(index)
+    onSendMessage({ command: 'addColumn', data: { index, tableIndex: currentTableIndex } })
+  }, [addColumn, onSendMessage, currentTableIndex])
+
+  const handleDeleteColumns = useCallback((indices: number[]) => {
+    const sortedIndices = [...indices].sort((a, b) => b - a)
+    sortedIndices.forEach(index => deleteColumn(index))
+    onSendMessage({ command: 'deleteColumns', data: { indices, tableIndex: currentTableIndex } })
+  }, [deleteColumn, onSendMessage, currentTableIndex])
+
+  const handleSort = useCallback((col: number) => {
+    sortColumn(col)
+  }, [sortColumn])
+
+  const handleCommitSort = useCallback(() => {
+    const { column, direction } = editorState.sortState;
+    if (direction === 'none') return;
+
+    commitSort();
+    updateStatus('success', '現在の表示順序を保存しました');
+
+    onSendMessage({
+        command: 'sort',
+        data: {
+            column,
+            direction,
+            tableIndex: currentTableIndex
+        }
+    });
+  }, [commitSort, editorState.sortState, onSendMessage, currentTableIndex, updateStatus]);
+
+  const handleResetSort = useCallback(() => {
+    resetSort();
+    updateStatus('info', 'テーブルのソートをリセットしました');
+  }, [resetSort, updateStatus]);
+
   const handleCopy = useCallback(async () => {
-    const success = await copyToClipboard(
-      currentTableData,
-      editorState.selectedCells,
-      editorState.selectionRange
-    )
-    if (success) {
-      updateStatus('success', 'セルをクリップボードにコピーしました')
-    } else {
-      updateStatus('error', 'コピーに失敗しました')
-    }
-  }, [copyToClipboard, currentTableData, editorState.selectedCells, editorState.selectionRange])
+    const success = await copySelectedCells(displayedTableData, editorState.selectedCells, editorState.selectionRange)
+    updateStatus(success ? 'success' : 'error', success ? 'セルをクリップボードにコピーしました' : 'コピーに失敗しました')
+  }, [copySelectedCells, displayedTableData, editorState.selectedCells, editorState.selectionRange, updateStatus])
 
   const handlePaste = useCallback(async () => {
-    console.log('🔍 handlePaste called')
-    console.log('🔍 currentEditingCell:', editorState.currentEditingCell)
-    console.log('🔍 selectionRange:', editorState.selectionRange)
-    
-    const pastedData = await pasteFromClipboard(editorState.currentEditingCell)
-    
-    
-    // セルが選択されていない場合のフォールバック処理
-    if (!editorState.selectionRange) {
-      console.log('🔍 No selection range - setting up fallback selection')
-      const startPos = editorState.currentEditingCell || { row: 0, col: 0 }
-      selectCell(startPos.row, startPos.col)
-      
-      // 選択が設定されるまで少し待ってから再試行
-      setTimeout(() => {
-        if (pastedData) {
-          handlePaste()
-        }
-      }, 50)
-      return
-    }
-    
-    if (pastedData && editorState.selectionRange) {
-      const { start } = editorState.selectionRange
-      
-      // ペーストデータのサイズを計算
-      const pasteRows = pastedData.length
-      const pasteCols = pastedData[0]?.length || 0
-      const targetEndRow = start.row + pasteRows - 1
-      const targetEndCol = start.col + pasteCols - 1
-      
-      // 必要な行数と列数を計算
-      const currentRowCount = currentTableData.rows.length
-      const currentColCount = currentTableData.headers.length
-      const neededRows = Math.max(0, targetEndRow + 1 - currentRowCount)
-      const neededCols = Math.max(0, targetEndCol + 1 - currentColCount)
-      
-      console.log('🔍 Paste info:', { pasteRows, pasteCols, neededRows, neededCols })
-      
-      // 不足している列を追加
-      for (let i = 0; i < neededCols; i++) {
-        addColumn()
+    const result = await pasteFromClipboard(displayedTableData, editorState.selectionRange, editorState.selectedCells, editorState.currentEditingCell)
+    if (result.success) {
+      if (result.updates && result.updates.length > 0) {
+        onSendMessage({ command: 'bulkUpdateCells', data: { updates: result.updates, tableIndex: currentTableIndex } })
       }
-      
-      // 不足している行を追加
-      for (let i = 0; i < neededRows; i++) {
-        addRow()
-      }
-      
-      // 一括更新用のデータを準備
-      const updates: Array<{ row: number; col: number; value: string }> = []
-      
-      pastedData.forEach((row, rowOffset) => {
-        row.forEach((cellValue, colOffset) => {
-          const targetRow = start.row + rowOffset
-          const targetCol = start.col + colOffset
-          
-          // 範囲外チェックを削除（テーブルを拡張しているため）
-          if (targetRow >= 0 && targetCol >= 0) {
-            updates.push({ row: targetRow, col: targetCol, value: cellValue })
-          }
-        })
-      })
-      
-      console.log('🔍 Updates to apply:', updates)
-      
-      // 一括更新を実行
-      if (updates.length > 0) {
-        updateCells(updates)
-        
-        // VSCodeに一括更新を通知
-        onSendMessage({
-          command: 'bulkUpdateCells',
-          data: { updates, tableIndex: currentTableIndex }
-        })
-        
-        // テーブル拡張も通知
-        if (neededRows > 0 || neededCols > 0) {
-          updateStatus('success', `クリップボードからペーストしました（${neededRows > 0 ? `${neededRows}行` : ''}${neededRows > 0 && neededCols > 0 ? '、' : ''}${neededCols > 0 ? `${neededCols}列` : ''}を自動追加）`)
-        } else {
-          updateStatus('success', 'クリップボードからペーストしました')
-        }
-      }
-    } else if (!pastedData) {
-      console.log('🔍 No pasted data received')
-      updateStatus('error', 'クリップボードにデータがありません')
+      updateStatus('success', result.message)
     } else {
-      console.log('🔍 Paste failed for unknown reason')
-      updateStatus('error', 'ペーストに失敗しました')
+      updateStatus('error', result.message)
     }
-  }, [pasteFromClipboard, editorState, currentTableData, updateCells, addColumn, addRow, onSendMessage, updateStatus, currentTableIndex, selectCell])
+  }, [pasteFromClipboard, displayedTableData, editorState, onSendMessage, updateStatus, currentTableIndex])
 
   const handleCut = useCallback(async () => {
-    const success = await copyToClipboard(
-      currentTableData,
-      editorState.selectedCells,
-      editorState.selectionRange
-    )
-    
+    const success = await copySelectedCells(displayedTableData, editorState.selectedCells, editorState.selectionRange)
     if (success && editorState.selectionRange) {
-      // 現在の選択状態を保存
-      const currentSelectionRange = editorState.selectionRange
-      const currentSelectedCells = new Set(editorState.selectedCells)
-      
-      // 選択されたセルをクリア（一括更新）
-      const { start, end } = editorState.selectionRange
-      const minRow = Math.min(start.row, end.row)
-      const maxRow = Math.max(start.row, end.row)
-      const minCol = Math.min(start.col, end.col)
-      const maxCol = Math.max(start.col, end.col)
-      
       const updates: Array<{ row: number; col: number; value: string }> = []
-      
-      for (let row = minRow; row <= maxRow; row++) {
-        for (let col = minCol; col <= maxCol; col++) {
-          if (row >= 0) {
-            updates.push({ row, col, value: '' })
-          }
-        }
-      }
-      
+      editorState.selectedCells.forEach(cellKey => {
+        const [row, col] = cellKey.split('-').map(Number)
+        updates.push({ row, col, value: '' })
+      })
       if (updates.length > 0) {
         updateCells(updates)
-        
-        // VSCodeに一括更新を通知
-        onSendMessage({
-          command: 'bulkUpdateCells',
-          data: { updates, tableIndex: currentTableIndex }
-        })
-        
-        // 切り取り後に選択状態を復元
-        // 少し遅延を入れて、セルの更新後に選択状態を設定
-        setTimeout(() => {
-          // 現在の選択を維持するために、同じ範囲を再選択
-          selectCell(currentSelectionRange.start.row, currentSelectionRange.start.col)
-          // 範囲選択の場合は、再度範囲選択を適用
-          if (currentSelectionRange.start.row !== currentSelectionRange.end.row || 
-              currentSelectionRange.start.col !== currentSelectionRange.end.col) {
-            selectCell(currentSelectionRange.end.row, currentSelectionRange.end.col, true)
-          }
-        }, 10)
+        onSendMessage({ command: 'bulkUpdateCells', data: { updates, tableIndex: currentTableIndex } })
       }
-      
       updateStatus('success', 'セルを切り取りました')
     } else {
       updateStatus('error', '切り取りに失敗しました')
     }
-  }, [copyToClipboard, currentTableData, editorState, updateCells, onSendMessage, updateStatus, currentTableIndex, selectCell])
+  }, [copySelectedCells, displayedTableData, editorState, updateCells, onSendMessage, updateStatus, currentTableIndex])
 
-  // セルクリア機能（Delete/Backspaceキー用）
   const handleClearCells = useCallback(() => {
-    if (editorState.selectedCells.size === 0) return
-
     const updates: Array<{ row: number; col: number; value: string }> = []
-    
     editorState.selectedCells.forEach(cellKey => {
       const [row, col] = cellKey.split('-').map(Number)
-      if (row >= 0 && row < currentTableData.rows.length && 
-          col >= 0 && col < currentTableData.headers.length) {
-        updates.push({ row, col, value: '' })
-      }
+      updates.push({ row, col, value: '' })
     })
-
     if (updates.length > 0) {
       updateCells(updates)
-      
-      // VSCodeに一括更新を通知
-      onSendMessage({
-        command: 'bulkUpdateCells',
-        data: { updates, tableIndex: currentTableIndex }
-      })
-      
+      onSendMessage({ command: 'bulkUpdateCells', data: { updates, tableIndex: currentTableIndex } })
       updateStatus('success', '選択されたセルをクリアしました')
     }
-  }, [editorState.selectedCells, currentTableData, updateCells, onSendMessage, updateStatus])
+  }, [editorState.selectedCells, updateCells, onSendMessage, updateStatus, currentTableIndex])
 
-  // CSVエクスポート
-  const handleExportCSV = useCallback((encoding: string = 'utf8') => {
-    const success = exportToCSV(currentTableData, onSendMessage, undefined, encoding)
-    if (success) {
-      const encodingLabel = encoding === 'sjis' ? 'Shift_JIS' : 'UTF-8'
-      updateStatus('success', `CSVエクスポートを開始しました (${encodingLabel})`)
-    } else {
-      updateStatus('error', 'CSVエクスポートに失敗しました')
-    }
-  }, [exportToCSV, currentTableData, onSendMessage, updateStatus])
-
-  // TSVエクスポート（useCSVExportフックを使用）
-  const handleExportTSV = useCallback((encoding: string = 'utf8') => {
-    const success = exportToTSV(currentTableData, onSendMessage, undefined, encoding)
-    
-    if (success) {
-      const encodingLabel = encoding === 'sjis' ? 'Shift_JIS' : 'UTF-8'
-      updateStatus('success', `TSVエクスポートを開始しました (${encodingLabel})`)
-    } else {
-      updateStatus('error', 'TSVエクスポートに失敗しました')
-    }
-  }, [exportToTSV, currentTableData, onSendMessage, updateStatus])
-
-  // キーボードナビゲーション
   useKeyboardNavigation({
-    tableData: currentTableData,
+    tableData: displayedTableData,
     currentEditingCell: editorState.currentEditingCell,
     selectionRange: editorState.selectionRange,
     selectionAnchor: selectionAnchor,
@@ -509,44 +227,41 @@ const TableEditor: React.FC<TableEditorProps> = ({
     onPaste: handlePaste,
     onCut: handleCut,
     onClearCells: handleClearCells,
-    onSelectAll: handleSelectAll,
+    onSelectAll: selectAll,
     onSetSelectionAnchor: setSelectionAnchor
   })
 
   return (
     <div id="table-content">
-  {/* ソートアクションは下部のエクスポートアクション列に統合 */}
-
-      {/* テーブル */}
       <div className="table-container">
         <table className="table-editor">
           <TableHeader
-            headers={currentTableData.headers}
+            headers={displayedTableData.headers}
             columnWidths={editorState.columnWidths}
             sortState={editorState.sortState}
             onHeaderUpdate={handleHeaderUpdate}
             onSort={handleSort}
             onColumnResize={setColumnWidth}
             onAddColumn={handleAddColumn}
-            onDeleteColumn={handleDeleteColumn}
-            onSelectAll={handleSelectAll}
+            onDeleteColumn={deleteColumn}
+            onSelectAll={selectAll}
             onColumnSelect={handleColumnSelect}
-            onShowColumnContextMenu={handleShowColumnContextMenu}
+            onShowColumnContextMenu={(e, i) => setContextMenuState({ type: 'column', index: i, position: { x: e.clientX, y: e.clientY } })}
             getDragProps={getDragProps}
             getDropProps={getDropProps}
             selectedCols={selectedCols}
           />
           <TableBody
-            headers={currentTableData.headers}
-            rows={currentTableData.rows}
+            headers={displayedTableData.headers}
+            rows={displayedTableData.rows}
             editorState={editorState}
             onCellUpdate={handleCellUpdate}
             onCellSelect={selectCell}
             onCellEdit={setCurrentEditingCell}
-            onAddRow={handleAddRow}
-            onDeleteRow={handleDeleteRow}
+            onAddRow={addRow}
+            onDeleteRow={deleteRow}
             onRowSelect={handleRowSelect}
-            onShowRowContextMenu={handleShowRowContextMenu}
+            onShowRowContextMenu={(e, i) => setContextMenuState({ type: 'row', index: i, position: { x: e.clientX, y: e.clientY } })}
             getDragProps={getDragProps}
             getDropProps={getDropProps}
             selectedRows={selectedRows}
@@ -554,15 +269,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
         </table>
       </div>
 
-      {/* エクスポート/ソートアクション */}
       <div className="export-actions">
-        {editorState.sortState.isViewOnly && (
+        {editorState.sortState.direction !== 'none' && (
           <div className="inline-sort-actions">
-            <button className="export-btn" onClick={handleRestoreOriginal}>
-              📄 Restore Original
+            <button className="export-btn" onClick={handleResetSort}>
+              📄 ソートをリセット
             </button>
             <button className="export-btn" onClick={handleCommitSort}>
-              💾 Save Sort to File
+              💾 この順序を保存
             </button>
           </div>
         )}
@@ -570,10 +284,6 @@ const TableEditor: React.FC<TableEditorProps> = ({
           className="encoding-select" 
           id="encodingSelect"
           defaultValue="utf8"
-          onChange={(e) => {
-            // Store selected encoding for export
-            (e.target as HTMLSelectElement).dataset.selectedEncoding = e.target.value
-          }}
         >
           <option value="utf8">UTF-8</option>
           <option value="sjis">Shift_JIS</option>
@@ -582,8 +292,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
           className="export-btn" 
           onClick={() => {
             const select = document.getElementById('encodingSelect') as HTMLSelectElement
-            const encoding = select?.value || 'utf8'
-            handleExportCSV(encoding)
+            exportToCSV(displayedTableData, onSendMessage, undefined, select?.value || 'utf8')
           }}
         >
           📄 Export CSV
@@ -592,26 +301,24 @@ const TableEditor: React.FC<TableEditorProps> = ({
           className="export-btn" 
           onClick={() => {
             const select = document.getElementById('encodingSelect') as HTMLSelectElement
-            const encoding = select?.value || 'utf8'
-            handleExportTSV(encoding)
+            exportToTSV(displayedTableData, onSendMessage, undefined, select?.value || 'utf8')
           }}
         >
           📋 Export TSV
         </button>
       </div>
 
-      {/* コンテキストメニュー */}
       <ContextMenu
         menuState={contextMenuState}
-        onAddRow={handleAddRow}
-        onDeleteRow={handleDeleteRow}
+  onAddRow={handleAddRow}
+        onDeleteRow={deleteRow}
         onDeleteRows={handleDeleteRows}
-        onAddColumn={handleAddColumn}
-        onDeleteColumn={handleDeleteColumn}
+  onAddColumn={handleAddColumn}
+        onDeleteColumn={deleteColumn}
         onDeleteColumns={handleDeleteColumns}
-        onClose={handleCloseContextMenu}
+        onClose={() => setContextMenuState({ type: null, index: -1, position: { x: 0, y: 0 } })}
         selectedCells={editorState.selectedCells}
-        tableData={currentTableData}
+        tableData={displayedTableData}
       />
     </div>
   )

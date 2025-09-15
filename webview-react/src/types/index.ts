@@ -42,8 +42,6 @@ export interface TableAction {
 export interface SortState {
   column: number
   direction: 'asc' | 'desc' | 'none'
-  isViewOnly: boolean
-  originalData: TableData | null
 }
 
 // 列幅設定

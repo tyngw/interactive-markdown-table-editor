@@ -150,8 +150,6 @@ const TableHeader: React.FC<TableHeaderProps> = ({
         
         {/* Column headers with enhanced styling */}
         {headers.map((header, col) => {
-          // Remove CSS-based pseudo-element arrows; rely solely on .sort-indicator
-          const sortIndicatorClass = sortState.isViewOnly ? 'view-only' : 'committed'
           const columnLetter = getColumnLetter(col)
           const storedWidth = columnWidths[col] || 150
           const widthStyle = {
@@ -202,7 +200,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   </div>
                 )}
                 <div 
-                  className={`sort-indicator ${sortIndicatorClass}`}
+                  className="sort-indicator"
                   onClick={(e) => {
                     e.stopPropagation()
                     console.log('🔧 Sort icon clicked for column:', col)
@@ -211,8 +209,8 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   }}
                   title="Sort column"
                 >
-                  {sortState.column === col && sortState.direction !== 'none' ? (
-                    sortState.direction === 'asc' ? '▲' : '▼'
+                  {sortState?.column === col && sortState?.direction !== 'none' ? (
+                    sortState?.direction === 'asc' ? '▲' : '▼'
                   ) : '↕'}
                 </div>
               </div>

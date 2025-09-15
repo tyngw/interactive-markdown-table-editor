@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import TableEditor from './components/TableEditor'
 import TableTabs from './components/TableTabs'
 import StatusBar from './components/StatusBar'
@@ -18,6 +18,16 @@ function AppContent() {
   const lastUpdateRef = useRef<{hash: string, time: number} | null>(null)
   const currentIndexRef = useRef(0)
   const pendingTabSwitchRef = useRef<{index: number, time: number} | null>(null)
+  const allTablesRef = useRef<TableData[]>([])
+
+  // refを最新の値で同期
+  useEffect(() => {
+    allTablesRef.current = allTables
+  }, [allTables])
+
+  useEffect(() => {
+    currentIndexRef.current = currentTableIndex
+  }, [currentTableIndex])
 
   // Debug theme loading
   useEffect(() => {
@@ -160,7 +170,24 @@ function AppContent() {
     // Table count tracking disabled for production  
   }, [allTables.length])
 
-
+  // onTableUpdateコールバックを安定化して無限ループを防ぐ
+  const handleTableUpdate = useCallback((updatedData: TableData) => {
+    // refから最新の値を取得（依存配列から除外してコールバックを安定化）
+    const currentTables = allTablesRef.current
+    const currentIdx = currentIndexRef.current
+    
+    // データが実際に変更されているかチェック（無限ループ防止）
+    const currentData = currentTables[currentIdx]
+    if (currentData && JSON.stringify(currentData) === JSON.stringify(updatedData)) {
+      console.log('🔍 [App] Skipping table update - no actual changes')
+      return
+    }
+    
+    console.log('🔍 [App] Applying table update - changes detected')
+    const newTables = [...currentTables]
+    newTables[currentIdx] = updatedData
+    setAllTables(newTables)
+  }, []) // 依存配列を空にしてコールバックを完全に安定化
 
   if (loading) {
     return (
@@ -198,11 +225,7 @@ function AppContent() {
         <TableEditor 
           tableData={currentTableData}
           currentTableIndex={currentTableIndex}
-          onTableUpdate={(updatedData) => {
-            const newTables = [...allTables]
-            newTables[currentTableIndex] = updatedData
-            setAllTables(newTables)
-          }}
+          onTableUpdate={handleTableUpdate}
           onSendMessage={sendMessage}
         />
         <StatusBar />

@@ -1,7 +1,14 @@
 import { useCallback } from 'react'
 import { TableData, CellPosition, SelectionRange } from '../types'
 
-export function useClipboard() {
+// フックが受け取る依存関数の型を定義
+interface ClipboardDependencies {
+  addRow: (index?: number) => void
+  addColumn: (index?: number) => void
+  updateCells: (updates: Array<{ row: number; col: number; value: string }>) => void
+}
+
+export function useClipboard({ addRow, addColumn, updateCells }: ClipboardDependencies) {
   // 選択されたセルのデータを取得
   const getSelectedCellsData = useCallback((
     tableData: TableData,
@@ -44,8 +51,8 @@ export function useClipboard() {
     return tsvData.split('\n').map(row => row.split('\t'))
   }, [])
 
-  // クリップボードにコピー
-  const copyToClipboard = useCallback(async (
+  // 選択されたセルをクリップボードにコピー
+  const copySelectedCells = useCallback(async (
     tableData: TableData,
     selectedCells: Set<string>,
     selectionRange: SelectionRange | null
@@ -60,33 +67,171 @@ export function useClipboard() {
       await navigator.clipboard.writeText(tsvData)
       return true
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error)
+      console.error('Failed to copy selected cells to clipboard:', error)
       return false
     }
   }, [getSelectedCellsData, convertToTSV])
 
-  // クリップボードからペースト
-  const pasteFromClipboard = useCallback(async (
-    currentCell: CellPosition | null
-  ): Promise<string[][] | null> => {
+  // テーブル全体をクリップボードにコピー
+  const copyEntireTable = useCallback(async (
+    tableData: TableData,
+    includeHeaders: boolean = true
+  ): Promise<boolean> => {
     try {
-      console.log('🔍 pasteFromClipboard called with currentCell:', currentCell)
+      const data = includeHeaders 
+        ? [tableData.headers, ...tableData.rows] 
+        : tableData.rows
       
-      // currentCellがnullでもペーストを許可（セル選択後にペーストされる）
+      const tsvData = convertToTSV(data)
+      await navigator.clipboard.writeText(tsvData)
+      return true
+    } catch (error) {
+      console.error('Failed to copy entire table to clipboard:', error)
+      return false
+    }
+  }, [convertToTSV])
+
+  // TSV形式でエクスポート
+  const exportTSV = useCallback((
+    tableData: TableData,
+    includeHeaders: boolean = true
+  ): string => {
+    const data = includeHeaders 
+      ? [tableData.headers, ...tableData.rows] 
+      : tableData.rows
+    return convertToTSV(data)
+  }, [convertToTSV])
+
+  // CSV形式でエクスポート
+  const exportCSV = useCallback((
+    tableData: TableData,
+    includeHeaders: boolean = true
+  ): string => {
+    const data = includeHeaders 
+      ? [tableData.headers, ...tableData.rows] 
+      : tableData.rows
+    
+    return data.map(row => 
+      row.map(cell => {
+        // CSV形式では、カンマやダブルクォートを含む値をダブルクォートで囲む
+        const escaped = cell.replace(/"/g, '""')
+        return cell.includes(',') || cell.includes('"') || cell.includes('\n') 
+          ? `"${escaped}"` 
+          : escaped
+      }).join(',')
+    ).join('\n')
+  }, [])
+
+  // クリップボードからペースト（テーブル拡張機能付き）
+  const pasteFromClipboard = useCallback(async (
+    tableData: TableData,
+    selectionRange: SelectionRange | null,
+    selectedCells: Set<string>,
+    currentEditingCell: CellPosition | null
+  ): Promise<{ success: boolean; message: string; updates?: Array<{ row: number; col: number; value: string }> }> => {
+    try {
+      console.log('🔍 pasteFromClipboard called with selection:', { selectionRange, selectedCells: selectedCells.size, currentEditingCell })
+      
       const clipboardText = await navigator.clipboard.readText()
-      console.log('🔍 clipboardText:', clipboardText)
-      
       if (!clipboardText || clipboardText.trim() === '') {
-        console.log('🔍 No clipboard text available')
-        return null
+        return { success: false, message: 'クリップボードにデータがありません' }
       }
 
-      const result = parseTSV(clipboardText)
-      console.log('🔍 Parsed TSV result:', result)
-      return result
+      const pastedData = parseTSV(clipboardText)
+      if (pastedData.length === 0) {
+        return { success: false, message: 'ペーストデータが無効です' }
+      }
+
+      // ペースト開始位置の決定
+      let startPos: CellPosition
+      if (selectionRange) {
+        startPos = selectionRange.start
+      } else if (currentEditingCell) {
+        startPos = currentEditingCell
+      } else {
+        startPos = { row: 0, col: 0 }
+      }
+
+      // 複数セル選択時の特別な処理
+      if (selectedCells.size > 1 && !selectionRange) {
+        // 複数セル選択時: 選択されたセルに順番にペースト
+        const sortedCells = Array.from(selectedCells).map(cellKey => {
+          const [row, col] = cellKey.split('-').map(Number)
+          return { row, col, key: cellKey }
+        }).sort((a, b) => a.row !== b.row ? a.row - b.row : a.col - b.col)
+        
+        const flatData = pastedData.flat()
+        const updates: Array<{ row: number; col: number; value: string }> = []
+        
+        for (let i = 0; i < Math.min(sortedCells.length, flatData.length); i++) {
+          const cell = sortedCells[i]
+          const value = flatData[i] || ''
+          updates.push({ row: cell.row, col: cell.col, value })
+        }
+        
+        if (updates.length > 0) {
+          updateCells(updates)
+          return {
+            success: true,
+            message: `選択されたセルにペーストしました（${updates.length}セル）`,
+            updates
+          }
+        }
+        return { success: false, message: 'ペーストするデータがありません' }
+      }
+
+      // 通常の矩形範囲ペースト処理
+      const pasteRows = pastedData.length
+      const pasteCols = pastedData[0]?.length || 0
+      const targetEndRow = startPos.row + pasteRows - 1
+      const targetEndCol = startPos.col + pasteCols - 1
+      
+      // テーブル拡張が必要かチェック
+      const neededRows = Math.max(0, targetEndRow + 1 - tableData.rows.length)
+      const neededCols = Math.max(0, targetEndCol + 1 - tableData.headers.length)
+      
+      // テーブル拡張実行
+      if (neededCols > 0) {
+        for (let i = 0; i < neededCols; i++) {
+          addColumn()
+        }
+      }
+      if (neededRows > 0) {
+        for (let i = 0; i < neededRows; i++) {
+          addRow()
+        }
+      }
+
+      // セル更新データを生成
+      const updates: Array<{ row: number; col: number; value: string }> = []
+      pastedData.forEach((row, rowOffset) => {
+        row.forEach((cellValue, colOffset) => {
+          updates.push({
+            row: startPos.row + rowOffset,
+            col: startPos.col + colOffset,
+            value: cellValue
+          })
+        })
+      })
+
+      // セル更新実行（テーブル拡張後にsetTimeoutで実行）
+      if (updates.length > 0) {
+        setTimeout(() => updateCells(updates), 0)
+      }
+
+      // 成功メッセージの生成
+      let message = 'クリップボードからペーストしました'
+      if (neededRows > 0 || neededCols > 0) {
+        const expansions = []
+        if (neededRows > 0) expansions.push(`${neededRows}行`)
+        if (neededCols > 0) expansions.push(`${neededCols}列`)
+        message += `（${expansions.join('、')}を自動追加）`
+      }
+
+      return { success: true, message, updates }
+
     } catch (error) {
       console.error('Failed to paste from clipboard:', error)
-      console.log('🔍 Clipboard access error details:', error)
       
       // フォールバック: execCommandを試す（古いブラウザ対応）
       try {
@@ -101,22 +246,39 @@ export function useClipboard() {
         document.body.removeChild(textarea)
         
         if (success && text) {
-          console.log('🔍 execCommand paste success:', text)
-          return parseTSV(text)
+          const fallbackData = parseTSV(text)
+          // 簡単なフォールバック処理（拡張なし）
+          const updates: Array<{ row: number; col: number; value: string }> = []
+          const startPos = selectionRange?.start || currentEditingCell || { row: 0, col: 0 }
+          
+          fallbackData.forEach((row, rowOffset) => {
+            row.forEach((cellValue, colOffset) => {
+              const targetRow = startPos.row + rowOffset
+              const targetCol = startPos.col + colOffset
+              if (targetRow < tableData.rows.length && targetCol < tableData.headers.length) {
+                updates.push({ row: targetRow, col: targetCol, value: cellValue })
+              }
+            })
+          })
+          
+          if (updates.length > 0) {
+            updateCells(updates)
+            return { success: true, message: 'ペーストしました（フォールバック）', updates }
+          }
         }
       } catch (fallbackError) {
         console.error('Fallback paste also failed:', fallbackError)
       }
       
-      return null
+      return { success: false, message: 'ペースト処理中にエラーが発生しました' }
     }
-  }, [parseTSV])
+  }, [addRow, addColumn, updateCells, parseTSV])
 
   return {
-    copyToClipboard,
+    copySelectedCells,
+    copyEntireTable,
     pasteFromClipboard,
-    getSelectedCellsData,
-    convertToTSV,
-    parseTSV
+    exportTSV,
+    exportCSV
   }
 }

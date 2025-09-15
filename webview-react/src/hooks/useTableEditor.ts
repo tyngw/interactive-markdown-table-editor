@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { TableData, CellPosition, ColumnWidths, EditorState } from '../types'
 import { useSelection } from './useSelection'
 import { useSort } from './useSort'
@@ -8,92 +8,146 @@ export function useTableEditor(initialData: TableData) {
   const [currentEditingCell, setCurrentEditingCell] = useState<CellPosition | null>(null)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
 
-  // Selection management using the separated useSelection hook
   const selection = useSelection({
     tableRowCount: tableData.rows.length,
     tableColCount: tableData.headers.length
   })
 
   // Sort management using the separated useSort hook
-  const sort = useSort({
-    onDataUpdate: setTableData
-  })
+  const useSortResult = useSort()
+  console.log('🔍 [useTableEditor] useSort returned:', useSortResult)
+  
+  if (!useSortResult) {
+    throw new Error('useSort returned undefined')
+  }
+  
+  const { sortState, sortColumn, resetSortState } = useSortResult
+  console.log('🔍 [useTableEditor] Destructured values:', { sortState, sortColumn, resetSortState })
 
-  // Sync state when the incoming table changes (e.g., tab switch)
-  useEffect(() => {
-    // Don't reset state if we're currently in a sorting operation
-    if (sort.sortState.isViewOnly) {
-      console.log('🔍 Skipping state reset due to active sort operation')
-      return
+  const { displayedData, viewToModelMap } = useMemo(() => {
+    console.log('🔍 [useTableEditor] useMemo sortState:', sortState)
+    
+    // sortStateが未定義の場合のガード
+    if (!sortState) {
+      console.warn('⚠️ [useTableEditor] sortState is undefined, returning original data')
+      return {
+        displayedData: tableData,
+        viewToModelMap: tableData.rows.map((_, index) => index),
+      }
     }
     
+    const { column, direction } = sortState
+    console.log('🔍 [useTableEditor] Sort parameters - column:', column, 'direction:', direction)
+    
+    if (direction === 'none' || column < 0) {
+      return {
+        displayedData: tableData,
+        viewToModelMap: tableData.rows.map((_, index) => index),
+      }
+    }
+
+    const indexedRows = tableData.rows.map((row, index) => ({ row, originalIndex: index }))
+
+    indexedRows.sort((a, b) => {
+      const aVal = a.row[column]?.toString().replace(/<br\s*\/?>/gi, ' ').toLowerCase().trim() || ''
+      const bVal = b.row[column]?.toString().replace(/<br\s*\/?>/gi, ' ').toLowerCase().trim() || ''
+      
+      const aNum = parseFloat(aVal)
+      const bNum = parseFloat(bVal)
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return direction === 'asc' ? aNum - bNum : bNum - aNum
+      }
+      
+      return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+    })
+
+    return {
+      displayedData: {
+        ...tableData,
+        rows: indexedRows.map(item => item.row),
+      },
+      viewToModelMap: indexedRows.map(item => item.originalIndex),
+    }
+  }, [tableData, sortState])
+
+  // Stable functions to avoid infinite effect loops
+  const stableFunctions = useRef({
+    resetSortState,
+    initializeSelection: selection.initializeSelection,
+  })
+
+  useEffect(() => {
+    stableFunctions.current.resetSortState = resetSortState
+    stableFunctions.current.initializeSelection = selection.initializeSelection
+  }, [resetSortState, selection.initializeSelection])
+
+  useEffect(() => {
     console.log('🔍 Resetting table state due to initialData change')
     setTableData(initialData)
     setCurrentEditingCell(null)
     setColumnWidths({})
     
-    // Reset sort state directly to avoid infinite loops
-    sort.resetSortState()
+    stableFunctions.current.resetSortState()
+    stableFunctions.current.initializeSelection()
+  }, [initialData])
 
-    // Initialize selection directly to avoid infinite loops
-    selection.initializeSelection()
-  }, [initialData, sort.sortState.isViewOnly]) // Remove function dependencies to prevent infinite loops
+  const updateCell = useCallback((viewIndex: number, col: number, value: string) => {
+    const modelIndex = viewToModelMap[viewIndex]
+    if (modelIndex === undefined) return
 
-  // Cell operations
-  const updateCell = useCallback((row: number, col: number, value: string) => {
     setTableData(prev => {
       const newRows = [...prev.rows]
-      if (!newRows[row]) {
-        newRows[row] = []
-      }
-      newRows[row][col] = value
+      newRows[modelIndex] = [...newRows[modelIndex]]
+      newRows[modelIndex][col] = value
       return { ...prev, rows: newRows }
     })
-  }, [])
+  }, [viewToModelMap])
 
-  // Batch cell updates
   const updateCells = useCallback((updates: Array<{ row: number; col: number; value: string }>) => {
     setTableData(prev => {
       const newRows = [...prev.rows]
-      updates.forEach(({ row, col, value }) => {
-        if (!newRows[row]) {
-          newRows[row] = []
+      updates.forEach(({ row: viewIndex, col, value }) => {
+        const modelIndex = viewToModelMap[viewIndex]
+        if (modelIndex !== undefined && newRows[modelIndex]) {
+          newRows[modelIndex] = [...newRows[modelIndex]]
+          newRows[modelIndex][col] = value
         }
-        newRows[row][col] = value
       })
       return { ...prev, rows: newRows }
     })
-  }, [])
+  }, [viewToModelMap])
 
-  // Header operations
-  const updateHeader = useCallback((col: number, value: string) => {
-    setTableData(prev => {
-      const newHeaders = [...prev.headers]
-      newHeaders[col] = value
-      return { ...prev, headers: newHeaders }
-    })
-  }, [])
-
-  // Row operations
-  const addRow = useCallback((index?: number) => {
+  const addRow = useCallback((viewIndex?: number) => {
+    console.log('🔍 [useTableEditor] addRow called, sortState:', sortState)
+    const isSorted = sortState?.direction !== 'none'
     setTableData(prev => {
       const newRows = [...prev.rows]
       const newRow = new Array(prev.headers.length).fill('')
-      const insertIndex = index !== undefined ? index : newRows.length
+      
+      let insertIndex = viewIndex
+      if (isSorted || viewIndex === undefined) {
+        insertIndex = newRows.length
+      } else {
+        const modelIndex = viewToModelMap[viewIndex]
+        insertIndex = modelIndex !== undefined ? modelIndex : newRows.length
+      }
+
       newRows.splice(insertIndex, 0, newRow)
       return { ...prev, rows: newRows }
     })
-  }, [])
+  }, [sortState?.direction, viewToModelMap])
 
-  const deleteRow = useCallback((index: number) => {
+  const deleteRow = useCallback((viewIndex: number) => {
+    const modelIndex = viewToModelMap[viewIndex]
+    if (modelIndex === undefined) return
+
     setTableData(prev => {
       const newRows = [...prev.rows]
-      newRows.splice(index, 1)
+      newRows.splice(modelIndex, 1)
       return { ...prev, rows: newRows }
     })
-  }, [])
+  }, [viewToModelMap])
 
-  // Column operations
   const addColumn = useCallback((index?: number) => {
     setTableData(prev => {
       const insertIndex = index !== undefined ? index : prev.headers.length
@@ -114,78 +168,79 @@ export function useTableEditor(initialData: TableData) {
     setTableData(prev => {
       const newHeaders = [...prev.headers]
       newHeaders.splice(index, 1)
-      
       const newRows = prev.rows.map(row => {
         const newRow = [...row]
         newRow.splice(index, 1)
         return newRow
       })
-      
       return { ...prev, headers: newHeaders, rows: newRows }
     })
   }, [])
 
-  // Move operations
   const moveRow = useCallback((fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex) return
-    
+    console.log('🔍 [useTableEditor] moveRow called, sortState:', sortState)
+    if (sortState?.direction !== 'none') return;
     setTableData(prev => {
       const newRows = [...prev.rows]
       const [movedRow] = newRows.splice(fromIndex, 1)
       newRows.splice(toIndex, 0, movedRow)
       return { ...prev, rows: newRows }
     })
-  }, [])
+  }, [sortState?.direction])
 
   const moveColumn = useCallback((fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex) return
-    
     setTableData(prev => {
-      // Move header
       const newHeaders = [...prev.headers]
       const [movedHeader] = newHeaders.splice(fromIndex, 1)
       newHeaders.splice(toIndex, 0, movedHeader)
-      
-      // Move data in each row
       const newRows = prev.rows.map(row => {
         const newRow = [...row]
         const [movedCell] = newRow.splice(fromIndex, 1)
         newRow.splice(toIndex, 0, movedCell)
         return newRow
       })
-      
       return { ...prev, headers: newHeaders, rows: newRows }
     })
   }, [])
 
-  // Column width management
   const setColumnWidth = useCallback((col: number, width: number) => {
     setColumnWidths(prev => ({ ...prev, [col]: width }))
   }, [])
 
-  // Sort operations - delegate to useSort hook
-  const sortColumn = useCallback((col: number) => {
-    return sort.sortColumn(col, tableData)
-  }, [sort, tableData])
+  const commitSort = useCallback(() => {
+    setTableData(displayedData)
+    resetSortState()
+  }, [displayedData, resetSortState])
 
-  // Editor state object
-  const editorState: EditorState = useMemo(() => ({
-    currentEditingCell,
-    selectedCells: selection.selectionState.selectedCells,
-    selectionRange: selection.selectionState.selectionRange,
-    isSelecting: selection.selectionState.isSelecting,
-    sortState: sort.sortState,
-    columnWidths
-  }), [currentEditingCell, selection.selectionState, sort.sortState, columnWidths])
+  const editorState: EditorState = useMemo(() => {
+    console.log('🔍 [useTableEditor] Building editorState with sortState:', sortState)
+    
+    // sortStateが未定義の場合のデフォルト値を設定
+    const safeSortState = sortState || { column: -1, direction: 'none' as const }
+    console.log('🔍 [useTableEditor] Using safeSortState:', safeSortState)
+    
+    const state = {
+      currentEditingCell,
+      selectedCells: selection.selectionState.selectedCells,
+      selectionRange: selection.selectionState.selectionRange,
+      isSelecting: selection.selectionState.isSelecting,
+      sortState: safeSortState,
+      columnWidths
+    }
+    console.log('🔍 [useTableEditor] Built editorState:', state)
+    return state
+  }, [currentEditingCell, selection.selectionState, sortState, columnWidths])
 
   return {
-    tableData,
+  // Display用のデータ（ソート適用後）
+  tableData: displayedData,
+  // モデル（実体）データ（ソート前／元データ）
+  modelTableData: tableData,
     editorState,
     selectionAnchor: selection.selectionState.selectionAnchor,
-    setTableData,
     updateCell,
     updateCells,
-    updateHeader,
+    updateHeader: (col: number, value: string) => setTableData(prev => ({...prev, headers: prev.headers.map((h, i) => i === col ? value : h)})),
     addRow,
     deleteRow,
     addColumn,
@@ -196,17 +251,12 @@ export function useTableEditor(initialData: TableData) {
     selectAll: selection.selectAll,
     clearSelection: selection.clearSelection,
     setCurrentEditingCell,
-    setIsSelecting: selection.setIsSelecting,
     setSelectionAnchor: selection.setSelectionAnchor,
     setColumnWidth,
     moveRow,
     moveColumn,
     sortColumn,
-    restoreOriginalView: sort.restoreOriginalView,
-    commitSortToFile: sort.commitSortToFile,
-    // Drag selection functions
-    startDragSelection: selection.startDragSelection,
-    updateDragSelection: selection.updateDragSelection,
-    endDragSelection: selection.endDragSelection
+    commitSort,
+    resetSort: resetSortState,
   }
 }

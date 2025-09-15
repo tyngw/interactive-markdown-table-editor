@@ -18,6 +18,45 @@ export class WebviewManager {
     private connectionHealthMap: Map<string, { lastActivity: number; isHealthy: boolean }> = new Map();
     private healthCheckInterval: NodeJS.Timeout | null = null;
 
+    /**
+     * 安全なURI文字列を生成するユーティリティメソッド
+     */
+    private getSafeUriString(uri: vscode.Uri): string {
+        try {
+            // 不正な文字をチェックして安全なURIを作成
+            if (!uri || !uri.scheme) {
+                console.warn('Invalid URI provided:', uri);
+                return '';
+            }
+
+            // schemeに不正な文字が含まれていないかチェック
+            const schemeRegex = /^[a-zA-Z][a-zA-Z0-9+.-]*$/;
+            if (!schemeRegex.test(uri.scheme)) {
+                console.warn('Invalid URI scheme:', uri.scheme);
+                // 安全なフォールバック: file schemeを使用
+                return vscode.Uri.file(uri.path).toString();
+            }
+
+            return vscode.Uri.from({
+                scheme: uri.scheme,
+                path: uri.path || '',
+                query: uri.query || '',
+                fragment: uri.fragment || ''
+            }).toString();
+        } catch (error) {
+            console.error('Failed to create safe URI string:', error);
+            console.error('Original URI:', uri);
+            
+            // 最後のフォールバック: エンコードされた文字列
+            try {
+                return encodeURI(uri.toString());
+            } catch (encodeError) {
+                console.error('Failed to encode URI:', encodeError);
+                return '';
+            }
+        }
+    }
+
     private constructor(context: vscode.ExtensionContext) {
         this.context = context;
         this.startHealthMonitoring();
@@ -738,9 +777,15 @@ export class WebviewManager {
         console.log('📊 Cell update tableIndex from React:', data.tableIndex);
 
         const actualPanelId = this.findPanelId(panel);
+        const safeUriString = this.getSafeUriString(uri);
+
+        if (!safeUriString) {
+            console.error('Failed to create safe URI string for cell update operation');
+            return;
+        }
 
         const commandData = {
-            uri: uri.toString(), // Convert URI to string
+            uri: safeUriString,
             panelId: actualPanelId,
             row: data.row,
             col: data.col,
@@ -762,9 +807,15 @@ export class WebviewManager {
         console.log('Header update tableIndex:', data.tableIndex);
 
         const actualPanelId = this.findPanelId(panel);
+        const safeUriString = this.getSafeUriString(uri);
+
+        if (!safeUriString) {
+            console.error('Failed to create safe URI string for header update operation');
+            return;
+        }
 
         const commandData = {
-            uri: uri.toString(), // Convert URI to string
+            uri: safeUriString,
             panelId: actualPanelId,
             col: data.col,
             value: data.value,
@@ -847,10 +898,29 @@ export class WebviewManager {
     private async handleSort(data: { column: number; direction: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Sort:', data, 'for file:', uri.toString());
 
+        // データの検証
+        if (!data || typeof data.column !== 'number' || !data.direction) {
+            console.error('Invalid sort data:', data);
+            return;
+        }
+
+        // direction値の検証
+        const validDirections = ['asc', 'desc', 'none'];
+        if (!validDirections.includes(data.direction)) {
+            console.error('Invalid sort direction:', data.direction);
+            return;
+        }
+
         const actualPanelId = this.findPanelId(panel);
+        const safeUriString = this.getSafeUriString(uri);
+
+        if (!safeUriString) {
+            console.error('Failed to create safe URI string for sort operation');
+            return;
+        }
 
         vscode.commands.executeCommand('markdownTableEditor.internal.sort', {
-            uri: uri.toString(),
+            uri: safeUriString,
             panelId: actualPanelId,
             column: data.column,
             direction: data.direction,

@@ -2,7 +2,7 @@ import { useStatus } from '../contexts/StatusContext'
 import { useTheme } from '../contexts/ThemeContext'
 
 const StatusBar: React.FC = () => {
-  const { status, tableInfo, saveStatus, sortViewOnly } = useStatus()
+  const { status, tableInfo, saveStatus, sortState } = useStatus()
   const { getStyle } = useTheme()
 
   return (
@@ -23,8 +23,8 @@ const StatusBar: React.FC = () => {
       </div>
       <div className="status-center">
         <div className="status-message" id="statusMessage">
-          {sortViewOnly && (
-            <span className="status-message info">📊 Viewing sorted data</span>
+          {sortState?.direction !== 'none' && (
+            <span className="status-message info">📊 表示順序はソートされています</span>
           )}
           {status.message && (
             <span className={`status-message ${status.type}`}>

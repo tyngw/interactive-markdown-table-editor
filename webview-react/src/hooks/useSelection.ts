@@ -32,6 +32,14 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     currentSelectionRange: null
   })
 
+  // 選択をクリア
+  const clearSelection = useCallback(() => {
+    setSelectedCells(new Set())
+    setSelectionRange(null)
+    setSelectionAnchor(null)
+    setIsSelecting(false)
+  }, [])
+
   // 初期選択状態を設定（A1セル）
   const initializeSelection = useCallback(() => {
     if (tableRowCount > 0 && tableColCount > 0) {
@@ -42,15 +50,7 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     } else {
       clearSelection()
     }
-  }, [tableRowCount, tableColCount])
-
-  // 選択をクリア
-  const clearSelection = useCallback(() => {
-    setSelectedCells(new Set())
-    setSelectionRange(null)
-    setSelectionAnchor(null)
-    setIsSelecting(false)
-  }, [])
+  }, [tableRowCount, tableColCount, clearSelection])
 
   // 範囲内のセルキーを生成
   const generateCellKeysInRange = useCallback((start: CellPosition, end: CellPosition): Set<string> => {
