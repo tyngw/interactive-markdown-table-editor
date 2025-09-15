@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import { TableData, VSCodeMessage, SortState } from '../types'
 import { useTableEditor } from '../hooks/useTableEditor'
 import { useClipboard } from '../hooks/useClipboard'
@@ -103,6 +103,46 @@ const TableEditor: React.FC<TableEditorProps> = ({
     onMoveRow: moveRow,
     onMoveColumn: moveColumn
   })
+
+  // 仮想スクロール用: スクロール位置と可視領域高さを追跡
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [scrollTop, setScrollTop] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(0)
+  const rowHeight = 30 // px, 保守的な固定行高（自動調整は別タスク）
+  const virtualizationThreshold = 200 // この行数を超えたら仮想スクロール有効化
+  const overscan = 5
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const updateSize = () => setContainerHeight(el.clientHeight)
+    updateSize()
+    // ResizeObserver が使えない環境向けに window resize も併用
+    const ro = (typeof ResizeObserver !== 'undefined') ? new ResizeObserver(updateSize) : null
+    ro?.observe(el)
+    window.addEventListener('resize', updateSize)
+    return () => {
+      ro?.disconnect()
+      window.removeEventListener('resize', updateSize)
+    }
+  }, [])
+
+  const handleScroll = useCallback(() => {
+    if (!containerRef.current) return
+    setScrollTop(containerRef.current.scrollTop)
+  }, [])
+
+  const totalRowCount = displayedTableData.rows.length
+  const virtualizationEnabled = totalRowCount > virtualizationThreshold
+  const visibleWindow = useMemo(() => {
+    if (!virtualizationEnabled) return null
+    const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan)
+    const visibleCount = Math.ceil(containerHeight / rowHeight) + overscan * 2
+    const endIndex = Math.min(totalRowCount, startIndex + visibleCount)
+    const topPadding = startIndex * rowHeight
+    const bottomPadding = Math.max(0, (totalRowCount - endIndex) * rowHeight)
+    return { startIndex, endIndex, topPadding, bottomPadding }
+  }, [virtualizationEnabled, scrollTop, containerHeight, rowHeight, overscan, totalRowCount])
 
   // 列/行選択をUIイベントから受け取りやすい形でラップ
   const handleColumnSelect = useCallback((col: number, event: React.MouseEvent) => {
@@ -247,7 +287,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
   return (
     <div id="table-content">
-      <div className="table-container">
+      <div className="table-container" ref={containerRef} onScroll={handleScroll}>
         <table className="table-editor">
           <TableHeader
             headers={displayedTableData.headers}
@@ -279,6 +319,13 @@ const TableEditor: React.FC<TableEditorProps> = ({
             getDragProps={getDragProps}
             getDropProps={getDropProps}
             selectedRows={selectedRows}
+            virtualization={virtualizationEnabled && visibleWindow ? {
+              enabled: true,
+              startIndex: visibleWindow.startIndex,
+              endIndex: visibleWindow.endIndex,
+              topPadding: visibleWindow.topPadding,
+              bottomPadding: visibleWindow.bottomPadding
+            } : { enabled: false }}
           />
         </table>
       </div>

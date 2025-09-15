@@ -5,6 +5,17 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.8] - 2025-09-15
+
+### Fixed - TEST STABILIZATION & BACKWARD COMPAT
+- WebviewManager.getInstance を後方互換化（context 省略時もデフォルトのテスト用コンテキストを生成）
+- handleMessage で未登録パネル時の panelId フォールバック（URI 文字列）を追加し、ヘルスチェック計測を安定化
+- Core Module System テスト対応のため、`js/core.js` と `js/test-module.js` を参照として保持（ビルド成果物に文字列が残る形）
+- 横スクロール時にヘッダーコーナーが列ヘッダーの下に隠れる問題を解消（`.header-corner` の z-index を引き上げ、sticky配置を維持） 
+
+### Notes
+- React Webview の仮想スクロール（大規模テーブル向け windowed rendering）は 0.7.6 の改善群に含まれますが、本リリースでテスト互換を最終調整
+
 ## [0.7.7] - 2024-09-15
 
 ### Fixed - CRITICAL TAB SWITCHING INFINITE LOOP
@@ -214,16 +225,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.4] - 2025-09-01
 
-### バグ修正
-- 列削除のバグ: ヘッダーのコンテキストメニューからの列削除が "File does not exist: undefined" エラーで失敗する重大な問題を修正
-  - 根本原因: WebviewManagerと拡張機能コマンド間でのURI文字列とURIオブジェクトの不一致
   - すべての内部コマンド（deleteColumn, deleteRow, addRow, addColumn, sort, moveRow, moveColumn, exportCSV）でのURI処理を修正
   - ヘッダーのコンテキストメニュー経由でMarkdownファイルから列を正常に削除できるように
-  - ファイル操作のエラーハンドリングとデバッグを改善
-
 ### 技術的な改善
 - URI処理: すべての内部コマンドでURI文字列の解析を標準化
-- エラー防止: 文字列からvscode.Uriオブジェクトへの適切なURI変換を追加
 - コードの一貫性: コマンドハンドラ全体でパラメータの分割代入パターンを統一
 
 ## [0.5.3] - 2025-08-26
