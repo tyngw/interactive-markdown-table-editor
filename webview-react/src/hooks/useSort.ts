@@ -1,18 +1,24 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { SortState } from '../types'
 
-export function useSort() {
+/**
+ * useSort
+ * Ensure each logical consumer gets its own isolated state.
+ * instanceKey is only for debugging/diagnostics.
+ */
+export function useSort(instanceKey?: string) {
   const [sortState, setSortState] = useState<SortState>({
     column: -1,
     direction: 'none'
   })
 
-  console.log('🔍 [useSort] Hook initialized, sortState:', sortState)
+  const keyRef = useRef(instanceKey)
+  console.log('🔍 [useSort] init', { key: keyRef.current, sortState })
 
   const sortColumn = useCallback((col: number) => {
-    console.log('🔍 [useSort] sortColumn called with:', col)
+    console.log('🔍 [useSort] sortColumn', { key: keyRef.current, col })
     setSortState(prev => {
-      console.log('🔍 [useSort] Previous sortState:', prev)
+      console.log('🔍 [useSort] prev', { key: keyRef.current, prev })
       let newState: SortState
       if (prev.column === col) {
         // 同じ列の場合: asc → desc → none の順で循環
@@ -31,13 +37,13 @@ export function useSort() {
         // 別の列の場合: 常にascから開始
         newState = { column: col, direction: 'asc' }
       }
-      console.log('🔍 [useSort] New sortState:', newState)
+      console.log('🔍 [useSort] next', { key: keyRef.current, newState })
       return newState
     })
   }, [])
 
   const resetSortState = useCallback(() => {
-    console.log('🔍 [useSort] resetSortState called')
+    console.log('🔍 [useSort] reset', { key: keyRef.current })
     setSortState({
       column: -1,
       direction: 'none'
@@ -50,6 +56,6 @@ export function useSort() {
     resetSortState
   }
   
-  console.log('🔍 [useSort] Hook returning:', returnValue)
+  console.log('🔍 [useSort] return', { key: keyRef.current, returnValue })
   return returnValue
 }

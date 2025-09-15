@@ -137,8 +137,8 @@ function AppContent() {
       }, 500)
     }
 
-    // 開発用: VSCode外でテストする場合のサンプルデータ
-    if (typeof window !== 'undefined' && !(window as any).acquireVsCodeApi && allTables.length === 0) {
+  // 開発用: VSCode外でテストする場合のサンプルデータ（DEV ビルドのみ）
+  if (import.meta.env?.DEV && typeof window !== 'undefined' && !(window as any).acquireVsCodeApi && allTables.length === 0) {
       // プロダクション環境では小さなサンプルデータのみ提供
       const testTables: TableData[] = [
         {

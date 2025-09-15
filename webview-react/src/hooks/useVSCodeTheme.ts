@@ -231,21 +231,7 @@ export function useVSCodeTheme() {
       console.log('=== THEME DEBUG: Theme loaded successfully ===')
     } catch (error) {
       console.error('=== THEME DEBUG: Failed to load VSCode theme colors ===', error)
-      // Fallback to default light theme
-      console.log('=== THEME DEBUG: Using fallback theme ===')
-      const fallbackTheme = {
-        'editor.background': '#ffffff',
-        'editor.foreground': '#000000',
-        'sideBar.background': '#f8f8f8',
-        'sideBar.foreground': '#000000',
-        'panel.border': '#e0e0e0',
-        'list.activeSelectionBackground': '#0078d4',
-        'list.activeSelectionForeground': '#ffffff',
-        'button.background': '#0078d4',
-        'button.foreground': '#ffffff',
-        'focusBorder': '#0078d4',
-      }
-      setTheme(fallbackTheme)
+      // VSCode Webview ではテーマ変数が提供される前提。フォールバックは行わず、ログのみに留める。
       setIsLoaded(true)
       setInitialLoadDone(true)
     }

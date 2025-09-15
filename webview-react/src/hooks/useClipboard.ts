@@ -92,35 +92,7 @@ export function useClipboard({ addRow, addColumn, updateCells }: ClipboardDepend
   }, [convertToTSV])
 
   // TSV形式でエクスポート
-  const exportTSV = useCallback((
-    tableData: TableData,
-    includeHeaders: boolean = true
-  ): string => {
-    const data = includeHeaders 
-      ? [tableData.headers, ...tableData.rows] 
-      : tableData.rows
-    return convertToTSV(data)
-  }, [convertToTSV])
-
-  // CSV形式でエクスポート
-  const exportCSV = useCallback((
-    tableData: TableData,
-    includeHeaders: boolean = true
-  ): string => {
-    const data = includeHeaders 
-      ? [tableData.headers, ...tableData.rows] 
-      : tableData.rows
-    
-    return data.map(row => 
-      row.map(cell => {
-        // CSV形式では、カンマやダブルクォートを含む値をダブルクォートで囲む
-        const escaped = cell.replace(/"/g, '""')
-        return cell.includes(',') || cell.includes('"') || cell.includes('\n') 
-          ? `"${escaped}"` 
-          : escaped
-      }).join(',')
-    ).join('\n')
-  }, [])
+  // 旧: exportTSV/exportCSV は useCSVExport に一本化したため削除
 
   // クリップボードからペースト（テーブル拡張機能付き）
   const pasteFromClipboard = useCallback(async (
@@ -232,44 +204,7 @@ export function useClipboard({ addRow, addColumn, updateCells }: ClipboardDepend
 
     } catch (error) {
       console.error('Failed to paste from clipboard:', error)
-      
-      // フォールバック: execCommandを試す（古いブラウザ対応）
-      try {
-        const textarea = document.createElement('textarea')
-        textarea.style.position = 'fixed'
-        textarea.style.opacity = '0'
-        document.body.appendChild(textarea)
-        textarea.focus()
-        
-        const success = document.execCommand('paste')
-        const text = textarea.value
-        document.body.removeChild(textarea)
-        
-        if (success && text) {
-          const fallbackData = parseTSV(text)
-          // 簡単なフォールバック処理（拡張なし）
-          const updates: Array<{ row: number; col: number; value: string }> = []
-          const startPos = selectionRange?.start || currentEditingCell || { row: 0, col: 0 }
-          
-          fallbackData.forEach((row, rowOffset) => {
-            row.forEach((cellValue, colOffset) => {
-              const targetRow = startPos.row + rowOffset
-              const targetCol = startPos.col + colOffset
-              if (targetRow < tableData.rows.length && targetCol < tableData.headers.length) {
-                updates.push({ row: targetRow, col: targetCol, value: cellValue })
-              }
-            })
-          })
-          
-          if (updates.length > 0) {
-            updateCells(updates)
-            return { success: true, message: 'ペーストしました（フォールバック）', updates }
-          }
-        }
-      } catch (fallbackError) {
-        console.error('Fallback paste also failed:', fallbackError)
-      }
-      
+      // VS Code Webview では Clipboard API が利用可能なためフォールバックは不要
       return { success: false, message: 'ペースト処理中にエラーが発生しました' }
     }
   }, [addRow, addColumn, updateCells, parseTSV])
@@ -277,8 +212,6 @@ export function useClipboard({ addRow, addColumn, updateCells }: ClipboardDepend
   return {
     copySelectedCells,
     copyEntireTable,
-    pasteFromClipboard,
-    exportTSV,
-    exportCSV
+    pasteFromClipboard
   }
 }

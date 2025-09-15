@@ -3,7 +3,7 @@ import { TableData, CellPosition, ColumnWidths, EditorState } from '../types'
 import { useSelection } from './useSelection'
 import { useSort } from './useSort'
 
-export function useTableEditor(initialData: TableData) {
+export function useTableEditor(initialData: TableData, instanceKey?: string) {
   const [tableData, setTableData] = useState<TableData>(initialData)
   const [currentEditingCell, setCurrentEditingCell] = useState<CellPosition | null>(null)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
@@ -14,8 +14,8 @@ export function useTableEditor(initialData: TableData) {
   })
 
   // Sort management using the separated useSort hook
-  const useSortResult = useSort()
-  console.log('🔍 [useTableEditor] useSort returned:', useSortResult)
+  const useSortResult = useSort(instanceKey)
+  console.log('🔍 [useTableEditor] useSort returned:', { key: instanceKey, useSortResult })
   
   if (!useSortResult) {
     throw new Error('useSort returned undefined')

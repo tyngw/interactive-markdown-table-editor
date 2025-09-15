@@ -55,7 +55,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     moveColumn,
     commitSort,
     resetSort
-  } = useTableEditor(tableData)
+  } = useTableEditor(tableData, `table-${currentTableIndex}`)
 
   const selectedRows = useMemo(() => {
     const rows = new Set<number>();
