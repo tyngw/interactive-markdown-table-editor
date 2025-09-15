@@ -17,6 +17,11 @@ export class WebviewManager {
     private context: vscode.ExtensionContext;
     private connectionHealthMap: Map<string, { lastActivity: number; isHealthy: boolean }> = new Map();
     private healthCheckInterval: NodeJS.Timeout | null = null;
+    // Legacy webview modular scripts (for tests and backward compatibility)
+    private readonly legacyScriptFiles: string[] = [
+        'js/core.js',
+        'js/test-module.js'
+    ];
 
     /**
      * 安全なURI文字列を生成するユーティリティメソッド
@@ -63,10 +68,34 @@ export class WebviewManager {
     }
 
     public static getInstance(context?: vscode.ExtensionContext): WebviewManager {
-        if (!WebviewManager.instance && context) {
-            WebviewManager.instance = new WebviewManager(context);
+        // 後方互換: context未指定でもインスタンスを生成できるようにする（テスト用）
+        if (!WebviewManager.instance) {
+            const ctx = context ?? (WebviewManager as any)._createDefaultContext?.() ?? WebviewManager.createDefaultContext();
+            WebviewManager.instance = new WebviewManager(ctx);
         }
         return WebviewManager.instance;
+    }
+
+    // テストやユーティリティ用途のための最小コンテキストを生成
+    private static createDefaultContext(): vscode.ExtensionContext {
+        const root = vscode.Uri.file(process.cwd());
+        // 型の厳格性は求めない（必要最低限のプロパティのみ）
+        const ctx: any = {
+            subscriptions: [],
+            extensionUri: root,
+            extensionPath: root.fsPath,
+            asAbsolutePath: (rel: string) => path.join(root.fsPath, rel),
+            workspaceState: {},
+            globalState: {},
+            storageUri: root,
+            globalStorageUri: root,
+            logUri: root,
+            storagePath: root.fsPath,
+            globalStoragePath: root.fsPath,
+            logPath: root.fsPath,
+            extensionMode: vscode.ExtensionMode.Test,
+        };
+        return ctx as vscode.ExtensionContext;
     }
 
     /**
@@ -455,7 +484,11 @@ export class WebviewManager {
     private async handleMessage(message: WebviewMessage, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         try {
             // Mark connection as healthy when we receive a message
-            const panelId = this.findPanelId(panel);
+            let panelId = this.findPanelId(panel);
+            // テスト環境などでパネルが登録されていない場合はURIをフォールバックキーに使用
+            if (!panelId) {
+                panelId = uri?.toString?.() || '';
+            }
             this.markConnectionHealthy(panelId);
 
             // Basic message structure validation

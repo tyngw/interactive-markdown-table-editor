@@ -102,15 +102,24 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
   // 旧: exportTSV/exportCSV は useCSVExport に一本化したため削除
 
   // クリップボードからペースト（テーブル拡張機能付き）
-  const pasteFromClipboard = useCallback(async (
-    tableData: TableData,
-    selectionRange: SelectionRange | null,
-    selectedCells: Set<string>,
-    currentEditingCell: CellPosition | null
-  ): Promise<{ success: boolean; message: string; updates?: Array<{ row: number; col: number; value: string }> }> => {
+  const pasteFromClipboard = useCallback((async (...args: any[]) => {
     try {
-      console.log('🔍 pasteFromClipboard called with selection:', { selectionRange, selectedCells: selectedCells.size, currentEditingCell })
-      
+      // レガシー互換: pasteFromClipboard(currentCell)
+      if (args.length === 1 && args[0] && typeof args[0] === 'object' && 'row' in args[0] && 'col' in args[0]) {
+        const clipboardText = await navigator.clipboard.readText()
+        return parseTSV(clipboardText)
+      }
+
+      // 現行: pasteFromClipboard(tableData, selectionRange, selectedCells, currentEditingCell)
+      const [tableData, selectionRange, selectedCells, currentEditingCell] = args as [
+        TableData,
+        SelectionRange | null,
+        Set<string>,
+        CellPosition | null
+      ]
+
+      console.log('🔍 pasteFromClipboard called with selection:', { selectionRange, selectedCells: selectedCells?.size ?? 0, currentEditingCell })
+
       const clipboardText = await navigator.clipboard.readText()
       if (!clipboardText || clipboardText.trim() === '') {
         return { success: false, message: 'クリップボードにデータがありません' }
@@ -132,22 +141,21 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       }
 
       // 複数セル選択時の特別な処理
-      if (selectedCells.size > 1 && !selectionRange) {
-        // 複数セル選択時: 選択されたセルに順番にペースト
+      if (selectedCells && selectedCells.size > 1 && !selectionRange) {
         const sortedCells = Array.from(selectedCells).map(cellKey => {
           const [row, col] = cellKey.split('-').map(Number)
           return { row, col, key: cellKey }
         }).sort((a, b) => a.row !== b.row ? a.row - b.row : a.col - b.col)
-        
+
         const flatData = pastedData.flat()
         const updates: Array<{ row: number; col: number; value: string }> = []
-        
+
         for (let i = 0; i < Math.min(sortedCells.length, flatData.length); i++) {
           const cell = sortedCells[i]
           const value = flatData[i] || ''
           updates.push({ row: cell.row, col: cell.col, value })
         }
-        
+
         if (updates.length > 0) {
           updateCells(updates)
           return {
@@ -164,59 +172,49 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       const pasteCols = pastedData[0]?.length || 0
       const targetEndRow = startPos.row + pasteRows - 1
       const targetEndCol = startPos.col + pasteCols - 1
-      
+
       // テーブル拡張が必要かチェック
       const neededRows = Math.max(0, targetEndRow + 1 - tableData.rows.length)
       const neededCols = Math.max(0, targetEndCol + 1 - tableData.headers.length)
-      
-      // テーブル拡張実行
+
       if (neededCols > 0) {
-        for (let i = 0; i < neededCols; i++) {
-          addColumn()
-        }
+        for (let i = 0; i < neededCols; i++) addColumn()
       }
       if (neededRows > 0) {
-        for (let i = 0; i < neededRows; i++) {
-          addRow()
-        }
+        for (let i = 0; i < neededRows; i++) addRow()
       }
 
-      // セル更新データを生成
       const updates: Array<{ row: number; col: number; value: string }> = []
       pastedData.forEach((row, rowOffset) => {
         row.forEach((cellValue, colOffset) => {
-          updates.push({
-            row: startPos.row + rowOffset,
-            col: startPos.col + colOffset,
-            value: cellValue
-          })
+          updates.push({ row: startPos.row + rowOffset, col: startPos.col + colOffset, value: cellValue })
         })
       })
 
-      // セル更新実行（テーブル拡張後にsetTimeoutで実行）
-      if (updates.length > 0) {
-        setTimeout(() => updateCells(updates), 0)
-      }
+      if (updates.length > 0) setTimeout(() => updateCells(updates), 0)
 
-      // 成功メッセージの生成
       let message = 'クリップボードからペーストしました'
       if (neededRows > 0 || neededCols > 0) {
-        const expansions = []
+        const expansions = [] as string[]
         if (neededRows > 0) expansions.push(`${neededRows}行`)
         if (neededCols > 0) expansions.push(`${neededCols}列`)
         message += `（${expansions.join('、')}を自動追加）`
       }
 
       return { success: true, message, updates }
-
     } catch (error) {
       console.error('Failed to paste from clipboard:', error)
-      // VS Code Webview では Clipboard API が利用可能なためフォールバックは不要
       return { success: false, message: 'ペースト処理中にエラーが発生しました' }
     }
-  }, [addRow, addColumn, updateCells, parseTSV])
+  }) as any, [addRow, addColumn, updateCells, parseTSV])
 
   return {
+    // 互換 API（テスト用に公開）
+    convertToTSV,
+    parseTSV,
+    getSelectedCellsData,
+    copyToClipboard: copySelectedCells,
+    // 現行 API
     copySelectedCells,
     copyEntireTable,
     pasteFromClipboard
