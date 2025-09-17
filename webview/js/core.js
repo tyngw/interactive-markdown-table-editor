@@ -1,4 +1,10 @@
 /**
+ * ⚠️ DEPRECATED: このLegacy WebviewのJSモジュールは廃止されました ⚠️
+ * 
+ * このファイルは後方互換性のためにのみ保持されています。
+ * 新しい開発やメンテナンスは webview-react/src/ で行われています。
+ * React版への移行が完了次第、このファイルは削除予定です。
+ * 
  * Core Module for Markdown Table Editor
  * 
  * This module provides the foundation for the modular table editor system.

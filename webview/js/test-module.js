@@ -1,4 +1,10 @@
 /**
+ * ⚠️ DEPRECATED: このLegacy WebviewのJSモジュールは廃止されました ⚠️
+ * 
+ * このファイルは後方互換性のためにのみ保持されています。
+ * 新しい開発やメンテナンスは webview-react/src/__tests__/ で行われています。
+ * React版への移行が完了次第、このファイルは削除予定です。
+ * 
  * Test Module for Markdown Table Editor
  * 
  * This is a test module that demonstrates the module system functionality.
