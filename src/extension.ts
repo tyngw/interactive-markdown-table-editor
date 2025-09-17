@@ -599,43 +599,40 @@ export function activate(context: vscode.ExtensionContext) {
 
             console.log(`✅ Found table manager for table ${targetTableIndex}`);
 
-            // Apply all updates
+            // 事前にテーブルサイズを確保（必要な最大行・列を計算）
+            let maxRow = -1;
+            let maxCol = -1;
+            for (const update of updates) {
+                maxRow = Math.max(maxRow, update.row);
+                maxCol = Math.max(maxCol, update.col);
+            }
+            
+            const currentTableData = tableDataManager.getTableData();
+            const neededRows = Math.max(0, maxRow + 1 - currentTableData.rows.length);
+            const neededCols = Math.max(0, maxCol + 1 - currentTableData.headers.length);
+            
+            console.log(`📏 Table expansion check: current(${currentTableData.rows.length}x${currentTableData.headers.length}), max needed(${maxRow + 1}x${maxCol + 1}), expansion(${neededRows}x${neededCols})`);
+            
+            // 必要に応じてテーブルを拡張
+            if (neededRows > 0) {
+                console.log(`📈 Adding ${neededRows} rows`);
+                tableDataManager.insertRows(currentTableData.rows.length, neededRows);
+            }
+            
+            if (neededCols > 0) {
+                console.log(`📈 Adding ${neededCols} columns`);
+                for (let i = 0; i < neededCols; i++) {
+                    const newColIndex = currentTableData.headers.length + i;
+                    const columnLetter = String.fromCharCode(65 + (newColIndex % 26)); // A, B, C...
+                    tableDataManager.addColumn(undefined, `Column ${columnLetter}`);
+                }
+            }
+
+            // Apply all updates (now all positions should be valid)
             for (const update of updates) {
                 const { row, col, value } = update;
                 console.log(`🔧 Updating cell [${row}, ${col}] = "${value}"`);
-                
-                try {
-                    tableDataManager.updateCell(row, col, value);
-                } catch (positionError) {
-                    if (positionError instanceof Error && positionError.message.includes('Invalid cell position')) {
-                        console.log('Invalid position detected during bulk update, attempting to refresh table data from file...');
-                        try {
-                            // Read fresh content from file and re-parse
-                            const fileUri = vscode.Uri.parse(uriString);
-                            const content = await fileHandler.readMarkdownFile(fileUri);
-                            const ast = markdownParser.parseDocument(content);
-                            const tables = markdownParser.findTablesInDocument(ast);
-
-                            if (targetTableIndex < tables.length) {
-                                // Create new manager with fresh data
-                                const newManager = new TableDataManager(tables[targetTableIndex], actualPanelId, targetTableIndex);
-                                tableManagersMap.set(targetTableIndex, newManager);
-                                tableDataManager = newManager;
-                                console.log('Table data refreshed successfully');
-
-                                // Try the update again with fresh data
-                                tableDataManager.updateCell(row, col, value);
-                            } else {
-                                throw new Error(`Table index ${targetTableIndex} not found in refreshed data`);
-                            }
-                        } catch (refreshError) {
-                            console.error('Could not refresh table data:', refreshError);
-                            throw positionError;
-                        }
-                    } else {
-                        throw positionError;
-                    }
-                }
+                tableDataManager.updateCell(row, col, value);
             }
 
             // Update the file once after all updates

@@ -274,10 +274,6 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       const targetEndRow = startPos.row + pasteRows - 1
       const targetEndCol = startPos.col + pasteCols - 1
 
-      // テーブル拡張が必要かチェック
-      const neededRows = Math.max(0, targetEndRow + 1 - tableData.rows.length)
-      const neededCols = Math.max(0, targetEndCol + 1 - tableData.headers.length)
-
       console.log('🔍 Paste analysis:', {
         startPos,
         pasteRows,
@@ -285,62 +281,27 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
         targetEndRow,
         targetEndCol,
         currentRows: tableData.rows.length,
-        currentCols: tableData.headers.length,
-        neededRows,
-        neededCols
+        currentCols: tableData.headers.length
       })
 
-      // テーブルを拡張（確実に同期実行）
-      const expansionPromises: Promise<void>[] = []
-      
-      // 列の拡張
-      for (let i = 0; i < neededCols; i++) {
-        const result = addColumn()
-        if (result && typeof result.then === 'function') {
-          expansionPromises.push(result)
-        } else {
-          // 同期関数の場合、即座に解決されるPromiseを追加
-          expansionPromises.push(Promise.resolve())
-        }
-      }
-      
-      // 行の拡張
-      for (let i = 0; i < neededRows; i++) {
-        const result = addRow()
-        if (result && typeof result.then === 'function') {
-          expansionPromises.push(result)
-        } else {
-          // 同期関数の場合、即座に解決されるPromiseを追加
-          expansionPromises.push(Promise.resolve())
-        }
-      }
-
-      // セル更新データを準備
+      // セル更新データを準備（Extension側で自動拡張されるため、座標チェックは最小限に）
       const updates: Array<{ row: number; col: number; value: string }> = []
-      const expectedRows = tableData.rows.length + neededRows
-      const expectedCols = tableData.headers.length + neededCols
       
       pastedData.forEach((row, rowOffset) => {
         row.forEach((cellValue, colOffset) => {
           const targetRow = startPos.row + rowOffset
           const targetCol = startPos.col + colOffset
           
-          // 座標が期待されるテーブルサイズ内であることを確認
-          if (targetRow >= 0 && targetCol >= 0 && targetRow < expectedRows && targetCol < expectedCols) {
+          // 基本的な座標検証のみ（負の値チェック）
+          if (targetRow >= 0 && targetCol >= 0) {
             updates.push({ row: targetRow, col: targetCol, value: cellValue })
           } else {
-            console.warn('🔍 Invalid target position:', { targetRow, targetCol, expectedRows, expectedCols })
+            console.warn('🔍 Invalid target position (negative):', { targetRow, targetCol })
           }
         })
       })
 
       console.log('🔍 Updates to apply:', updates)
-
-      // 全ての拡張処理が完了してからセル更新を実行
-      if (expansionPromises.length > 0) {
-        await Promise.all(expansionPromises)
-        console.log('🔍 Table expansion completed via Promise.all')
-      }
       
       if (updates.length > 0) {
         updateCells(updates)
@@ -361,13 +322,7 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
         }
       }
 
-      let message = 'クリップボードからペーストしました'
-      if (neededRows > 0 || neededCols > 0) {
-        const expansions = [] as string[]
-        if (neededRows > 0) expansions.push(`${neededRows}行`)
-        if (neededCols > 0) expansions.push(`${neededCols}列`)
-        message += `（${expansions.join('、')}を自動追加）`
-      }
+      const message = 'クリップボードからペーストしました（テーブルは自動拡張されます）'
 
       return { success: true, message, updates }
     } catch (error) {
