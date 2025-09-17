@@ -71,84 +71,72 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
     const result: string[][] = []
     // 改行コードを一律に LF に正規化（\r\n, \r → \n）
     const normalized = tsvData.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-    const lines = normalized.split('\n')
     
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-      if (line === '' && i === lines.length - 1) break // 最後の空行は無視
-      
+    let i = 0
+    while (i < normalized.length) {
       const row: string[] = []
-      let currentCell = ''
-      let inQuotes = false
-      let j = 0
+      let rowEnded = false
       
-      while (j < line.length) {
-        const char = line[j]
+      while (i < normalized.length && !rowEnded) {
+        let currentCell = ''
+        let inQuotes = false
         
-        if (char === '"' && !inQuotes) {
-          // クォート開始
+        // セルの開始がクォートかチェック
+        if (i < normalized.length && normalized[i] === '"') {
           inQuotes = true
-        } else if (char === '"' && inQuotes) {
-          // クォート内でダブルクォートをチェック
-          if (j + 1 < line.length && line[j + 1] === '"') {
-            // エスケープされたダブルクォート
-            currentCell += '"'
-            j++ // 次のクォートをスキップ
-          } else {
-            // クォート終了
-            inQuotes = false
-          }
-        } else if (char === '\t' && !inQuotes) {
-          // セル区切り
-          row.push(currentCell.replace(/\n/g, '<br/>'))
-          currentCell = ''
-        } else {
-          currentCell += char
+          i++ // 開始クォートをスキップ
         }
-        j++
-      }
-      
-      // クォート内で行が終了した場合、次の行も読み込む
-      while (inQuotes && i + 1 < lines.length) {
-        i++
-        currentCell += '\n' + lines[i]
         
-        // 新しい行でクォートの終了をチェック
-        let k = currentCell.lastIndexOf('\n') + 1
-        while (k < currentCell.length) {
-          const char = currentCell[k]
-          if (char === '"') {
-            if (k + 1 < currentCell.length && currentCell[k + 1] === '"') {
-              k++ // エスケープされたクォートをスキップ
-            } else {
-              inQuotes = false
-              // クォート後の処理を続行
-              const remaining = currentCell.substring(k + 1)
-              currentCell = currentCell.substring(0, k)
-              
-              // 残りの文字列でタブ区切りを処理
-              const parts = remaining.split('\t')
-              row.push(currentCell.replace(/\n/g, '<br/>'))
-              
-              for (let p = 1; p < parts.length; p++) {
-                row.push(parts[p].replace(/\n/g, '<br/>'))
-              }
-              
-              if (parts.length > 1) {
-                currentCell = ''
+        while (i < normalized.length) {
+          const char = normalized[i]
+          
+          if (inQuotes) {
+            if (char === '"') {
+              // クォート内でクォートに遭遇
+              if (i + 1 < normalized.length && normalized[i + 1] === '"') {
+                // エスケープされたクォート（""）
+                currentCell += '"'
+                i += 2
               } else {
-                currentCell = parts[0]
+                // クォート終了
+                inQuotes = false
+                i++
               }
-              break
+            } else {
+              currentCell += char
+              i++
+            }
+          } else {
+            // クォート外
+            if (char === '\t') {
+              // セル区切り
+              row.push(currentCell.replace(/\n/g, '<br/>'))
+              i++
+              break // 次のセルへ
+            } else if (char === '\n') {
+              // 行区切り
+              row.push(currentCell.replace(/\n/g, '<br/>'))
+              i++
+              rowEnded = true
+              break // 行終了
+            } else {
+              currentCell += char
+              i++
             }
           }
-          k++
+        }
+        
+        // ファイル終端の場合
+        if (i >= normalized.length) {
+          row.push(currentCell.replace(/\n/g, '<br/>'))
+          rowEnded = true
         }
       }
       
-      // 最後のセルを追加
-      row.push(currentCell.replace(/\n/g, '<br/>'))
-      result.push(row)
+      // 空行でない場合のみ追加
+      if (row.length > 0 && !(row.length === 1 && row[0] === '')) {
+        result.push(row)
+      }
     }
     
     return result

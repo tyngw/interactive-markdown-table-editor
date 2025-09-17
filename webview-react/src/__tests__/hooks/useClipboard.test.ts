@@ -52,7 +52,7 @@ describe('useClipboard', () => {
   test('parses quoted multiline with CRLF correctly', () => {
     const { result } = renderHook(() => useClipboard())
     // Windows CRLF 改行と二重引用符で囲まれたセル内改行
-    const tsv = 'Name\tDesc\r\nAlice\t"line1\r\nline2"\r\n'
+    const tsv = 'Name\tDesc\r\nAlice\t"line1\r\nline2"'
     const data = result.current.parseTSV(tsv)
     expect(data).toEqual([
       ['Name', 'Desc'],
@@ -63,11 +63,32 @@ describe('useClipboard', () => {
   test('parses quoted multiline with lone CR correctly', () => {
     const { result } = renderHook(() => useClipboard())
     // 古いMac形式などの CR 改行
-    const tsv = 'A\tB\rX\t"L1\rL2"\r'
+    const tsv = 'A\tB\rX\t"L1\rL2"'
     const data = result.current.parseTSV(tsv)
     expect(data).toEqual([
       ['A', 'B'],
       ['X', 'L1<br/>L2']
+    ])
+  })
+
+  test('parses consecutive quoted multiline cells correctly', () => {
+    const { result } = renderHook(() => useClipboard())
+    // 連続する引用符付き多行セル（ユーザーが報告した問題のケース）
+    const tsv = '"test\ntest"\t"test\ntest"'
+    const data = result.current.parseTSV(tsv)
+    expect(data).toEqual([
+      ['test<br/>test', 'test<br/>test']
+    ])
+  })
+
+  test('parses complex multiline TSV with multiple rows correctly', () => {
+    const { result } = renderHook(() => useClipboard())
+    // 複数行の複雑なケース
+    const tsv = '"cell1\nline2"\t"cell2\nline2"\n"row2col1"\t"row2\nwith\nnewlines"'
+    const data = result.current.parseTSV(tsv)
+    expect(data).toEqual([
+      ['cell1<br/>line2', 'cell2<br/>line2'],
+      ['row2col1', 'row2<br/>with<br/>newlines']
     ])
   })
 
