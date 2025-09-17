@@ -3,8 +3,8 @@ import { TableData, CellPosition, SelectionRange } from '../types'
 
 // フックが受け取る依存関数の型を定義
 interface ClipboardDependencies {
-  addRow: (index?: number) => void
-  addColumn: (index?: number) => void
+  addRow: (index?: number) => void | Promise<void>
+  addColumn: (index?: number) => void | Promise<void>
   updateCells: (updates: Array<{ row: number; col: number; value: string }>) => void
 }
 
@@ -283,41 +283,60 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
         neededCols
       })
 
-      // テーブルを拡張（同期的に実行）
-      if (neededCols > 0) {
-        for (let i = 0; i < neededCols; i++) {
-          addColumn()
+      // テーブルを拡張（確実に同期実行）
+      const expansionPromises: Promise<void>[] = []
+      
+      // 列の拡張
+      for (let i = 0; i < neededCols; i++) {
+        const result = addColumn()
+        if (result && typeof result.then === 'function') {
+          expansionPromises.push(result)
+        } else {
+          // 同期関数の場合、即座に解決されるPromiseを追加
+          expansionPromises.push(Promise.resolve())
         }
       }
-      if (neededRows > 0) {
-        for (let i = 0; i < neededRows; i++) {
-          addRow()
+      
+      // 行の拡張
+      for (let i = 0; i < neededRows; i++) {
+        const result = addRow()
+        if (result && typeof result.then === 'function') {
+          expansionPromises.push(result)
+        } else {
+          // 同期関数の場合、即座に解決されるPromiseを追加
+          expansionPromises.push(Promise.resolve())
         }
       }
 
       // セル更新データを準備
       const updates: Array<{ row: number; col: number; value: string }> = []
+      const expectedRows = tableData.rows.length + neededRows
+      const expectedCols = tableData.headers.length + neededCols
+      
       pastedData.forEach((row, rowOffset) => {
         row.forEach((cellValue, colOffset) => {
           const targetRow = startPos.row + rowOffset
           const targetCol = startPos.col + colOffset
           
-          // 座標が有効範囲内であることを確認
-          if (targetRow >= 0 && targetCol >= 0) {
+          // 座標が期待されるテーブルサイズ内であることを確認
+          if (targetRow >= 0 && targetCol >= 0 && targetRow < expectedRows && targetCol < expectedCols) {
             updates.push({ row: targetRow, col: targetCol, value: cellValue })
+          } else {
+            console.warn('🔍 Invalid target position:', { targetRow, targetCol, expectedRows, expectedCols })
           }
         })
       })
 
       console.log('🔍 Updates to apply:', updates)
 
-      // テーブル拡張が完了してからセル更新を実行
+      // 全ての拡張処理が完了してからセル更新を実行
+      if (expansionPromises.length > 0) {
+        await Promise.all(expansionPromises)
+        console.log('🔍 Table expansion completed via Promise.all')
+      }
+      
       if (updates.length > 0) {
-        // より長い待機時間を設定してテーブル拡張の完了を確実に待つ
-        setTimeout(() => {
-          console.log('🔍 Applying updates after table expansion...')
-          updateCells(updates)
-        }, neededRows > 0 || neededCols > 0 ? 100 : 0)
+        updateCells(updates)
       }
 
       let message = 'クリップボードからペーストしました'
