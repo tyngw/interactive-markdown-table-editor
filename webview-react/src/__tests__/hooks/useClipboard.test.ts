@@ -182,4 +182,80 @@ describe('useClipboard', () => {
     
     expect(success).toBe(false)
   })
+
+  test('selects pasted area after single cell paste', async () => {
+    const mockSelectCell = jest.fn()
+    const mockUpdateCells = jest.fn()
+    const { result } = renderHook(() => useClipboard({
+      addRow: () => {},
+      addColumn: () => {},
+      updateCells: mockUpdateCells,
+      selectCell: mockSelectCell
+    }))
+    
+    // 単一セルデータをモック
+    ;(navigator.clipboard.readText as jest.Mock).mockResolvedValueOnce('TestData')
+    
+    const pasteResult = await result.current.pasteFromClipboard(
+      mockTableData,
+      null,
+      new Set(),
+      { row: 1, col: 1 }
+    )
+    
+    expect(pasteResult.success).toBe(true)
+    expect(mockSelectCell).toHaveBeenCalledWith(1, 1) // 単一セル選択
+  })
+
+  test('selects pasted area after multi-cell paste', async () => {
+    const mockSelectCell = jest.fn()
+    const mockUpdateCells = jest.fn()
+    const { result } = renderHook(() => useClipboard({
+      addRow: () => {},
+      addColumn: () => {},
+      updateCells: mockUpdateCells,
+      selectCell: mockSelectCell
+    }))
+    
+    // 複数セルデータをモック (2x2)
+    ;(navigator.clipboard.readText as jest.Mock).mockResolvedValueOnce('A\tB\nC\tD')
+    
+    const pasteResult = await result.current.pasteFromClipboard(
+      mockTableData,
+      null,
+      new Set(),
+      { row: 0, col: 0 }
+    )
+    
+    expect(pasteResult.success).toBe(true)
+    expect(mockSelectCell).toHaveBeenCalledWith(0, 0) // 開始セル選択
+    expect(mockSelectCell).toHaveBeenCalledWith(1, 1, true) // 終了セルまで拡張選択
+  })
+
+  test('selects pasted area after multi-cell selection paste', async () => {
+    const mockSelectCell = jest.fn()
+    const mockUpdateCells = jest.fn()
+    const { result } = renderHook(() => useClipboard({
+      addRow: () => {},
+      addColumn: () => {},
+      updateCells: mockUpdateCells,
+      selectCell: mockSelectCell
+    }))
+    
+    // 複数データをモック
+    ;(navigator.clipboard.readText as jest.Mock).mockResolvedValueOnce('X\tY\tZ')
+    
+    const selectedCells = new Set(['1-0', '1-2', '2-1']) // 複数セル選択
+    const pasteResult = await result.current.pasteFromClipboard(
+      mockTableData,
+      null,
+      selectedCells,
+      null
+    )
+    
+    expect(pasteResult.success).toBe(true)
+    // 最初と最後の選択されたセルの範囲を選択
+    expect(mockSelectCell).toHaveBeenCalledWith(1, 0) // 最初のセル
+    expect(mockSelectCell).toHaveBeenCalledWith(2, 1, true) // 最後のセルまで拡張選択
+  })
 })
