@@ -69,51 +69,84 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
   // TSVデータを解析
   const parseTSV = useCallback((tsvData: string): string[][] => {
     const result: string[][] = []
-    let currentRow: string[] = []
-    let currentCell = ''
-    let inQuotes = false
-    let i = 0
+    const lines = tsvData.split('\n')
     
-    while (i < tsvData.length) {
-      const char = tsvData[i]
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      if (line === '' && i === lines.length - 1) break // 最後の空行は無視
       
-      if (char === '"' && !inQuotes) {
-        inQuotes = true
-      } else if (char === '"' && inQuotes) {
-        if (i + 1 < tsvData.length && tsvData[i + 1] === '"') {
-          // Escaped quote
-          currentCell += '"'
-          i++ // Skip next quote
+      const row: string[] = []
+      let currentCell = ''
+      let inQuotes = false
+      let j = 0
+      
+      while (j < line.length) {
+        const char = line[j]
+        
+        if (char === '"' && !inQuotes) {
+          // クォート開始
+          inQuotes = true
+        } else if (char === '"' && inQuotes) {
+          // クォート内でダブルクォートをチェック
+          if (j + 1 < line.length && line[j + 1] === '"') {
+            // エスケープされたダブルクォート
+            currentCell += '"'
+            j++ // 次のクォートをスキップ
+          } else {
+            // クォート終了
+            inQuotes = false
+          }
+        } else if (char === '\t' && !inQuotes) {
+          // セル区切り
+          row.push(currentCell.replace(/\n/g, '<br/>'))
+          currentCell = ''
         } else {
-          inQuotes = false
+          currentCell += char
         }
-      } else if (char === '\t' && !inQuotes) {
-        // Convert newlines to <br> tags for storage
-        currentCell = currentCell.replace(/\n/g, '<br/>')
-        currentRow.push(currentCell)
-        currentCell = ''
-      } else if (char === '\n' && !inQuotes) {
-        // End of row - convert newlines to <br> tags for storage
-        currentCell = currentCell.replace(/\n/g, '<br/>')
-        currentRow.push(currentCell)
-        if (currentRow.length > 0) {
-          result.push(currentRow)
+        j++
+      }
+      
+      // クォート内で行が終了した場合、次の行も読み込む
+      while (inQuotes && i + 1 < lines.length) {
+        i++
+        currentCell += '\n' + lines[i]
+        
+        // 新しい行でクォートの終了をチェック
+        let k = currentCell.lastIndexOf('\n') + 1
+        while (k < currentCell.length) {
+          const char = currentCell[k]
+          if (char === '"') {
+            if (k + 1 < currentCell.length && currentCell[k + 1] === '"') {
+              k++ // エスケープされたクォートをスキップ
+            } else {
+              inQuotes = false
+              // クォート後の処理を続行
+              const remaining = currentCell.substring(k + 1)
+              currentCell = currentCell.substring(0, k)
+              
+              // 残りの文字列でタブ区切りを処理
+              const parts = remaining.split('\t')
+              row.push(currentCell.replace(/\n/g, '<br/>'))
+              
+              for (let p = 1; p < parts.length; p++) {
+                row.push(parts[p].replace(/\n/g, '<br/>'))
+              }
+              
+              if (parts.length > 1) {
+                currentCell = ''
+              } else {
+                currentCell = parts[0]
+              }
+              break
+            }
+          }
+          k++
         }
-        currentRow = []
-        currentCell = ''
-      } else {
-        currentCell += char
       }
-      i++
-    }
-    
-    // Add final cell and row if any content remains
-    if (currentCell !== '' || currentRow.length > 0) {
-      currentCell = currentCell.replace(/\n/g, '<br/>')
-      currentRow.push(currentCell)
-      if (currentRow.length > 0) {
-        result.push(currentRow)
-      }
+      
+      // 最後のセルを追加
+      row.push(currentCell.replace(/\n/g, '<br/>'))
+      result.push(row)
     }
     
     return result
@@ -238,21 +271,54 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       const neededRows = Math.max(0, targetEndRow + 1 - tableData.rows.length)
       const neededCols = Math.max(0, targetEndCol + 1 - tableData.headers.length)
 
+      console.log('🔍 Paste analysis:', {
+        startPos,
+        pasteRows,
+        pasteCols,
+        targetEndRow,
+        targetEndCol,
+        currentRows: tableData.rows.length,
+        currentCols: tableData.headers.length,
+        neededRows,
+        neededCols
+      })
+
+      // テーブルを拡張（同期的に実行）
       if (neededCols > 0) {
-        for (let i = 0; i < neededCols; i++) addColumn()
+        for (let i = 0; i < neededCols; i++) {
+          addColumn()
+        }
       }
       if (neededRows > 0) {
-        for (let i = 0; i < neededRows; i++) addRow()
+        for (let i = 0; i < neededRows; i++) {
+          addRow()
+        }
       }
 
+      // セル更新データを準備
       const updates: Array<{ row: number; col: number; value: string }> = []
       pastedData.forEach((row, rowOffset) => {
         row.forEach((cellValue, colOffset) => {
-          updates.push({ row: startPos.row + rowOffset, col: startPos.col + colOffset, value: cellValue })
+          const targetRow = startPos.row + rowOffset
+          const targetCol = startPos.col + colOffset
+          
+          // 座標が有効範囲内であることを確認
+          if (targetRow >= 0 && targetCol >= 0) {
+            updates.push({ row: targetRow, col: targetCol, value: cellValue })
+          }
         })
       })
 
-      if (updates.length > 0) setTimeout(() => updateCells(updates), 0)
+      console.log('🔍 Updates to apply:', updates)
+
+      // テーブル拡張が完了してからセル更新を実行
+      if (updates.length > 0) {
+        // より長い待機時間を設定してテーブル拡張の完了を確実に待つ
+        setTimeout(() => {
+          console.log('🔍 Applying updates after table expansion...')
+          updateCells(updates)
+        }, neededRows > 0 || neededCols > 0 ? 100 : 0)
+      }
 
       let message = 'クリップボードからペーストしました'
       if (neededRows > 0 || neededCols > 0) {
