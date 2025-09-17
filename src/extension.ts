@@ -438,8 +438,8 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            console.log('🔍 Using URI:', uriString);
-            console.log('🔍 Using Panel ID:', actualPanelId);
+            console.log('Using URI:', uriString);
+            console.log('Using Panel ID:', actualPanelId);
             console.log('🎯 Target table index:', tableIndex);
 
             const panel = webviewManager.getPanel(actualPanelId);
@@ -569,8 +569,8 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            console.log('🔍 Using URI:', uriString);
-            console.log('🔍 Using Panel ID:', actualPanelId);
+            console.log('Using URI:', uriString);
+            console.log('Using Panel ID:', actualPanelId);
             console.log('🎯 Target table index:', tableIndex);
             console.log('📊 Updates count:', updates.length);
 

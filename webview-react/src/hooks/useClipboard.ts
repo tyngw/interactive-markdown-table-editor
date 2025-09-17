@@ -203,7 +203,7 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
         CellPosition | null
       ]
 
-      console.log('🔍 pasteFromClipboard called with selection:', { selectionRange, selectedCells: selectedCells?.size ?? 0, currentEditingCell })
+      console.log('pasteFromClipboard called with selection:', { selectionRange, selectedCells: selectedCells?.size ?? 0, currentEditingCell })
 
       const clipboardText = await navigator.clipboard.readText()
       if (!clipboardText || clipboardText.trim() === '') {
@@ -274,7 +274,7 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       const targetEndRow = startPos.row + pasteRows - 1
       const targetEndCol = startPos.col + pasteCols - 1
 
-      console.log('🔍 Paste analysis:', {
+      console.log('Paste analysis:', {
         startPos,
         pasteRows,
         pasteCols,
@@ -296,12 +296,12 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
           if (targetRow >= 0 && targetCol >= 0) {
             updates.push({ row: targetRow, col: targetCol, value: cellValue })
           } else {
-            console.warn('🔍 Invalid target position (negative):', { targetRow, targetCol })
+            console.warn('Invalid target position (negative):', { targetRow, targetCol })
           }
         })
       })
 
-      console.log('🔍 Updates to apply:', updates)
+      console.log('Updates to apply:', updates)
       
       if (updates.length > 0) {
         updateCells(updates)

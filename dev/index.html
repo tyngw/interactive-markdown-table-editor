@@ -249,7 +249,7 @@
         // Mock VSCode API
         window.vscode = {
             postMessage: function (message) {
-                console.log('🔍 Dev Mode - VSCode Message:', message);
+                console.log('Dev Mode - VSCode Message:', message);
 
                 // Handle different message types for development
                 switch (message.command) {

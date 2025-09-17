@@ -201,7 +201,7 @@ export function useKeyboardNavigation({
     // Shiftキーが押された瞬間にselectionAnchorを設定（メインハンドラー内で管理）
     if (event.key === 'Shift' && !selectionAnchor && selectionRange?.start) {
       const anchorPos = selectionRange.end || selectionRange.start
-      console.log('🔍 [React] Shift key pressed in main handler, setting anchor:', anchorPos)
+      console.log('[React] Shift key pressed in main handler, setting anchor:', anchorPos)
       onSetSelectionAnchor(anchorPos)
       return // Shiftキー単体の場合は他の処理をしない
     }
@@ -239,7 +239,7 @@ export function useKeyboardNavigation({
 
     // 現在選択されているセルを取得（範囲選択中はendを使用）
     const currentPos = selectionRange?.end || selectionRange?.start
-    console.log('🔍 [React] Current position calculation:', {
+    console.log('[React] Current position calculation:', {
       'selectionRange.start': selectionRange?.start,
       'selectionRange.end': selectionRange?.end,
       'currentPos': currentPos,
@@ -302,7 +302,7 @@ export function useKeyboardNavigation({
         event.preventDefault()
         const direction = key.replace('Arrow', '').toLowerCase() as 'up' | 'down' | 'left' | 'right'
         const nextPos = getNextCellPosition(currentPos, direction, cmdKey)
-        console.log('🔍 [React] Arrow key pressed:', direction, 'shiftKey:', shiftKey, 'currentPos:', currentPos, 'nextPos:', nextPos, 'selectionAnchor:', selectionAnchor)
+        console.log('[React] Arrow key pressed:', direction, 'shiftKey:', shiftKey, 'currentPos:', currentPos, 'nextPos:', nextPos, 'selectionAnchor:', selectionAnchor)
         onCellSelect(nextPos.row, nextPos.col, shiftKey)
         // ensure visibility
         setTimeout(() => scrollCellIntoView(nextPos.row, nextPos.col), 0)
@@ -465,7 +465,7 @@ export function useKeyboardNavigation({
   // キーアップイベントハンドラー（Shiftキーのクリア用）
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
     if (event.key === 'Shift') {
-      console.log('🔍 [React] Shift key released in main handler, clearing anchor')
+      console.log('[React] Shift key released in main handler, clearing anchor')
       onSetSelectionAnchor(null)
     }
   }, [onSetSelectionAnchor])

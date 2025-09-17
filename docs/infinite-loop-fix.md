@@ -52,11 +52,11 @@ const handleTableUpdate = useCallback((updatedData: TableData) => {
   // データが実際に変更されているかチェック（無限ループ防止）
   const currentData = currentTables[currentIdx]
   if (currentData && JSON.stringify(currentData) === JSON.stringify(updatedData)) {
-    console.log('🔍 [App] Skipping table update - no actual changes')
+    console.log('[App] Skipping table update - no actual changes')
     return
   }
   
-  console.log('🔍 [App] Applying table update - changes detected')
+  console.log('[App] Applying table update - changes detected')
   const newTables = [...currentTables]
   newTables[currentIdx] = updatedData
   setAllTables(newTables)
