@@ -1,4 +1,10 @@
 /**
+ * ⚠️ DEPRECATED: このLegacy WebviewのJSモジュールは廃止されました ⚠️
+ * 
+ * このファイルは後方互換性のためにのみ保持されています。
+ * 新しい開発やメンテナンスは webview-react/src/utils/csvExporter.ts で行われています。
+ * React版への移行が完了次第、このファイルは削除予定です。
+ * 
  * CSV Exporter Module for Markdown Table Editor
  * 
  * This module handles CSV export functionality.
