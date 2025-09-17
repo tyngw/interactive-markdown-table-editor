@@ -6,6 +6,7 @@ interface ClipboardDependencies {
   addRow: (index?: number) => void | Promise<void>
   addColumn: (index?: number) => void | Promise<void>
   updateCells: (updates: Array<{ row: number; col: number; value: string }>) => void
+  selectCell?: (row: number, col: number, extend?: boolean, toggle?: boolean) => void
 }
 
 const defaultDeps: ClipboardDependencies = {
@@ -15,7 +16,7 @@ const defaultDeps: ClipboardDependencies = {
 }
 
 export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
-  const { addRow, addColumn, updateCells } = deps
+  const { addRow, addColumn, updateCells, selectCell } = deps
   // 選択されたセルのデータを取得
   const getSelectedCellsData = useCallback((
     tableData: TableData,
@@ -242,6 +243,22 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
 
         if (updates.length > 0) {
           updateCells(updates)
+          
+          // 貼り付けた範囲を選択状態にする
+          if (selectCell && sortedCells.length > 0) {
+            const firstCell = sortedCells[0]
+            const lastCell = sortedCells[Math.min(sortedCells.length, updates.length) - 1]
+            
+            // 単一セルの場合は単純選択、複数セルの場合は範囲選択
+            if (updates.length === 1) {
+              selectCell(firstCell.row, firstCell.col)
+            } else {
+              // 最初のセルを選択してから、最後のセルまで拡張選択
+              selectCell(firstCell.row, firstCell.col)
+              selectCell(lastCell.row, lastCell.col, true) // extend=true
+            }
+          }
+          
           return {
             success: true,
             message: `選択されたセルにペーストしました（${updates.length}セル）`,
@@ -327,6 +344,21 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       
       if (updates.length > 0) {
         updateCells(updates)
+        
+        // 貼り付けた矩形範囲を選択状態にする
+        if (selectCell && pasteRows > 0 && pasteCols > 0) {
+          const endRow = startPos.row + pasteRows - 1
+          const endCol = startPos.col + pasteCols - 1
+          
+          // 単一セルの場合は単純選択、複数セルの場合は範囲選択
+          if (pasteRows === 1 && pasteCols === 1) {
+            selectCell(startPos.row, startPos.col)
+          } else {
+            // 最初のセルを選択してから、最後のセルまで拡張選択
+            selectCell(startPos.row, startPos.col)
+            selectCell(endRow, endCol, true) // extend=true
+          }
+        }
       }
 
       let message = 'クリップボードからペーストしました'
@@ -342,7 +374,7 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       console.error('Failed to paste from clipboard:', error)
       return { success: false, message: 'ペースト処理中にエラーが発生しました' }
     }
-  }) as any, [addRow, addColumn, updateCells, parseTSV])
+  }) as any, [addRow, addColumn, updateCells, parseTSV, selectCell])
 
   return {
     // 互換 API（テスト用に公開）

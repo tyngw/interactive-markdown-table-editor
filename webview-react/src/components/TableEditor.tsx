@@ -94,7 +94,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
   const { copySelectedCells, pasteFromClipboard } = useClipboard({
     addRow,
     addColumn,
-    updateCells
+    updateCells,
+    selectCell
   })
 
   const { exportToCSV, exportToTSV } = useCSVExport()
