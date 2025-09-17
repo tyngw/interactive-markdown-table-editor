@@ -50,12 +50,73 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
 
   // データをTSV形式に変換
   const convertToTSV = useCallback((data: string[][]): string => {
-    return data.map(row => row.join('\t')).join('\n')
+    return data.map(row => 
+      row.map(cell => {
+        // Convert <br> tags to newlines for clipboard export
+        let cellText = cell.replace(/<br\s*\/?>/gi, '\n')
+        
+        // If cell contains tabs, newlines, or quotes, we need to quote it
+        if (cellText.includes('\t') || cellText.includes('\n') || cellText.includes('"')) {
+          // Escape quotes by doubling them and wrap in quotes
+          cellText = '"' + cellText.replace(/"/g, '""') + '"'
+        }
+        
+        return cellText
+      }).join('\t')
+    ).join('\n')
   }, [])
 
   // TSVデータを解析
   const parseTSV = useCallback((tsvData: string): string[][] => {
-    return tsvData.split('\n').map(row => row.split('\t'))
+    const result: string[][] = []
+    let currentRow: string[] = []
+    let currentCell = ''
+    let inQuotes = false
+    let i = 0
+    
+    while (i < tsvData.length) {
+      const char = tsvData[i]
+      
+      if (char === '"' && !inQuotes) {
+        inQuotes = true
+      } else if (char === '"' && inQuotes) {
+        if (i + 1 < tsvData.length && tsvData[i + 1] === '"') {
+          // Escaped quote
+          currentCell += '"'
+          i++ // Skip next quote
+        } else {
+          inQuotes = false
+        }
+      } else if (char === '\t' && !inQuotes) {
+        // Convert newlines to <br> tags for storage
+        currentCell = currentCell.replace(/\n/g, '<br/>')
+        currentRow.push(currentCell)
+        currentCell = ''
+      } else if (char === '\n' && !inQuotes) {
+        // End of row - convert newlines to <br> tags for storage
+        currentCell = currentCell.replace(/\n/g, '<br/>')
+        currentRow.push(currentCell)
+        if (currentRow.length > 0) {
+          result.push(currentRow)
+        }
+        currentRow = []
+        currentCell = ''
+      } else {
+        currentCell += char
+      }
+      i++
+    }
+    
+    // Add final cell and row if any content remains
+    if (currentCell !== '' || currentRow.length > 0) {
+      currentCell = currentCell.replace(/\n/g, '<br/>')
+      currentRow.push(currentCell)
+      if (currentRow.length > 0) {
+        result.push(currentRow)
+      }
+    }
+    
+    return result
   }, [])
 
   // 選択されたセルをクリップボードにコピー
