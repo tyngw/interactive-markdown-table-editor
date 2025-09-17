@@ -49,6 +49,28 @@ describe('useClipboard', () => {
     ])
   })
 
+  test('parses quoted multiline with CRLF correctly', () => {
+    const { result } = renderHook(() => useClipboard())
+    // Windows CRLF 改行と二重引用符で囲まれたセル内改行
+    const tsv = 'Name\tDesc\r\nAlice\t"line1\r\nline2"\r\n'
+    const data = result.current.parseTSV(tsv)
+    expect(data).toEqual([
+      ['Name', 'Desc'],
+      ['Alice', 'line1<br/>line2']
+    ])
+  })
+
+  test('parses quoted multiline with lone CR correctly', () => {
+    const { result } = renderHook(() => useClipboard())
+    // 古いMac形式などの CR 改行
+    const tsv = 'A\tB\rX\t"L1\rL2"\r'
+    const data = result.current.parseTSV(tsv)
+    expect(data).toEqual([
+      ['A', 'B'],
+      ['X', 'L1<br/>L2']
+    ])
+  })
+
   test('gets selected cells data correctly', () => {
     const { result } = renderHook(() => useClipboard())
     

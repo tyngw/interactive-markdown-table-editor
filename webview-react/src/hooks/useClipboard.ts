@@ -69,7 +69,9 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
   // TSVデータを解析
   const parseTSV = useCallback((tsvData: string): string[][] => {
     const result: string[][] = []
-    const lines = tsvData.split('\n')
+    // 改行コードを一律に LF に正規化（\r\n, \r → \n）
+    const normalized = tsvData.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    const lines = normalized.split('\n')
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
