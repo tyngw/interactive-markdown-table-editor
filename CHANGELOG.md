@@ -5,6 +5,12 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.12] - 2025-09-17log
+### Fixed
+- **React版ペースト機能の改善**: 最下行に複数行データを貼り付ける際の「Invalid cell position」エラーを修正
+- **改行処理の改善**: 他のアプリケーションからの改行を含むデータの貼り付け処理を改善し、クォートされた文字列内の改行が正しくBRタグに変換されるよう修正
+- **テーブル拡張タイミングの修正**: テーブル拡張処理とセル更新処理のタイミングを調整し、競合状態を解消
+
 ## [0.7.11] - 2025-09-15
 
 ### Fixed
