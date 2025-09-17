@@ -89,6 +89,8 @@ const TableBody: React.FC<TableBodyProps> = ({
   }, [onCellEdit])
 
   const commitCellEdit = useCallback((row: number, col: number, value: string, move?: 'right' | 'left' | 'down' | 'up') => {
+    console.log('[TableBody] commitCellEdit called:', { row, col, value, move })
+    
     const storageValue = processCellContentForStorage(value)
     onCellUpdate(row, col, storageValue)
     
@@ -102,7 +104,7 @@ const TableBody: React.FC<TableBodyProps> = ({
       // console.warn('Failed to cleanup original height:', error)
     }
     
-    onCellEdit(null)
+    // セル移動処理を編集終了前に実行
     if (typeof move !== 'undefined') {
       let nextRow = row
       let nextCol = col
@@ -122,7 +124,21 @@ const TableBody: React.FC<TableBodyProps> = ({
           if (nextRow > 0) { nextRow -= 1 }
           break
       }
-      onCellSelect(nextRow, nextCol, false)
+      
+      console.log('[TableBody] Moving to next cell:', { nextRow, nextCol })
+      
+      // 編集モードを終了してから少し遅らせてセル移動を実行
+      onCellEdit(null)
+      
+      // DOM更新を確実に待ってからセル選択を実行
+      setTimeout(() => {
+        console.log('[TableBody] Executing cell selection:', { nextRow, nextCol })
+        onCellSelect(nextRow, nextCol, false)
+      }, 10)
+    } else {
+      // 移動しない場合は通常通り編集終了
+      console.log('[TableBody] No move specified, just ending edit')
+      onCellEdit(null)
     }
   }, [onCellUpdate, onCellEdit, onCellSelect, rows.length, headers.length])
 

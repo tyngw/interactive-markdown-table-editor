@@ -72,7 +72,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     tableData,
     `table-${currentTableIndex}`,
     { sortState: effectiveSortState, setSortState: effectiveSetSortState },
-    { initializeSelectionOnDataChange: true }
+    { initializeSelectionOnDataChange: false }
   )
 
   const selectedRows = useMemo(() => {
@@ -117,10 +117,18 @@ const TableEditor: React.FC<TableEditorProps> = ({
   }, [selectRow])
 
   // 親へはモデルデータの変更のみ通知（displayedDataはソートで頻繁に変わるため通知しない）
+  // セル更新時の自動通知は handleCellUpdate で制御するため、ここでの自動通知は無効化
+  /*
   useEffect(() => {
     onTableUpdate(modelTableData)
     updateTableInfo(modelTableData.rows.length, modelTableData.headers.length)
   }, [modelTableData, onTableUpdate, updateTableInfo])
+  */
+  
+  // テーブル情報の更新のみ行う
+  useEffect(() => {
+    updateTableInfo(modelTableData.rows.length, modelTableData.headers.length)
+  }, [modelTableData, updateTableInfo])
 
   // ステータスバー等のUI用にソート状態の更新を分離
   useEffect(() => {
@@ -128,11 +136,18 @@ const TableEditor: React.FC<TableEditorProps> = ({
   }, [editorState.sortState, updateSortState])
 
   const handleCellUpdate = useCallback((row: number, col: number, value: string) => {
+    console.log('[TableEditor] handleCellUpdate called:', { row, col, value })
     updateCell(row, col, value)
     updateSaveStatus('saving')
     onSendMessage({ command: 'updateCell', data: withTableIndex({ row, col, value }) })
-    setTimeout(() => updateSaveStatus('saved'), 500)
-  }, [updateCell, onSendMessage, updateSaveStatus, withTableIndex])
+    
+    // モデルデータの更新通知を少し遅らせる（選択状態の移動が完了してから）
+    setTimeout(() => {
+      console.log('[TableEditor] Delayed table update notification')
+      onTableUpdate(modelTableData)
+      updateSaveStatus('saved')
+    }, 100)
+  }, [updateCell, onSendMessage, updateSaveStatus, withTableIndex, modelTableData, onTableUpdate])
 
   const handleHeaderUpdate = useCallback((col: number, value: string) => {
     updateHeader(col, value)

@@ -72,7 +72,7 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
   // セルを選択
   const selectCell = useCallback((row: number, col: number, extend = false, toggle = false) => {
     const cellKey = `${row}-${col}`
-    console.log('🔍 [useSelection] selectCell called:', { row, col, extend, toggle, selectionAnchor })
+    console.log('[useSelection] selectCell called:', { row, col, extend, toggle, selectionAnchor })
 
     if (toggle) {
       const newSelectedCells = new Set(selectedCells)
@@ -86,30 +86,36 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       }
       setSelectedCells(newSelectedCells)
       setSelectionRange({ start: { row, col }, end: { row, col } })
+      // toggleの場合もanchorを設定
+      setSelectionAnchor({ row, col })
     } else if (extend && selectionAnchor) {
       // Shift+矢印キー：selectionAnchorを起点として範囲選択
-      console.log('🔍 [useSelection] Using selectionAnchor for extend:', selectionAnchor)
+      console.log('[useSelection] Using selectionAnchor for extend:', selectionAnchor)
       const newRange: SelectionRange = {
         start: selectionAnchor,
         end: { row, col }
       }
       setSelectionRange(newRange)
       setSelectedCells(generateCellKeysInRange(selectionAnchor, { row, col }))
+      // extendの場合はanchorを変更しない
     } else if (extend && selectionRange) {
       // マウス範囲選択：現在のselectionRangeを拡張
-      console.log('🔍 [useSelection] Using selectionRange for extend:', selectionRange.start)
+      console.log('[useSelection] Using selectionRange for extend:', selectionRange.start)
       const newRange: SelectionRange = {
         start: selectionRange.start,
         end: { row, col }
       }
       setSelectionRange(newRange)
       setSelectedCells(generateCellKeysInRange(newRange.start, newRange.end))
+      // anchorをselectionRange.startに設定
+      setSelectionAnchor(selectionRange.start)
     } else {
       // 単一セル選択：selectionAnchorを新しく設定
-      console.log('🔍 [useSelection] Single cell selection, setting new anchor:', { row, col })
+      console.log('[useSelection] Single cell selection, setting new anchor:', { row, col })
+      const newPosition = { row, col }
       setSelectedCells(new Set([cellKey]))
-      setSelectionRange({ start: { row, col }, end: { row, col } })
-      setSelectionAnchor({ row, col })
+      setSelectionRange({ start: newPosition, end: newPosition })
+      setSelectionAnchor(newPosition)
     }
   }, [selectionRange, selectedCells, selectionAnchor, generateCellKeysInRange])
 
