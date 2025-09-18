@@ -109,10 +109,11 @@ const TableHeader: React.FC<TableHeaderProps> = ({
     // リサイズ中やハンドル上のクリックは無視
     if (resizing) return
     if ((event.target as HTMLElement).closest('.resize-handle')) return
+    if ((event.target as HTMLElement).closest('.sort-indicator')) return
 
-    // 旧仕様に合わせ、ヘッダークリックでソートを実行（テスト互換）
-    onSort(col)
-  }, [resizing, onSort])
+    // ヘッダクリック時はソートを実行しない（ソートボタンのみで実行）
+    // onSort(col)
+  }, [resizing])
 
   return (
     <thead>
@@ -175,9 +176,6 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                 ) : (
                   <div className="column-title" title="Double-click to edit header">
                     {header}
-                    {sortState?.column === col && sortState?.direction !== 'none' && (
-                      <span>{sortState.direction === 'asc' ? ' ↑' : ' ↓'}</span>
-                    )}
                   </div>
                 )}
                 <div 
