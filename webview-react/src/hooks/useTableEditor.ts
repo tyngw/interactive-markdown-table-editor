@@ -51,7 +51,7 @@ export function useTableEditor(
   }
 
   const { displayedData, viewToModelMap } = useMemo(() => {
-    console.log('[useTableEditor] useMemo sortState:', sortState)
+    console.log('🔍 [useTableEditor] useMemo sortState:', sortState)
     
     // sortStateが未定義の場合のガード
     if (!sortState) {
@@ -63,7 +63,7 @@ export function useTableEditor(
     }
     
     const { column, direction } = sortState
-    console.log('[useTableEditor] Sort parameters - column:', column, 'direction:', direction)
+    console.log('🔍 [useTableEditor] Sort parameters - column:', column, 'direction:', direction)
     
     if (direction === 'none' || column < 0) {
       return {
@@ -108,10 +108,7 @@ export function useTableEditor(
   }, [resetSortState, selection.initializeSelection])
 
   useEffect(() => {
-    console.log('[useTableEditor] Data change detected, initialData changed')
-    console.log('[useTableEditor] Previous data:', JSON.stringify(tableData, null, 2))
-    console.log('[useTableEditor] New data:', JSON.stringify(initialData, null, 2))
-    
+    console.log('🔍 Resetting table state due to initialData change')
     setTableData(initialData)
     setCurrentEditingCell(null)
     setColumnWidths({})
@@ -120,10 +117,8 @@ export function useTableEditor(
     stableFunctions.current.resetSortState()
     // 初期選択は UI 側の都合でのみ実行（テストでは初期選択なしを期待）
     if (options?.initializeSelectionOnDataChange) {
-      console.log('[useTableEditor] Initializing selection due to data change')
       stableFunctions.current.initializeSelection()
     } else {
-      console.log('[useTableEditor] NOT initializing selection - option disabled')
       // 明示的に選択をクリアする必要があるケースは useSelection 側で担保済み
     }
   }, [initialData])
@@ -155,7 +150,7 @@ export function useTableEditor(
   }, [viewToModelMap])
 
   const addRow = useCallback((viewIndex?: number) => {
-    console.log('[useTableEditor] addRow called, sortState:', sortState)
+    console.log('🔍 [useTableEditor] addRow called, sortState:', sortState)
     const isSorted = sortState?.direction !== 'none'
     setTableData(prev => {
       const newRows = [...prev.rows]
@@ -215,7 +210,7 @@ export function useTableEditor(
   }, [])
 
   const moveRow = useCallback((fromIndex: number, toIndex: number) => {
-    console.log('[useTableEditor] moveRow called, sortState:', sortState)
+    console.log('🔍 [useTableEditor] moveRow called, sortState:', sortState)
     if (sortState?.direction !== 'none') return;
     setTableData(prev => {
       const newRows = [...prev.rows]
@@ -250,11 +245,11 @@ export function useTableEditor(
   }, [displayedData, resetSortState])
 
   const editorState: EditorState = useMemo(() => {
-    console.log('[useTableEditor] Building editorState with sortState:', sortState)
+    console.log('🔍 [useTableEditor] Building editorState with sortState:', sortState)
     
     // sortStateが未定義の場合のデフォルト値を設定
     const safeSortState = sortState || { column: -1, direction: 'none' as const }
-    console.log('[useTableEditor] Using safeSortState:', safeSortState)
+    console.log('🔍 [useTableEditor] Using safeSortState:', safeSortState)
     
     const state = {
       currentEditingCell,
@@ -264,7 +259,7 @@ export function useTableEditor(
       sortState: safeSortState,
       columnWidths
     }
-    console.log('[useTableEditor] Built editorState:', state)
+    console.log('🔍 [useTableEditor] Built editorState:', state)
     return state
   }, [currentEditingCell, selection.selectionState, sortState, columnWidths])
 
