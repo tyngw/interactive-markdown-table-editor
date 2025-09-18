@@ -86,8 +86,6 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       }
       setSelectedCells(newSelectedCells)
       setSelectionRange({ start: { row, col }, end: { row, col } })
-      // toggleの場合もanchorを設定
-      setSelectionAnchor({ row, col })
     } else if (extend && selectionAnchor) {
       // Shift+矢印キー：selectionAnchorを起点として範囲選択
       console.log('[useSelection] Using selectionAnchor for extend:', selectionAnchor)
@@ -97,7 +95,6 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       }
       setSelectionRange(newRange)
       setSelectedCells(generateCellKeysInRange(selectionAnchor, { row, col }))
-      // extendの場合はanchorを変更しない
     } else if (extend && selectionRange) {
       // マウス範囲選択：現在のselectionRangeを拡張
       console.log('[useSelection] Using selectionRange for extend:', selectionRange.start)
@@ -107,15 +104,12 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       }
       setSelectionRange(newRange)
       setSelectedCells(generateCellKeysInRange(newRange.start, newRange.end))
-      // anchorをselectionRange.startに設定
-      setSelectionAnchor(selectionRange.start)
     } else {
       // 単一セル選択：selectionAnchorを新しく設定
       console.log('[useSelection] Single cell selection, setting new anchor:', { row, col })
-      const newPosition = { row, col }
       setSelectedCells(new Set([cellKey]))
-      setSelectionRange({ start: newPosition, end: newPosition })
-      setSelectionAnchor(newPosition)
+      setSelectionRange({ start: { row, col }, end: { row, col } })
+      setSelectionAnchor({ row, col })
     }
   }, [selectionRange, selectedCells, selectionAnchor, generateCellKeysInRange])
 

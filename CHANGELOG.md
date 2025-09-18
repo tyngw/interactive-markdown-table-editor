@@ -5,6 +5,15 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.13] - 2025-09-18
+
+### Fixed / Improved
+- React Webview: いくつかのバグ修正と内部ロジックの改善
+  - `TableBody` で不要なデバッグログを削除し、セル編集後のセル移動処理の競合を防止するために編集終了と選択移動の順序を整理
+  - `TableEditor` 側で表示インデックスからモデルインデックスへ変換する処理を追加し、複数セルの一括更新や貼り付け時に正しいモデル行へ反映されるように修正
+  - `useSelection` の選択アンカー処理を整理し、単一選択／拡張選択時のアンカー設定が一貫するように調整
+  - `useTableEditor` に表示行 → モデル行をマッピングする `mapViewRowToModel` を追加し、表示順とモデルデータの整合性を確保
+
 ## [0.7.12] - 2025-09-17log
 ### Fixed
 - **React版ペースト機能の改善**: 最下行に複数行データを貼り付ける際の「Invalid cell position」エラーを修正
