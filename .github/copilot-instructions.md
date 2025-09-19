@@ -19,9 +19,11 @@
 - Webview や統合動作に関する変更は `src/test/suite` または `test/` の統合テストに追加
 - 追加後は `npm run compile` を実行してビルドし、`npm run test`（必要に応じて `npm run test:integration`）で全テストをパスさせること
 
-## CHANGELOG の更新
-変更内容に応じて、CHANGELOG.md と package.json の version を更新すること
-ただし、例外として修正が複数回に及んだ場合は、最初の修正時のみ version を更新し、以降の修正では更新しないこと
+## versionとCHANGELOG の更新
+変更後は、versionを更新する。ただし、例外として修正不備により修正が複数回に及んだ場合は、最初の修正時のみ version を更新し、以降の修正では更新しないこと
+version の更新ルールは以下の通り。
+また、CHANGELOG.md に変更内容を日本語で記載すること。最新の変更が一番上に来るようにすること
+
 1. bugfix: x.x.x → x.x.x+1
 2. minor: x.x.x → x.x+1.0
 3. major: x.x.x → x+1.0.0
