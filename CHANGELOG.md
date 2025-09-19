@@ -5,6 +5,20 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.14] - 2025-09-19
+
+### Fixed / Improved
+- React Webview: 初期化時に`requestTableData`が繰り返し送信される問題を修正
+  - 原因: `webview-react/src/App.tsx` の初期化用 `useEffect` の依存配列に `sendMessage` が含まれており、再レンダリングにより繰り返しメッセージが送信されていました
+  - 修正: 依存配列を空にして初期化処理を1回だけ実行するように変更
+- React Webview: メッセージ送受信や内部フックの詳細デバッグログを本番では出力しないよう最適化
+  - `useVSCodeCommunication.ts`、`useTableEditor.ts`、`App.tsx` のデバッグログを NODE_ENV によって条件化し、プロダクションでの過剰なログ出力を抑制
+- Packaging: 拡張機能を再ビルド・再パッケージ化（VSIX を作成）
+
+### Notes
+- 本リリースは主に安定性（無限ループの解消）とログ出力の最適化が目的です。VSIX を再配布済みです。
+
+
 ## [0.7.13] - 2025-09-18
 
 ### Fixed / Improved

@@ -8,7 +8,9 @@ import { useVSCodeCommunication } from './hooks/useVSCodeCommunication'
 import { TableData, SortState } from './types'
 
 function AppContent() {
-  console.log('[React] AppContent initializing...')
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[React] AppContent initializing...')
+  }
   const [allTables, setAllTables] = useState<TableData[]>([])
   const [currentTableIndex, setCurrentTableIndex] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -40,8 +42,10 @@ function AppContent() {
 
   // Debug: Current table index
   useEffect(() => {
-    console.log('📊 App: currentTableIndex updated to:', currentTableIndex);
-    console.log('📊 App: Total tables:', allTables.length);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📊 App: currentTableIndex updated to:', currentTableIndex);
+      console.log('📊 App: Total tables:', allTables.length);
+    }
   }, [currentTableIndex, allTables.length])
 
   // Debug: Log when currentTableData changes to track rendering
@@ -148,8 +152,8 @@ function AppContent() {
       }, 500)
     }
 
-  // 開発用: VSCode外でテストする場合のサンプルデータ（DEV ビルドのみ）
-  if (import.meta.env?.DEV && typeof window !== 'undefined' && !(window as any).acquireVsCodeApi && allTables.length === 0) {
+    // 開発用: VSCode外でテストする場合のサンプルデータ（DEV ビルドのみ）
+    if (import.meta.env?.DEV && typeof window !== 'undefined' && !(window as any).acquireVsCodeApi && allTables.length === 0) {
       // プロダクション環境では小さなサンプルデータのみ提供
       const testTables: TableData[] = [
         {
@@ -165,7 +169,8 @@ function AppContent() {
       setAllTables(testTables)
       setLoading(false)
     }
-  }, [sendMessage, themeRequested, setThemeRequested, allTables.length])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 初期化は1回だけ実行
 
   // keep ref in sync when state changes (covers programmatic changes)
   useEffect(() => {
@@ -190,11 +195,15 @@ function AppContent() {
     // データが実際に変更されているかチェック（無限ループ防止）
     const currentData = currentTables[currentIdx]
     if (currentData && JSON.stringify(currentData) === JSON.stringify(updatedData)) {
-      console.log('[App] Skipping table update - no actual changes')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[App] Skipping table update - no actual changes')
+      }
       return
     }
     
-    console.log('[App] Applying table update - changes detected')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[App] Applying table update - changes detected')
+    }
     const newTables = [...currentTables]
     newTables[currentIdx] = updatedData
     setAllTables(newTables)

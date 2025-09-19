@@ -51,11 +51,15 @@ export function useTableEditor(
   }
 
   const { displayedData, viewToModelMap } = useMemo(() => {
-    console.log('🔍 [useTableEditor] useMemo sortState:', sortState)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 [useTableEditor] useMemo sortState:', sortState)
+    }
     
     // sortStateが未定義の場合のガード
     if (!sortState) {
-      console.warn('⚠️ [useTableEditor] sortState is undefined, returning original data')
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ [useTableEditor] sortState is undefined, returning original data')
+      }
       return {
         displayedData: tableData,
         viewToModelMap: tableData.rows.map((_, index) => index),
@@ -63,7 +67,9 @@ export function useTableEditor(
     }
     
     const { column, direction } = sortState
-    console.log('🔍 [useTableEditor] Sort parameters - column:', column, 'direction:', direction)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 [useTableEditor] Sort parameters - column:', column, 'direction:', direction)
+    }
     
     if (direction === 'none' || column < 0) {
       return {
@@ -108,7 +114,9 @@ export function useTableEditor(
   }, [resetSortState, selection.initializeSelection])
 
   useEffect(() => {
-    console.log('🔍 Resetting table state due to initialData change')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Resetting table state due to initialData change')
+    }
     setTableData(initialData)
     setCurrentEditingCell(null)
     setColumnWidths({})

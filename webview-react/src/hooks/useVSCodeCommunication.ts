@@ -14,8 +14,13 @@ export function useVSCodeCommunication(callbacks: VSCodeCommunicationCallbacks) 
 
   // VSCodeにメッセージを送信
   const sendMessage = useCallback((message: VSCodeMessage) => {
-    console.log('🚀 React: Sending message to VSCode:', message.command);
-    console.log('📦 React: Message data:', JSON.stringify(message.data, null, 2));
+    // プロダクション環境では詳細ログを抑制
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🚀 React: Sending message to VSCode:', message.command);
+      if (message.data) {
+        console.log('📦 React: Message data:', JSON.stringify(message.data, null, 2));
+      }
+    }
     
     if (window.vscode) {
       window.vscode.postMessage(message)
@@ -28,7 +33,11 @@ export function useVSCodeCommunication(callbacks: VSCodeCommunicationCallbacks) 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data
-      console.log('React: Received message from VSCode:', message.command, message)
+      
+      // プロダクション環境では詳細ログを抑制
+      if (process.env.NODE_ENV === 'development') {
+        console.log('React: Received message from VSCode:', message.command, message)
+      }
 
       switch (message.command) {
         case 'updateTableData':
