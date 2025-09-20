@@ -227,9 +227,11 @@ describe('TableEditor', () => {
     const deleteButton = screen.getByText('この行を削除')
     await user.click(deleteButton)
     
-    // 正しいインデックス（1）で削除メッセージが送信されることを確認
-    // UI からは VSCodeメッセージ送信を直接行わないため、ここでは呼び出しがないことを許容
-    expect(mockOnSendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ command: 'deleteRows' }))
+    // 正しいインデックス（1）で削除メッセージが送信されることを確認（単一行でも deleteRows を使用）
+    expect(mockOnSendMessage).toHaveBeenCalledWith({
+      command: 'deleteRows',
+      data: { indices: [1] }
+    })
   })
 
   test('context menu row addition works with correct indices', async () => {
@@ -268,7 +270,10 @@ describe('TableEditor', () => {
     const deleteColumnButton = screen.getByText('この列を削除')
     await user.click(deleteColumnButton)
     
-    // UI からは VSCodeメッセージ送信を直接行わないため、ここでは呼び出しがないことを許容
-    expect(mockOnSendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ command: 'deleteColumns' }))
+    // 単一列削除でも deleteColumns が送信される
+    expect(mockOnSendMessage).toHaveBeenCalledWith({
+      command: 'deleteColumns',
+      data: { indices: [1] }
+    })
   })
 })

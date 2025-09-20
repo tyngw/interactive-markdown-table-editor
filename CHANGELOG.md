@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.19] - 2025-09-20
+
+### Fixed / Delete operations sync
+- 単一行・単一列の削除操作がエディタ（拡張）側に反映されない問題を修正
+  - 原因: React Webview 側で単一削除時に `deleteRows`/`deleteColumns` メッセージを送信していなかったため、UI のみ更新されファイルへ同期されていなかった
+  - 対応: `TableEditor.tsx` に単一削除用ハンドラ（`handleDeleteRow`/`handleDeleteColumn`）を追加し、単一時も `[index]` で各メッセージを送信するよう統一
+  - これにより、単一・複数いずれの削除でも `deleteRows` / `deleteColumns` の内部コマンドに集約
+
+### Tests
+- `webview-react/src/__tests__/TableEditor.test.tsx` のコンテキストメニュー関連テストを更新
+  - 単一行/列削除でも `deleteRows`/`deleteColumns` メッセージを送ることを検証するよう期待値を修正
+
 All notable changes to the Markdown Table Editor extension will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
