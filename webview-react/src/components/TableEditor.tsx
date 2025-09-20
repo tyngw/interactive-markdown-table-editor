@@ -150,6 +150,11 @@ const TableEditor: React.FC<TableEditorProps> = ({
     onSendMessage({ command: 'deleteRows', data: withTableIndex({ indices }) })
   }, [deleteRow, onSendMessage, withTableIndex])
 
+  // 単一行削除でも拡張に同期する
+  const handleDeleteRow = useCallback((index: number) => {
+    handleDeleteRows([index])
+  }, [handleDeleteRows])
+
   const handleAddColumn = useCallback((index?: number) => {
     addColumn(index)
     onSendMessage({ command: 'addColumn', data: withTableIndex({ index }) })
@@ -160,6 +165,11 @@ const TableEditor: React.FC<TableEditorProps> = ({
     sortedIndices.forEach(index => deleteColumn(index))
     onSendMessage({ command: 'deleteColumns', data: withTableIndex({ indices }) })
   }, [deleteColumn, onSendMessage, withTableIndex])
+
+  // 単一列削除でも拡張に同期する
+  const handleDeleteColumn = useCallback((index: number) => {
+    handleDeleteColumns([index])
+  }, [handleDeleteColumns])
 
   const handleSort = useCallback((col: number) => {
     sortColumn(col)
@@ -258,7 +268,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
             onSort={handleSort}
             onColumnResize={setColumnWidth}
             onAddColumn={handleAddColumn}
-            onDeleteColumn={deleteColumn}
+            onDeleteColumn={handleDeleteColumn}
             onSelectAll={selectAll}
             onColumnSelect={handleColumnSelect}
             onShowColumnContextMenu={(e, i) => setContextMenuState({ type: 'column', index: i, position: { x: e.clientX, y: e.clientY } })}
@@ -274,7 +284,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
             onCellSelect={selectCell}
             onCellEdit={setCurrentEditingCell}
             onAddRow={addRow}
-            onDeleteRow={deleteRow}
+            onDeleteRow={handleDeleteRow}
             onRowSelect={handleRowSelect}
             onShowRowContextMenu={(e, i) => setContextMenuState({ type: 'row', index: i, position: { x: e.clientX, y: e.clientY } })}
             getDragProps={getDragProps}
@@ -326,10 +336,10 @@ const TableEditor: React.FC<TableEditorProps> = ({
       <ContextMenu
         menuState={contextMenuState}
   onAddRow={handleAddRow}
-        onDeleteRow={deleteRow}
+    onDeleteRow={handleDeleteRow}
         onDeleteRows={handleDeleteRows}
   onAddColumn={handleAddColumn}
-        onDeleteColumn={deleteColumn}
+    onDeleteColumn={handleDeleteColumn}
         onDeleteColumns={handleDeleteColumns}
         onClose={() => setContextMenuState({ type: null, index: -1, position: { x: 0, y: 0 } })}
         selectedCells={editorState.selectedCells}
