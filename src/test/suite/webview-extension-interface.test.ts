@@ -521,16 +521,27 @@ suite('Webview-Extension Interface Tests', () => {
             
             // Clear health map
             manager.connectionHealthMap.clear();
-            
+
+            // Register panel first to ensure findPanelId works
+            const testPanelId = testUri.toString() + '_' + Date.now();
+            manager.panels.set(testPanelId, panel);
+
             // Handle a valid message
             await manager.handleMessage({
                 command: 'requestTableData'
             }, panel, testUri);
-            
+
             // Check if connection was marked as healthy
-            const health = manager.connectionHealthMap.get(testUri.toString());
+            // The health might be stored under the panelId or fallback to URI string
+            const uriString = testUri.toString();
+            const health = manager.connectionHealthMap.get(testPanelId) || 
+                          manager.connectionHealthMap.get(uriString);
+            
             assert.ok(health, 'Should have health record after message');
             assert.strictEqual(health.isHealthy, true, 'Should be marked as healthy');
+            
+            // Cleanup
+            manager.panels.delete(testPanelId);
         });
     });
 
