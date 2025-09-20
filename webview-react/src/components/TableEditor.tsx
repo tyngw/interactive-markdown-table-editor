@@ -101,8 +101,28 @@ const TableEditor: React.FC<TableEditorProps> = ({
   const { exportToCSV, exportToTSV } = useCSVExport()
 
   const { getDragProps, getDropProps } = useDragDrop({
-    onMoveRow: moveRow,
-    onMoveColumn: moveColumn
+    onMoveRow: (fromIndex: number, toIndex: number) => {
+      console.log(`TableEditor: onMoveRow called with fromIndex=${fromIndex}, toIndex=${toIndex}`)
+      if (typeof fromIndex !== 'number' || typeof toIndex !== 'number') {
+        console.error(`Invalid indices in onMoveRow: fromIndex=${fromIndex} (${typeof fromIndex}), toIndex=${toIndex} (${typeof toIndex})`)
+        return
+      }
+      moveRow(fromIndex, toIndex)
+      const messageData = withTableIndex({ fromIndex, toIndex })
+      console.log(`Sending moveRow message:`, messageData)
+      onSendMessage({ command: 'moveRow', data: messageData })
+    },
+    onMoveColumn: (fromIndex: number, toIndex: number) => {
+      console.log(`TableEditor: onMoveColumn called with fromIndex=${fromIndex}, toIndex=${toIndex}`)
+      if (typeof fromIndex !== 'number' || typeof toIndex !== 'number') {
+        console.error(`Invalid indices in onMoveColumn: fromIndex=${fromIndex} (${typeof fromIndex}), toIndex=${toIndex} (${typeof toIndex})`)
+        return
+      }
+      moveColumn(fromIndex, toIndex)
+      const messageData = withTableIndex({ fromIndex, toIndex })
+      console.log(`Sending moveColumn message:`, messageData)
+      onSendMessage({ command: 'moveColumn', data: messageData })
+    }
   })
 
   // 列/行選択をUIイベントから受け取りやすい形でラップ

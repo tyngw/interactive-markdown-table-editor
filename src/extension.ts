@@ -1158,7 +1158,7 @@ export function activate(context: vscode.ExtensionContext) {
     const moveRowCommand = vscode.commands.registerCommand('markdownTableEditor.internal.moveRow', async (data: any) => {
         try {
             console.log('Internal command: moveRow', data);
-            const { uri: uriString, panelId, from, to, tableIndex } = data;
+            const { uri: uriString, panelId, fromIndex, toIndex, tableIndex } = data;
             const uri = vscode.Uri.parse(uriString);
             const panel = webviewManager.getPanel(uriString);
 
@@ -1182,7 +1182,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             // Move the row
-            tableDataManager.moveRow(from, to);
+            tableDataManager.moveRow(fromIndex, toIndex);
 
             // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
@@ -1200,7 +1200,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
             webviewManager.updateTableData(panel, allTableData, uri);
-            webviewManager.sendSuccess(panel, `Row moved from ${from} to ${to}`);
+            webviewManager.sendSuccess(panel, `Row moved from ${fromIndex} to ${toIndex}`);
         } catch (error) {
             console.error('Error in moveRow:', error);
             const panel = webviewManager.getPanel(data.uri);
@@ -1213,7 +1213,7 @@ export function activate(context: vscode.ExtensionContext) {
     const moveColumnCommand = vscode.commands.registerCommand('markdownTableEditor.internal.moveColumn', async (data: any) => {
         try {
             console.log('Internal command: moveColumn', data);
-            const { uri: uriString, panelId, from, to, tableIndex } = data;
+            const { uri: uriString, panelId, fromIndex, toIndex, tableIndex } = data;
             const uri = vscode.Uri.parse(uriString);
             const panel = webviewManager.getPanel(uriString);
 
@@ -1237,7 +1237,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             // Move the column
-            tableDataManager.moveColumn(from, to);
+            tableDataManager.moveColumn(fromIndex, toIndex);
 
             // Update the file using table index for more accurate positioning
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
@@ -1255,7 +1255,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
             webviewManager.updateTableData(panel, allTableData, uri);
-            webviewManager.sendSuccess(panel, `Column moved from ${from} to ${to}`);
+            webviewManager.sendSuccess(panel, `Column moved from ${fromIndex} to ${toIndex}`);
         } catch (error) {
             console.error('Error in moveColumn:', error);
             const panel = webviewManager.getPanel(data.uri);

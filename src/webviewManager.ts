@@ -777,8 +777,8 @@ export class WebviewManager {
 
     private validateMoveData(data: any): boolean {
         if (!data) return false;
-        return typeof data.from === 'number' && data.from >= 0 &&
-            typeof data.to === 'number' && data.to >= 0 &&
+        return typeof data.fromIndex === 'number' && data.fromIndex >= 0 &&
+            typeof data.toIndex === 'number' && data.toIndex >= 0 &&
             (data.tableIndex === undefined || (typeof data.tableIndex === 'number' && data.tableIndex >= 0));
     }
 
@@ -1012,15 +1012,45 @@ export class WebviewManager {
     private async handleMoveRow(data: { fromIndex: number; toIndex: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Move row:', data, 'for file:', uri.toString());
 
+        // Validate indices
+        if (typeof data.fromIndex !== 'number' || typeof data.toIndex !== 'number') {
+            const error = `Failed to move row: Invalid row indices: from ${data.fromIndex}, to ${data.toIndex}`;
+            console.error(error);
+            panel.webview.postMessage({
+                command: 'error',
+                message: error
+            });
+            return;
+        }
+
+        if (data.fromIndex < 0 || data.toIndex < 0) {
+            const error = `Failed to move row: Invalid row indices (negative): from ${data.fromIndex}, to ${data.toIndex}`;
+            console.error(error);
+            panel.webview.postMessage({
+                command: 'error',
+                message: error
+            });
+            return;
+        }
+
         const actualPanelId = this.findPanelId(panel);
 
-        vscode.commands.executeCommand('markdownTableEditor.internal.moveRow', {
-            uri: uri.toString(),
-            panelId: actualPanelId,
-            fromIndex: data.fromIndex,
-            toIndex: data.toIndex,
-            tableIndex: data?.tableIndex
-        });
+        try {
+            vscode.commands.executeCommand('markdownTableEditor.internal.moveRow', {
+                uri: uri.toString(),
+                panelId: actualPanelId,
+                fromIndex: data.fromIndex,
+                toIndex: data.toIndex,
+                tableIndex: data?.tableIndex
+            });
+        } catch (error) {
+            const errorMessage = `Failed to execute moveRow command: ${error}`;
+            console.error(errorMessage);
+            panel.webview.postMessage({
+                command: 'error',
+                message: errorMessage
+            });
+        }
     }
 
     /**
@@ -1029,15 +1059,45 @@ export class WebviewManager {
     private async handleMoveColumn(data: { fromIndex: number; toIndex: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
         console.log('Move column:', data, 'for file:', uri.toString());
 
+        // Validate indices
+        if (typeof data.fromIndex !== 'number' || typeof data.toIndex !== 'number') {
+            const error = `Failed to move column: Invalid column indices: from ${data.fromIndex}, to ${data.toIndex}`;
+            console.error(error);
+            panel.webview.postMessage({
+                command: 'error',
+                message: error
+            });
+            return;
+        }
+
+        if (data.fromIndex < 0 || data.toIndex < 0) {
+            const error = `Failed to move column: Invalid column indices (negative): from ${data.fromIndex}, to ${data.toIndex}`;
+            console.error(error);
+            panel.webview.postMessage({
+                command: 'error',
+                message: error
+            });
+            return;
+        }
+
         const actualPanelId = this.findPanelId(panel);
 
-        vscode.commands.executeCommand('markdownTableEditor.internal.moveColumn', {
-            uri: uri.toString(),
-            panelId: actualPanelId,
-            fromIndex: data.fromIndex,
-            toIndex: data.toIndex,
-            tableIndex: data?.tableIndex
-        });
+        try {
+            vscode.commands.executeCommand('markdownTableEditor.internal.moveColumn', {
+                uri: uri.toString(),
+                panelId: actualPanelId,
+                fromIndex: data.fromIndex,
+                toIndex: data.toIndex,
+                tableIndex: data?.tableIndex
+            });
+        } catch (error) {
+            const errorMessage = `Failed to execute moveColumn command: ${error}`;
+            console.error(errorMessage);
+            panel.webview.postMessage({
+                command: 'error',
+                message: errorMessage
+            });
+        }
     }
 
     /**

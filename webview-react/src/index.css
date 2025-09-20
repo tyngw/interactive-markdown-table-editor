@@ -793,15 +793,18 @@ textarea.cell-input[data-multiline="true"] {
 
 /* ====== 11. ドラッグ&ドロップ ====== */
 .dragging {
-    opacity: 0.5 !important;
-    transform: rotate(2deg);
-    transition: all 0.2s ease;
+    opacity: 0.6 !important;
+    transform: rotate(1deg) scale(1.02);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     z-index: 1000;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 122, 204, 0.1);
+    border: 2px solid rgba(0, 122, 204, 0.5) !important;
 }
 
 .drag-over {
     background-color: var(--vscode-list-dropBackground) !important;
     border: 2px solid var(--vscode-focusBorder) !important;
+    transition: all 0.2s ease;
 }
 
 .drop-zone {
@@ -815,24 +818,58 @@ textarea.cell-input[data-multiline="true"] {
 
 .drop-indicator {
     position: absolute;
-    background-color: var(--vscode-focusBorder);
+    background-color: #007ACC;
     z-index: 1000;
     pointer-events: none;
-    opacity: 0.8;
-    transition: all 0.2s ease;
-    box-shadow: 0 0 6px rgba(0, 122, 255, 0.5);
+    opacity: 0.95;
+    transition: all 0.15s ease;
+    box-shadow: 0 0 12px rgba(0, 122, 204, 0.8), 0 0 4px rgba(0, 122, 204, 1);
+    border-radius: 3px;
+    animation: dropIndicatorPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes dropIndicatorPulse {
+    0% {
+        opacity: 0.7;
+        transform: scale(1);
+        box-shadow: 0 0 8px rgba(0, 122, 204, 0.6);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+        box-shadow: 0 0 16px rgba(0, 122, 204, 0.9), 0 0 6px rgba(0, 122, 204, 1);
+    }
+    100% {
+        opacity: 0.7;
+        transform: scale(1);
+        box-shadow: 0 0 8px rgba(0, 122, 204, 0.6);
+    }
 }
 
 .drop-indicator.column {
     top: 0;
     bottom: 0;
-    width: 3px;
+    width: 6px;
+    /* より太い縦線でSpreadsheetライクな見た目 */
+    background: linear-gradient(to bottom, 
+        rgba(0, 122, 204, 0.9), 
+        rgba(0, 122, 204, 1), 
+        rgba(0, 122, 204, 0.9));
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+    border-right: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .drop-indicator.row {
     left: 0;
     right: 0;
-    height: 3px;
+    height: 6px;
+    /* より太い横線でSpreadsheetライクな見た目 */
+    background: linear-gradient(to right, 
+        rgba(0, 122, 204, 0.9), 
+        rgba(0, 122, 204, 1), 
+        rgba(0, 122, 204, 0.9));
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* Drag cursor states */
