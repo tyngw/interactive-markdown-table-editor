@@ -5,6 +5,14 @@ All notable changes to the Markdown Table Editor extension will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.15] - 2025-09-20
+
+### Fixed
+- 複数行選択時のコンテキストメニューから行追加機能を修正
+  - 複数行を全選択してコンテキストメニューから「この上に行を追加」または「この下に行を追加」を選択した際、選択した行数分の行が追加されるように修正
+  - Spreadsheetと同様の動作に準拠（例：2行選択時は2行追加、3行選択時は3行追加）
+  - メニューラベルも動的に変更され、選択行数が表示される（例：「この下に2行を追加」）
+
 ## [0.7.14] - 2025-09-19
 
 ### Fixed / Improved

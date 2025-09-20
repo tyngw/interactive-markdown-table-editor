@@ -1,5 +1,3 @@
-import { useTheme } from '../contexts/ThemeContext'
-
 interface ContextMenuState {
   type: 'row' | 'column' | null
   index: number
@@ -31,16 +29,47 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   selectedCells,
   tableData
 }) => {
-  const { getStyle } = useTheme()
   if (!menuState.type) return null
 
   const handleAddRowAbove = () => {
-    onAddRow(menuState.index)
+    const selectedRows = getSelectedRows()
+    const isCurrentRowFullySelected = isRowFullySelected(menuState.index)
+    
+    if (selectedRows.size > 1 && isCurrentRowFullySelected) {
+      // Multiple rows selected - add the same number of rows above the first selected row
+      const selectedRowArray = Array.from(selectedRows).sort((a, b) => a - b)
+      const firstRowIndex = selectedRowArray[0]
+      const selectedRowCount = selectedRows.size
+      
+      // Add rows one by one at the same position (they'll stack up above)
+      for (let i = 0; i < selectedRowCount; i++) {
+        onAddRow(firstRowIndex)
+      }
+    } else {
+      // Single row - add one row above
+      onAddRow(menuState.index)
+    }
     onClose()
   }
 
   const handleAddRowBelow = () => {
-    onAddRow(menuState.index + 1)
+    const selectedRows = getSelectedRows()
+    const isCurrentRowFullySelected = isRowFullySelected(menuState.index)
+    
+    if (selectedRows.size > 1 && isCurrentRowFullySelected) {
+      // Multiple rows selected - add the same number of rows below the last selected row
+      const selectedRowArray = Array.from(selectedRows).sort((a, b) => b - a) // Sort descending
+      const lastRowIndex = selectedRowArray[0] // Highest index
+      const selectedRowCount = selectedRows.size
+      
+      // Add rows one by one after the last selected row
+      for (let i = 0; i < selectedRowCount; i++) {
+        onAddRow(lastRowIndex + 1)
+      }
+    } else {
+      // Single row - add one row below
+      onAddRow(menuState.index + 1)
+    }
     onClose()
   }
 
@@ -150,11 +179,19 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         >
           <button className="context-menu-item" onClick={handleAddRowAbove}>
             <span className="context-menu-icon">⬆️</span>
-            <span className="context-menu-label">この上に行を追加</span>
+            <span className="context-menu-label">
+              {getSelectedRows().size > 1 && isRowFullySelected(menuState.index)
+                ? `この上に${getSelectedRows().size}行を追加`
+                : 'この上に行を追加'}
+            </span>
           </button>
           <button className="context-menu-item" onClick={handleAddRowBelow}>
             <span className="context-menu-icon">⬇️</span>
-            <span className="context-menu-label">この下に行を追加</span>
+            <span className="context-menu-label">
+              {getSelectedRows().size > 1 && isRowFullySelected(menuState.index)
+                ? `この下に${getSelectedRows().size}行を追加`
+                : 'この下に行を追加'}
+            </span>
           </button>
           <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={handleDeleteRow}>

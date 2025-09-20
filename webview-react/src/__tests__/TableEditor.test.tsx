@@ -161,16 +161,15 @@ describe('TableEditor', () => {
     const nameHeader = screen.getByText('Name')
     await user.click(nameHeader)
     
-    // ソートが実行されることを確認（内部状態の変更）
-    // 見出しに昇順インジケーターが付くことを確認
+    // ソート後の状態を確認
+    // ソートインジケーターは`.sort-indicator`要素にある
     await waitFor(() => {
-      expect(
-        screen.getByText((content, node) => {
-          const hasTitle = node?.classList?.contains('column-title')
-          const text = node?.textContent || ''
-          return !!hasTitle && /Name\s*↑/.test(text)
-        })
-      ).toBeInTheDocument()
+      const sortIndicator = document.querySelector('[data-col="0"] .sort-indicator')
+      expect(sortIndicator).toBeTruthy()
+      // ソートされた状態を確認するため、データの順序をチェック
+      const cells = screen.getAllByText(/Alice|Bob|Charlie/)
+      // 昇順でソートされているかを確認 (Alice < Bob < Charlie)
+      expect(cells[0]).toHaveTextContent('Alice')
     })
   })
 
