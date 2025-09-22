@@ -19,6 +19,8 @@ export class WebviewManager {
     private connectionHealthMap: Map<string, { lastActivity: number; isHealthy: boolean }> = new Map();
     private healthCheckInterval: NodeJS.Timeout | null = null;
     private undoRedoManager: UndoRedoManager;
+    private isInitialized: boolean = false;
+    private initializationPromise: Promise<void> | null = null;
     // Legacy webview modular scripts (for tests and backward compatibility)
     private readonly legacyScriptFiles: string[] = [
         'js/core.js',
@@ -36,30 +38,57 @@ export class WebviewManager {
                 return '';
             }
 
+            // 最初にtoString()を試す
+            const uriString = uri.toString();
+            
+            // Basic validation: URIに必要最小限の文字が含まれているかチェック
+            if (uriString.length < 5 || !uriString.includes('://')) {
+                console.warn('Invalid URI string format:', uriString);
+                throw new Error('Invalid URI format');
+            }
+
             // schemeに不正な文字が含まれていないかチェック
             const schemeRegex = /^[a-zA-Z][a-zA-Z0-9+.-]*$/;
             if (!schemeRegex.test(uri.scheme)) {
-                console.warn('Invalid URI scheme:', uri.scheme);
-                // 安全なフォールバック: file schemeを使用
-                return vscode.Uri.file(uri.path).toString();
+                console.warn('Invalid URI scheme detected:', uri.scheme, 'Full URI:', uriString);
+                // エラーではなく、警告として処理し続行
             }
 
-            return vscode.Uri.from({
-                scheme: uri.scheme,
-                path: uri.path || '',
-                query: uri.query || '',
-                fragment: uri.fragment || ''
-            }).toString();
+            return uriString;
         } catch (error) {
             console.error('Failed to create safe URI string:', error);
             console.error('Original URI:', uri);
             
-            // 最後のフォールバック: エンコードされた文字列
+            // より詳細なフォールバック処理
             try {
-                return encodeURI(uri.toString());
-            } catch (encodeError) {
-                console.error('Failed to encode URI:', encodeError);
-                return '';
+                // 基本的なURI再構成を試行
+                const reconstructedUri = vscode.Uri.from({
+                    scheme: uri.scheme === 'untitled' ? 'file' : (uri.scheme || 'file'),
+                    path: uri.path || '',
+                    query: uri.query || '',
+                    fragment: uri.fragment || ''
+                });
+                const reconstructedString = reconstructedUri.toString();
+                console.log('Reconstructed URI:', reconstructedString);
+                return reconstructedString;
+            } catch (reconstructError) {
+                console.error('Failed to reconstruct URI:', reconstructError);
+                
+                // 最後のフォールバック: 安全な文字でエンコード
+                try {
+                    if (uri.path) {
+                        // ファイルパスが利用可能な場合はfile schemeで再構築
+                        const fileUri = vscode.Uri.file(uri.fsPath || uri.path);
+                        return fileUri.toString();
+                    } else {
+                        // どうしても作れない場合は空文字を返す
+                        console.error('Cannot create any valid URI representation');
+                        return '';
+                    }
+                } catch (finalError) {
+                    console.error('Final fallback also failed:', finalError);
+                    return '';
+                }
             }
         }
     }
@@ -68,6 +97,51 @@ export class WebviewManager {
         this.context = context;
         this.undoRedoManager = UndoRedoManager.getInstance();
         this.startHealthMonitoring();
+        
+        // Start async initialization but don't block constructor
+        this.initializationPromise = this.initializeAsync();
+    }
+    
+    /**
+     * 非同期初期化処理
+     */
+    private async initializeAsync(): Promise<void> {
+        try {
+            console.log('WebviewManager: Starting async initialization...');
+            
+            // Check if webview build directory exists and is accessible
+            const reactBuildPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview-dist');
+            try {
+                await vscode.workspace.fs.stat(reactBuildPath);
+                console.log('WebviewManager: React build directory verified');
+            } catch (error) {
+                console.warn('WebviewManager: React build directory not found, this may cause issues:', error);
+            }
+            
+            // Verify key build files exist
+            const indexHtmlPath = vscode.Uri.joinPath(reactBuildPath, 'index.html');
+            try {
+                await vscode.workspace.fs.stat(indexHtmlPath);
+                console.log('WebviewManager: React build index.html verified');
+            } catch (error) {
+                console.warn('WebviewManager: React build index.html not found:', error);
+            }
+            
+            this.isInitialized = true;
+            console.log('WebviewManager: Async initialization completed');
+        } catch (error) {
+            console.error('WebviewManager: Async initialization failed:', error);
+            // Don't throw - allow the manager to still function with reduced capabilities
+        }
+    }
+    
+    /**
+     * 初期化完了を待つ
+     */
+    private async ensureInitialized(): Promise<void> {
+        if (!this.isInitialized && this.initializationPromise) {
+            await this.initializationPromise;
+        }
     }
 
     public static getInstance(context?: vscode.ExtensionContext): WebviewManager {
@@ -205,6 +279,9 @@ export class WebviewManager {
      * Internal method to create table editor panel with option to force new panel
      */
     private async _createTableEditorPanel(tableData: TableData | TableData[], uri: vscode.Uri, forceNewPanel: boolean): Promise<vscode.WebviewPanel> {
+        // Ensure WebviewManager is fully initialized before proceeding
+        await this.ensureInitialized();
+        
         let panelId = uri.toString();
 
         // If forcing new panel, create unique panel ID
@@ -259,56 +336,139 @@ export class WebviewManager {
             panelTitle = `${path.basename(uri.fsPath)} - Table Editor (${panelNumber})`;
         }
 
-        // Create new panel
-        const panel = vscode.window.createWebviewPanel(
-            'markdownTableEditor',
-            panelTitle,
-            vscode.ViewColumn.Two,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: [
-                    vscode.Uri.joinPath(this.context.extensionUri, 'webview-dist'),
-                    vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webview'),
-                    vscode.Uri.joinPath(this.context.extensionUri, 'webview')
-                ]
-            }
-        );
+        // Create new panel with safe URI handling
+        let panel: vscode.WebviewPanel;
+        try {
+            panel = vscode.window.createWebviewPanel(
+                'markdownTableEditor',
+                panelTitle,
+                vscode.ViewColumn.Two,
+                {
+                    enableScripts: true,
+                    retainContextWhenHidden: true,
+                    localResourceRoots: [
+                        vscode.Uri.joinPath(this.context.extensionUri, 'webview-dist'),
+                        vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webview'),
+                        vscode.Uri.joinPath(this.context.extensionUri, 'webview')
+                    ]
+                }
+            );
 
-        // Set the icon for the webview panel tab
-        panel.iconPath = vscode.Uri.joinPath(this.context.extensionUri, 'icon.png');
+            // Set the icon for the webview panel tab with error handling
+            try {
+                panel.iconPath = vscode.Uri.joinPath(this.context.extensionUri, 'icon.png');
+            } catch (iconError) {
+                console.warn('Failed to set panel icon:', iconError);
+                // Continue without icon
+            }
+        } catch (panelError) {
+            console.error('Failed to create webview panel:', panelError);
+            throw new Error(`Failed to create webview panel: ${panelError instanceof Error ? panelError.message : String(panelError)}`);
+        }
 
         console.log('Webview panel created, setting HTML content...');
 
-        // Use React build for webview
+        // Use React build for webview with enhanced error handling and retry logic
         const reactBuildPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview-dist');
         
-        // Check if React build exists, fallback to original if not
-        const indexHtmlPath = vscode.Uri.joinPath(reactBuildPath, 'index.html');
-        let html: string;
+        // Enhanced build path validation
+        let html: string = '';
+        let buildReady = false;
+        const maxRetries = 3;
+        const retryDelay = 100; // 100ms
+        
+        for (let attempt = 1; attempt <= maxRetries && !buildReady; attempt++) {
+            try {
+                console.log(`Attempting to load React build (attempt ${attempt}/${maxRetries})...`);
+                
+                // Check if React build directory exists first
+                try {
+                    await vscode.workspace.fs.stat(reactBuildPath);
+                    console.log('React build directory exists');
+                } catch (dirError) {
+                    console.error('React build directory not found:', reactBuildPath.toString());
+                    throw new Error(`React build directory not accessible: ${dirError}`);
+                }
+                
+                // Check if index.html exists
+                const indexHtmlPath = vscode.Uri.joinPath(reactBuildPath, 'index.html');
+                try {
+                    await vscode.workspace.fs.stat(indexHtmlPath);
+                    console.log('React build index.html found');
+                } catch (htmlError) {
+                    console.error('React build index.html not found:', indexHtmlPath.toString());
+                    throw new Error(`React build index.html not accessible: ${htmlError}`);
+                }
+                
+                // Try to read React build HTML
+                const htmlBuffer = await vscode.workspace.fs.readFile(indexHtmlPath);
+                html = Buffer.from(htmlBuffer).toString('utf8');
+                
+                if (!html || html.trim().length === 0) {
+                    throw new Error('React build HTML is empty');
+                }
+                
+                console.log(`React build loaded successfully (${html.length} characters)`);
+                buildReady = true;
+                
+            } catch (buildError) {
+                console.warn(`Build loading attempt ${attempt} failed:`, buildError);
+                
+                if (attempt < maxRetries) {
+                    console.log(`Retrying in ${retryDelay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                } else {
+                    console.error('All build loading attempts failed');
+                    throw new Error(`React webview build not accessible after ${maxRetries} attempts: ${buildError}`);
+                }
+            }
+        }
+        
+        if (!buildReady || !html) {
+            throw new Error('Failed to load React build after all retry attempts');
+        }
         
         try {
-            // Try to read React build HTML
-            const htmlBuffer = await vscode.workspace.fs.readFile(indexHtmlPath);
-            html = Buffer.from(htmlBuffer).toString('utf8');
-            
-            // Convert relative paths to webview URIs
+            // Convert relative paths to webview URIs with safe URI handling
             const assetsPath = vscode.Uri.joinPath(reactBuildPath, 'assets');
-            const assetsUri = panel.webview.asWebviewUri(assetsPath);
+            let assetsUri: vscode.Uri;
+            let assetsUriString: string;
+            
+            try {
+                assetsUri = panel.webview.asWebviewUri(assetsPath);
+                assetsUriString = this.getSafeUriString(assetsUri);
+                
+                // Fallback if getSafeUriString returns empty
+                if (!assetsUriString) {
+                    assetsUriString = assetsUri.toString();
+                }
+            } catch (uriError) {
+                console.error('Failed to convert assets path to webview URI:', uriError);
+                console.error('Assets path:', assetsPath.toString());
+                
+                // Fallback: try to encode the path safely
+                try {
+                    assetsUri = panel.webview.asWebviewUri(vscode.Uri.file(assetsPath.fsPath));
+                    assetsUriString = assetsUri.toString();
+                } catch (fallbackError) {
+                    console.error('Fallback URI creation also failed:', fallbackError);
+                    throw new Error(`Failed to create safe webview URI for assets: ${fallbackError}`);
+                }
+            }
             
             console.log('React build path:', reactBuildPath.toString());
             console.log('Assets path:', assetsPath.toString());
-            console.log('Assets URI:', assetsUri.toString());
+            console.log('Assets URI:', assetsUriString);
             console.log('Original HTML:', html);
             
             // Replace asset paths with webview URIs (be careful not to double-replace)
             const originalHtml = html;
             // First replace relative paths
-            html = html.replace(/src="\.\/assets\//g, `src="${assetsUri.toString()}/`);
-            html = html.replace(/href="\.\/assets\//g, `href="${assetsUri.toString()}/`);
+            html = html.replace(/src="\.\/assets\//g, `src="${assetsUriString}/`);
+            html = html.replace(/href="\.\/assets\//g, `href="${assetsUriString}/`);
             // Then replace any remaining absolute paths that weren't already replaced
-            html = html.replace(/src="\/assets\//g, `src="${assetsUri.toString()}/`);
-            html = html.replace(/href="\/assets\//g, `href="${assetsUri.toString()}/`);
+            html = html.replace(/src="\/assets\//g, `src="${assetsUriString}/`);
+            html = html.replace(/href="\/assets\//g, `href="${assetsUriString}/`);
             
             console.log('HTML after asset path replacement:', html);
             console.log('Asset path replacements made:', originalHtml !== html);
