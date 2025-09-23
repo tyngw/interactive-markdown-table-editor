@@ -35,13 +35,16 @@ let watchMode = {
     startWatching() {
         if (!WATCH_MODE) return;
         
-        const webviewDir = path.join(ROOT_DIR, 'webview');
-        const devDir = path.join(ROOT_DIR, 'dev');
-        
-        console.log('📁 Watching for file changes in webview/ and dev/ directories...');
-        
-        this.watchDirectory(webviewDir);
-        this.watchDirectory(devDir);
+        const watchTargets = [
+            path.join(ROOT_DIR, 'webview'),
+            path.join(ROOT_DIR, 'webview-dist'),
+            path.join(ROOT_DIR, 'out', 'webview'),
+            path.join(ROOT_DIR, 'dev')
+        ];
+
+        console.log('📁 Watching for file changes in dev/, webview-dist/, out/webview/, and webview/ directories...');
+
+        watchTargets.forEach(dir => this.watchDirectory(dir));
     },
     
     watchDirectory(dir) {
@@ -86,20 +89,33 @@ const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url);
     let pathname = parsedUrl.pathname;
     
-    // Default to dev/index.html for root requests
+    // Default to dev/index.html for root requests and handle trailing slashes
     if (pathname === '/') {
         pathname = '/dev/index.html';
+    } else if (pathname === '/dev' || pathname === '/dev/') {
+        pathname = '/dev/index.html';
     }
-    
-    const filePath = path.join(ROOT_DIR, pathname);
-    
-    // Security check - ensure the file is within our project directory
-    if (!filePath.startsWith(ROOT_DIR)) {
+
+    let relativePath = pathname.replace(/^\/+/u, '');
+    if (relativePath.endsWith('/')) {
+        relativePath = path.join(relativePath, 'index.html');
+    }
+
+    let baseDir = ROOT_DIR;
+    if (relativePath.startsWith('webview/')) {
+        baseDir = path.join(ROOT_DIR, 'out');
+    }
+
+    const filePath = path.resolve(baseDir, relativePath);
+    const relativeToBase = path.relative(baseDir, filePath);
+
+    // Security check - ensure the file is within our allowed directories
+    if (relativeToBase.startsWith('..') || path.isAbsolute(relativeToBase)) {
         res.writeHead(403, { 'Content-Type': 'text/plain' });
         res.end('403 Forbidden');
         return;
     }
-    
+
     fs.stat(filePath, (err, stats) => {
         if (err || !stats.isFile()) {
             res.writeHead(404, { 'Content-Type': 'text/plain' });

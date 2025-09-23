@@ -7,7 +7,7 @@
     <title>Markdown Table Editor - Development Mode</title>
 
     <!-- Load the main CSS styles -->
-    <link rel="stylesheet" href="/webview/style.css">
+    <link rel="stylesheet" href="/webview/assets/index.css">
 
     <!-- Development-specific styles -->
     <style>
@@ -354,7 +354,7 @@
         };
 
         // Set up CSS and script URIs for the webview system (same order as webviewManager.ts)
-        window.cssUri = '/webview/style.css';
+        window.cssUri = '/webview/assets/index.css';
         window.scriptUris = [
             // Core system must be loaded first
             '/webview/js/core.js',
@@ -364,6 +364,7 @@
             '/webview/js/vscode-communication.js',
             '/webview/js/ui-renderer.js',
             '/webview/js/table-manager.js',
+            '/webview/js/content-converter.js',
 
             // Feature modules
             '/webview/js/table-renderer.js',
@@ -469,6 +470,7 @@
     <script src="/webview/js/vscode-communication.js"></script>
     <script src="/webview/js/ui-renderer.js"></script>
     <script src="/webview/js/table-manager.js"></script>
+    <script src="/webview/js/content-converter.js"></script>
 
     <!-- Feature modules -->
     <script src="/webview/js/table-renderer.js"></script>
