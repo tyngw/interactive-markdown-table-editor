@@ -7,12 +7,13 @@ A VS Code extension that provides a spreadsheet-like interface for editing Markd
 **Developing this extension?** Skip the `vsce package` cycle for HTML/CSS/JS changes:
 
 ```bash
-npm run dev
-# Open http://localhost:3000/dev/ in your browser
-# Edit webview files and refresh to see changes instantly!
+npm run setup:webview   # one-time setup for webview-react/
+npm run dev:webview     # start the Vite dev server with hot reload
+# Open the URL printed by Vite (e.g. http://localhost:5173/)
+# Edit webview-react/src/**/* and changes appear instantly
 ```
 
-> 💡 Use `npm run dev:watch` for file change monitoring
+> 💡 Run `npm run build-webview` before packaging to copy the latest webview bundle.
 
 ## Features
 
@@ -44,7 +45,7 @@ npm run dev
 - **Drag & Drop**: Reorder rows and columns by dragging
 - **CSV Export**: Export table data to CSV format for external use
 - **Auto-save**: Changes are automatically saved back to your Markdown file
-- **Multiple Tables Support**: Handle multiple tables in a single document with table selection
+- **Multiple Tables Support**: Switch between tables using the built-in tab bar without leaving the editor
 - **Mixed Content Support**: Safely edit tables in documents with mixed content (code blocks, lists, etc.)
 - **Robust Error Handling**: Comprehensive error handling with status messages at the bottom
 - **Table Index Tracking**: Accurately track and update specific tables in multi-table documents
@@ -56,11 +57,12 @@ npm run dev
 1. Open a Markdown file containing one or more tables
 2. Place your cursor inside a table or anywhere in the document
 3. Right-click and select "Open Table Editor" or use the command palette (Ctrl+Shift+P) and search for "Markdown Table Editor: Open Table Editor"
-4. **For Multiple Tables**: If your document contains multiple tables, you'll be presented with a selection dialog showing:
-   - Table location (line numbers)
-   - Column headers preview
-   - Row and column counts
-   - Content preview
+4. **Multiple tables?** A tab bar appears at the top of the editor so you can swap between tables without leaving the webview.
+
+### Additional Commands
+
+- `Markdown Table Editor: Open Table Editor (New Panel)` opens another panel so you can view multiple tables side-by-side.
+- `Markdown Table Editor: Select Table Editor Theme` lets you pick a dedicated theme for the editor and updates the `markdownTableEditor.theme` setting.
 
 ### Creating a New Table
 
@@ -96,7 +98,7 @@ npm run dev
 This extension now robustly handles documents containing multiple tables and mixed content:
 
 ### Multiple Tables
-- **Table Selection**: When opening the editor on a document with multiple tables, choose which table to edit from an intuitive selection dialog
+- **Tabbed Interface**: Each table opens in its own tab inside the editor so you can switch instantly.
 - **Accurate Positioning**: Each table is tracked by its index in the document, ensuring precise updates
 - **Safe Updates**: Changes to one table won't affect other tables or content in the document
 
@@ -148,7 +150,7 @@ This extension now robustly handles documents containing multiple tables and mix
 
 This extension contributes the following settings:
 
-* `markdownTableEditor.enable`: Enable/disable this extension
+* `markdownTableEditor.theme`: Choose a dedicated theme for the webview (`inherit` follows the active VS Code theme).
 
 ## Known Issues
 
@@ -165,45 +167,37 @@ For developers working on this extension, a development mode is available that a
 
 ### Quick Start
 
-1. **Start the development server:**
+1. **Start the React webview dev server:**
    ```bash
-   npm run dev
+   npm run dev:webview
    ```
 
-2. **Open your browser to:**
-   ```
-   http://localhost:3000/dev/
-   ```
+2. **Open the Vite URL printed in the terminal (e.g. `http://localhost:5173/`).**
 
-3. **Edit files and refresh:** Make changes to files in the `webview/` folder and simply refresh your browser to see the changes immediately.
+3. **Edit files:** Make changes to files in `webview-react/src/`; Vite hot-reloads changes automatically.
 
 ### Features
 
-- **🔄 Live Development**: Edit HTML, CSS, and JS files without rebuilding the extension
-- **🎯 Sample Data**: Pre-loaded test tables for quick testing
-- **🐛 Debug Tools**: Built-in debugging utilities and state inspection
+- **🔄 Live Development**: Vite provides instant hot reload for React components, styles, and hooks
+- **🎯 Sample Data**: The dev server auto-loads representative tables when VS Code isn't attached
+- **🐛 Debug-Friendly**: Rich console logging plus optional React DevTools support
 - **🎨 VSCode Theming**: Accurate VSCode theme simulation for consistent development
-- **📱 Mock API**: Complete VSCode API simulation for testing table operations
+- **📱 Mock Messaging**: Simulated VS Code messaging layer so you can exercise table operations in the browser
 
 ### Development Workflow
 
-1. Start the development server with `npm run dev`
-2. Open `http://localhost:3000/dev/` in your browser
-3. Use the development controls:
-   - **Sample Data Dropdown**: Choose from Simple, Complex, or Empty table templates
-   - **Load Sample**: Load the selected sample data
-   - **Clear**: Clear the current table
-   - **Debug State**: Log the current TableEditor state to console
-4. Edit files in the `webview/` folder (CSS, JS, HTML)
-5. Refresh the browser to see changes immediately
-6. No need to run `vsce package` during development!
+1. Start the dev server with `npm run dev:webview`
+2. Open the printed Vite URL in your browser
+3. Interact with the sample table data or connect from VS Code to load real documents
+4. Edit components, hooks, and styles under `webview-react/src/`
+5. Let Vite hot-reload changes (refresh only when you need a clean state)
+6. Run `npm run build-webview` when you're ready to sync the bundle back into the extension
 
 ### Debugging
 
-- Open browser developer tools to see console logs
-- Use the "Debug State" button to inspect the table editor state
-- All table operations (add/delete rows/columns, sorting, etc.) are logged to console
-- Test CSV export functionality directly in the browser
+- Open browser developer tools (and React DevTools) to inspect state and network messages
+- All table operations (add/delete rows/columns, sorting, etc.) log details to the console
+- Trigger `npm run test` or launch the extension in VS Code for end-to-end validation when needed
 
 This development mode significantly speeds up the development cycle for UI and functionality changes.
 
