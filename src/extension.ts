@@ -347,6 +347,94 @@ export function activate(context: vscode.ExtensionContext) {
         };
     };
 
+    /**
+     * テーブル操作に共通する処理（Undo保存・更新反映・メッセージ送信）を集約するヘルパー関数。
+     * 同種のコード重複と記述漏れ（特にUndoセーブ）を防ぎ、保守性を高めることが目的。
+     */
+    interface TableEditOptions<T = void> {
+        operationName: string;
+        mutate: (context: {
+            manager: TableDataManager;
+            managersMap: Map<number, TableDataManager>;
+            tableIndex: number;
+            commandData: any;
+        }) => T | Promise<T>;
+        getUndoDescription?: (commandData: any) => string;
+        getSuccessMessage?: (result: T, commandData: any) => string | undefined;
+        getErrorMessage?: (error: unknown, commandData: any) => string;
+    }
+
+    const runTableEdit = async <T>(commandData: any, options: TableEditOptions<T>): Promise<void> => {
+        console.log(`[MTE][Ext] ${options.operationName}:`, commandData);
+
+        const { uri: rawUri, panelId } = commandData;
+        const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
+
+        if (!uriString || !uri) {
+            console.error(`Unable to resolve URI for ${options.operationName} command`);
+            return;
+        }
+
+        if (!panel) {
+            console.error(`Panel not found for ID: ${panelKey || uriString}`);
+            return;
+        }
+
+        if (!tableManagersMap) {
+            webviewManager.sendError(panel, 'Table managers not found');
+            return;
+        }
+
+        const tableIndex = typeof commandData?.tableIndex === 'number' ? commandData.tableIndex : 0;
+        const tableDataManager = tableManagersMap.get(tableIndex);
+
+        if (!tableDataManager) {
+            webviewManager.sendError(panel, `Table manager not found for table ${tableIndex}`);
+            return;
+        }
+
+        try {
+            const undoDescription = options.getUndoDescription ? options.getUndoDescription(commandData) : options.operationName;
+            await undoRedoManager.saveState(uri, undoDescription);
+
+            const result = await options.mutate({
+                manager: tableDataManager,
+                managersMap: tableManagersMap,
+                tableIndex,
+                commandData
+            });
+
+            const updatedMarkdown = tableDataManager.serializeToMarkdown();
+            const tableData = tableDataManager.getTableData();
+            await fileHandler.updateTableByIndex(
+                uri,
+                tableData.metadata.tableIndex,
+                updatedMarkdown
+            );
+
+            const allTableData: TableData[] = [];
+            tableManagersMap.forEach((manager, idx) => {
+                allTableData[idx] = manager.getTableData();
+            });
+
+            webviewManager.updateTableData(panel, allTableData, uri);
+
+            const successMessage = options.getSuccessMessage
+                ? options.getSuccessMessage(result, commandData)
+                : `${options.operationName} completed`;
+
+            if (successMessage) {
+                webviewManager.sendSuccess(panel, successMessage);
+            }
+        } catch (error) {
+            console.error(`Error in ${options.operationName}:`, error);
+            const errorMessage = options.getErrorMessage
+                ? options.getErrorMessage(error, commandData)
+                : `Failed to ${options.operationName.toLowerCase()}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            webviewManager.sendError(panel, errorMessage);
+        }
+    };
+
     // Register internal commands for webview communication
     const requestTableDataCommand = vscode.commands.registerCommand('markdownTableEditor.internal.requestTableData', async (data: any) => {
         try {
@@ -868,327 +956,92 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const addRowCommand = vscode.commands.registerCommand('markdownTableEditor.internal.addRow', async (data: any) => {
-        try {
-            console.log('Internal command: addRow', data);
-            const { uri: rawUri, panelId, index, tableIndex } = data;
-            const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
-
-            if (!uriString || !uri) {
-                console.error('Unable to resolve URI for addRow command');
-                return;
-            }
-
-            if (!panel) {
-                console.error('Panel not found for ID:', panelKey || uriString);
-                return;
-            }
-
-            if (!tableManagersMap) {
-                webviewManager.sendError(panel, 'Table managers not found');
-                return;
-            }
-
-            const targetTableIndex = tableIndex !== undefined ? tableIndex : 0;
-            const tableDataManager = tableManagersMap.get(targetTableIndex);
-            if (!tableDataManager) {
-                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);
-                return;
-            }
-
-            tableDataManager.addRow(index);
-
-            const updatedMarkdown = tableDataManager.serializeToMarkdown();
-            const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableByIndex(
-                uri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
-
-            const allTableData: TableData[] = [];
-            tableManagersMap.forEach((manager, idx) => {
-                allTableData[idx] = manager.getTableData();
-            });
-
-            webviewManager.updateTableData(panel, allTableData, uri);
-            webviewManager.sendSuccess(panel, 'Row added successfully');
-        } catch (error) {
-            console.error('Error in addRow:', error);
-            const { panel } = resolvePanelContext(data?.uri, data?.panelId);
-            if (panel) {
-                webviewManager.sendError(panel, `Failed to add row: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            }
-        }
+        await runTableEdit(data, {
+            operationName: 'Add row',
+            getSuccessMessage: () => 'Row added successfully',
+            mutate: ({ manager, commandData }) => {
+                manager.addRow(commandData?.index);
+            },
+            getErrorMessage: (error) => `Failed to add row: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
     });
 
     const deleteRowCommand = vscode.commands.registerCommand('markdownTableEditor.internal.deleteRow', async (data: any) => {
-        try {
-            console.log('Internal command: deleteRow', data);
-            const { uri: rawUri, panelId, index, tableIndex } = data;
-            const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
-
-            if (!uriString || !uri) {
-                console.error('Unable to resolve URI for deleteRow command');
-                return;
-            }
-
-            if (!panel) {
-                console.error('Panel not found for ID:', panelKey || uriString);
-                return;
-            }
-
-            if (!tableManagersMap) {
-                webviewManager.sendError(panel, 'Table managers not found');
-                return;
-            }
-
-            const targetTableIndex = tableIndex !== undefined ? tableIndex : 0;
-            const tableDataManager = tableManagersMap.get(targetTableIndex);
-            if (!tableDataManager) {
-                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);
-                return;
-            }
-
-            tableDataManager.deleteRow(index);
-
-            const updatedMarkdown = tableDataManager.serializeToMarkdown();
-            const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableByIndex(
-                uri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
-
-            const allTableData: TableData[] = [];
-            tableManagersMap.forEach((manager, idx) => {
-                allTableData[idx] = manager.getTableData();
-            });
-
-            webviewManager.updateTableData(panel, allTableData, uri);
-            webviewManager.sendSuccess(panel, 'Row deleted successfully');
-        } catch (error) {
-            console.error('Error in deleteRow:', error);
-            const { panel } = resolvePanelContext(data?.uri, data?.panelId);
-            if (panel) {
-                webviewManager.sendError(panel, `Failed to delete row: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            }
-        }
+        await runTableEdit(data, {
+            operationName: 'Delete row',
+            getUndoDescription: () => 'Delete row',
+            getSuccessMessage: () => 'Row deleted successfully',
+            mutate: ({ manager, commandData }) => {
+                const index = commandData?.index;
+                if (typeof index !== 'number' || index < 0) {
+                    throw new Error('Invalid row index received for deletion');
+                }
+                manager.deleteRow(index);
+            },
+            getErrorMessage: (error) => `Failed to delete row: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
     });
 
     const addColumnCommand = vscode.commands.registerCommand('markdownTableEditor.internal.addColumn', async (data: any) => {
-        try {
-            console.log('Internal command: addColumn', data);
-            const { uri: rawUri, panelId, index, header, tableIndex } = data;
-            const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
-
-            if (!uriString || !uri) {
-                console.error('Unable to resolve URI for addColumn command');
-                return;
-            }
-
-            if (!panel) {
-                console.error('Panel not found for ID:', panelKey || uriString);
-                return;
-            }
-
-            if (!tableManagersMap) {
-                webviewManager.sendError(panel, 'Table managers not found');
-                return;
-            }
-
-            const targetTableIndex = tableIndex !== undefined ? tableIndex : 0;
-            const tableDataManager = tableManagersMap.get(targetTableIndex);
-            if (!tableDataManager) {
-                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);
-                return;
-            }
-
-            tableDataManager.addColumn(index, header);
-
-            const updatedMarkdown = tableDataManager.serializeToMarkdown();
-            const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableByIndex(
-                uri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
-
-            const allTableData: TableData[] = [];
-            tableManagersMap.forEach((manager, idx) => {
-                allTableData[idx] = manager.getTableData();
-            });
-
-            webviewManager.updateTableData(panel, allTableData, uri);
-            webviewManager.sendSuccess(panel, 'Column added successfully');
-        } catch (error) {
-            console.error('Error in addColumn:', error);
-            const { panel } = resolvePanelContext(data?.uri, data?.panelId);
-            if (panel) {
-                webviewManager.sendError(panel, `Failed to add column: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            }
-        }
+        await runTableEdit(data, {
+            operationName: 'Add column',
+            getSuccessMessage: () => 'Column added successfully',
+            mutate: ({ manager, commandData }) => {
+                manager.addColumn(commandData?.index, commandData?.header);
+            },
+            getErrorMessage: (error) => `Failed to add column: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
     });
 
     const deleteColumnCommand = vscode.commands.registerCommand('markdownTableEditor.internal.deleteColumn', async (data: any) => {
-        try {
-            console.log('Internal command: deleteColumn', data);
-            const { uri: rawUri, panelId, index, tableIndex } = data;
-            const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
-
-            if (!uriString || !uri) {
-                console.error('Unable to resolve URI for deleteColumn command');
-                return;
-            }
-
-            if (!panel) {
-                console.error('Panel not found for ID:', panelKey || uriString);
-                return;
-            }
-
-            if (!tableManagersMap) {
-                webviewManager.sendError(panel, 'Table managers not found');
-                return;
-            }
-
-            const targetTableIndex = tableIndex !== undefined ? tableIndex : 0;
-            const tableDataManager = tableManagersMap.get(targetTableIndex);
-            if (!tableDataManager) {
-                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);
-                return;
-            }
-
-            tableDataManager.deleteColumn(index);
-
-            const updatedMarkdown = tableDataManager.serializeToMarkdown();
-            const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableByIndex(
-                uri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
-
-            const allTableData: TableData[] = [];
-            tableManagersMap.forEach((manager, idx) => {
-                allTableData[idx] = manager.getTableData();
-            });
-
-            webviewManager.updateTableData(panel, allTableData, uri);
-            webviewManager.sendSuccess(panel, 'Column deleted successfully');
-        } catch (error) {
-            console.error('Error in deleteColumn:', error);
-            const { panel } = resolvePanelContext(data?.uri, data?.panelId);
-            if (panel) {
-                webviewManager.sendError(panel, `Failed to delete column: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            }
-        }
+        await runTableEdit(data, {
+            operationName: 'Delete column',
+            getSuccessMessage: () => 'Column deleted successfully',
+            mutate: ({ manager, commandData }) => {
+                const index = commandData?.index;
+                if (typeof index !== 'number' || index < 0) {
+                    throw new Error('Invalid column index received for deletion');
+                }
+                manager.deleteColumn(index);
+            },
+            getErrorMessage: (error) => `Failed to delete column: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
     });
 
     const deleteRowsCommand = vscode.commands.registerCommand('markdownTableEditor.internal.deleteRows', async (data: any) => {
-        try {
-            console.log('Internal command: deleteRows', data);
-            const { uri: rawUri, panelId, indices, tableIndex } = data;
-            const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
-
-            if (!uriString || !uri) {
-                console.error('Unable to resolve URI for deleteRows command');
-                return;
-            }
-
-            if (!panel) {
-                console.error('Panel not found for ID:', panelKey || uriString);
-                return;
-            }
-
-            if (!tableManagersMap) {
-                webviewManager.sendError(panel, 'Table managers not found');
-                return;
-            }
-
-            const targetTableIndex = tableIndex !== undefined ? tableIndex : 0;
-            const tableDataManager = tableManagersMap.get(targetTableIndex);
-            if (!tableDataManager) {
-                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);
-                return;
-            }
-
-            tableDataManager.deleteRows(indices);
-
-            const updatedMarkdown = tableDataManager.serializeToMarkdown();
-            const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableByIndex(
-                uri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
-
-            const allTableData: TableData[] = [];
-            tableManagersMap.forEach((manager, idx) => {
-                allTableData[idx] = manager.getTableData();
-            });
-
-            webviewManager.updateTableData(panel, allTableData, uri);
-            webviewManager.sendSuccess(panel, `${indices.length} row(s) deleted successfully`);
-        } catch (error) {
-            console.error('Error in deleteRows:', error);
-            const { panel } = resolvePanelContext(data?.uri, data?.panelId);
-            if (panel) {
-                webviewManager.sendError(panel, `Failed to delete rows: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            }
-        }
+        await runTableEdit(data, {
+            operationName: 'Delete rows',
+            getUndoDescription: (commandData) => `Delete ${Array.isArray(commandData?.indices) ? commandData.indices.length : 0} row(s)`,
+            getSuccessMessage: (_result, commandData) => {
+                const count = Array.isArray(commandData?.indices) ? commandData.indices.length : 0;
+                return count > 0 ? `${count} row(s) deleted successfully` : undefined;
+            },
+            mutate: ({ manager, commandData }) => {
+                if (!Array.isArray(commandData?.indices) || commandData.indices.length === 0) {
+                    throw new Error('No row indices provided for deletion');
+                }
+                manager.deleteRows(commandData.indices);
+            },
+            getErrorMessage: (error) => `Failed to delete rows: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
     });
 
     const deleteColumnsCommand = vscode.commands.registerCommand('markdownTableEditor.internal.deleteColumns', async (data: any) => {
-        try {
-            console.log('Internal command: deleteColumns', data);
-            const { uri: rawUri, panelId, indices, tableIndex } = data;
-            const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
-
-            if (!uriString || !uri) {
-                console.error('Unable to resolve URI for deleteColumns command');
-                return;
-            }
-
-            if (!panel) {
-                console.error('Panel not found for ID:', panelKey || uriString);
-                return;
-            }
-
-            if (!tableManagersMap) {
-                webviewManager.sendError(panel, 'Table managers not found');
-                return;
-            }
-
-            const targetTableIndex = tableIndex !== undefined ? tableIndex : 0;
-            const tableDataManager = tableManagersMap.get(targetTableIndex);
-            if (!tableDataManager) {
-                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`);
-                return;
-            }
-
-            tableDataManager.deleteColumns(indices);
-
-            const updatedMarkdown = tableDataManager.serializeToMarkdown();
-            const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableByIndex(
-                uri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
-
-            const allTableData: TableData[] = [];
-            tableManagersMap.forEach((manager, idx) => {
-                allTableData[idx] = manager.getTableData();
-            });
-
-            webviewManager.updateTableData(panel, allTableData, uri);
-            webviewManager.sendSuccess(panel, `${indices.length} column(s) deleted successfully`);
-        } catch (error) {
-            console.error('Error in deleteColumns:', error);
-            const { panel } = resolvePanelContext(data?.uri, data?.panelId);
-            if (panel) {
-                webviewManager.sendError(panel, `Failed to delete columns: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            }
-        }
+        await runTableEdit(data, {
+            operationName: 'Delete columns',
+            getUndoDescription: (commandData) => `Delete ${Array.isArray(commandData?.indices) ? commandData.indices.length : 0} column(s)`,
+            getSuccessMessage: (_result, commandData) => {
+                const count = Array.isArray(commandData?.indices) ? commandData.indices.length : 0;
+                return count > 0 ? `${count} column(s) deleted successfully` : undefined;
+            },
+            mutate: ({ manager, commandData }) => {
+                if (!Array.isArray(commandData?.indices) || commandData.indices.length === 0) {
+                    throw new Error('No column indices provided for deletion');
+                }
+                manager.deleteColumns(commandData.indices);
+            },
+            getErrorMessage: (error) => `Failed to delete columns: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
     });
 
     const sortCommand = vscode.commands.registerCommand('markdownTableEditor.internal.sort', async (data: any) => {
