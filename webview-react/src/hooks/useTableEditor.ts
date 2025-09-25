@@ -347,6 +347,7 @@ export function useTableEditor(
   tableData: displayedData,
   // モデル（実体）データ（ソート前／元データ）
   modelTableData: tableData,
+    viewToModelMap,
     editorState,
     selectionAnchor: selection.selectionState.selectionAnchor,
     updateCell,

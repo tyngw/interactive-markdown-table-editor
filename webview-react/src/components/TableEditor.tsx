@@ -67,13 +67,29 @@ const TableEditor: React.FC<TableEditorProps> = ({
     moveRow,
     moveColumn,
     commitSort,
-    resetSort
+    resetSort,
+    viewToModelMap
   } = useTableEditor(
     tableData,
     `table-${currentTableIndex}`,
     { sortState: effectiveSortState, setSortState: effectiveSetSortState },
     { initializeSelectionOnDataChange: true }
   )
+
+  const toModelRow = useCallback((viewRow: number): number => {
+    if (!Array.isArray(viewToModelMap)) {
+      return viewRow
+    }
+    const mapped = viewToModelMap[viewRow]
+    return typeof mapped === 'number' ? mapped : viewRow
+  }, [viewToModelMap])
+
+  const mapUpdatesToModel = useCallback((updates: Array<{ row: number; col: number; value: string }>) => {
+    return updates.map(update => ({
+      ...update,
+      row: toModelRow(update.row)
+    }))
+  }, [toModelRow])
 
   const selectedRows = useMemo(() => {
     const rows = new Set<number>();
@@ -150,9 +166,10 @@ const TableEditor: React.FC<TableEditorProps> = ({
   const handleCellUpdate = useCallback((row: number, col: number, value: string) => {
     updateCell(row, col, value)
     updateSaveStatus('saving')
-    onSendMessage({ command: 'updateCell', data: withTableIndex({ row, col, value }) })
+    const modelRow = toModelRow(row)
+    onSendMessage({ command: 'updateCell', data: withTableIndex({ row: modelRow, col, value }) })
     setTimeout(() => updateSaveStatus('saved'), 500)
-  }, [updateCell, onSendMessage, updateSaveStatus, withTableIndex])
+  }, [updateCell, onSendMessage, updateSaveStatus, toModelRow, withTableIndex])
 
   const handleHeaderUpdate = useCallback((col: number, value: string) => {
     updateHeader(col, value)
@@ -165,10 +182,11 @@ const TableEditor: React.FC<TableEditorProps> = ({
   }, [addRow, onSendMessage, withTableIndex])
 
   const handleDeleteRows = useCallback((indices: number[]) => {
-    const sortedIndices = [...indices].sort((a, b) => b - a)
-    sortedIndices.forEach(index => deleteRow(index))
-    onSendMessage({ command: 'deleteRows', data: withTableIndex({ indices }) })
-  }, [deleteRow, onSendMessage, withTableIndex])
+    const sortedViewIndices = [...indices].sort((a, b) => b - a)
+    const modelIndices = sortedViewIndices.map(toModelRow).sort((a, b) => b - a)
+    sortedViewIndices.forEach(index => deleteRow(index))
+    onSendMessage({ command: 'deleteRows', data: withTableIndex({ indices: modelIndices }) })
+  }, [deleteRow, onSendMessage, toModelRow, withTableIndex])
 
   // 単一行削除でも拡張に同期する
   const handleDeleteRow = useCallback((index: number) => {
@@ -222,13 +240,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
     const result = await pasteFromClipboard(displayedTableData, editorState.selectionRange, editorState.selectedCells, editorState.currentEditingCell)
     if (result.success) {
       if (result.updates && result.updates.length > 0) {
-        onSendMessage({ command: 'bulkUpdateCells', data: withTableIndex({ updates: result.updates }) })
+        const modelUpdates = mapUpdatesToModel(result.updates)
+        onSendMessage({ command: 'bulkUpdateCells', data: withTableIndex({ updates: modelUpdates }) })
       }
       updateStatus('success', result.message)
     } else {
       updateStatus('error', result.message)
     }
-  }, [pasteFromClipboard, displayedTableData, editorState, onSendMessage, updateStatus, withTableIndex])
+  }, [displayedTableData, editorState, mapUpdatesToModel, onSendMessage, pasteFromClipboard, updateStatus, withTableIndex])
 
   const handleCut = useCallback(async () => {
     const success = await copySelectedCells(displayedTableData, editorState.selectedCells, editorState.selectionRange)
@@ -240,13 +259,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
       })
       if (updates.length > 0) {
         updateCells(updates)
-    onSendMessage({ command: 'bulkUpdateCells', data: withTableIndex({ updates }) })
+        const modelUpdates = mapUpdatesToModel(updates)
+        onSendMessage({ command: 'bulkUpdateCells', data: withTableIndex({ updates: modelUpdates }) })
       }
       updateStatus('success', 'セルを切り取りました')
     } else {
       updateStatus('error', '切り取りに失敗しました')
     }
-  }, [copySelectedCells, displayedTableData, editorState, updateCells, onSendMessage, updateStatus, withTableIndex])
+  }, [copySelectedCells, displayedTableData, editorState, mapUpdatesToModel, onSendMessage, updateCells, updateStatus, withTableIndex])
 
   const handleClearCells = useCallback(() => {
     const updates: Array<{ row: number; col: number; value: string }> = []
@@ -256,10 +276,11 @@ const TableEditor: React.FC<TableEditorProps> = ({
     })
     if (updates.length > 0) {
       updateCells(updates)
-    onSendMessage({ command: 'bulkUpdateCells', data: withTableIndex({ updates }) })
+      const modelUpdates = mapUpdatesToModel(updates)
+      onSendMessage({ command: 'bulkUpdateCells', data: withTableIndex({ updates: modelUpdates }) })
       updateStatus('success', '選択されたセルをクリアしました')
     }
-  }, [editorState.selectedCells, updateCells, onSendMessage, updateStatus, withTableIndex])
+  }, [editorState.selectedCells, mapUpdatesToModel, onSendMessage, updateCells, updateStatus, withTableIndex])
 
   useKeyboardNavigation({
     tableData: displayedTableData,
