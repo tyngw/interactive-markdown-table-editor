@@ -19,11 +19,6 @@ export class WebviewManager {
     private undoRedoManager: UndoRedoManager;
     private isInitialized: boolean = false;
     private initializationPromise: Promise<void> | null = null;
-    // Legacy webview modular scripts (for tests and backward compatibility)
-    private readonly legacyScriptFiles: string[] = [
-        'js/core.js',
-        'js/test-module.js'
-    ];
 
     /**
      * 安全なURI文字列を生成するユーティリティメソッド
@@ -1059,12 +1054,9 @@ export class WebviewManager {
      */
     public dispose(): void {
         console.log('WebviewManager: Disposing resources...');
-        
-        // Stop health monitoring
-        if (this.healthCheckInterval) {
-            clearInterval(this.healthCheckInterval);
-            this.healthCheckInterval = null;
-        }
+
+        // Stop periodic health checks
+        this.stopHealthMonitoring();
 
         // Dispose all panels
         for (const panel of this.panels.values()) {
@@ -1254,47 +1246,5 @@ export class WebviewManager {
             data: tableData
         });
     }
-
-    /**
-     * Apply table state without window switching by directly invoking file update
-     */
-    private async applyTableState(markdownContent: string, tableIndex: number, uri: vscode.Uri, panel: vscode.WebviewPanel): Promise<void> {
-        try {
-            // Execute the internal file update command directly
-            vscode.commands.executeCommand('markdownTableEditor.internal.directFileUpdate', {
-                uri: uri.toString(),
-                panelId: this.findPanelId(panel),
-                markdownContent,
-                tableIndex
-            });
-            
-            // Refresh panel data to reflect the changes
-            this.refreshPanelData(panel, uri);
-            
-        } catch (error) {
-            console.error('[MTE][Ext] Failed to apply table state:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get appropriate ViewColumn for text editor based on webview panel position
-     */
-    private getAppropriateViewColumn(panel: vscode.WebviewPanel): vscode.ViewColumn {
-        // If webview is in column Two, place text editor in column One
-        // If webview is in column One, place text editor in column Two
-        // Otherwise, use Beside to place it next to the webview
-        switch (panel.viewColumn) {
-            case vscode.ViewColumn.Two:
-                return vscode.ViewColumn.One;
-            case vscode.ViewColumn.One:
-                return vscode.ViewColumn.Two;
-            case vscode.ViewColumn.Three:
-                return vscode.ViewColumn.Two;
-            default:
-                return vscode.ViewColumn.Beside;
-        }
-    }
-
 
 }
