@@ -1,5 +1,5 @@
 interface ContextMenuState {
-  type: 'row' | 'column' | null
+  type: 'row' | 'column' | 'editor' | null
   index: number
   position: { x: number; y: number }
 }
@@ -15,6 +15,13 @@ interface ContextMenuProps {
   onClose: () => void
   selectedCells?: Set<string>
   tableData?: { headers: string[]; rows: string[][] }
+  onExportCsv?: () => void
+  onExportTsv?: () => void
+  exportEncoding?: 'utf8' | 'sjis'
+  onChangeEncoding?: (encoding: 'utf8' | 'sjis') => void
+  onResetSort?: () => void
+  onCommitSort?: () => void
+  hasActiveSort?: boolean
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -27,7 +34,14 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onDeleteColumns,
   onClose,
   selectedCells,
-  tableData
+  tableData,
+  onExportCsv,
+  onExportTsv,
+  exportEncoding = 'utf8',
+  onChangeEncoding,
+  onResetSort,
+  onCommitSort,
+  hasActiveSort
 }) => {
   if (!menuState.type) return null
 
@@ -145,10 +159,52 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     onClose()
   }
 
-  // Adjust menu position to keep it in viewport
   const adjustedPosition = {
-    x: Math.min(menuState.position.x, window.innerWidth - 200), // Assume menu width ~200px
-    y: Math.min(menuState.position.y, window.innerHeight - 150) // Assume menu height ~150px
+    x: Math.min(menuState.position.x, window.innerWidth - 220),
+    y: Math.min(menuState.position.y, window.innerHeight - 200)
+  }
+
+  if (menuState.type === 'editor') {
+    return (
+      <>
+        <div
+          className="context-menu-backdrop"
+          onClick={onClose}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}
+        />
+        <div
+          className="context-menu"
+          style={{ position: 'fixed', left: adjustedPosition.x, top: adjustedPosition.y, zIndex: 1000 }}
+        >
+          <button className="context-menu-item" onClick={() => { onResetSort?.(); onClose(); }} disabled={!hasActiveSort}>
+            <span className="context-menu-icon">🗂️</span>
+            <span className="context-menu-label">ソートをリセット</span>
+          </button>
+          <button className="context-menu-item" onClick={() => { onCommitSort?.(); onClose(); }} disabled={!hasActiveSort}>
+            <span className="context-menu-icon">💾</span>
+            <span className="context-menu-label">この順序を保存</span>
+          </button>
+          <div className="context-menu-separator"></div>
+          <button className="context-menu-item" onClick={() => { onExportCsv?.(); onClose(); }}>
+            <span className="context-menu-icon">📄</span>
+            <span className="context-menu-label">Export CSV ({exportEncoding.toUpperCase()})</span>
+          </button>
+          <button className="context-menu-item" onClick={() => { onExportTsv?.(); onClose(); }}>
+            <span className="context-menu-icon">📋</span>
+            <span className="context-menu-label">Export TSV ({exportEncoding.toUpperCase()})</span>
+          </button>
+          <div className="context-menu-separator"></div>
+          <button className="context-menu-item" onClick={() => { onChangeEncoding?.('utf8'); onClose(); }}>
+            <span className="context-menu-icon">{exportEncoding === 'utf8' ? '✓' : ''}</span>
+            <span className="context-menu-label">UTF-8</span>
+          </button>
+          <button className="context-menu-item" onClick={() => { onChangeEncoding?.('sjis'); onClose(); }}>
+            <span className="context-menu-icon">{exportEncoding === 'sjis' ? '✓' : ''}</span>
+            <span className="context-menu-label">Shift_JIS</span>
+          </button>
+        </div>
+      </>
+    )
   }
 
   return (
