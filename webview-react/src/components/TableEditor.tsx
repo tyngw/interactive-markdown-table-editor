@@ -36,6 +36,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     index: -1,
     position: { x: 0, y: 0 }
   })
+  const [exportEncoding, setExportEncoding] = useState<'utf8' | 'sjis'>('utf8')
 
   const { updateStatus, updateTableInfo, updateSaveStatus, updateSortState } = useStatus()
 
@@ -299,8 +300,36 @@ const TableEditor: React.FC<TableEditorProps> = ({
     onRedo: () => onSendMessage({ command: 'redo' })
   })
 
+  const handleExportCsv = useCallback(() => {
+    exportToCSV(displayedTableData, onSendMessage, undefined, exportEncoding)
+  }, [displayedTableData, exportEncoding, exportToCSV, onSendMessage])
+
+  const handleExportTsv = useCallback(() => {
+    exportToTSV(displayedTableData, onSendMessage, undefined, exportEncoding)
+  }, [displayedTableData, exportEncoding, exportToTSV, onSendMessage])
+
+  const handleEncodingChange = useCallback((next: 'utf8' | 'sjis') => {
+    setExportEncoding(next)
+  }, [])
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenuState({ type: null, index: -1, position: { x: 0, y: 0 } })
+  }, [])
+
+  const handleEditorContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented) {
+      return
+    }
+    event.preventDefault()
+    setContextMenuState({
+      type: 'editor',
+      index: -1,
+      position: { x: event.clientX, y: event.clientY }
+    })
+  }, [])
+
   return (
-    <div id="table-content">
+    <div id="table-content" onContextMenu={handleEditorContextMenu}>
       <div className="table-container">
         <table className="table-editor">
           <TableHeader
@@ -337,45 +366,6 @@ const TableEditor: React.FC<TableEditorProps> = ({
         </table>
       </div>
 
-      <div className="export-actions">
-        {editorState.sortState.direction !== 'none' && (
-          <div className="inline-sort-actions">
-            <button className="export-btn" onClick={handleResetSort}>
-              📄 ソートをリセット
-            </button>
-            <button className="export-btn" onClick={handleCommitSort}>
-              💾 この順序を保存
-            </button>
-          </div>
-        )}
-        <select 
-          className="encoding-select" 
-          id="encodingSelect"
-          defaultValue="utf8"
-        >
-          <option value="utf8">UTF-8</option>
-          <option value="sjis">Shift_JIS</option>
-        </select>
-        <button 
-          className="export-btn" 
-          onClick={() => {
-            const select = document.getElementById('encodingSelect') as HTMLSelectElement
-            exportToCSV(displayedTableData, onSendMessage, undefined, select?.value || 'utf8')
-          }}
-        >
-          📄 Export CSV
-        </button>
-        <button 
-          className="export-btn" 
-          onClick={() => {
-            const select = document.getElementById('encodingSelect') as HTMLSelectElement
-            exportToTSV(displayedTableData, onSendMessage, undefined, select?.value || 'utf8')
-          }}
-        >
-          📋 Export TSV
-        </button>
-      </div>
-
       <ContextMenu
         menuState={contextMenuState}
   onAddRow={handleAddRow}
@@ -384,9 +374,16 @@ const TableEditor: React.FC<TableEditorProps> = ({
   onAddColumn={handleAddColumn}
     onDeleteColumn={handleDeleteColumn}
         onDeleteColumns={handleDeleteColumns}
-        onClose={() => setContextMenuState({ type: null, index: -1, position: { x: 0, y: 0 } })}
+        onClose={closeContextMenu}
         selectedCells={editorState.selectedCells}
         tableData={displayedTableData}
+        onExportCsv={handleExportCsv}
+        onExportTsv={handleExportTsv}
+        exportEncoding={exportEncoding}
+        onChangeEncoding={handleEncodingChange}
+        onResetSort={handleResetSort}
+        onCommitSort={handleCommitSort}
+        hasActiveSort={editorState.sortState.direction !== 'none'}
       />
     </div>
   )

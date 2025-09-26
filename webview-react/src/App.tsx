@@ -253,11 +253,6 @@ function AppContent() {
     <StatusProvider>
       <div id="mte-root">
         <div id="app">
-        <TableTabs
-          tables={allTables}
-          currentTableIndex={currentTableIndex}
-          onTabChange={handleTabChange}
-        />
         <TableEditor 
           tableData={currentTableData}
           currentTableIndex={currentTableIndex}
@@ -273,7 +268,14 @@ function AppContent() {
             })
           }}
         />
-        <StatusBar />
+        <div className="bottom-chrome">
+          <TableTabs
+            tables={allTables}
+            currentTableIndex={currentTableIndex}
+            onTabChange={handleTabChange}
+          />
+          <StatusBar />
+        </div>
         </div>
       </div>
     </StatusProvider>
