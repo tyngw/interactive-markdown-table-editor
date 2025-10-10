@@ -105,6 +105,7 @@
   },
   "dependencies": {
     "iconv-lite": "^0.6.3",
+    "jaconv": "^1.1.2",
     "markdown-it": "^13.0.1"
   }
 }
