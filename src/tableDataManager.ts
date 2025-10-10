@@ -749,6 +749,27 @@ export class TableDataManager {
     }
 
     /**
+     * CSVインポート等でヘッダ・行を丸ごと置換
+     * - alignment は未指定時すべて 'left'
+     */
+    replaceContents(headers: string[], rows: string[][], alignment?: ('left' | 'center' | 'right')[]): void {
+        if (!Array.isArray(headers) || headers.length === 0) {
+            throw new Error('Headers must not be empty')
+        }
+        const colCount = headers.length
+        for (const r of rows) {
+            if (!Array.isArray(r)) throw new Error('Invalid row in rows')
+            if (r.length !== colCount) throw new Error('Row length mismatch in imported data')
+        }
+        const align = alignment && alignment.length === colCount ? alignment.slice() : new Array(colCount).fill('left') as ('left'|'center'|'right')[]
+        this.tableData.headers = headers.slice()
+        this.tableData.rows = rows.map(r => r.slice())
+        this.tableData.alignment = align
+        this.updateMetadata()
+        this.notifyChange()
+    }
+
+    /**
      * Insert multiple rows at once
      */
     insertRows(startIndex: number, count: number): void {

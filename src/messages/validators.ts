@@ -16,7 +16,7 @@ import {
 
 export const validCommands: WebviewCommand[] = [
   'requestTableData', 'updateCell', 'bulkUpdateCells', 'updateHeader', 'addRow', 'deleteRows',
-  'addColumn', 'deleteColumns', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'pong', 'switchTable', 'requestThemeVariables', 'undo', 'redo',
+  'addColumn', 'deleteColumns', 'sort', 'moveRow', 'moveColumn', 'importCSV', 'exportCSV', 'pong', 'switchTable', 'requestThemeVariables', 'undo', 'redo',
   'webviewError', 'webviewUnhandledRejection', 'diag'
 ];
 
@@ -76,6 +76,13 @@ export function validateMessageData(message: WebviewMessage): boolean {
       if (v.csvContent.trim().length === 0) return false;
       // if filename is provided, it must be a non-empty string
       if ('filename' in v && (typeof (v as any).filename !== 'string' || (v as any).filename.trim().length === 0)) return false;
+      return true;
+    }
+    case 'importCSV': {
+      // データは省略可能（tableIndexのみ任意）
+      if (d === undefined) return true;
+      if (!isObject(d)) return false;
+      if ('tableIndex' in (d as any) && typeof (d as any).tableIndex !== 'number') return false;
       return true;
     }
     case 'switchTable': {

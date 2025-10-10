@@ -585,6 +585,10 @@ export class WebviewManager {
                     await this.handleExportCSV(message.data, panel, uri);
                     break;
 
+                case 'importCSV':
+                    await this.handleImportCSV(message.data, panel, uri);
+                    break;
+
                 case 'pong':
                     // Handle pong response from webview
                     console.log(`Received pong from webview, response time: ${message.responseTime ? message.responseTime - (message.timestamp || 0) : 'unknown'}ms`);
@@ -1032,6 +1036,19 @@ export class WebviewManager {
                 filename: data?.filename,
                 encoding: data?.encoding
             },
+            tableIndex: data?.tableIndex
+        });
+    }
+
+    /**
+     * Handle import CSV (open dialog + forward to extension)
+     */
+    private async handleImportCSV(data: { tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        console.log('Import CSV request for file:', uri.toString(), 'data:', data);
+        const actualPanelId = this.findPanelId(panel);
+        vscode.commands.executeCommand('markdownTableEditor.internal.importCSV', {
+            uri: uri.toString(),
+            panelId: actualPanelId,
             tableIndex: data?.tableIndex
         });
     }

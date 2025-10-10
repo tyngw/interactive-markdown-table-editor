@@ -5,6 +5,7 @@ import { MarkdownParser } from './markdownParser';
 import { getFileHandler } from './fileHandler';
 import { buildThemeVariablesCss, getInstalledColorThemes } from './themeUtils';
 import { UndoRedoManager } from './undoRedoManager';
+import { decodeBuffer, detectTextEncoding, parseCsv, toRectangular } from './csvUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Markdown Table Editor extension is now active!');
@@ -1284,6 +1285,112 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    const importCSVCommand = vscode.commands.registerCommand('markdownTableEditor.internal.importCSV', async (data: any) => {
+        try {
+            console.log('Internal command: importCSV', data)
+            const { uri: rawUri, panelId, tableIndex } = data || {}
+            const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId)
+
+            if (!uriString || !uri) {
+                console.error('Unable to resolve URI for importCSV command')
+                return
+            }
+            if (!panel) {
+                console.error('Panel not found for ID:', panelKey || uriString)
+                return
+            }
+            if (!tableManagersMap) {
+                webviewManager.sendError(panel, 'Table managers not found')
+                return
+            }
+
+            const targetTableIndex = typeof tableIndex === 'number' ? tableIndex : 0
+            const tableDataManager = tableManagersMap.get(targetTableIndex)
+            if (!tableDataManager) {
+                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`)
+                return
+            }
+
+            // ファイル選択
+            const openUris = await vscode.window.showOpenDialog({
+                canSelectFiles: true,
+                canSelectFolders: false,
+                canSelectMany: false,
+                filters: {
+                    'CSV Files': ['csv'],
+                    'All Files': ['*']
+                }
+            })
+            if (!openUris || openUris.length === 0) {
+                console.log('CSV import cancelled by user')
+                return
+            }
+            const csvUri = openUris[0]
+
+            // 読込 + 自動判別
+            const buf = await vscode.workspace.fs.readFile(csvUri)
+            const enc = detectTextEncoding(Buffer.from(buf))
+            const text = decodeBuffer(Buffer.from(buf), enc)
+
+            // 解析
+            const rows = parseCsv(text)
+            if (!rows || rows.length === 0) {
+                webviewManager.sendError(panel, 'CSV appears to be empty')
+                return
+            }
+            // 有効性の軽い検証（いずれかのセルに内容があるか）
+            const hasAnyValue = rows.some(r => r.some(c => (c || '').trim().length > 0))
+            if (!hasAnyValue) {
+                webviewManager.sendError(panel, 'CSV appears to contain no values')
+                return
+            }
+            const rectangular = toRectangular(rows)
+
+            // 確認ダイアログ（モーダル）。承認時のみ上書き
+            const confirm = await vscode.window.showWarningMessage(
+                'インポートしたCSVは現在のシートに上書きされます。\nよろしいですか？',
+                { modal: true },
+                'はい',
+                'キャンセル'
+            )
+            if (confirm !== 'はい') {
+                console.log('CSV import cancelled at confirmation dialog')
+                return
+            }
+
+            // Undo保存
+            await undoRedoManager.saveState(uri, 'Import CSV')
+
+            // テーブルに反映（置換）
+            tableDataManager.replaceContents(rectangular.headers, rectangular.rows)
+
+            // Markdownへ反映
+            const updatedMarkdown = tableDataManager.serializeToMarkdown()
+            const tableData = tableDataManager.getTableData()
+            await fileHandler.updateTableByIndex(
+                uri,
+                tableData.metadata.tableIndex,
+                updatedMarkdown
+            )
+
+            // すべてのテーブルを再送
+            const allTableData: TableData[] = []
+            tableManagersMap.forEach((manager, idx) => {
+                allTableData[idx] = manager.getTableData()
+            })
+            webviewManager.updateTableData(panel, allTableData, uri)
+
+            const label = enc === 'sjis' ? 'Shift_JIS' : 'UTF-8'
+            webviewManager.sendSuccess(panel, `CSV imported from ${csvUri.fsPath} (${label})`)
+        } catch (error) {
+            console.error('Error in importCSV:', error)
+            const { panel } = resolvePanelContext(data?.uri, data?.panelId)
+            if (panel) {
+                webviewManager.sendError(panel, `Failed to import CSV: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            }
+        }
+    })
+
     context.subscriptions.push(
         openEditorCommand,
         openEditorNewPanelCommand,
@@ -1304,7 +1411,8 @@ export function activate(context: vscode.ExtensionContext) {
         sortCommand,
         moveRowCommand,
         moveColumnCommand,
-        exportCSVCommand
+        exportCSVCommand,
+        importCSVCommand
     );
 
     console.log('All commands registered successfully!');

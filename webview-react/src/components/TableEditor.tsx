@@ -308,6 +308,10 @@ const TableEditor: React.FC<TableEditorProps> = ({
     exportToTSV(displayedTableData, onSendMessage, undefined, exportEncoding)
   }, [displayedTableData, exportEncoding, exportToTSV, onSendMessage])
 
+  const handleImportCsv = useCallback(() => {
+    onSendMessage({ command: 'importCSV', data: withTableIndex({}) })
+  }, [onSendMessage, withTableIndex])
+
   const handleEncodingChange = useCallback((next: 'utf8' | 'sjis') => {
     setExportEncoding(next)
   }, [])
@@ -377,6 +381,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
         onClose={closeContextMenu}
         selectedCells={editorState.selectedCells}
         tableData={displayedTableData}
+        onImportCsv={handleImportCsv}
         onExportCsv={handleExportCsv}
         onExportTsv={handleExportTsv}
         exportEncoding={exportEncoding}

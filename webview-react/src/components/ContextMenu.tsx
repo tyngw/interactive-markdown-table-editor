@@ -15,6 +15,7 @@ interface ContextMenuProps {
   onClose: () => void
   selectedCells?: Set<string>
   tableData?: { headers: string[]; rows: string[][] }
+  onImportCsv?: () => void
   onExportCsv?: () => void
   onExportTsv?: () => void
   exportEncoding?: 'utf8' | 'sjis'
@@ -35,6 +36,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onClose,
   selectedCells,
   tableData,
+  onImportCsv,
   onExportCsv,
   onExportTsv,
   exportEncoding = 'utf8',
@@ -176,6 +178,11 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           className="context-menu"
           style={{ position: 'fixed', left: adjustedPosition.x, top: adjustedPosition.y, zIndex: 1000 }}
         >
+          <button className="context-menu-item" onClick={() => { onImportCsv?.(); onClose(); }}>
+            <span className="context-menu-icon">📥</span>
+            <span className="context-menu-label">Import CSV (Auto)</span>
+          </button>
+          <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={() => { onResetSort?.(); onClose(); }} disabled={!hasActiveSort}>
             <span className="context-menu-icon">🗂️</span>
             <span className="context-menu-label">ソートをリセット</span>
