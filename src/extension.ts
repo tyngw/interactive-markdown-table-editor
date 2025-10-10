@@ -6,6 +6,8 @@ import { getFileHandler } from './fileHandler';
 import { buildThemeVariablesCss, getInstalledColorThemes } from './themeUtils';
 import { UndoRedoManager } from './undoRedoManager';
 import { decodeBuffer, detectTextEncoding, parseCsv, toRectangular } from './csvUtils';
+import { normalizeForImport } from './encodingNormalizer';
+import { normalizeForShiftJisExport } from './encodingNormalizer';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Markdown Table Editor extension is now active!');
@@ -1253,19 +1255,42 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
             if (saveUri) {
+                let contentToWrite = csvContent;
                 let buffer: Buffer;
 
                 if (encoding === 'sjis') {
+                    // 近似変換の事前チェック
+                    const { normalized, replacements } = normalizeForShiftJisExport(csvContent);
+                    if (replacements.length > 0) {
+                        const examples = Array.from(new Set(replacements.map(r => `${r.from}→${r.to}`))).slice(0, 5).join('、');
+                        const confirm = await vscode.window.showWarningMessage(
+                            `Shift_JISで保存できない可能性のある文字が見つかりました。\n近似文字に置換して書き出しますか？\n例: ${examples}${replacements.length > 5 ? '、他' : ''}`,
+                            { modal: true },
+                            '変換して保存',
+                            '変換しない'
+                        );
+                        if (confirm === undefined) {
+                            console.log('User cancelled approximate conversion for SJIS export');
+                            return;
+                        }
+                        if (confirm === '変換して保存') {
+                            contentToWrite = normalized;
+                        } else if (confirm === '変換しない') {
+                            // 変換せずにSJISエンコードを試みる（非対応文字は '?' になる可能性あり）
+                            contentToWrite = csvContent;
+                        }
+                    }
+
                     try {
                         const iconv = require('iconv-lite');
-                        buffer = iconv.encode(csvContent, 'shift_jis');
+                        buffer = iconv.encode(contentToWrite, 'shift_jis');
                         console.log('CSV content encoded to Shift_JIS');
                     } catch (error) {
                         console.warn('iconv-lite encoding failed, falling back to UTF-8:', error);
-                        buffer = Buffer.from(csvContent, 'utf8');
+                        buffer = Buffer.from(contentToWrite, 'utf8');
                     }
                 } else {
-                    buffer = Buffer.from(csvContent, 'utf8');
+                    buffer = Buffer.from(contentToWrite, 'utf8');
                 }
 
                 await vscode.workspace.fs.writeFile(saveUri, buffer);
@@ -1330,7 +1355,9 @@ export function activate(context: vscode.ExtensionContext) {
             // 読込 + 自動判別
             const buf = await vscode.workspace.fs.readFile(csvUri)
             const enc = detectTextEncoding(Buffer.from(buf))
-            const text = decodeBuffer(Buffer.from(buf), enc)
+            const textRaw = decodeBuffer(Buffer.from(buf), enc)
+            // 文字正規化（NFKC）: 解析前に適用
+            const { normalized: text } = normalizeForImport(textRaw)
 
             // 解析
             const rows = parseCsv(text)
@@ -1354,8 +1381,7 @@ export function activate(context: vscode.ExtensionContext) {
             const confirm = await vscode.window.showWarningMessage(
                 'インポートしたCSVは現在のシートに上書きされます。\nよろしいですか？',
                 { modal: true },
-                'はい',
-                'キャンセル'
+                'はい'
             )
             if (confirm !== 'はい') {
                 console.log('CSV import cancelled at confirmation dialog')
