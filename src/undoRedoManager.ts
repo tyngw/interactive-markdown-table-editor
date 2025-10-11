@@ -57,8 +57,6 @@ export class UndoRedoManager {
 
             // Clear redo stack when new state is saved
             this.redoStack.set(uriString, []);
-
-            console.log(`[MTE][UndoRedo] State saved for ${uriString}: "${description}"`);
         } catch (error) {
             console.error('[MTE][UndoRedo] Failed to save state:', error);
         }
@@ -72,7 +70,6 @@ export class UndoRedoManager {
         const undoStack = this.undoStack.get(uriString);
 
         if (!undoStack || undoStack.length === 0) {
-            console.log('[MTE][UndoRedo] No undo history available');
             return false;
         }
 
@@ -107,8 +104,6 @@ export class UndoRedoManager {
                     this.redoStack.set(uriString, redoStack);
                 }
                 redoStack.push(currentStateBeforeUndo);
-
-                console.log(`[MTE][UndoRedo] Undo successful: ${previousState.description}`);
                 return true;
             } else {
                 // Restore undo stack if edit failed
@@ -130,7 +125,6 @@ export class UndoRedoManager {
         const redoStack = this.redoStack.get(uriString);
 
         if (!redoStack || redoStack.length === 0) {
-            console.log('[MTE][UndoRedo] No redo history available');
             return false;
         }
 
@@ -165,8 +159,6 @@ export class UndoRedoManager {
                     this.undoStack.set(uriString, undoStack);
                 }
                 undoStack.push(currentStateBeforeRedo);
-
-                console.log(`[MTE][UndoRedo] Redo successful: ${nextState.description}`);
                 return true;
             } else {
                 // Restore redo stack if edit failed
@@ -203,7 +195,6 @@ export class UndoRedoManager {
         const uriString = uri.toString();
         this.undoStack.delete(uriString);
         this.redoStack.delete(uriString);
-        console.log(`[MTE][UndoRedo] History cleared for ${uriString}`);
     }
 
     /**
@@ -219,7 +210,6 @@ export class UndoRedoManager {
             redoCount: redoStack ? redoStack.length : 0
         };
         
-        console.log(`[MTE][UndoRedo] Stats for ${uriString}:`, stats);
         return stats;
     }
 }

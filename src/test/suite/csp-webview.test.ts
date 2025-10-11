@@ -67,19 +67,6 @@ suite('CSP and Webview HTML Tests', () => {
         const headEndIndex = processedHtml.indexOf('</head>');
         const cspMetaIndex = processedHtml.indexOf('Content-Security-Policy');
         
-        console.log('HTML structure analysis:');
-        console.log('Head start index:', headStartIndex);
-        console.log('Head end index:', headEndIndex);
-        console.log('CSP meta index:', cspMetaIndex);
-        console.log('CSP is before head end:', cspMetaIndex < headEndIndex);
-        
-        // このテストは修正後は成功するはず
-        if (cspMetaIndex >= headEndIndex) {
-            console.log('CSP meta tag found outside head element - this demonstrates the bug');
-            console.log('Processed HTML snippet around CSP:');
-            console.log(processedHtml.substring(Math.max(0, cspMetaIndex - 100), cspMetaIndex + 200));
-        }
-        
         // 修正前は失敗、修正後は成功するべきテスト
         assert.ok(cspMetaIndex >= 0, 'CSP meta tag should exist');
         assert.ok(cspMetaIndex > headStartIndex, 'CSP meta tag should be after head start');

@@ -62,7 +62,6 @@ export class WebviewManager {
                     fragment: uri.fragment || ''
                 });
                 const reconstructedString = reconstructedUri.toString();
-                console.log('Reconstructed URI:', reconstructedString);
                 return reconstructedString;
             } catch (reconstructError) {
                 console.error('Failed to reconstruct URI:', reconstructError);
@@ -273,11 +272,8 @@ export class WebviewManager {
             }
         }
 
-        console.log('Creating webview panel for:', panelId, forceNewPanel ? '(forced new panel)' : '');
-
         // If panel already exists for the same file and not forcing new panel, reveal it
         if (!forceNewPanel && this.panels.has(panelId)) {
-            console.log('Panel already exists for same file, revealing...');
             const existingPanel = this.panels.get(panelId)!;
             existingPanel.reveal();
             this.updateTableData(existingPanel, tableData, uri);
@@ -286,7 +282,6 @@ export class WebviewManager {
 
         // If any table editor panel is already open and not forcing new panel, reuse it for the new file
         if (!forceNewPanel && this.panels.size > 0) {
-            console.log('Existing table editor panel found, reusing for new file...');
             const existingPanelEntry = Array.from(this.panels.entries())[0];
             const [oldPanelId, existingPanel] = existingPanelEntry;
             
@@ -302,8 +297,6 @@ export class WebviewManager {
             this.updateTableData(existingPanel, tableData, uri);
             return existingPanel;
         }
-
-        console.log('Creating new webview panel...');
 
         // Generate appropriate title
         let panelTitle = `${path.basename(uri.fsPath)} - Table Editor`;
@@ -344,10 +337,7 @@ export class WebviewManager {
             throw new Error(`Failed to create webview panel: ${panelError instanceof Error ? panelError.message : String(panelError)}`);
         }
 
-        console.log('Webview panel created, setting HTML content...');
-
         try {
-            console.log('Creating webview HTML via builder');
             const html = await buildWebviewHtml(this.context, panel);
             panel.webview.html = html;
         } catch (error) {
@@ -356,14 +346,11 @@ export class WebviewManager {
             throw new Error(`Unable to construct webview HTML: ${message}`);
         }
 
-        console.log('HTML content set, storing panel reference...');
-
         // Store panel reference
         this.panels.set(panelId, panel);
 
         // Handle panel disposal
         panel.onDidDispose(() => {
-            console.log('Panel disposed for:', panelId);
             // Remove the panel reference by finding the entry that matches the panel object
             for (const [key, panelRef] of this.panels.entries()) {
                 if (panelRef === panel) {
@@ -379,15 +366,11 @@ export class WebviewManager {
             if (e.webviewPanel.active && e.webviewPanel.visible) {
                 const currentPanelId = this.findPanelId(e.webviewPanel);
                 if (currentPanelId) {
-                    console.log('[MTE][Ext] Panel became active, refreshing data for:', currentPanelId);
                     // Request fresh data when panel becomes active
                     this.refreshPanelData(e.webviewPanel, vscode.Uri.parse(currentPanelId.replace(/_\d{13,}$/, '')));
                     // Ensure theme is applied when panel becomes active
                     this.applyThemeToPanel(e.webviewPanel);
                 }
-            } else {
-                const currentPanelId = this.findPanelId(e.webviewPanel);
-                console.log('[MTE][Ext] Panel state changed (inactive or hidden):', { active: e.webviewPanel.active, visible: e.webviewPanel.visible, panelId: currentPanelId });
             }
         }, null, this.context.subscriptions);
 
@@ -398,11 +381,8 @@ export class WebviewManager {
             this.context.subscriptions
         );
 
-        console.log('Setting up initial data timeout...');
-
         // Send initial data after webview is fully ready
         setTimeout(() => {
-            console.log('Sending initial table data to webview...');
             this.updateTableData(panel, tableData, uri);
             // Apply theme shortly after data is sent to avoid race with script init
             this.applyThemeToPanel(panel);

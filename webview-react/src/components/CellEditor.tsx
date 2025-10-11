@@ -12,15 +12,15 @@ export interface CellEditorProps {
   rowMaxHeight?: number
 }
 
-const CellEditor: React.FC<CellEditorProps> = ({ 
-  value, 
-  onCommit, 
-  onCancel, 
+const CellEditor: React.FC<CellEditorProps> = ({
+  value,
+  onCommit,
+  onCancel,
   // 位置情報は親が保持（ここでは使用しない）
-  rowIndex: _rowIndex, 
-  colIndex: _colIndex, 
-  originalHeight, 
-  rowMaxHeight 
+  rowIndex: _rowIndex,
+  colIndex: _colIndex,
+  originalHeight,
+  rowMaxHeight
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [currentValue, setCurrentValue] = useState(value)
@@ -44,7 +44,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
       const selectionStart = textarea.selectionStart
       const selectionEnd = textarea.selectionEnd
       const hadFocus = document.activeElement === textarea
-      
+
       textarea.style.height = 'auto'
       const contentHeight = textarea.scrollHeight
       const minHeight = 32
@@ -71,21 +71,11 @@ const CellEditor: React.FC<CellEditorProps> = ({
       } else {
         textarea.removeAttribute('data-multiline')
       }
-      
-      // デバッグログを追加
-      console.log('CellEditor height calculation:', {
-        rowIndex: _rowIndex,
-        colIndex: _colIndex,
-        contentHeight,
-        originalHeight: baseOriginal,
-        rowMaxHeight: baseRowMax,
-        finalHeight,
-        textValue: textarea.value,
-        calculation: `max(min=${minHeight}, rowMax=${baseRowMax}, content=${contentHeight}) = ${finalHeight}`
-      })
-      
-  // いったん計算上の finalHeight を適用
-  textarea.style.height = `${finalHeight}px`
+
+
+
+      // いったん計算上の finalHeight を適用
+      textarea.style.height = `${finalHeight}px`
 
       // 行内の他セルとも高さを同期（行の視覚的な一貫性を維持）
       try {
@@ -163,20 +153,11 @@ const CellEditor: React.FC<CellEditorProps> = ({
               measured = r && r.height ? Math.ceil(r.height) : 0
             }
             const effective = measured > 0 ? measured : finalHeight
-            if (effective !== finalHeight) {
-              console.log('CellEditor height post-layout adjust:', {
-                rowIndex: _rowIndex,
-                colIndex: _colIndex,
-                plannedFinal: finalHeight,
-                measuredCell: measured,
-                applied: effective
-              })
-            }
             textarea.style.height = `${effective}px`
           } catch (_) { /* noop */ }
         }
       } catch (_) { /* noop */ }
-      
+
       // DOM操作後に選択状態を復元
       if (hadFocus && document.activeElement !== textarea) {
         textarea.focus()
@@ -203,10 +184,10 @@ const CellEditor: React.FC<CellEditorProps> = ({
 
     adjustHeight()
     const handleInput = () => { if (!isComposing) adjustHeight() }
-    
+
     textarea.addEventListener('input', handleInput)
-  textarea.addEventListener('heightUpdate', handleHeightUpdate as EventListener)
-    
+    textarea.addEventListener('heightUpdate', handleHeightUpdate as EventListener)
+
     return () => {
       textarea.removeEventListener('input', handleInput)
       textarea.removeEventListener('heightUpdate', handleHeightUpdate as EventListener)
@@ -317,7 +298,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
   }, [currentValue, onCommit])
 
   return (
-  <textarea
+    <textarea
       ref={textareaRef}
       className="cell-input"
       value={currentValue}
@@ -340,29 +321,29 @@ const CellEditor: React.FC<CellEditorProps> = ({
       }}
       onBlur={handleBlur}
       style={{
-    border: 'none',
-    background: 'transparent',
-    color: 'inherit',
-    fontFamily: 'inherit',
-    fontSize: 'inherit',
-    outline: 'none',
-    resize: 'none',
-    boxSizing: 'border-box',
-    margin: 0,
-    whiteSpace: 'pre-wrap',
-    wordWrap: 'break-word',
-    wordBreak: 'break-word',
-    overflowWrap: 'break-word',
-    overflow: 'hidden',
-    lineHeight: '1.2',
-    verticalAlign: 'top',
-    textAlign: 'left',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    zIndex: 5,
-    padding: '4px 6px'
+        border: 'none',
+        background: 'transparent',
+        color: 'inherit',
+        fontFamily: 'inherit',
+        fontSize: 'inherit',
+        outline: 'none',
+        resize: 'none',
+        boxSizing: 'border-box',
+        margin: 0,
+        whiteSpace: 'pre-wrap',
+        wordWrap: 'break-word',
+        wordBreak: 'break-word',
+        overflowWrap: 'break-word',
+        overflow: 'hidden',
+        lineHeight: '1.2',
+        verticalAlign: 'top',
+        textAlign: 'left',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        zIndex: 5,
+        padding: '4px 6px'
       }}
     />
   )

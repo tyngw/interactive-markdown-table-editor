@@ -33,7 +33,6 @@ function buildBootstrapScript(): string {
                 if (api) {
                     window.vscode = api;
                     try { window.__mteVscodeApi = api; } catch (_) {}
-                    console.log(tag, 'VS Code API ready');
                 } else {
                     console.warn(tag, 'VS Code API unavailable at bootstrap');
                 }
@@ -41,11 +40,9 @@ function buildBootstrapScript(): string {
                     try { api && api.postMessage(payload); } catch (_) {}
                 };
                 window.addEventListener('DOMContentLoaded', () => {
-                    console.log('[MTE][WV] DOMContentLoaded');
                     safePost({ command: 'diag', data: { event: 'DOMContentLoaded' } });
                 });
                 window.addEventListener('load', () => {
-                    console.log('[MTE][WV] load');
                     safePost({ command: 'diag', data: { event: 'load' } });
                 });
                 window.addEventListener('error', (event) => {
