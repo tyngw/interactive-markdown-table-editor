@@ -38,6 +38,15 @@
 - 実行したコマンド（例: ``npm run test:all``）を記載し、UI 変更はスクリーンショットや GIF を添付します。
 - ビルド成果物（`out/`, `webview-dist/`）はコミットに含めず、ユーザーに影響がある場合は `CHANGELOG.md` を更新してください。
 
+## versionとCHANGELOG の更新
+変更後は、versionを更新する。ただし、例外として修正不備により修正が複数回に及んだ場合は、最初の修正時のみ version を更新し、以降の修正では更新しないこと
+version の更新ルールは以下の通り。
+また、CHANGELOG.md に変更内容を日本語で記載すること。最新の変更が一番上に来るようにすること
+
+1. bugfix: x.x.x → x.x.x+1
+2. minor: x.x.x → x.x+1.0
+3. major: x.x.x → x+1.0.0
+
 ## Webview 開発のヒント
 - デバッグ中は `npm run compile` 前に `MTE_KEEP_CONSOLE=1` を設定してビルド後も詳細ログを残します。
 - 開発サーバーの Debug State パネルとブラウザ DevTools でテーブル状態を確認し、本体拡張へ反映する前に挙動を固めてください。
