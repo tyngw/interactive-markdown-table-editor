@@ -40,6 +40,11 @@ const CellEditor: React.FC<CellEditorProps> = ({
     textarea.setSelectionRange(textLength, textLength)
 
     const adjustHeight = () => {
+      // DOM操作前に選択状態を保存
+      const selectionStart = textarea.selectionStart
+      const selectionEnd = textarea.selectionEnd
+      const hadFocus = document.activeElement === textarea
+      
       textarea.style.height = 'auto'
       const contentHeight = textarea.scrollHeight
       const minHeight = 32
@@ -171,6 +176,16 @@ const CellEditor: React.FC<CellEditorProps> = ({
           } catch (_) { /* noop */ }
         }
       } catch (_) { /* noop */ }
+      
+      // DOM操作後に選択状態を復元
+      if (hadFocus && document.activeElement !== textarea) {
+        textarea.focus()
+      }
+      if (selectionStart !== null && selectionEnd !== null) {
+        try {
+          textarea.setSelectionRange(selectionStart, selectionEnd)
+        } catch (_) { /* noop */ }
+      }
     }
 
     // カスタムイベントリスナーを追加（高さ情報の更新時）
