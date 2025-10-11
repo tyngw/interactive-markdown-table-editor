@@ -5,6 +5,7 @@ import { useClipboard } from '../hooks/useClipboard'
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
 import { useCSVExport } from '../hooks/useCSVExport'
 import { useDragDrop } from '../hooks/useDragDrop'
+import { useAutofill } from '../hooks/useAutofill'
 import { useStatus } from '../contexts/StatusContext'
 import TableHeader from './TableHeader'
 import TableBody from './TableBody'
@@ -116,6 +117,19 @@ const TableEditor: React.FC<TableEditorProps> = ({
   })
 
   const { exportToCSV, exportToTSV } = useCSVExport()
+
+  const { isDragging: isAutofilling, fillRange, handleFillHandleMouseDown } = useAutofill({
+    selectionRange: editorState.selectionRange,
+    onUpdateCells: (updates) => {
+      updateCells(updates)
+      const modelUpdates = mapUpdatesToModel(updates)
+      onSendMessage({ command: 'bulkUpdateCells', data: withTableIndex({ updates: modelUpdates }) })
+      updateStatus('success', 'オートフィルを適用しました')
+    },
+    getCellValue: (row: number, col: number) => {
+      return displayedTableData.rows[row]?.[col] || ''
+    }
+  })
 
   const { getDragProps, getDropProps } = useDragDrop({
     onMoveRow: (fromIndex: number, toIndex: number) => {
@@ -366,6 +380,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
             getDragProps={getDragProps}
             getDropProps={getDropProps}
             selectedRows={selectedRows}
+            fillRange={fillRange}
+            onFillHandleMouseDown={handleFillHandleMouseDown}
           />
         </table>
       </div>

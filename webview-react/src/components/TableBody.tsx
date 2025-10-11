@@ -18,6 +18,8 @@ interface TableBodyProps {
   getDragProps?: (type: 'row' | 'column', index: number) => any
   getDropProps?: (type: 'row' | 'column', index: number) => any
   selectedRows?: Set<number>
+  fillRange?: { start: CellPosition; end: CellPosition } | null
+  onFillHandleMouseDown?: (event: React.MouseEvent) => void
 }
 
 const TableBody: React.FC<TableBodyProps> = ({
@@ -31,7 +33,9 @@ const TableBody: React.FC<TableBodyProps> = ({
   onShowRowContextMenu,
   getDragProps,
   getDropProps,
-  selectedRows
+  selectedRows,
+  fillRange,
+  onFillHandleMouseDown
 }) => {
   const savedHeightsRef = useRef<Map<string, { original: number; rowMax: number }>>(new Map())
 
@@ -262,6 +266,26 @@ const TableBody: React.FC<TableBodyProps> = ({
     onCellEdit(null)
   }, [onCellEdit])
 
+  // フィル範囲内のセルかどうかを判定
+  const isCellInFillRange = useCallback((row: number, col: number) => {
+    if (!fillRange) return false
+    const startRow = Math.min(fillRange.start.row, fillRange.end.row)
+    const endRow = Math.max(fillRange.start.row, fillRange.end.row)
+    const startCol = Math.min(fillRange.start.col, fillRange.end.col)
+    const endCol = Math.max(fillRange.start.col, fillRange.end.col)
+    return row >= startRow && row <= endRow && col >= startCol && col <= endCol
+  }, [fillRange])
+
+  // 選択範囲の右下セルかどうかを判定
+  const isBottomRightCell = useCallback((row: number, col: number) => {
+    if (!editorState.selectionRange) return false
+    const startRow = Math.min(editorState.selectionRange.start.row, editorState.selectionRange.end.row)
+    const endRow = Math.max(editorState.selectionRange.start.row, editorState.selectionRange.end.row)
+    const startCol = Math.min(editorState.selectionRange.start.col, editorState.selectionRange.end.col)
+    const endCol = Math.max(editorState.selectionRange.start.col, editorState.selectionRange.end.col)
+    return row === endRow && col === endCol
+  }, [editorState.selectionRange])
+
   // すべての編集開始経路（ダブルクリック/キーボード/F2/Enter）に対して行高さ測定を保証
   useEffect(() => {
     const pos = editorState.currentEditingCell
@@ -369,6 +393,8 @@ const TableBody: React.FC<TableBodyProps> = ({
             const storedWidth = editorState.columnWidths[colIndex] || 150
             const isEditing = isCellEditing(rowIndex, colIndex)
             const isSelected = isCellSelected(rowIndex, colIndex)
+            const isInFillRange = isCellInFillRange(rowIndex, colIndex)
+            const showFillHandle = isBottomRightCell(rowIndex, colIndex) && !isEditing
             const widthStyle = {
               width: `${storedWidth}px`,
               minWidth: `${storedWidth}px`,
@@ -381,7 +407,7 @@ const TableBody: React.FC<TableBodyProps> = ({
               <td 
                 key={colIndex}
                 id={cellId}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
                 onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                 onDoubleClick={() => startCellEdit(rowIndex, colIndex)}
                 data-row={rowIndex}
@@ -415,13 +441,22 @@ const TableBody: React.FC<TableBodyProps> = ({
                     rowMaxHeight={savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax}
                   />
                 ) : (
-                  <div className="cell-content">
-                    {cell && cell.trim() !== '' ? (
-                      <span dangerouslySetInnerHTML={{ __html: processCellContent(cell) }} />
-                    ) : (
-                      <span className="empty-cell-placeholder">&nbsp;</span>
+                  <>
+                    <div className="cell-content">
+                      {cell && cell.trim() !== '' ? (
+                        <span dangerouslySetInnerHTML={{ __html: processCellContent(cell) }} />
+                      ) : (
+                        <span className="empty-cell-placeholder">&nbsp;</span>
+                      )}
+                    </div>
+                    {showFillHandle && onFillHandleMouseDown && (
+                      <div 
+                        className="fill-handle"
+                        onMouseDown={onFillHandleMouseDown}
+                        title="ドラッグしてオートフィル"
+                      />
                     )}
-                  </div>
+                  </>
                 )}
               </td>
             )

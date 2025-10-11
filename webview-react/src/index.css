@@ -1101,7 +1101,33 @@ textarea.cell-input[data-multiline="true"] {
     box-shadow: inset 0 0 0 1px var(--vscode-inputValidation-errorBorder);
 }
 
-/* ====== 16. レスポンシブ対応 ====== */
+/* ====== 16. オートフィル機能 ====== */
+.fill-handle {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    width: 8px;
+    height: 8px;
+    background-color: var(--vscode-focusBorder, #007ACC);
+    border: 1px solid var(--vscode-editor-background, #fff);
+    cursor: crosshair;
+    z-index: 100;
+    border-radius: 1px;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.fill-handle:hover {
+    background-color: var(--vscode-button-hoverBackground, #005A9E);
+    transform: scale(1.2);
+    transition: transform 0.1s ease;
+}
+
+.table-editor td.data-cell.fill-range {
+    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
+    border: 1px dashed var(--vscode-focusBorder) !important;
+}
+
+/* ====== 17. レスポンシブ対応 ====== */
 @media (max-width: 768px) {
     .status-bar {
         font-size: 11px;
