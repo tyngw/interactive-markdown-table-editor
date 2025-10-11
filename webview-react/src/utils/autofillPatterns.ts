@@ -27,6 +27,12 @@ export function detectPattern(values: string[]): PatternInfo {
     return { type: 'copy', startValue: values[0] }
   }
 
+  // 日付パターンを検出（最優先：数値パターンより前に判定）
+  const datePattern = detectDatePattern(values)
+  if (datePattern) {
+    return datePattern
+  }
+
   // 曜日パターンを検出（数値より優先）
   const weekdayPattern = detectWeekdayPattern(values)
   if (weekdayPattern) {
@@ -37,12 +43,6 @@ export function detectPattern(values: string[]): PatternInfo {
   const monthPattern = detectMonthPattern(values)
   if (monthPattern) {
     return monthPattern
-  }
-
-  // 日付パターンを検出
-  const datePattern = detectDatePattern(values)
-  if (datePattern) {
-    return datePattern
   }
 
   // 数値の連続パターンを検出
@@ -97,18 +97,34 @@ function detectNumericSeries(values: string[]): PatternInfo | null {
 }
 
 /**
- * 日付パターンを検出（YYYY/MM/DD, YYYY-MM-DD, M/D など）
+ * 日付パターンを検出（YYYY/MM/DD, YYYY-MM-DD, M/D, YYYY年M月D日 など）
  */
 function detectDatePattern(values: string[]): PatternInfo | null {
   // 元の形式を判定
   const firstValue = values[0].trim()
+  
+  // 日本語形式: YYYY年M月D日 または YYYY年MM月DD日
+  const japaneseFormat = /^(\d{4})年(\d{1,2})月(\d{1,2})日$/.test(firstValue)
+  
+  // 年あり形式: YYYY/MM/DD または YYYY-MM-DD
   const hasYear = /^\d{4}[/-]/.test(firstValue)
   
   const dates = values.map(v => {
     const trimmed = v.trim()
     let d: Date
     
-    if (hasYear) {
+    if (japaneseFormat) {
+      // 日本語形式: YYYY年M月D日
+      const match = trimmed.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/)
+      if (match) {
+        const year = parseInt(match[1], 10)
+        const month = parseInt(match[2], 10)
+        const day = parseInt(match[3], 10)
+        d = new Date(year, month - 1, day)
+      } else {
+        return null
+      }
+    } else if (hasYear) {
       // 年あり形式: YYYY/MM/DD または YYYY-MM-DD
       d = new Date(trimmed)
     } else {
@@ -398,6 +414,20 @@ function formatDate(date: Date, originalFormat: string): string {
   const year = date.getFullYear()
   const month = date.getMonth() + 1
   const day = date.getDate()
+  
+  // 日本語形式かチェック
+  const isJapanese = /年.*月.*日/.test(originalFormat)
+  
+  if (isJapanese) {
+    // 日本語形式: YYYY年M月D日 または YYYY年MM月DD日
+    const hasMonthPadding = /年0\d月/.test(originalFormat)
+    const hasDayPadding = /月0\d日/.test(originalFormat)
+    
+    const monthStr = hasMonthPadding ? String(month).padStart(2, '0') : String(month)
+    const dayStr = hasDayPadding ? String(day).padStart(2, '0') : String(day)
+    
+    return `${year}年${monthStr}月${dayStr}日`
+  }
   
   // 年が含まれているかチェック
   const hasYear = /^\d{4}[/-]/.test(originalFormat)

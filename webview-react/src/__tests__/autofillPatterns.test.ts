@@ -70,6 +70,20 @@ describe('autofillPatterns', () => {
       expect(pattern.increment).toBe(1)
       expect(pattern.dateFormat).toBe('2024/01/29')
     })
+
+    it('日付パターンを検出する（日本語形式）', () => {
+      const pattern = detectPattern(['2025年1月1日', '2025年1月2日', '2025年1月3日'])
+      expect(pattern.type).toBe('date')
+      expect(pattern.increment).toBe(1)
+      expect(pattern.dateFormat).toBe('2025年1月1日')
+    })
+
+    it('日付パターンを検出する（日本語形式、ゼロパディング）', () => {
+      const pattern = detectPattern(['2025年01月01日', '2025年01月02日', '2025年01月03日'])
+      expect(pattern.type).toBe('date')
+      expect(pattern.increment).toBe(1)
+      expect(pattern.dateFormat).toBe('2025年01月01日')
+    })
   })
 
   describe('generateNextValue', () => {
@@ -210,6 +224,42 @@ describe('autofillPatterns', () => {
       }
       const result = generateNextValue(pattern, '2024/01/29', 1)
       expect(result).toBe('2024/01/30')
+    })
+
+    it('日付を生成する（日本語形式）', () => {
+      const startDate = new Date(2025, 0, 1) // 2025年1月1日
+      const pattern = { 
+        type: 'date' as const, 
+        increment: 1, 
+        startValue: startDate,
+        dateFormat: '2025年1月1日'
+      }
+      const result = generateNextValue(pattern, '2025年1月1日', 1)
+      expect(result).toBe('2025年1月2日')
+    })
+
+    it('日付を生成する（日本語形式、月をまたぐ）', () => {
+      const startDate = new Date(2025, 0, 31) // 2025年1月31日
+      const pattern = { 
+        type: 'date' as const, 
+        increment: 1, 
+        startValue: startDate,
+        dateFormat: '2025年1月31日'
+      }
+      const result = generateNextValue(pattern, '2025年1月31日', 1)
+      expect(result).toBe('2025年2月1日')
+    })
+
+    it('日付を生成する（日本語形式、ゼロパディング）', () => {
+      const startDate = new Date(2025, 0, 1) // 2025年1月1日
+      const pattern = { 
+        type: 'date' as const, 
+        increment: 1, 
+        startValue: startDate,
+        dateFormat: '2025年01月01日'
+      }
+      const result = generateNextValue(pattern, '2025年01月01日', 1)
+      expect(result).toBe('2025年01月02日')
     })
   })
 })

@@ -34,10 +34,11 @@ npm run dev:webview     # start the Vite dev server with hot reload
 - **Autofill**: 
   - Drag the fill handle (bottom-right corner of selection) to auto-fill cells
   - Automatically detects patterns: numbers (1, 2, 3...), dates, weekdays, months
-  - Date formats with or without year (2024/01/29 or 1/29, preserves original format)
+  - Multiple date formats supported (2024/01/29, 1/29, 2025年1月1日, preserves original format)
   - Smart text with number increment (Item 1 → Item 2, Test-A-5 → Test-A-6)
   - Preserves zero-padding (001, 002, 003...)
   - Handles multiple numbers by incrementing the last occurrence
+  - Copies values as-is when no pattern is detected
   - Smart pattern recognition for series and copy operations
 - **Column Width Management**: 
   - Manual resizing with drag handles
