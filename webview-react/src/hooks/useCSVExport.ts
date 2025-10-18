@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { TableData, VSCodeMessage } from '../types'
+import { convertBrTagsToNewlines, escapeCSVField, escapeTSVField } from '../utils/contentConverter'
 
 export function useCSVExport() {
   // CSVコンテンツを生成
@@ -15,12 +16,9 @@ export function useCSVExport() {
     // CSV形式に変換（カンマ区切り、必要に応じてクォート）
     return csvRows.map(row => 
       row.map(cell => {
-        const cellStr = String(cell || '')
-        // カンマ、改行、ダブルクォートが含まれている場合はクォートで囲む
-        if (cellStr.includes(',') || cellStr.includes('\n') || cellStr.includes('"')) {
-          return `"${cellStr.replace(/"/g, '""')}"`
-        }
-        return cellStr
+        // <br/>タグを改行コードに変換してからエスケープ
+        const cellStr = convertBrTagsToNewlines(String(cell || ''))
+        return escapeCSVField(cellStr)
       }).join(',')
     ).join('\n')
   }, [])
@@ -32,7 +30,11 @@ export function useCSVExport() {
     const tsvRows = [headers, ...rows]
     
     return tsvRows.map(row => 
-      row.map(cell => String(cell || '')).join('\t')
+      row.map(cell => {
+        // <br/>タグを改行コードに変換してからエスケープ
+        const cellStr = convertBrTagsToNewlines(String(cell || ''))
+        return escapeTSVField(cellStr)
+      }).join('\t')
     ).join('\n')
   }, [])
 

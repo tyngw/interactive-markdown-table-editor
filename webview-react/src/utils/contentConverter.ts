@@ -38,6 +38,62 @@ export function processCellContentForStorage(content: string): string {
   return content.replace(/\n/g, '<br/>')
 }
 
+/**
+ * Convert <br> tags to newlines for clipboard/export operations
+ * This is used for CSV export, clipboard copy, etc.
+ */
+export function convertBrTagsToNewlines(content: string): string {
+  if (!content) return ''
+  
+  // Convert all variations of <br> tags to newlines
+  return content.replace(/<br\s*\/?>/gi, '\n')
+}
+
+/**
+ * Convert newlines to <br/> tags for import operations
+ * This is used for CSV import, clipboard paste, etc.
+ */
+export function convertNewlinesToBrTags(content: string): string {
+  if (!content) return ''
+  
+  // Convert newlines to <br/> tags
+  return content.replace(/\n/g, '<br/>')
+}
+
+/**
+ * Escape CSV field with proper quoting
+ * Handles commas, newlines, and quotes
+ */
+export function escapeCSVField(field: string): string {
+  if (!field) return ''
+  
+  const cellStr = String(field)
+  
+  // カンマ、改行、ダブルクォートが含まれている場合はクォートで囲む
+  if (cellStr.includes(',') || cellStr.includes('\n') || cellStr.includes('"')) {
+    return `"${cellStr.replace(/"/g, '""')}"`
+  }
+  
+  return cellStr
+}
+
+/**
+ * Escape TSV field with proper quoting
+ * Handles tabs, newlines, and quotes
+ */
+export function escapeTSVField(field: string): string {
+  if (!field) return ''
+  
+  const cellStr = String(field)
+  
+  // タブ、改行、ダブルクォートが含まれている場合はクォートで囲む
+  if (cellStr.includes('\t') || cellStr.includes('\n') || cellStr.includes('"')) {
+    return `"${cellStr.replace(/"/g, '""')}"`
+  }
+  
+  return cellStr
+}
+
 // Escape HTML content while preserving <br> tags
 function escapeHtmlExceptBreaks(text: string): string {
   if (!text) return ''

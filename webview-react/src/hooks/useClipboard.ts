@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { TableData, CellPosition, SelectionRange } from '../types'
+import { convertBrTagsToNewlines, convertNewlinesToBrTags, escapeTSVField } from '../utils/contentConverter'
 
 // フックが受け取る依存関数の型を定義
 interface ClipboardDependencies {
@@ -53,16 +54,9 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
   const convertToTSV = useCallback((data: string[][]): string => {
     return data.map(row => 
       row.map(cell => {
-        // Convert <br> tags to newlines for clipboard export
-        let cellText = cell.replace(/<br\s*\/?>/gi, '\n')
-        
-        // If cell contains tabs, newlines, or quotes, we need to quote it
-        if (cellText.includes('\t') || cellText.includes('\n') || cellText.includes('"')) {
-          // Escape quotes by doubling them and wrap in quotes
-          cellText = '"' + cellText.replace(/"/g, '""') + '"'
-        }
-        
-        return cellText
+        // <br/>タグを改行コードに変換してからエスケープ（共通関数を使用）
+        const cellText = convertBrTagsToNewlines(cell)
+        return escapeTSVField(cellText)
       }).join('\t')
     ).join('\n')
   }, [])
@@ -110,13 +104,13 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
           } else {
             // クォート外
             if (char === '\t') {
-              // セル区切り
-              row.push(currentCell.replace(/\n/g, '<br/>'))
+              // セル区切り（改行コードをbrタグに変換 - 共通関数を使用）
+              row.push(convertNewlinesToBrTags(currentCell))
               i++
               break // 次のセルへ
             } else if (char === '\n') {
-              // 行区切り
-              row.push(currentCell.replace(/\n/g, '<br/>'))
+              // 行区切り（改行コードをbrタグに変換 - 共通関数を使用）
+              row.push(convertNewlinesToBrTags(currentCell))
               i++
               rowEnded = true
               break // 行終了
@@ -127,9 +121,9 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
           }
         }
         
-        // ファイル終端の場合
+        // ファイル終端の場合（改行コードをbrタグに変換 - 共通関数を使用）
         if (i >= normalized.length) {
-          row.push(currentCell.replace(/\n/g, '<br/>'))
+          row.push(convertNewlinesToBrTags(currentCell))
           rowEnded = true
         }
       }
