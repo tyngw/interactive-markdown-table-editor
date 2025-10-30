@@ -10,7 +10,6 @@ export type WebviewCommand =
   | 'sort'
   | 'moveRow'
   | 'moveColumn'
-  | 'importCSV'
   | 'exportCSV'
   | 'pong'
   | 'switchTable'
@@ -83,11 +82,6 @@ export interface ExportCSVData {
   csvContent: string;
   filename?: string;
   encoding?: string;
-}
-
-export interface ImportCSVData {
-  // 追加のパラメータが必要になれば拡張（例: mode: 'replace' | 'append'）
-  tableIndex?: number;
 }
 
 export interface SwitchTableData { index: number }
