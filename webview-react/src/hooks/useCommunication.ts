@@ -117,18 +117,105 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     };
   }, [onTableData, onError, onSuccess, onThemeVariables, onSetActiveTable]);
 
-  // メッセージ送信用のメソッド
-  const sendMessage = useCallback((command: string, data?: any) => {
+  // メッセージ送信用のメソッド（旧形式との互換性を保つ）
+  const sendMessage = useCallback((commandOrMessage: string | { command: string; data?: any }, data?: any) => {
     const manager = commManagerRef.current;
     if (!manager) {
       console.error('[useCommunication] Communication manager not initialized');
       return;
     }
 
-    console.log('[useCommunication] Sending message:', command, data);
-    // レガシーコマンドを新しいシステムに変換
-    // （ここでは通知として送信）
-    manager.sendNotification(command as any, data);
+    // 引数が文字列の場合と、オブジェクトの場合の両方に対応
+    let command: string;
+    let messageData: any;
+
+    if (typeof commandOrMessage === 'string') {
+      // 新形式: sendMessage('updateCell', { ... })
+      command = commandOrMessage;
+      messageData = data;
+    } else {
+      // 旧形式: sendMessage({ command: 'updateCell', data: { ... } })
+      command = commandOrMessage.command;
+      messageData = commandOrMessage.data;
+    }
+
+    console.log('[useCommunication] Sending message:', command, messageData);
+
+    // コマンドに基づいて適切な通信マネージャーのメソッドを呼び出す
+    switch (command) {
+      case 'updateCell':
+        if (messageData) {
+          manager.updateCell(messageData.row, messageData.col, messageData.value, messageData.tableIndex);
+        }
+        break;
+      case 'bulkUpdateCells':
+        if (messageData) {
+          manager.bulkUpdateCells(messageData.updates, messageData.tableIndex);
+        }
+        break;
+      case 'updateHeader':
+        if (messageData) {
+          manager.updateHeader(messageData.col, messageData.value, messageData.tableIndex);
+        }
+        break;
+      case 'addRow':
+        manager.addRow(messageData?.index, messageData?.tableIndex);
+        break;
+      case 'deleteRows':
+        if (messageData) {
+          manager.deleteRows(messageData.indices, messageData.tableIndex);
+        }
+        break;
+      case 'addColumn':
+        manager.addColumn(messageData?.index, messageData?.tableIndex);
+        break;
+      case 'deleteColumns':
+        if (messageData) {
+          manager.deleteColumns(messageData.indices, messageData.tableIndex);
+        }
+        break;
+      case 'sort':
+        if (messageData) {
+          manager.sort(messageData.column, messageData.direction, messageData.tableIndex);
+        }
+        break;
+      case 'moveRow':
+        if (messageData) {
+          manager.moveRow(messageData.fromIndex, messageData.toIndex, messageData.tableIndex);
+        }
+        break;
+      case 'moveColumn':
+        if (messageData) {
+          manager.moveColumn(messageData.fromIndex, messageData.toIndex, messageData.tableIndex);
+        }
+        break;
+      case 'exportCSV':
+        if (messageData) {
+          manager.exportCSV(messageData.csvContent, messageData.filename, messageData.encoding, messageData.tableIndex);
+        }
+        break;
+      case 'switchTable':
+        if (messageData) {
+          manager.switchTable(messageData.index);
+        }
+        break;
+      case 'undo':
+        manager.undo();
+        break;
+      case 'redo':
+        manager.redo();
+        break;
+      case 'requestTableData':
+        manager.requestTableData();
+        break;
+      case 'requestThemeVariables':
+        manager.requestThemeVariables();
+        break;
+      default:
+        // その他のコマンドは通知として送信
+        console.warn('[useCommunication] Unknown command, sending as notification:', command);
+        manager.sendNotification(command as any, messageData);
+    }
   }, []);
 
   // 便利メソッド

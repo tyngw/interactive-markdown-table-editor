@@ -258,7 +258,6 @@ function AppContent() {
           currentTableIndex={currentTableIndex}
           onTableUpdate={handleTableUpdate}
           onSendMessage={communication.sendMessage}
-          communication={communication}
           sortState={sortStates[currentTableIndex]}
           setSortState={(updater) => {
             setSortStates((prev) => {
