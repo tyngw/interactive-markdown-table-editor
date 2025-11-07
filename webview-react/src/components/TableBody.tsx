@@ -365,8 +365,85 @@ const TableBody: React.FC<TableBodyProps> = ({
 
   return (
     <tbody>
+      {/* hasColumnHeaders が false の場合、ヘッダー行を0行目として表示 */}
+      {headerConfig?.hasColumnHeaders === false && (
+        <tr key={-1} data-row={-1}>
+          <td
+            className="row-number"
+            onClick={(e) => {
+              if (onRowSelect) {
+                onRowSelect(-1, e)
+              }
+            }}
+            title="Row 0"
+          >
+            0
+          </td>
+          {headers.map((header, colIndex) => {
+            // 行ヘッダーONの場合、先頭列をスキップ
+            if (headerConfig?.hasRowHeaders && colIndex === 0) {
+              return null
+            }
+            const cellId = `cell--1-${colIndex}`
+            const isEmpty = !header || header.trim() === ''
+            const cellClass = isEmpty ? 'empty-cell' : ''
+            const storedWidth = editorState.columnWidths[colIndex] || 150
+            const isEditing = isCellEditing(-1, colIndex)
+            const isSelected = isCellSelected(-1, colIndex)
+            const isInFillRange = isCellInFillRange(-1, colIndex)
+            const showFillHandle = isBottomRightCell(-1, colIndex) && !isEditing
+            const widthStyle = {
+              width: `${storedWidth}px`,
+              minWidth: `${storedWidth}px`,
+              maxWidth: `${storedWidth}px`
+            }
+
+            const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
+
+            return (
+              <td
+                key={colIndex}
+                id={cellId}
+                data-row={-1}
+                data-col={colIndex}
+                className={`${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isInFillRange ? 'fill-range' : ''}`}
+                style={widthStyle}
+                onMouseDown={(e) => handleCellMouseDown(-1, colIndex, e)}
+              >
+                {isEditing ? (
+                  <CellEditor
+                    initialValue={processCellContentForEditing(header)}
+                    onSave={(value) => {
+                      const processed = processCellContentForStorage(value)
+                      onCellUpdate(-1, colIndex, processed)
+                      onCellEdit(null)
+                    }}
+                    onCancel={() => onCellEdit(null)}
+                    cellId={cellId}
+                  />
+                ) : (
+                  <div
+                    className="cell-content"
+                    onDoubleClick={() => startCellEdit(-1, colIndex)}
+                    dangerouslySetInnerHTML={{ __html: processCellContent(header) }}
+                  />
+                )}
+                {showFillHandle && onFillHandleMouseDown && (
+                  <div
+                    className="fill-handle"
+                    onMouseDown={onFillHandleMouseDown}
+                  />
+                )}
+              </td>
+            )
+          })}
+        </tr>
+      )}
+
       {rows.map((row, rowIndex) => {
         const rowHeaderValue = headerConfig?.hasRowHeaders ? (row[0] || '') : ''
+        // hasColumnHeaders が false の場合、表示行番号を +1 する
+        const displayRowNumber = headerConfig?.hasColumnHeaders === false ? rowIndex + 1 : rowIndex + 1
         return (
         <tr key={rowIndex} data-row={rowIndex}>
           <td
@@ -382,17 +459,17 @@ const TableBody: React.FC<TableBodyProps> = ({
               }
             }}
             onContextMenu={(e) => handleRowContextMenu(e, rowIndex)}
-            title={headerConfig?.hasRowHeaders ? `Row ${rowIndex + 1}: ${rowHeaderValue}` : `Row ${rowIndex + 1}`}
+            title={headerConfig?.hasRowHeaders ? `Row ${displayRowNumber}: ${rowHeaderValue}` : `Row ${displayRowNumber}`}
             {...(getDragProps ? getDragProps('row', rowIndex) : {})}
             {...(getDropProps ? getDropProps('row', rowIndex) : {})}
           >
             {headerConfig?.hasRowHeaders ? (
               <div className="row-header-content">
-                <div className="row-number-label">{rowIndex + 1}</div>
+                <div className="row-number-label">{displayRowNumber}</div>
                 <div className="row-header-title">{rowHeaderValue}</div>
               </div>
             ) : (
-              rowIndex + 1
+              displayRowNumber
             )}
           </td>
 
