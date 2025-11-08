@@ -481,58 +481,6 @@ body {
     vertical-align: top;
 }
 
-/* ヘッダー行セル（列ヘッダーOFF時の0行目） */
-.table-editor td.header-row-cell {
-    background-color: var(--vscode-editor-background);
-    border: 1px solid var(--vscode-panel-border);
-    padding: 0 !important;
-    text-align: left;
-    position: relative;
-    width: 150px;
-    min-width: 150px;
-    cursor: cell;
-    transition: background-color 0.15s ease;
-    box-sizing: border-box;
-    height: auto;
-    overflow: hidden;
-    white-space: normal;
-    word-wrap: break-word;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    vertical-align: middle;
-}
-
-.table-editor td.header-row-cell.user-resized {
-    min-width: 10px;
-}
-
-.table-editor td.header-row-cell.selected {
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
-    color: var(--vscode-list-activeSelectionForeground) !important;
-    outline: 2px solid var(--vscode-focusBorder) !important;
-    outline-offset: -1px !important;
-    box-sizing: border-box !important;
-    min-height: 32px !important;
-    height: auto !important;
-}
-
-.table-editor td.header-row-cell.editing {
-    padding: 0 !important;
-    background-color: var(--vscode-input-background);
-    outline: 2px solid var(--vscode-inputOption-activeBorder);
-    outline-offset: -1px;
-    box-sizing: border-box;
-    height: auto !important;
-    position: relative;
-    vertical-align: middle !important;
-    text-align: left !important;
-}
-
-.table-editor td.header-row-cell.fill-range {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    border: 1px dashed var(--vscode-focusBorder) !important;
-}
-
 .table-editor td.data-cell.user-resized,
 .table-editor td.editable-cell.user-resized {
     min-width: 10px;

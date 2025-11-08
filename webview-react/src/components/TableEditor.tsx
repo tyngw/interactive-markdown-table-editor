@@ -194,12 +194,19 @@ const TableEditor: React.FC<TableEditorProps> = ({
   }, [editorState.sortState, updateSortState])
 
   const handleCellUpdate = useCallback((row: number, col: number, value: string) => {
-    updateCell(row, col, value)
-    updateSaveStatus('saving')
-    const modelRow = toModelRow(row)
-    onSendMessage({ command: 'updateCell', data: withTableIndex({ row: modelRow, col, value }) })
-    setTimeout(() => updateSaveStatus('saved'), 500)
-  }, [updateCell, onSendMessage, updateSaveStatus, toModelRow, withTableIndex])
+    // 0行目（列ヘッダーOFF時）はheaders配列を更新
+    if (row === -1) {
+      updateHeader(col, value)
+      onSendMessage({ command: 'updateHeader', data: withTableIndex({ col, value }) })
+    } else {
+      // 通常のデータセルはrows配列を更新
+      updateCell(row, col, value)
+      updateSaveStatus('saving')
+      const modelRow = toModelRow(row)
+      onSendMessage({ command: 'updateCell', data: withTableIndex({ row: modelRow, col, value }) })
+      setTimeout(() => updateSaveStatus('saved'), 500)
+    }
+  }, [updateCell, updateHeader, onSendMessage, updateSaveStatus, toModelRow, withTableIndex])
 
   const handleHeaderUpdate = useCallback((col: number, value: string) => {
     updateHeader(col, value)
@@ -326,7 +333,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
     onSelectAll: selectAll,
     onSetSelectionAnchor: setSelectionAnchor,
     onUndo: () => onSendMessage({ command: 'undo' }),
-    onRedo: () => onSendMessage({ command: 'redo' })
+    onRedo: () => onSendMessage({ command: 'redo' }),
+    headerConfig: editorState.headerConfig
   })
 
   const handleExportCsv = useCallback(() => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react'
-import { CellPosition, SelectionRange, TableData } from '../types'
+import { CellPosition, SelectionRange, TableData, HeaderConfig } from '../types'
 
 interface KeyboardNavigationProps {
   tableData: TableData
@@ -16,6 +16,7 @@ interface KeyboardNavigationProps {
   onSetSelectionAnchor: (position: CellPosition | null) => void
   onUndo: () => void
   onRedo: () => void
+  headerConfig?: HeaderConfig
 }
 
 export function useKeyboardNavigation({
@@ -32,7 +33,8 @@ export function useKeyboardNavigation({
   onSelectAll,
   onSetSelectionAnchor,
   onUndo,
-  onRedo
+  onRedo,
+  headerConfig
 }: KeyboardNavigationProps) {
 
   // Helper function to check if a cell has content (for smart navigation)
@@ -150,6 +152,8 @@ export function useKeyboardNavigation({
     const { row, col } = currentPos
     const maxRow = tableData.rows.length - 1
     const maxCol = tableData.headers.length - 1
+    // 列ヘッダーOFF時は0行目（内部的にはrow=-1）まで移動可能
+    const minRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
 
     // Smart navigation with Ctrl key
     if (ctrlKey) {
@@ -158,7 +162,7 @@ export function useKeyboardNavigation({
 
     switch (direction) {
       case 'up':
-        return { row: Math.max(0, row - 1), col }
+        return { row: Math.max(minRow, row - 1), col }
       case 'down':
         return { row: Math.min(maxRow, row + 1), col }
       case 'left':
@@ -168,7 +172,7 @@ export function useKeyboardNavigation({
       default:
         return currentPos
     }
-  }, [tableData, getSmartNavigationPosition])
+  }, [tableData, getSmartNavigationPosition, headerConfig])
 
   // Tab/Shift+Tabナビゲーション
   const getTabNextPosition = useCallback((
@@ -178,12 +182,14 @@ export function useKeyboardNavigation({
     const { row, col } = currentPos
     const maxRow = tableData.rows.length - 1
     const maxCol = tableData.headers.length - 1
+    // 列ヘッダーOFF時は0行目（内部的にはrow=-1）が最上行
+    const minRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
 
     if (shiftKey) {
       // Shift+Tab: 前のセルへ
       if (col > 0) {
         return { row, col: col - 1 }
-      } else if (row > 0) {
+      } else if (row > minRow) {
         return { row: row - 1, col: maxCol }
       } else {
         return { row: maxRow, col: maxCol }
@@ -195,10 +201,10 @@ export function useKeyboardNavigation({
       } else if (row < maxRow) {
         return { row: row + 1, col: 0 }
       } else {
-        return { row: 0, col: 0 }
+        return { row: minRow, col: 0 }
       }
     }
-  }, [tableData])
+  }, [tableData, headerConfig])
 
   // キーボードイベントハンドラー
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
@@ -320,10 +326,12 @@ export function useKeyboardNavigation({
 
       case 'Home': {
         event.preventDefault()
+        // 列ヘッダーOFF時は0行目（内部的にはrow=-1）が最上行
+        const topRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
         if (cmdKey) {
           // Ctrl+Home: Top-left corner
-          onCellSelect(0, 0, false)
-          setTimeout(() => scrollCellIntoView(0, 0), 0)
+          onCellSelect(topRow, 0, false)
+          setTimeout(() => scrollCellIntoView(topRow, 0), 0)
         } else {
           // Home: Start of row
           onCellSelect(currentPos.row, 0, false)
@@ -351,7 +359,9 @@ export function useKeyboardNavigation({
 
       case 'PageUp': {
         event.preventDefault()
-        const nextRow = Math.max(0, currentPos.row - 10)
+        // 列ヘッダーOFF時は0行目（内部的にはrow=-1）が最上行
+        const minRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
+        const nextRow = Math.max(minRow, currentPos.row - 10)
         onCellSelect(nextRow, currentPos.col, false)
   setTimeout(() => scrollCellIntoView(nextRow, currentPos.col), 0)
         break
@@ -375,6 +385,8 @@ export function useKeyboardNavigation({
 
       case 'Enter': {
         event.preventDefault()
+        // 列ヘッダーOFF時は0行目（内部的にはrow=-1）が最上行
+        const minRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
         if (shiftKey) {
           // Shift+Enter: 上のセルへ移動
           const nextPos = getNextCellPosition(currentPos, 'up')
@@ -382,7 +394,7 @@ export function useKeyboardNavigation({
           setTimeout(() => scrollCellIntoView(nextPos.row, nextPos.col), 0)
         } else {
           // Enter: 編集開始
-          if (currentPos.row >= 0) {
+          if (currentPos.row >= minRow) {
             onCellEdit(currentPos)
             setTimeout(() => scrollCellIntoView(currentPos.row, currentPos.col), 0)
           }
@@ -392,7 +404,9 @@ export function useKeyboardNavigation({
 
       case 'F2': {
         event.preventDefault()
-        if (currentPos.row >= 0) {
+        // 列ヘッダーOFF時は0行目（内部的にはrow=-1）が最上行
+        const minRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
+        if (currentPos.row >= minRow) {
           onCellEdit(currentPos)
         }
         break
@@ -449,7 +463,9 @@ export function useKeyboardNavigation({
 
       default:
         // 文字キーが押された場合は編集開始
-        if (key.length === 1 && !cmdKey && currentPos.row >= 0) {
+        // 列ヘッダーOFF時は0行目（内部的にはrow=-1）が最上行
+        const minRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
+        if (key.length === 1 && !cmdKey && currentPos.row >= minRow) {
           onCellEdit(currentPos)
         }
         break
@@ -470,7 +486,8 @@ export function useKeyboardNavigation({
     onSelectAll,
     onSetSelectionAnchor,
     onUndo,
-    onRedo
+    onRedo,
+    headerConfig
   ])
 
   // キーアップイベントハンドラー（Shiftキーのクリア用）
