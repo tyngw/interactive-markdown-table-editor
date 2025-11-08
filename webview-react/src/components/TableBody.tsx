@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { EditorState, CellPosition, HeaderConfig } from '../types'
 import { processCellContent, processCellContentForEditing, processCellContentForStorage } from '../utils/contentConverter'
 import CellEditor from './CellEditor'
@@ -21,6 +21,7 @@ interface TableBodyProps {
   selectedRows?: Set<number>
   fillRange?: { start: CellPosition; end: CellPosition } | null
   onFillHandleMouseDown?: (event: React.MouseEvent) => void
+  onRowResize?: (row: number, height: number) => void
   headerConfig?: HeaderConfig
 }
 
@@ -39,9 +40,11 @@ const TableBody: React.FC<TableBodyProps> = ({
   selectedRows,
   fillRange,
   onFillHandleMouseDown,
+  onRowResize,
   headerConfig
 }) => {
   const savedHeightsRef = useRef<Map<string, { original: number; rowMax: number }>>(new Map())
+  const [resizingRow, setResizingRow] = useState<{ row: number; startY: number; startHeight: number } | null>(null)
 
   const handleCellMouseDown = useCallback((row: number, col: number, event: React.MouseEvent) => {
     if ((event.target as HTMLElement).classList.contains('cell-input')) {
@@ -58,6 +61,43 @@ const TableBody: React.FC<TableBodyProps> = ({
       onShowRowContextMenu(e, rowIndex)
     }
   }, [onShowRowContextMenu])
+
+  // 行リサイズ開始
+  const handleRowResizeStart = useCallback((e: React.MouseEvent, row: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startHeight = editorState.rowHeights[row] || 32
+    setResizingRow({ row, startY, startHeight })
+  }, [editorState.rowHeights])
+
+  // 行リサイズ中
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!resizingRow) return
+
+    const deltaY = e.clientY - resizingRow.startY
+    const newHeight = Math.max(24, resizingRow.startHeight + deltaY)
+    if (onRowResize) {
+      onRowResize(resizingRow.row, newHeight)
+    }
+  }, [resizingRow, onRowResize])
+
+  // 行リサイズ終了
+  const handleMouseUp = useCallback(() => {
+    setResizingRow(null)
+  }, [])
+
+  // リサイズイベントリスナーの設定
+  useEffect(() => {
+    if (resizingRow) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [resizingRow, handleMouseMove, handleMouseUp])
 
   // 列記号はユーティリティから提供
 
@@ -461,8 +501,10 @@ const TableBody: React.FC<TableBodyProps> = ({
         const rowHeaderValue = headerConfig?.hasRowHeaders ? (row[0] || '') : ''
         // hasColumnHeaders が false の場合、表示行番号を +1 する
         const displayRowNumber = headerConfig?.hasColumnHeaders === false ? rowIndex + 1 : rowIndex + 1
+        const storedHeight = editorState.rowHeights[rowIndex]
+        const rowStyle = storedHeight ? { height: `${storedHeight}px`, minHeight: `${storedHeight}px` } : {}
         return (
-        <tr key={rowIndex} data-row={rowIndex}>
+        <tr key={rowIndex} data-row={rowIndex} style={rowStyle}>
           <td
             className={`row-number ${selectedRows?.has(rowIndex) ? 'highlighted' : ''} ${headerConfig?.hasRowHeaders ? 'row-header-with-value' : ''}`}
             onClick={(e) => {
@@ -488,6 +530,10 @@ const TableBody: React.FC<TableBodyProps> = ({
             ) : (
               displayRowNumber
             )}
+            <div
+              className="resize-handle-row"
+              onMouseDown={(e) => handleRowResizeStart(e, rowIndex)}
+            />
           </td>
 
           {row.map((cell, colIndex) => {

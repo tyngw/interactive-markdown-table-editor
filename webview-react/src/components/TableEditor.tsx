@@ -408,6 +408,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
             selectedRows={selectedRows}
             fillRange={fillRange}
             onFillHandleMouseDown={handleFillHandleMouseDown}
+            onRowResize={setRowHeight}
             headerConfig={editorState.headerConfig}
           />
         </table>
