@@ -408,7 +408,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                 id={cellId}
                 data-row={-1}
                 data-col={colIndex}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
+                className={`header-row-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
                 style={widthStyle}
                 onMouseDown={(e) => handleCellMouseDown(-1, colIndex, e)}
                 onDoubleClick={() => startCellEdit(-1, colIndex)}
