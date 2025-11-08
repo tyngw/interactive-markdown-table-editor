@@ -394,6 +394,13 @@ export class ExtensionCommunicationManager {
   }
 
   /**
+   * フォント設定適用の送信
+   */
+  public applyFontSettings(fontFamily?: string, fontSize?: number): void {
+    this.sendNotification(ExtensionCommand.APPLY_FONT_SETTINGS, { fontFamily, fontSize });
+  }
+
+  /**
    * 操作成功通知の送信
    */
   public sendOperationSuccess(message: string, data?: any): void {

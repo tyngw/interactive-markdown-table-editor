@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { TableData, CellPosition, ColumnWidths, EditorState, SortState, HeaderConfig } from '../types'
+import { TableData, CellPosition, ColumnWidths, RowHeights, EditorState, SortState, HeaderConfig } from '../types'
 import { useSelection } from './useSelection'
 import { useSort } from './useSort'
 
@@ -16,6 +16,7 @@ export function useTableEditor(
   const [tableData, setTableData] = useState<TableData>(initialData)
   const [currentEditingCell, setCurrentEditingCell] = useState<CellPosition | null>(null)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
+  const [rowHeights, setRowHeights] = useState<RowHeights>({})
   const [internalHeaderConfig, setInternalHeaderConfig] = useState<HeaderConfig>(
     (initialData as any).headerConfig || {
       hasColumnHeaders: true,  // デフォルトで列ヘッダーあり
@@ -158,7 +159,9 @@ export function useTableEditor(
 
     setTableData(initialData)
     setCurrentEditingCell(null)
-    setColumnWidths({})
+    // Don't reset column widths and row heights to preserve them across table updates
+    // setColumnWidths({})
+    // setRowHeights({})
 
     if (wasInternal) {
       console.log('[MTE][useTableEditor] Skipping sort reset and selection initialization due to internal or echo update')
@@ -329,6 +332,10 @@ export function useTableEditor(
     setColumnWidths(prev => ({ ...prev, [col]: width }))
   }, [])
 
+  const setRowHeight = useCallback((row: number, height: number) => {
+    setRowHeights(prev => ({ ...prev, [row]: height }))
+  }, [])
+
   const commitSort = useCallback(() => {
     markInternalUpdate()
     setTableData(displayedData)
@@ -363,11 +370,12 @@ export function useTableEditor(
       isSelecting: selection.selectionState.isSelecting,
       sortState: safeSortState,
       columnWidths,
+      rowHeights,
       headerConfig
     }
     console.log('🔍 [useTableEditor] Built editorState:', state)
     return state
-  }, [currentEditingCell, selection.selectionState, sortState, columnWidths, headerConfig])
+  }, [currentEditingCell, selection.selectionState, sortState, columnWidths, rowHeights, headerConfig])
 
   return {
   // Display用のデータ（ソート適用後）
@@ -392,6 +400,7 @@ export function useTableEditor(
     setCurrentEditingCell,
     setSelectionAnchor: selection.setSelectionAnchor,
     setColumnWidth,
+    setRowHeight,
     moveRow,
     moveColumn,
     sortColumn,

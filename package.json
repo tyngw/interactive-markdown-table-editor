@@ -66,6 +66,18 @@
           "type": "string",
           "default": "inherit",
           "markdownDescription": "Table Editor のテーマ。`inherit` で VS Code の現在のテーマに追従。その他は 'extensionId:path' 形式のテーマID。コマンド 'Markdown Table Editor: Select Table Editor Theme' から選択できます。"
+        },
+        "markdownTableEditor.fontFamily": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "テーブルエディターで使用するフォントファミリー。空の場合は VS Code のエディターフォント設定を使用します。"
+        },
+        "markdownTableEditor.fontSize": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 100,
+          "markdownDescription": "テーブルエディターで使用するフォントサイズ（px）。0の場合は VS Code のエディターフォントサイズ設定を使用します。"
         }
       }
     }

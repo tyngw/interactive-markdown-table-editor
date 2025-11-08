@@ -584,6 +584,7 @@ export class WebviewManager {
                     this.refreshPanelData(e.webviewPanel, vscode.Uri.parse(currentPanelId.replace(/_\d{13,}$/, '')));
                     // Ensure theme is applied when panel becomes active
                     this.applyThemeToPanel(e.webviewPanel);
+                    this.applyFontSettingsToPanel(e.webviewPanel);
                 }
             } else {
                 const currentPanelId = this.findPanelId(e.webviewPanel);
@@ -605,6 +606,7 @@ export class WebviewManager {
             this.updateTableData(panel, tableData, uri);
             // Apply theme shortly after data is sent to avoid race with script init
             this.applyThemeToPanel(panel);
+            this.applyFontSettingsToPanel(panel);
 
             // Send a second update after another delay to ensure it's received
             setTimeout(() => {
@@ -612,6 +614,7 @@ export class WebviewManager {
                 this.updateTableData(panel, tableData, uri);
                 // Re-apply theme again to cover late-initialized listeners
                 this.applyThemeToPanel(panel);
+                this.applyFontSettingsToPanel(panel);
             }, 1000);
         }, 500);
 
@@ -1209,6 +1212,26 @@ export class WebviewManager {
             }
         } catch (error) {
             console.warn('WebviewManager: Failed to apply theme to panel:', error);
+        }
+    }
+
+    /**
+     * Apply current configured font settings to a specific panel
+     */
+    private async applyFontSettingsToPanel(panel: vscode.WebviewPanel): Promise<void> {
+        try {
+            const config = vscode.workspace.getConfiguration('markdownTableEditor');
+            const fontFamily = config.get<string>('fontFamily', '');
+            const fontSize = config.get<number>('fontSize', 0);
+            const panelId = this.findPanelId(panel);
+            const commManager = this.communicationManagers.get(panelId);
+            if (commManager) {
+                commManager.applyFontSettings(fontFamily, fontSize);
+            } else {
+                console.warn('[MTE][Ext] Communication manager not found for applyFontSettingsToPanel');
+            }
+        } catch (error) {
+            console.warn('WebviewManager: Failed to apply font settings to panel:', error);
         }
     }
 

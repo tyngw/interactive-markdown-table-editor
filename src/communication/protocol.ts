@@ -74,6 +74,7 @@ export enum ExtensionCommand {
   UPDATE_TABLE_DATA = 'updateTableData',
   SET_ACTIVE_TABLE = 'setActiveTable',
   APPLY_THEME_VARIABLES = 'applyThemeVariables',
+  APPLY_FONT_SETTINGS = 'applyFontSettings',
   CELL_UPDATE_ERROR = 'cellUpdateError',
   HEADER_UPDATE_ERROR = 'headerUpdateError',
   OPERATION_SUCCESS = 'operationSuccess',
@@ -182,6 +183,11 @@ export interface SyncStateData {
     fileName: string;
     fileNameWithoutExt: string;
   };
+}
+
+export interface FontSettings {
+  fontFamily?: string;
+  fontSize?: number;
 }
 
 // エラーコード
