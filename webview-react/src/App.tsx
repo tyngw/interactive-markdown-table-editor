@@ -16,6 +16,7 @@ function AppContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [themeRequested, setThemeRequested] = useState(false)
+  const [fontSettings, setFontSettings] = useState<{ fontFamily?: string; fontSize?: number }>({})
   // テーブルごとのソート状態を上位で管理
   const [sortStates, setSortStates] = useState<SortState[]>([])
   const { theme, isLoaded, applyThemeVariables } = useTheme()
@@ -129,6 +130,15 @@ function AppContent() {
       // Theme variables logging disabled for production
       applyThemeVariables(data)
     },
+    onFontSettings: (data: any) => {
+      console.log('[MTE][React] onFontSettings received', data)
+      if (data && (data.fontFamily || data.fontSize)) {
+        setFontSettings({
+          fontFamily: data.fontFamily,
+          fontSize: data.fontSize
+        })
+      }
+    },
     onSetActiveTable: (index: number) => {
       // Immediately update the index to avoid flicker
       if (index !== currentIndexRef.current) {
@@ -199,8 +209,23 @@ function AppContent() {
   }, [currentTableIndex])
 
   useEffect(() => {
-    // Table count tracking disabled for production  
+    // Table count tracking disabled for production
   }, [allTables.length])
+
+  // Apply font settings to CSS custom properties
+  useEffect(() => {
+    const root = document.documentElement
+    if (fontSettings.fontFamily) {
+      root.style.setProperty('--mte-font-family', fontSettings.fontFamily)
+    } else {
+      root.style.removeProperty('--mte-font-family')
+    }
+    if (fontSettings.fontSize && fontSettings.fontSize > 0) {
+      root.style.setProperty('--mte-font-size', `${fontSettings.fontSize}px`)
+    } else {
+      root.style.removeProperty('--mte-font-size')
+    }
+  }, [fontSettings])
 
   // onTableUpdateコールバックを安定化して無限ループを防ぐ
   const handleTableUpdate = useCallback((updatedData: TableData) => {

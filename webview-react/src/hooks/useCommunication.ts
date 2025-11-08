@@ -13,11 +13,12 @@ interface CommunicationCallbacks {
   onError?: (error: string) => void;
   onSuccess?: (message: string) => void;
   onThemeVariables?: (data: any) => void;
+  onFontSettings?: (data: any) => void;
   onSetActiveTable?: (index: number) => void;
 }
 
 export function useCommunication(callbacks: CommunicationCallbacks) {
-  const { onTableData, onError, onSuccess, onThemeVariables, onSetActiveTable } = callbacks;
+  const { onTableData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable } = callbacks;
   const commManagerRef = useRef<WebviewCommunicationManager | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -55,6 +56,13 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
       console.log('[useCommunication] Received theme variables:', data);
       if (onThemeVariables) {
         onThemeVariables(data);
+      }
+    });
+
+    manager.registerNotificationHandler(ExtensionCommand.APPLY_FONT_SETTINGS, (data) => {
+      console.log('[useCommunication] Received font settings:', data);
+      if (onFontSettings) {
+        onFontSettings(data);
       }
     });
 
@@ -115,7 +123,7 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
       manager.dispose();
       commManagerRef.current = null;
     };
-  }, [onTableData, onError, onSuccess, onThemeVariables, onSetActiveTable]);
+  }, [onTableData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable]);
 
   // メッセージ送信用のメソッド（旧形式との互換性を保つ）
   const sendMessage = useCallback((commandOrMessage: string | { command: string; data?: any }, data?: any) => {

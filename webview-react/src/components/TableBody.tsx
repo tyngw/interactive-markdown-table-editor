@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { EditorState, CellPosition, HeaderConfig } from '../types'
 import { processCellContent, processCellContentForEditing, processCellContentForStorage } from '../utils/contentConverter'
 import CellEditor from './CellEditor'
@@ -415,7 +415,10 @@ const TableBody: React.FC<TableBodyProps> = ({
                   ...widthStyle,
                   ...(isEditing
                     ? {
-                        minHeight: (savedHeightsRef.current.get(`-1-${colIndex}`)?.rowMax || 32) + 'px'
+                        // 編集時はmaxHeightを解除して自由に拡張できるようにする
+                        minHeight: (savedHeightsRef.current.get(`-1-${colIndex}`)?.rowMax || 32) + 'px',
+                        height: 'auto',
+                        maxHeight: 'none'
                       }
                     : {})
                 }}
@@ -508,11 +511,11 @@ const TableBody: React.FC<TableBodyProps> = ({
               minWidth: `${storedWidth}px`,
               maxWidth: `${storedWidth}px`
             }
-            
+
             const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
-            
+
             return (
-              <td 
+              <td
                 key={colIndex}
                 id={cellId}
                 className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
@@ -524,9 +527,10 @@ const TableBody: React.FC<TableBodyProps> = ({
                   ...widthStyle,
                   ...(isEditing
                     ? {
-                        // startCellEdit で事前に style.minHeight を同期済みだが、
-                        // SSR/JSDOM 環境や初回描画でも確実に適用されるよう二重化
-                        minHeight: (savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax || 32) + 'px'
+                        // 編集時はmaxHeightを解除して自由に拡張できるようにする
+                        minHeight: (savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax || 32) + 'px',
+                        height: 'auto',
+                        maxHeight: 'none'
                       }
                     : {})
                 }}

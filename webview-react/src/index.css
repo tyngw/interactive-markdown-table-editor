@@ -103,8 +103,8 @@ body {
 }
 
 body {
-    font-family: var(--vscode-editor-font-family, var(--vscode-font-family, 'Consolas', 'Monaco', 'Courier New', monospace));
-    font-size: var(--vscode-editor-font-size, var(--vscode-font-size, 14px));
+    font-family: var(--mte-font-family, var(--vscode-editor-font-family, var(--vscode-font-family, 'Consolas', 'Monaco', 'Courier New', monospace)));
+    font-size: var(--mte-font-size, var(--vscode-editor-font-size, var(--vscode-font-size, 14px)));
     color: var(--vscode-editor-foreground, var(--vscode-foreground, #333333));
     background-color: var(--vscode-editor-background);
     padding: 0;
@@ -220,8 +220,8 @@ body {
     border-spacing: 0;
     width: auto;
     min-width: 600px;
-    font-family: var(--vscode-editor-font-family, var(--vscode-font-family, 'Consolas', 'Monaco', 'Courier New', monospace));
-    font-size: var(--vscode-editor-font-size, var(--vscode-font-size, 14px));
+    font-family: var(--mte-font-family, var(--vscode-editor-font-family, var(--vscode-font-family, 'Consolas', 'Monaco', 'Courier New', monospace)));
+    font-size: var(--mte-font-size, var(--vscode-editor-font-size, var(--vscode-font-size, 14px)));
     color: var(--vscode-editor-foreground, var(--vscode-foreground, #333333));
     table-layout: fixed;
     display: table;
@@ -443,6 +443,7 @@ body {
     user-select: none;
     color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
     cursor: pointer;
+    /* Sticky position with relative context for resize handle */
     position: sticky !important;
     left: 0 !important;
     /* Lower than both header corner (1000) and regular headers (50) */
@@ -691,8 +692,8 @@ textarea.cell-input[data-multiline="true"] {
 .resize-handle {
     position: absolute;
     top: 0;
-    right: -2px;
-    width: 6px;
+    right: -4px;
+    width: 8px;
     height: 100%;
     cursor: col-resize;
     background-color: transparent;
@@ -714,9 +715,7 @@ textarea.cell-input[data-multiline="true"] {
     opacity: 0.9;
 }
 
-.user-resized {
-    border-right: 2px solid var(--vscode-focusBorder) !important;
-}
+/* Removed blue border after resize - users found it distracting */
 
 /* ====== 10. ソート機能 ====== */
 .sort-indicator {

@@ -158,7 +158,9 @@ export function useTableEditor(
 
     setTableData(initialData)
     setCurrentEditingCell(null)
-    setColumnWidths({})
+    // Don't reset column widths and row heights to preserve them across table updates
+    // setColumnWidths({})
+    // setRowHeights({})
 
     if (wasInternal) {
       console.log('[MTE][useTableEditor] Skipping sort reset and selection initialization due to internal or echo update')

@@ -77,6 +77,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     setCurrentEditingCell,
     setSelectionAnchor,
     setColumnWidth,
+    setRowHeight,
     sortColumn,
     moveRow,
     moveColumn,
