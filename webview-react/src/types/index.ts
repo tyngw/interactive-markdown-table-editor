@@ -56,11 +56,6 @@ export interface ColumnWidths {
   [columnIndex: number]: number
 }
 
-// 行高さ設定
-export interface RowHeights {
-  [rowIndex: number]: number
-}
-
 // エディタ状態
 export interface EditorState {
   currentEditingCell: CellPosition | null
@@ -69,6 +64,5 @@ export interface EditorState {
   isSelecting: boolean
   sortState: SortState
   columnWidths: ColumnWidths
-  rowHeights: RowHeights
   headerConfig: HeaderConfig
 }

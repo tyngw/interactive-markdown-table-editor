@@ -512,15 +512,6 @@ body {
     color: var(--vscode-editor-foreground, var(--vscode-foreground, #333333));
 }
 
-/* Height-constrained cells: when row height is manually resized */
-.data-cell.height-resized .cell-content {
-    height: 100%;
-    max-height: 100%;
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-}
-
 .empty-cell {
     color: var(--vscode-descriptionForeground);
     font-style: italic;
@@ -714,30 +705,12 @@ textarea.cell-input[data-multiline="true"] {
     -ms-user-select: none;
 }
 
-.resize-handle-row {
-    position: absolute;
-    bottom: -4px;
-    left: 0;
-    width: 100%;
-    height: 8px;
-    cursor: row-resize;
-    background-color: transparent;
-    z-index: 10;
-    border-radius: 2px;
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-}
-
-.resize-handle:hover,
-.resize-handle-row:hover {
+.resize-handle:hover {
     background-color: var(--vscode-focusBorder);
     opacity: 0.7;
 }
 
-.resize-handle:active,
-.resize-handle-row:active {
+.resize-handle:active {
     background-color: var(--vscode-focusBorder);
     opacity: 0.9;
 }

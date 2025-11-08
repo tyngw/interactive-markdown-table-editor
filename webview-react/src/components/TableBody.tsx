@@ -21,7 +21,6 @@ interface TableBodyProps {
   selectedRows?: Set<number>
   fillRange?: { start: CellPosition; end: CellPosition } | null
   onFillHandleMouseDown?: (event: React.MouseEvent) => void
-  onRowResize?: (row: number, height: number) => void
   headerConfig?: HeaderConfig
 }
 
@@ -40,11 +39,9 @@ const TableBody: React.FC<TableBodyProps> = ({
   selectedRows,
   fillRange,
   onFillHandleMouseDown,
-  onRowResize,
   headerConfig
 }) => {
   const savedHeightsRef = useRef<Map<string, { original: number; rowMax: number }>>(new Map())
-  const [resizingRow, setResizingRow] = useState<{ row: number; startY: number; startHeight: number } | null>(null)
 
   const handleCellMouseDown = useCallback((row: number, col: number, event: React.MouseEvent) => {
     if ((event.target as HTMLElement).classList.contains('cell-input')) {
@@ -61,68 +58,6 @@ const TableBody: React.FC<TableBodyProps> = ({
       onShowRowContextMenu(e, rowIndex)
     }
   }, [onShowRowContextMenu])
-
-  // 行リサイズ開始
-  const handleRowResizeStart = useCallback((e: React.MouseEvent, row: number) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const startY = e.clientY
-
-    // Get actual row height from DOM to ensure immediate response to mouse movement
-    let actualHeight = editorState.rowHeights[row] || 32
-    try {
-      const rowElement = document.querySelector(`tr[data-row="${row}"]`)
-      if (rowElement instanceof HTMLElement) {
-        // Use offsetHeight as it includes padding and borders
-        const measuredHeight = rowElement.offsetHeight
-        if (measuredHeight && measuredHeight > 0) {
-          actualHeight = measuredHeight
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to get actual row height, using stored/default value', error)
-    }
-
-    setResizingRow({ row, startY, startHeight: actualHeight })
-  }, [editorState.rowHeights])
-
-  // 行リサイズ中
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!resizingRow) return
-
-    const deltaY = e.clientY - resizingRow.startY
-    const newHeight = Math.max(24, resizingRow.startHeight + deltaY)
-    if (onRowResize) {
-      onRowResize(resizingRow.row, newHeight)
-    }
-  }, [resizingRow, onRowResize])
-
-  // 行リサイズ終了
-  const handleMouseUp = useCallback(() => {
-    setResizingRow(null)
-  }, [])
-
-  // リサイズイベントリスナーの設定
-  useEffect(() => {
-    if (resizingRow) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-      }
-    }
-  }, [resizingRow, handleMouseMove, handleMouseUp])
-
-  // 行リサイズハンドルのダブルクリック（高さを自動調整）
-  const handleRowResizeDoubleClick = useCallback((e: React.MouseEvent, row: number) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (onRowResize) {
-      // 高さを削除してauto-fitに戻す
-      onRowResize(row, 0)
-    }
-  }, [onRowResize])
 
   // 列記号はユーティリティから提供
 
@@ -439,11 +374,6 @@ const TableBody: React.FC<TableBodyProps> = ({
         <tr key={-1} data-row={-1}>
           <td
             className="row-number"
-            style={editorState.rowHeights[-1] ? {
-              height: `${editorState.rowHeights[-1]}px`,
-              minHeight: `${editorState.rowHeights[-1]}px`,
-              maxHeight: `${editorState.rowHeights[-1]}px`
-            } : { minHeight: '24px' }}
             onClick={(e) => {
               if (onRowSelect) {
                 onRowSelect(-1, e)
@@ -452,12 +382,6 @@ const TableBody: React.FC<TableBodyProps> = ({
             title="Row 0"
           >
             0
-            <div
-              className="resize-handle-row"
-              onMouseDown={(e) => handleRowResizeStart(e, -1)}
-              onDoubleClick={(e) => handleRowResizeDoubleClick(e, -1)}
-              title="ダブルクリックで自動調整"
-            />
           </td>
           {headers.map((header, colIndex) => {
             // 行ヘッダーONの場合、先頭列をスキップ
@@ -468,7 +392,6 @@ const TableBody: React.FC<TableBodyProps> = ({
             const isEmpty = !header || header.trim() === ''
             const cellClass = isEmpty ? 'empty-cell' : ''
             const storedWidth = editorState.columnWidths[colIndex] || 150
-            const storedHeight = editorState.rowHeights[-1]
             const isEditing = isCellEditing(-1, colIndex)
             const isSelected = isCellSelected(-1, colIndex)
             const isInFillRange = isCellInFillRange(-1, colIndex)
@@ -478,14 +401,8 @@ const TableBody: React.FC<TableBodyProps> = ({
               minWidth: `${storedWidth}px`,
               maxWidth: `${storedWidth}px`
             }
-            const heightStyle = storedHeight ? {
-              height: `${storedHeight}px`,
-              minHeight: `${storedHeight}px`,
-              maxHeight: `${storedHeight}px`
-            } : { minHeight: '24px' }
 
             const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
-            const heightResizedClass = storedHeight ? 'height-resized' : ''
 
             return (
               <td
@@ -493,17 +410,17 @@ const TableBody: React.FC<TableBodyProps> = ({
                 id={cellId}
                 data-row={-1}
                 data-col={colIndex}
-                className={`data-cell ${cellClass} ${userResizedClass} ${heightResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
                 style={{
                   ...widthStyle,
                   ...(isEditing
                     ? {
                         // 編集時はmaxHeightを解除して自由に拡張できるようにする
-                        minHeight: (savedHeightsRef.current.get(`-1-${colIndex}`)?.rowMax || storedHeight || 32) + 'px',
+                        minHeight: (savedHeightsRef.current.get(`-1-${colIndex}`)?.rowMax || 32) + 'px',
                         height: 'auto',
                         maxHeight: 'none'
                       }
-                    : heightStyle)
+                    : {})
                 }}
                 onMouseDown={(e) => handleCellMouseDown(-1, colIndex, e)}
                 onDoubleClick={() => startCellEdit(-1, colIndex)}
@@ -547,17 +464,10 @@ const TableBody: React.FC<TableBodyProps> = ({
         const rowHeaderValue = headerConfig?.hasRowHeaders ? (row[0] || '') : ''
         // hasColumnHeaders が false の場合、表示行番号を +1 する
         const displayRowNumber = headerConfig?.hasColumnHeaders === false ? rowIndex + 1 : rowIndex + 1
-        const storedHeight = editorState.rowHeights[rowIndex]
-        const cellHeightStyle = storedHeight ? {
-          height: `${storedHeight}px`,
-          minHeight: `${storedHeight}px`,
-          maxHeight: `${storedHeight}px`
-        } : { minHeight: '24px' }
         return (
         <tr key={rowIndex} data-row={rowIndex}>
           <td
             className={`row-number ${selectedRows?.has(rowIndex) ? 'highlighted' : ''} ${headerConfig?.hasRowHeaders ? 'row-header-with-value' : ''}`}
-            style={cellHeightStyle}
             onClick={(e) => {
               if (onRowSelect) {
                 onRowSelect(rowIndex, e)
@@ -581,12 +491,6 @@ const TableBody: React.FC<TableBodyProps> = ({
             ) : (
               displayRowNumber
             )}
-            <div
-              className="resize-handle-row"
-              onMouseDown={(e) => handleRowResizeStart(e, rowIndex)}
-              onDoubleClick={(e) => handleRowResizeDoubleClick(e, rowIndex)}
-              title="ダブルクリックで自動調整"
-            />
           </td>
 
           {row.map((cell, colIndex) => {
@@ -609,13 +513,12 @@ const TableBody: React.FC<TableBodyProps> = ({
             }
 
             const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
-            const heightResizedClass = storedHeight ? 'height-resized' : ''
 
             return (
               <td
                 key={colIndex}
                 id={cellId}
-                className={`data-cell ${cellClass} ${userResizedClass} ${heightResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
                 onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                 onDoubleClick={() => startCellEdit(rowIndex, colIndex)}
                 data-row={rowIndex}
@@ -625,11 +528,11 @@ const TableBody: React.FC<TableBodyProps> = ({
                   ...(isEditing
                     ? {
                         // 編集時はmaxHeightを解除して自由に拡張できるようにする
-                        minHeight: (savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax || storedHeight || 32) + 'px',
+                        minHeight: (savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax || 32) + 'px',
                         height: 'auto',
                         maxHeight: 'none'
                       }
-                    : cellHeightStyle)
+                    : {})
                 }}
                 title={`Cell ${getColumnLetter(colIndex)}${rowIndex + 1}`}
               >

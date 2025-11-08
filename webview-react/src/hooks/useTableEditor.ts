@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { TableData, CellPosition, ColumnWidths, RowHeights, EditorState, SortState, HeaderConfig } from '../types'
+import { TableData, CellPosition, ColumnWidths, EditorState, SortState, HeaderConfig } from '../types'
 import { useSelection } from './useSelection'
 import { useSort } from './useSort'
 
@@ -16,7 +16,6 @@ export function useTableEditor(
   const [tableData, setTableData] = useState<TableData>(initialData)
   const [currentEditingCell, setCurrentEditingCell] = useState<CellPosition | null>(null)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
-  const [rowHeights, setRowHeights] = useState<RowHeights>({})
   const [internalHeaderConfig, setInternalHeaderConfig] = useState<HeaderConfig>(
     (initialData as any).headerConfig || {
       hasColumnHeaders: true,  // デフォルトで列ヘッダーあり
@@ -332,19 +331,6 @@ export function useTableEditor(
     setColumnWidths(prev => ({ ...prev, [col]: width }))
   }, [])
 
-  const setRowHeight = useCallback((row: number, height: number) => {
-    setRowHeights(prev => {
-      const next = { ...prev }
-      if (height === 0) {
-        // 高さが0の場合は削除（auto-fitに戻す）
-        delete next[row]
-      } else {
-        next[row] = height
-      }
-      return next
-    })
-  }, [])
-
   const commitSort = useCallback(() => {
     markInternalUpdate()
     setTableData(displayedData)
@@ -379,12 +365,11 @@ export function useTableEditor(
       isSelecting: selection.selectionState.isSelecting,
       sortState: safeSortState,
       columnWidths,
-      rowHeights,
       headerConfig
     }
     console.log('🔍 [useTableEditor] Built editorState:', state)
     return state
-  }, [currentEditingCell, selection.selectionState, sortState, columnWidths, rowHeights, headerConfig])
+  }, [currentEditingCell, selection.selectionState, sortState, columnWidths, headerConfig])
 
   return {
   // Display用のデータ（ソート適用後）
@@ -409,7 +394,6 @@ export function useTableEditor(
     setCurrentEditingCell,
     setSelectionAnchor: selection.setSelectionAnchor,
     setColumnWidth,
-    setRowHeight,
     moveRow,
     moveColumn,
     sortColumn,
