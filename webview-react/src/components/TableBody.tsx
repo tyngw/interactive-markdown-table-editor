@@ -414,6 +414,7 @@ const TableBody: React.FC<TableBodyProps> = ({
         <tr key={-1} data-row={-1}>
           <td
             className="row-number"
+            style={editorState.rowHeights[-1] ? { height: `${editorState.rowHeights[-1]}px`, minHeight: `${editorState.rowHeights[-1]}px` } : {}}
             onClick={(e) => {
               if (onRowSelect) {
                 onRowSelect(-1, e)
@@ -422,6 +423,10 @@ const TableBody: React.FC<TableBodyProps> = ({
             title="Row 0"
           >
             0
+            <div
+              className="resize-handle-row"
+              onMouseDown={(e) => handleRowResizeStart(e, -1)}
+            />
           </td>
           {headers.map((header, colIndex) => {
             // 行ヘッダーONの場合、先頭列をスキップ
@@ -432,6 +437,7 @@ const TableBody: React.FC<TableBodyProps> = ({
             const isEmpty = !header || header.trim() === ''
             const cellClass = isEmpty ? 'empty-cell' : ''
             const storedWidth = editorState.columnWidths[colIndex] || 150
+            const storedHeight = editorState.rowHeights[-1]
             const isEditing = isCellEditing(-1, colIndex)
             const isSelected = isCellSelected(-1, colIndex)
             const isInFillRange = isCellInFillRange(-1, colIndex)
@@ -441,6 +447,7 @@ const TableBody: React.FC<TableBodyProps> = ({
               minWidth: `${storedWidth}px`,
               maxWidth: `${storedWidth}px`
             }
+            const heightStyle = storedHeight ? { height: `${storedHeight}px`, minHeight: `${storedHeight}px` } : {}
 
             const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
 
@@ -453,9 +460,10 @@ const TableBody: React.FC<TableBodyProps> = ({
                 className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
                 style={{
                   ...widthStyle,
+                  ...heightStyle,
                   ...(isEditing
                     ? {
-                        minHeight: (savedHeightsRef.current.get(`-1-${colIndex}`)?.rowMax || 32) + 'px'
+                        minHeight: (savedHeightsRef.current.get(`-1-${colIndex}`)?.rowMax || storedHeight || 32) + 'px'
                       }
                     : {})
                 }}
@@ -502,11 +510,12 @@ const TableBody: React.FC<TableBodyProps> = ({
         // hasColumnHeaders が false の場合、表示行番号を +1 する
         const displayRowNumber = headerConfig?.hasColumnHeaders === false ? rowIndex + 1 : rowIndex + 1
         const storedHeight = editorState.rowHeights[rowIndex]
-        const rowStyle = storedHeight ? { height: `${storedHeight}px`, minHeight: `${storedHeight}px` } : {}
+        const cellHeightStyle = storedHeight ? { height: `${storedHeight}px`, minHeight: `${storedHeight}px` } : {}
         return (
-        <tr key={rowIndex} data-row={rowIndex} style={rowStyle}>
+        <tr key={rowIndex} data-row={rowIndex}>
           <td
             className={`row-number ${selectedRows?.has(rowIndex) ? 'highlighted' : ''} ${headerConfig?.hasRowHeaders ? 'row-header-with-value' : ''}`}
+            style={cellHeightStyle}
             onClick={(e) => {
               if (onRowSelect) {
                 onRowSelect(rowIndex, e)
@@ -554,11 +563,11 @@ const TableBody: React.FC<TableBodyProps> = ({
               minWidth: `${storedWidth}px`,
               maxWidth: `${storedWidth}px`
             }
-            
+
             const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
-            
+
             return (
-              <td 
+              <td
                 key={colIndex}
                 id={cellId}
                 className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
@@ -568,11 +577,12 @@ const TableBody: React.FC<TableBodyProps> = ({
                 data-col={colIndex}
                 style={{
                   ...widthStyle,
+                  ...cellHeightStyle,
                   ...(isEditing
                     ? {
                         // startCellEdit で事前に style.minHeight を同期済みだが、
                         // SSR/JSDOM 環境や初回描画でも確実に適用されるよう二重化
-                        minHeight: (savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax || 32) + 'px'
+                        minHeight: (savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax || storedHeight || 32) + 'px'
                       }
                     : {})
                 }}
