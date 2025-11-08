@@ -512,6 +512,15 @@ body {
     color: var(--vscode-editor-foreground, var(--vscode-foreground, #333333));
 }
 
+/* Height-constrained cells: when row height is manually resized */
+.data-cell.height-resized .cell-content {
+    height: 100%;
+    max-height: 100%;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
 .empty-cell {
     color: var(--vscode-descriptionForeground);
     font-style: italic;

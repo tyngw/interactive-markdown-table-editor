@@ -485,6 +485,7 @@ const TableBody: React.FC<TableBodyProps> = ({
             } : { minHeight: '24px' }
 
             const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
+            const heightResizedClass = storedHeight ? 'height-resized' : ''
 
             return (
               <td
@@ -492,7 +493,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                 id={cellId}
                 data-row={-1}
                 data-col={colIndex}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${heightResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
                 style={{
                   ...widthStyle,
                   ...(isEditing
@@ -608,12 +609,13 @@ const TableBody: React.FC<TableBodyProps> = ({
             }
 
             const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
+            const heightResizedClass = storedHeight ? 'height-resized' : ''
 
             return (
               <td
                 key={colIndex}
                 id={cellId}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${heightResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
                 onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                 onDoubleClick={() => startCellEdit(rowIndex, colIndex)}
                 data-row={rowIndex}
