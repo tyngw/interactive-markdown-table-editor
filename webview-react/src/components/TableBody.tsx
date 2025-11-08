@@ -67,8 +67,23 @@ const TableBody: React.FC<TableBodyProps> = ({
     e.preventDefault()
     e.stopPropagation()
     const startY = e.clientY
-    const startHeight = editorState.rowHeights[row] || 32
-    setResizingRow({ row, startY, startHeight })
+
+    // Get actual row height from DOM to ensure immediate response to mouse movement
+    let actualHeight = editorState.rowHeights[row] || 32
+    try {
+      const rowElement = document.querySelector(`tr[data-row="${row}"]`)
+      if (rowElement instanceof HTMLElement) {
+        // Use offsetHeight as it includes padding and borders
+        const measuredHeight = rowElement.offsetHeight
+        if (measuredHeight && measuredHeight > 0) {
+          actualHeight = measuredHeight
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to get actual row height, using stored/default value', error)
+    }
+
+    setResizingRow({ row, startY, startHeight: actualHeight })
   }, [editorState.rowHeights])
 
   // 行リサイズ中
