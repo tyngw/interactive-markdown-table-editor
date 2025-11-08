@@ -4,6 +4,11 @@ interface ContextMenuState {
   position: { x: number; y: number }
 }
 
+interface HeaderConfig {
+  hasColumnHeaders: boolean
+  hasRowHeaders: boolean
+}
+
 interface ContextMenuProps {
   menuState: ContextMenuState
   onAddRow: (index?: number) => void
@@ -23,6 +28,9 @@ interface ContextMenuProps {
   onResetSort?: () => void
   onCommitSort?: () => void
   hasActiveSort?: boolean
+  headerConfig?: HeaderConfig
+  onToggleColumnHeaders?: () => void
+  onToggleRowHeaders?: () => void
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -43,7 +51,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onChangeEncoding,
   onResetSort,
   onCommitSort,
-  hasActiveSort
+  hasActiveSort,
+  headerConfig,
+  onToggleColumnHeaders,
+  onToggleRowHeaders
 }) => {
   if (!menuState.type) return null
 
@@ -181,6 +192,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           <button className="context-menu-item" onClick={() => { onImportCsv?.(); onClose(); }}>
             <span className="context-menu-icon">📥</span>
             <span className="context-menu-label">Import CSV (Auto)</span>
+          </button>
+          <div className="context-menu-separator"></div>
+          <button className="context-menu-item" onClick={() => { onToggleColumnHeaders?.(); onClose(); }}>
+            <span className="context-menu-icon">{headerConfig?.hasColumnHeaders ? '✓' : ''}</span>
+            <span className="context-menu-label">列ヘッダーを表示</span>
+          </button>
+          <button className="context-menu-item" onClick={() => { onToggleRowHeaders?.(); onClose(); }}>
+            <span className="context-menu-icon">{headerConfig?.hasRowHeaders ? '✓' : ''}</span>
+            <span className="context-menu-label">行ヘッダーを表示</span>
           </button>
           <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={() => { onResetSort?.(); onClose(); }} disabled={!hasActiveSort}>

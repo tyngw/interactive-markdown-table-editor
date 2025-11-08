@@ -7,12 +7,15 @@ import { UndoRedoManager } from './undoRedoManager';
 import { WebviewMessage } from './messages/types';
 export type { WebviewMessage } from './messages/types';
 import { validateBasicMessageStructure, validateMessageCommand, validateMessageData } from './messages/validators';
+import { ExtensionCommunicationManager } from './communication/ExtensionCommunicationManager';
+import { WebviewCommand } from './communication/protocol';
 
     // WebviewMessage 型は messages/types へ分離
 
 export class WebviewManager {
     private static instance: WebviewManager;
     private panels: Map<string, vscode.WebviewPanel> = new Map();
+    private communicationManagers: Map<string, ExtensionCommunicationManager> = new Map();
     private context: vscode.ExtensionContext;
     private connectionHealthMap: Map<string, { lastActivity: number; isHealthy: boolean }> = new Map();
     private healthCheckInterval: NodeJS.Timeout | null = null;
@@ -533,19 +536,6 @@ export class WebviewManager {
                 console.log('Final CSP fix applied');
             }
 
-            // --- Webview 起動診断スクリプトを head に挿入 ---
-            try {
-                const diagScript = `\n    <script>(function(){\n      try {\n        var _vscode = (typeof acquireVsCodeApi === 'function') ? acquireVsCodeApi() : null;\n        window.addEventListener('DOMContentLoaded', function(){\n          try { console.log('[MTE][WV] DOMContentLoaded'); _vscode && _vscode.postMessage({ command: 'diag', data: { event: 'DOMContentLoaded' } }); } catch(e) {}\n        });\n        window.addEventListener('load', function(){\n          try { console.log('[MTE][WV] load'); _vscode && _vscode.postMessage({ command: 'diag', data: { event: 'load' } }); } catch(e) {}\n        });\n        window.addEventListener('error', function(e){\n          try { _vscode && _vscode.postMessage({ command: 'webviewError', data: { message: e.message, filename: e.filename, lineno: e.lineno, colno: e.colno, stack: e.error && e.error.stack } }); } catch(_) {}\n        });\n        window.addEventListener('unhandledrejection', function(e){\n          try { var r = e && e.reason; _vscode && _vscode.postMessage({ command: 'webviewUnhandledRejection', data: { message: r && (r.message || r.toString && r.toString()), stack: r && r.stack } }); } catch(_) {}\n        });\n        console.log('[MTE][WV] diag script installed');\n        _vscode && _vscode.postMessage({ command: 'diag', data: { event: 'diag-installed' } });\n      } catch(e) { try { console.log('[MTE][WV] diag init failed', e && (e.stack || e)); } catch(_) {} }\n    })();<\/script>`;
-                if (headOpenEnd >= 0) {
-                    html = html.slice(0, headOpenEnd + 1) + diagScript + html.slice(headOpenEnd + 1);
-                } else {
-                    // 念のため先頭に挿入
-                    html = diagScript + html;
-                }
-            } catch (diagErr) {
-                console.warn('Failed to inject diagnostic script into webview HTML:', diagErr);
-            }
-            
             console.log('Using React build for webview');
             console.log('Modified HTML length:', html.length);
             console.log('Final HTML being sent to webview:', html);
@@ -570,6 +560,15 @@ export class WebviewManager {
                 if (panelRef === panel) {
                     this.panels.delete(key);
                     this.connectionHealthMap.delete(key);
+
+                    // Dispose communication manager
+                    const commMgr = this.communicationManagers.get(key);
+                    if (commMgr) {
+                        commMgr.dispose();
+                        this.communicationManagers.delete(key);
+                        console.log('[MTE][Ext] Communication manager disposed for panel:', key);
+                    }
+
                     break;
                 }
             }
@@ -592,12 +591,11 @@ export class WebviewManager {
             }
         }, null, this.context.subscriptions);
 
-        // Handle messages from webview
-        panel.webview.onDidReceiveMessage(
-            (message: WebviewMessage) => this.handleMessage(message, panel),
-            undefined,
-            this.context.subscriptions
-        );
+        // Initialize new communication manager for this panel
+        const commManager = new ExtensionCommunicationManager(panel);
+        this.communicationManagers.set(panelId, commManager);
+        this.setupCommunicationHandlers(commManager, panel, uri);
+        console.log('[MTE][Ext] Communication manager initialized for panel:', panelId);
 
         console.log('Setting up initial data timeout...');
 
@@ -625,7 +623,7 @@ export class WebviewManager {
      * Update table data in the webview
      */
     public updateTableData(panel: vscode.WebviewPanel, tableData: TableData | TableData[], uri?: vscode.Uri): void {
-    const start = Date.now();
+        const start = Date.now();
         const message: any = {
             command: 'updateTableData',
             data: tableData
@@ -645,20 +643,33 @@ export class WebviewManager {
             const tables = Array.isArray(tableData) ? tableData.length : 1;
             console.log('[MTE][Ext] Sending updateTableData', { tables, hasUri: !!uri, panelActive: panel.active, panelVisible: panel.visible });
         } catch {}
-        panel.webview.postMessage(message);
-        try {
-            console.log('[MTE][Ext] updateTableData posted in', Date.now() - start, 'ms');
-        } catch {}
+
+        // Send via new communication manager
+        const panelId = this.findPanelId(panel);
+        const commManager = this.communicationManagers.get(panelId);
+        if (commManager) {
+            try {
+                commManager.updateTableData(message);
+                console.log('[MTE][Ext] updateTableData sent via communication manager in', Date.now() - start, 'ms');
+            } catch (error) {
+                console.error('[MTE][Ext] Failed to send via communication manager:', error);
+            }
+        } else {
+            console.warn('[MTE][Ext] Communication manager not found for panel:', panelId);
+        }
     }
 
     /**
      * Set active table index in webview
      */
     public setActiveTable(panel: vscode.WebviewPanel, index: number): void {
-        panel.webview.postMessage({
-            command: 'setActiveTable',
-            data: { index }
-        });
+        const panelId = this.findPanelId(panel);
+        const commManager = this.communicationManagers.get(panelId);
+        if (commManager) {
+            commManager.setActiveTable(index);
+        } else {
+            console.warn('[MTE][Ext] Communication manager not found for setActiveTable');
+        }
     }
 
     /**
@@ -679,160 +690,38 @@ export class WebviewManager {
      * Send error message to webview
      */
     public sendError(panel: vscode.WebviewPanel, message: string): void {
-        panel.webview.postMessage({
-            command: 'error',
-            message: message
-        });
+        const panelId = this.findPanelId(panel);
+        const commManager = this.communicationManagers.get(panelId);
+        if (commManager) {
+            commManager.sendOperationError(message);
+        } else {
+            console.warn('[MTE][Ext] Communication manager not found for sendError');
+        }
     }
 
     /**
      * Send cell update error to webview for potential rollback
      */
     public sendCellUpdateError(panel: vscode.WebviewPanel, errorInfo: { row: number; col: number; error: string }): void {
-        panel.webview.postMessage({
-            command: 'cellUpdateError',
-            data: errorInfo
-        });
+        const panelId = this.findPanelId(panel);
+        const commManager = this.communicationManagers.get(panelId);
+        if (commManager) {
+            commManager.sendCellUpdateError(errorInfo.row, errorInfo.col, errorInfo.error);
+        } else {
+            console.warn('[MTE][Ext] Communication manager not found for sendCellUpdateError');
+        }
     }
 
     public sendHeaderUpdateError(panel: vscode.WebviewPanel, errorInfo: { col: number; error: string }): void {
-        panel.webview.postMessage({
-            command: 'headerUpdateError',
-            data: errorInfo
-        });
-    }
-
-    /**
-     * Handle messages from webview
-     */
-    private async handleMessage(message: WebviewMessage, panel: vscode.WebviewPanel): Promise<void> {
-        try {
-            // Mark connection as healthy when we receive a message
-            let panelId = this.findPanelId(panel);
-            const uriString = panelId.replace(/_\d{13,}$/, '');
-            const uri = vscode.Uri.parse(uriString);
-
-            // テスト環境などでパネルが登録されていない場合はURIをフォールバックキーに使用
-            if (!panelId) {
-                panelId = uri?.toString?.() || '';
-            }
-            this.markConnectionHealthy(panelId);
-
-            // Basic message structure validation
-            if (!validateBasicMessageStructure(message)) {
-                this.sendError(panel, 'Invalid message format received from webview');
-                return;
-            }
-
-            console.log(`Handling webview message: ${message.command}`, message.data);
-
-            // Validate specific message content based on command
-            if (!validateMessageCommand(message)) {
-                this.sendError(panel, `Unknown command: ${message.command}`);
-                return;
-            }
-
-            if (!validateMessageData(message)) {
-                this.sendError(panel, 'Invalid message data received from webview');
-                return;
-            }
-
-            switch (message.command) {
-                case 'requestTableData':
-                    await this.handleRequestTableData(panel, uri);
-                    break;
-
-                case 'updateCell':
-                    await this.handleCellUpdate(message.data, panel, uri);
-                    break;
-
-                case 'bulkUpdateCells':
-                    await this.handleBulkUpdateCells(message.data, panel, uri);
-                    break;
-
-                case 'updateHeader':
-                    await this.handleHeaderUpdate(message.data, panel, uri);
-                    break;
-
-                case 'addRow':
-                    await this.handleAddRow(message.data, panel, uri);
-                    break;
-
-                case 'deleteRows':
-                    await this.handleDeleteRows(message.data, panel, uri);
-                    break;
-
-                case 'addColumn':
-                    await this.handleAddColumn(message.data, panel, uri);
-                    break;
-
-                case 'deleteColumns':
-                    await this.handleDeleteColumns(message.data, panel, uri);
-                    break;
-
-                case 'sort':
-                    await this.handleSort(message.data, panel, uri);
-                    break;
-
-                case 'moveRow':
-                    await this.handleMoveRow(message.data, panel, uri);
-                    break;
-
-                case 'moveColumn':
-                    await this.handleMoveColumn(message.data, panel, uri);
-                    break;
-
-                case 'exportCSV':
-                    await this.handleExportCSV(message.data, panel, uri);
-                    break;
-
-                case 'pong':
-                    // Handle pong response from webview
-                    console.log(`Received pong from webview, response time: ${message.responseTime ? message.responseTime - (message.timestamp || 0) : 'unknown'}ms`);
-                    this.markConnectionHealthy(panelId);
-                    break;
-
-                case 'switchTable':
-                    // Handle table switch notification from webview
-                    console.log('[MTE][Ext] Table switch notification from webview:', message.data);
-                    // Send setActiveTable to synchronize the index explicitly
-                    await this.handleSwitchTable(message.data, panel, uri);
-                    break;
-
-                case 'requestThemeVariables':
-                    await this.handleRequestThemeVariables(panel);
-                    break;
-
-                case 'undo':
-                    await this.handleUndo(panel, uri);
-                    break;
-
-                case 'redo':
-                    await this.handleRedo(panel, uri);
-                    break;
-
-                case 'diag':
-                    // Diagnostic pings from webview – keep lightweight
-                    console.log('[MTE][Ext] diag:', message.data);
-                    break;
-
-                case 'webviewError':
-                    console.warn('[MTE][Ext] webviewError:', message.data);
-                    break;
-
-                case 'webviewUnhandledRejection':
-                    console.warn('[MTE][Ext] webviewUnhandledRejection:', message.data);
-                    break;
-
-                default:
-                    console.warn('[MTE][Ext] Unhandled webview command:', message.command, message.data);
-                    break;
-            }
-        } catch (err) {
-            console.error('[MTE][Ext] Error handling webview message:', err);
-            try { this.sendError(panel, `Error handling message: ${err instanceof Error ? err.message : String(err)}`); } catch {}
+        const panelId = this.findPanelId(panel);
+        const commManager = this.communicationManagers.get(panelId);
+        if (commManager) {
+            commManager.sendHeaderUpdateError(errorInfo.col, errorInfo.error);
+        } else {
+            console.warn('[MTE][Ext] Communication manager not found for sendHeaderUpdateError');
         }
     }
+
 
 
     /**
@@ -1262,13 +1151,7 @@ export class WebviewManager {
      * Handle theme variables request from webview
      */
     private async handleRequestThemeVariables(panel: vscode.WebviewPanel): Promise<void> {
-        try {
-            const selectedTheme = vscode.workspace.getConfiguration('markdownTableEditor').get<string>('theme', 'inherit');
-            const themeVars = await buildThemeVariablesCss(selectedTheme);
-            panel.webview.postMessage({ command: 'applyThemeVariables', data: { cssText: themeVars.cssText } });
-        } catch (error) {
-            console.warn('Failed to send theme variables to panel:', error);
-        }
+        await this.applyThemeToPanel(panel);
     }
 
     /**
@@ -1276,12 +1159,23 @@ export class WebviewManager {
      */
     public dispose(): void {
         console.log('WebviewManager: Disposing resources...');
-        
+
         // Stop health monitoring
         if (this.healthCheckInterval) {
             clearInterval(this.healthCheckInterval);
             this.healthCheckInterval = null;
         }
+
+        // Dispose all communication managers
+        for (const [panelId, commManager] of this.communicationManagers.entries()) {
+            try {
+                commManager.dispose();
+                console.log('[MTE][Ext] Communication manager disposed for panel:', panelId);
+            } catch (error) {
+                console.error('Error disposing communication manager:', error);
+            }
+        }
+        this.communicationManagers.clear();
 
         // Dispose all panels
         for (const panel of this.panels.values()) {
@@ -1306,7 +1200,13 @@ export class WebviewManager {
         try {
             const selectedTheme = vscode.workspace.getConfiguration('markdownTableEditor').get<string>('theme', 'inherit');
             const themeVars = await buildThemeVariablesCss(selectedTheme);
-            panel.webview.postMessage({ command: 'applyThemeVariables', data: { cssText: themeVars.cssText } });
+            const panelId = this.findPanelId(panel);
+            const commManager = this.communicationManagers.get(panelId);
+            if (commManager) {
+                commManager.applyThemeVariables(themeVars.cssText);
+            } else {
+                console.warn('[MTE][Ext] Communication manager not found for applyThemeToPanel');
+            }
         } catch (error) {
             console.warn('WebviewManager: Failed to apply theme to panel:', error);
         }
@@ -1578,6 +1478,135 @@ export class WebviewManager {
             console.error('[MTE][Ext] Failed to apply table state:', error);
             throw error;
         }
+    }
+
+    /**
+     * Setup communication handlers for a panel
+     */
+    private setupCommunicationHandlers(
+        commManager: ExtensionCommunicationManager,
+        panel: vscode.WebviewPanel,
+        uri: vscode.Uri
+    ): void {
+        // Register handlers for all webview commands
+        commManager.registerHandler(WebviewCommand.REQUEST_TABLE_DATA, async (data) => {
+            console.log('[MTE][Ext] Handler: REQUEST_TABLE_DATA');
+            await this.handleRequestTableData(panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.UPDATE_CELL, async (data) => {
+            console.log('[MTE][Ext] Handler: UPDATE_CELL', data);
+            await this.handleCellUpdate(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.BULK_UPDATE_CELLS, async (data) => {
+            console.log('[MTE][Ext] Handler: BULK_UPDATE_CELLS', data);
+            await this.handleBulkUpdateCells(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.UPDATE_HEADER, async (data) => {
+            console.log('[MTE][Ext] Handler: UPDATE_HEADER', data);
+            await this.handleHeaderUpdate(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.ADD_ROW, async (data) => {
+            console.log('[MTE][Ext] Handler: ADD_ROW', data);
+            await this.handleAddRow(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.DELETE_ROWS, async (data) => {
+            console.log('[MTE][Ext] Handler: DELETE_ROWS', data);
+            await this.handleDeleteRows(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.ADD_COLUMN, async (data) => {
+            console.log('[MTE][Ext] Handler: ADD_COLUMN', data);
+            await this.handleAddColumn(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.DELETE_COLUMNS, async (data) => {
+            console.log('[MTE][Ext] Handler: DELETE_COLUMNS', data);
+            await this.handleDeleteColumns(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.SORT, async (data) => {
+            console.log('[MTE][Ext] Handler: SORT', data);
+            await this.handleSort(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.MOVE_ROW, async (data) => {
+            console.log('[MTE][Ext] Handler: MOVE_ROW', data);
+            await this.handleMoveRow(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.MOVE_COLUMN, async (data) => {
+            console.log('[MTE][Ext] Handler: MOVE_COLUMN', data);
+            await this.handleMoveColumn(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.EXPORT_CSV, async (data) => {
+            console.log('[MTE][Ext] Handler: EXPORT_CSV', data);
+            await this.handleExportCSV(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.SWITCH_TABLE, async (data) => {
+            console.log('[MTE][Ext] Handler: SWITCH_TABLE', data);
+            await this.handleSwitchTable(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.REQUEST_THEME_VARIABLES, async (data) => {
+            console.log('[MTE][Ext] Handler: REQUEST_THEME_VARIABLES');
+            await this.handleRequestThemeVariables(panel);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.UNDO, async (data) => {
+            console.log('[MTE][Ext] Handler: UNDO');
+            await this.handleUndo(panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.REDO, async (data) => {
+            console.log('[MTE][Ext] Handler: REDO');
+            await this.handleRedo(panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.PONG, async (data) => {
+            console.log('[MTE][Ext] Handler: PONG');
+            const panelId = this.findPanelId(panel);
+            this.markConnectionHealthy(panelId);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.REQUEST_SYNC, async (data) => {
+            console.log('[MTE][Ext] Handler: REQUEST_SYNC');
+            // 現在の状態を送信
+            this.refreshPanelData(panel, uri);
+            return { success: true };
+        });
+
+        console.log('[MTE][Ext] All communication handlers registered');
+    }
+
+    /**
+     * Get communication manager for a panel
+     */
+    public getCommunicationManager(panelId: string): ExtensionCommunicationManager | null {
+        return this.communicationManagers.get(panelId) || null;
     }
 
     /**

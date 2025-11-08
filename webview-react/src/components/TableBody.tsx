@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { EditorState, CellPosition } from '../types'
+import { EditorState, CellPosition, HeaderConfig } from '../types'
 import { processCellContent, processCellContentForEditing, processCellContentForStorage } from '../utils/contentConverter'
 import CellEditor from './CellEditor'
 import { getColumnLetter } from '../utils/tableUtils'
@@ -9,6 +9,7 @@ interface TableBodyProps {
   rows: string[][]
   editorState: EditorState
   onCellUpdate: (row: number, col: number, value: string) => void
+  onHeaderUpdate?: (col: number, value: string) => void
   onCellSelect: (row: number, col: number, extend?: boolean, toggle?: boolean) => void
   onCellEdit: (position: CellPosition | null) => void
   onAddRow: (index?: number) => void
@@ -20,6 +21,7 @@ interface TableBodyProps {
   selectedRows?: Set<number>
   fillRange?: { start: CellPosition; end: CellPosition } | null
   onFillHandleMouseDown?: (event: React.MouseEvent) => void
+  headerConfig?: HeaderConfig
 }
 
 const TableBody: React.FC<TableBodyProps> = ({
@@ -27,6 +29,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   rows,
   editorState,
   onCellUpdate,
+  onHeaderUpdate,
   onCellSelect,
   onCellEdit,
   onRowSelect,
@@ -35,7 +38,8 @@ const TableBody: React.FC<TableBodyProps> = ({
   getDropProps,
   selectedRows,
   fillRange,
-  onFillHandleMouseDown
+  onFillHandleMouseDown,
+  headerConfig
 }) => {
   const savedHeightsRef = useRef<Map<string, { original: number; rowMax: number }>>(new Map())
 
@@ -183,7 +187,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   const commitCellEdit = useCallback((row: number, col: number, value: string, move?: 'right' | 'left' | 'down' | 'up') => {
     const storageValue = processCellContentForStorage(value)
     onCellUpdate(row, col, storageValue)
-    
+
     try {
       const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
         if (cellElement instanceof HTMLElement) {
@@ -213,30 +217,32 @@ const TableBody: React.FC<TableBodyProps> = ({
     try {
   savedHeightsRef.current.delete(`${row}-${col}`)
     } catch (_) { /* noop */ }
-    
+
     onCellEdit(null)
     if (typeof move !== 'undefined') {
       let nextRow = row
       let nextCol = col
       const maxRow = rows.length - 1
       const maxCol = headers.length - 1
+      // 列ヘッダーOFF時は0行目（row=-1）が最小行
+      const minRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
       switch (move) {
         case 'right':
           if (nextCol < maxCol) { nextCol += 1 } else if (nextRow < maxRow) { nextRow += 1; nextCol = 0 }
           break
         case 'left':
-          if (nextCol > 0) { nextCol -= 1 } else if (nextRow > 0) { nextRow -= 1; nextCol = maxCol }
+          if (nextCol > 0) { nextCol -= 1 } else if (nextRow > minRow) { nextRow -= 1; nextCol = maxCol }
           break
         case 'down':
           if (nextRow < maxRow) { nextRow += 1 }
           break
         case 'up':
-          if (nextRow > 0) { nextRow -= 1 }
+          if (nextRow > minRow) { nextRow -= 1 }
           break
       }
       onCellSelect(nextRow, nextCol, false)
     }
-  }, [onCellUpdate, onCellEdit, onCellSelect, rows.length, headers.length])
+  }, [onCellUpdate, onCellEdit, onCellSelect, rows.length, headers.length, headerConfig])
 
   const cancelCellEdit = useCallback((row: number, col: number) => {
     try {
@@ -363,11 +369,102 @@ const TableBody: React.FC<TableBodyProps> = ({
 
   return (
     <tbody>
+      {/* hasColumnHeaders が false の場合、ヘッダー行を0行目として通常のデータセルと同様に表示 */}
+      {headerConfig?.hasColumnHeaders === false && (
+        <tr key={-1} data-row={-1}>
+          <td
+            className="row-number"
+            onClick={(e) => {
+              if (onRowSelect) {
+                onRowSelect(-1, e)
+              }
+            }}
+            title="Row 0"
+          >
+            0
+          </td>
+          {headers.map((header, colIndex) => {
+            // 行ヘッダーONの場合、先頭列をスキップ
+            if (headerConfig?.hasRowHeaders && colIndex === 0) {
+              return null
+            }
+            const cellId = `cell--1-${colIndex}`
+            const isEmpty = !header || header.trim() === ''
+            const cellClass = isEmpty ? 'empty-cell' : ''
+            const storedWidth = editorState.columnWidths[colIndex] || 150
+            const isEditing = isCellEditing(-1, colIndex)
+            const isSelected = isCellSelected(-1, colIndex)
+            const isInFillRange = isCellInFillRange(-1, colIndex)
+            const showFillHandle = isBottomRightCell(-1, colIndex) && !isEditing
+            const widthStyle = {
+              width: `${storedWidth}px`,
+              minWidth: `${storedWidth}px`,
+              maxWidth: `${storedWidth}px`
+            }
+
+            const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
+
+            return (
+              <td
+                key={colIndex}
+                id={cellId}
+                data-row={-1}
+                data-col={colIndex}
+                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
+                style={{
+                  ...widthStyle,
+                  ...(isEditing
+                    ? {
+                        minHeight: (savedHeightsRef.current.get(`-1-${colIndex}`)?.rowMax || 32) + 'px'
+                      }
+                    : {})
+                }}
+                onMouseDown={(e) => handleCellMouseDown(-1, colIndex, e)}
+                onDoubleClick={() => startCellEdit(-1, colIndex)}
+                title={`Cell ${getColumnLetter(colIndex)}0`}
+              >
+                {isEditing ? (
+                  <CellEditor
+                    value={processCellContentForEditing(header)}
+                    onCommit={(value, move) => commitCellEdit(-1, colIndex, value, move)}
+                    onCancel={() => cancelCellEdit(-1, colIndex)}
+                    rowIndex={-1}
+                    colIndex={colIndex}
+                    originalHeight={savedHeightsRef.current.get(`-1-${colIndex}`)?.original}
+                    rowMaxHeight={savedHeightsRef.current.get(`-1-${colIndex}`)?.rowMax}
+                  />
+                ) : (
+                  <>
+                    <div className="cell-content">
+                      {header && header.trim() !== '' ? (
+                        <span dangerouslySetInnerHTML={{ __html: processCellContent(header) }} />
+                      ) : (
+                        <span className="empty-cell-placeholder">&nbsp;</span>
+                      )}
+                    </div>
+                    {showFillHandle && onFillHandleMouseDown && (
+                      <div
+                        className="fill-handle"
+                        onMouseDown={onFillHandleMouseDown}
+                        title="ドラッグしてオートフィル"
+                      />
+                    )}
+                  </>
+                )}
+              </td>
+            )
+          })}
+        </tr>
+      )}
+
       {rows.map((row, rowIndex) => {
+        const rowHeaderValue = headerConfig?.hasRowHeaders ? (row[0] || '') : ''
+        // hasColumnHeaders が false の場合、表示行番号を +1 する
+        const displayRowNumber = headerConfig?.hasColumnHeaders === false ? rowIndex + 1 : rowIndex + 1
         return (
         <tr key={rowIndex} data-row={rowIndex}>
-          <td 
-            className={`row-number ${selectedRows?.has(rowIndex) ? 'highlighted' : ''}`}
+          <td
+            className={`row-number ${selectedRows?.has(rowIndex) ? 'highlighted' : ''} ${headerConfig?.hasRowHeaders ? 'row-header-with-value' : ''}`}
             onClick={(e) => {
               if (onRowSelect) {
                 onRowSelect(rowIndex, e)
@@ -379,14 +476,25 @@ const TableBody: React.FC<TableBodyProps> = ({
               }
             }}
             onContextMenu={(e) => handleRowContextMenu(e, rowIndex)}
-            title={`Row ${rowIndex + 1}`}
+            title={headerConfig?.hasRowHeaders ? `Row ${displayRowNumber}: ${rowHeaderValue}` : `Row ${displayRowNumber}`}
             {...(getDragProps ? getDragProps('row', rowIndex) : {})}
             {...(getDropProps ? getDropProps('row', rowIndex) : {})}
           >
-            {rowIndex + 1}
+            {headerConfig?.hasRowHeaders ? (
+              <div className="row-header-content">
+                <div className="row-number-label">{displayRowNumber}</div>
+                <div className="row-header-title">{rowHeaderValue}</div>
+              </div>
+            ) : (
+              displayRowNumber
+            )}
           </td>
-          
+
           {row.map((cell, colIndex) => {
+            // 行ヘッダーONの場合、先頭列をスキップ
+            if (headerConfig?.hasRowHeaders && colIndex === 0) {
+              return null
+            }
             const cellId = `cell-${rowIndex}-${colIndex}`
             const isEmpty = !cell || cell.trim() === ''
             const cellClass = isEmpty ? 'empty-cell' : ''

@@ -4,7 +4,7 @@ import TableTabs from './components/TableTabs'
 import StatusBar from './components/StatusBar'
 import { StatusProvider } from './contexts/StatusContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
-import { useVSCodeCommunication } from './hooks/useVSCodeCommunication'
+import { useCommunication } from './hooks/useCommunication'
 import { TableData, SortState } from './types'
 
 function AppContent() {
@@ -53,7 +53,7 @@ function AppContent() {
     // currentTableData change tracking disabled for production
   }, [currentTableData, currentTableIndex, allTables.length])
 
-  const { sendMessage } = useVSCodeCommunication({
+  const communication = useCommunication({
     onTableData: (data: TableData | TableData[]) => {
       console.log('[MTE][React] onTableData received', {
         isArray: Array.isArray(data),
@@ -142,29 +142,29 @@ function AppContent() {
 
   // タブ変更時の処理
   const handleTabChange = (index: number) => {
-    
+
     setCurrentTableIndex(index)
     currentIndexRef.current = index
     pendingTabSwitchRef.current = { index, time: Date.now() }
-    sendMessage({ command: 'switchTable', data: { index } })
+    communication.switchTable(index)
   }
 
   useEffect(() => {
     // Debug: Check window properties when React app starts
     // 初期データをリクエスト
     console.log('[MTE][React] requesting initial table data');
-    sendMessage({ command: 'requestTableData' })
-    
+    communication.requestTableData()
+
     // テーマ変数をリクエスト（一度だけ）
     if (!themeRequested) {
       console.log('[MTE][React] requesting theme variables (initial)');
-      sendMessage({ command: 'requestThemeVariables' })
+      communication.requestThemeVariables()
       setThemeRequested(true)
-      
+
       // VSCodeの初期化遅延に対応するため、少し遅延してもう一度リクエスト
       setTimeout(() => {
         console.log('[MTE][React] requesting theme variables (delayed retry)');
-        sendMessage({ command: 'requestThemeVariables' })
+        communication.requestThemeVariables()
       }, 500)
     }
 
@@ -253,11 +253,11 @@ function AppContent() {
     <StatusProvider>
       <div id="mte-root">
         <div id="app">
-        <TableEditor 
+        <TableEditor
           tableData={currentTableData}
           currentTableIndex={currentTableIndex}
           onTableUpdate={handleTableUpdate}
-          onSendMessage={sendMessage}
+          onSendMessage={communication.sendMessage}
           sortState={sortStates[currentTableIndex]}
           setSortState={(updater) => {
             setSortStates((prev) => {

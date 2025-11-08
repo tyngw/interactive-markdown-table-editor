@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { SortState, ColumnWidths } from '../types'
+import { SortState, ColumnWidths, HeaderConfig } from '../types'
 import { getColumnLetter } from '../utils/tableUtils'
 
 interface TableHeaderProps {
@@ -18,6 +18,7 @@ interface TableHeaderProps {
   getDragProps?: (type: 'row' | 'column', index: number) => any
   getDropProps?: (type: 'row' | 'column', index: number) => any
   selectedCols?: Set<number>
+  headerConfig?: HeaderConfig
 }
 
 const TableHeader: React.FC<TableHeaderProps> = ({
@@ -31,7 +32,8 @@ const TableHeader: React.FC<TableHeaderProps> = ({
   onShowColumnContextMenu,
   getDragProps,
   getDropProps,
-  selectedCols
+  selectedCols,
+  headerConfig
 }) => {
   // theme context はここでは未使用
   const [editingHeader, setEditingHeader] = useState<number | null>(null)
@@ -164,21 +166,25 @@ const TableHeader: React.FC<TableHeaderProps> = ({
             >
               <div className="header-content">
                 <div className="column-letter">{columnLetter}</div>
-                {editingHeader === col ? (
-                  <input
-                    className="header-input"
-                    type="text"
-                    defaultValue={header}
-                    autoFocus
-                    onBlur={(e) => handleHeaderBlur(col, e.target.value)}
-                    onKeyDown={(e) => handleHeaderKeyDown(e, col)}
-                  />
-                ) : (
-                  <div className="column-title" title="Double-click to edit header">
-                    {header}
-                  </div>
+                {headerConfig?.hasColumnHeaders !== false && (
+                  <>
+                    {editingHeader === col ? (
+                      <input
+                        className="header-input"
+                        type="text"
+                        defaultValue={header}
+                        autoFocus
+                        onBlur={(e) => handleHeaderBlur(col, e.target.value)}
+                        onKeyDown={(e) => handleHeaderKeyDown(e, col)}
+                      />
+                    ) : (
+                      <div className="column-title" title="Double-click to edit header">
+                        {header}
+                      </div>
+                    )}
+                  </>
                 )}
-                <div 
+                <div
                   className="sort-indicator"
                   onClick={(e) => {
                     e.stopPropagation()

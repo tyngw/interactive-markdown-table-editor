@@ -1,19 +1,31 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { TableData, CellPosition, ColumnWidths, EditorState, SortState } from '../types'
+import { TableData, CellPosition, ColumnWidths, EditorState, SortState, HeaderConfig } from '../types'
 import { useSelection } from './useSelection'
 import { useSort } from './useSort'
 
 type SetSortState = (updater: SortState | ((prev: SortState) => SortState)) => void
+type SetHeaderConfig = (updater: HeaderConfig | ((prev: HeaderConfig) => HeaderConfig)) => void
 
 export function useTableEditor(
   initialData: TableData,
   instanceKey?: string,
   externalSort?: { sortState: SortState; setSortState: SetSortState },
-  options?: { initializeSelectionOnDataChange?: boolean }
+  options?: { initializeSelectionOnDataChange?: boolean },
+  externalHeaderConfig?: { headerConfig: HeaderConfig; setHeaderConfig: SetHeaderConfig }
 ) {
   const [tableData, setTableData] = useState<TableData>(initialData)
   const [currentEditingCell, setCurrentEditingCell] = useState<CellPosition | null>(null)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
+  const [internalHeaderConfig, setInternalHeaderConfig] = useState<HeaderConfig>(
+    (initialData as any).headerConfig || {
+      hasColumnHeaders: true,  // デフォルトで列ヘッダーあり
+      hasRowHeaders: false     // デフォルトで行ヘッダーなし
+    }
+  )
+
+  // 外部から提供されたheaderConfigを使用、なければ内部状態を使用
+  const headerConfig = externalHeaderConfig?.headerConfig ?? internalHeaderConfig
+  const setHeaderConfig = externalHeaderConfig?.setHeaderConfig ?? setInternalHeaderConfig
   // 内部由来のデータ更新（セル編集・行列操作など）を検知するためのフラグ
   const internalUpdateRef = useRef(false)
   const internalUpdateTsRef = useRef<number>(0)
@@ -323,24 +335,39 @@ export function useTableEditor(
     resetSortState()
   }, [displayedData, resetSortState])
 
+  const toggleColumnHeaders = useCallback(() => {
+    setHeaderConfig(prev => ({
+      ...prev,
+      hasColumnHeaders: !prev.hasColumnHeaders
+    }))
+  }, [setHeaderConfig])
+
+  const toggleRowHeaders = useCallback(() => {
+    setHeaderConfig(prev => ({
+      ...prev,
+      hasRowHeaders: !prev.hasRowHeaders
+    }))
+  }, [setHeaderConfig])
+
   const editorState: EditorState = useMemo(() => {
     console.log('🔍 [useTableEditor] Building editorState with sortState:', sortState)
-    
+
     // sortStateが未定義の場合のデフォルト値を設定
     const safeSortState = sortState || { column: -1, direction: 'none' as const }
     console.log('🔍 [useTableEditor] Using safeSortState:', safeSortState)
-    
+
     const state = {
       currentEditingCell,
       selectedCells: selection.selectionState.selectedCells,
       selectionRange: selection.selectionState.selectionRange,
       isSelecting: selection.selectionState.isSelecting,
       sortState: safeSortState,
-      columnWidths
+      columnWidths,
+      headerConfig
     }
     console.log('🔍 [useTableEditor] Built editorState:', state)
     return state
-  }, [currentEditingCell, selection.selectionState, sortState, columnWidths])
+  }, [currentEditingCell, selection.selectionState, sortState, columnWidths, headerConfig])
 
   return {
   // Display用のデータ（ソート適用後）
@@ -370,5 +397,7 @@ export function useTableEditor(
     sortColumn,
     commitSort,
     resetSort: resetSortState,
+    toggleColumnHeaders,
+    toggleRowHeaders,
   }
 }

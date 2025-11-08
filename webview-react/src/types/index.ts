@@ -1,3 +1,9 @@
+// ヘッダー設定
+export interface HeaderConfig {
+  hasColumnHeaders: boolean  // 一番上の行を列ヘッダーとして扱う
+  hasRowHeaders: boolean     // 一番左の列を行ヘッダーとして扱う
+}
+
 // テーブルデータの型定義
 export interface TableData {
   headers: string[]
@@ -6,6 +12,7 @@ export interface TableData {
     fileName: string
     filePath: string
   }
+  headerConfig?: HeaderConfig
 }
 
 // 複数テーブル対応
@@ -57,4 +64,5 @@ export interface EditorState {
   isSelecting: boolean
   sortState: SortState
   columnWidths: ColumnWidths
+  headerConfig: HeaderConfig
 }

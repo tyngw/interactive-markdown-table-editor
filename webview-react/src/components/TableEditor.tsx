@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
-import { TableData, VSCodeMessage, SortState } from '../types'
+import { TableData, VSCodeMessage, SortState, HeaderConfig } from '../types'
 import { useTableEditor } from '../hooks/useTableEditor'
 import { useClipboard } from '../hooks/useClipboard'
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
@@ -18,6 +18,8 @@ interface TableEditorProps {
   onSendMessage: (message: VSCodeMessage) => void
   sortState?: SortState
   setSortState?: (updater: SortState | ((prev: SortState) => SortState)) => void
+  headerConfig?: HeaderConfig
+  setHeaderConfig?: (updater: HeaderConfig | ((prev: HeaderConfig) => HeaderConfig)) => void
 }
 
 const TableEditor: React.FC<TableEditorProps> = ({
@@ -26,12 +28,22 @@ const TableEditor: React.FC<TableEditorProps> = ({
   onTableUpdate,
   onSendMessage,
   sortState,
-  setSortState
+  setSortState,
+  headerConfig,
+  setHeaderConfig
 }) => {
   // 外部未指定時は内部の状態を使用
   const [internalSortState, setInternalSortState] = useState<SortState>({ column: -1, direction: 'none' })
   const effectiveSortState = sortState ?? internalSortState
   const effectiveSetSortState = setSortState ?? setInternalSortState
+
+  const [internalHeaderConfig, setInternalHeaderConfig] = useState<HeaderConfig>({
+    hasColumnHeaders: true,
+    hasRowHeaders: false
+  })
+  const effectiveHeaderConfig = headerConfig ?? internalHeaderConfig
+  const effectiveSetHeaderConfig = setHeaderConfig ?? setInternalHeaderConfig
+
   const [contextMenuState, setContextMenuState] = useState<ContextMenuState>({
     type: null,
     index: -1,
@@ -70,12 +82,15 @@ const TableEditor: React.FC<TableEditorProps> = ({
     moveColumn,
     commitSort,
     resetSort,
-    viewToModelMap
+    viewToModelMap,
+    toggleColumnHeaders,
+    toggleRowHeaders
   } = useTableEditor(
     tableData,
     `table-${currentTableIndex}`,
     { sortState: effectiveSortState, setSortState: effectiveSetSortState },
-    { initializeSelectionOnDataChange: true }
+    { initializeSelectionOnDataChange: true },
+    { headerConfig: effectiveHeaderConfig, setHeaderConfig: effectiveSetHeaderConfig }
   )
 
   const toModelRow = useCallback((viewRow: number): number => {
@@ -179,12 +194,19 @@ const TableEditor: React.FC<TableEditorProps> = ({
   }, [editorState.sortState, updateSortState])
 
   const handleCellUpdate = useCallback((row: number, col: number, value: string) => {
-    updateCell(row, col, value)
-    updateSaveStatus('saving')
-    const modelRow = toModelRow(row)
-    onSendMessage({ command: 'updateCell', data: withTableIndex({ row: modelRow, col, value }) })
-    setTimeout(() => updateSaveStatus('saved'), 500)
-  }, [updateCell, onSendMessage, updateSaveStatus, toModelRow, withTableIndex])
+    // 0行目（列ヘッダーOFF時）はheaders配列を更新
+    if (row === -1) {
+      updateHeader(col, value)
+      onSendMessage({ command: 'updateHeader', data: withTableIndex({ col, value }) })
+    } else {
+      // 通常のデータセルはrows配列を更新
+      updateCell(row, col, value)
+      updateSaveStatus('saving')
+      const modelRow = toModelRow(row)
+      onSendMessage({ command: 'updateCell', data: withTableIndex({ row: modelRow, col, value }) })
+      setTimeout(() => updateSaveStatus('saved'), 500)
+    }
+  }, [updateCell, updateHeader, onSendMessage, updateSaveStatus, toModelRow, withTableIndex])
 
   const handleHeaderUpdate = useCallback((col: number, value: string) => {
     updateHeader(col, value)
@@ -311,7 +333,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
     onSelectAll: selectAll,
     onSetSelectionAnchor: setSelectionAnchor,
     onUndo: () => onSendMessage({ command: 'undo' }),
-    onRedo: () => onSendMessage({ command: 'redo' })
+    onRedo: () => onSendMessage({ command: 'redo' }),
+    headerConfig: editorState.headerConfig
   })
 
   const handleExportCsv = useCallback(() => {
@@ -365,12 +388,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
             getDragProps={getDragProps}
             getDropProps={getDropProps}
             selectedCols={selectedCols}
+            headerConfig={editorState.headerConfig}
           />
           <TableBody
             headers={displayedTableData.headers}
             rows={displayedTableData.rows}
             editorState={editorState}
             onCellUpdate={handleCellUpdate}
+            onHeaderUpdate={handleHeaderUpdate}
             onCellSelect={selectCell}
             onCellEdit={setCurrentEditingCell}
             onAddRow={addRow}
@@ -382,6 +407,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
             selectedRows={selectedRows}
             fillRange={fillRange}
             onFillHandleMouseDown={handleFillHandleMouseDown}
+            headerConfig={editorState.headerConfig}
           />
         </table>
       </div>
@@ -405,6 +431,9 @@ const TableEditor: React.FC<TableEditorProps> = ({
         onResetSort={handleResetSort}
         onCommitSort={handleCommitSort}
         hasActiveSort={editorState.sortState.direction !== 'none'}
+        headerConfig={editorState.headerConfig}
+        onToggleColumnHeaders={toggleColumnHeaders}
+        onToggleRowHeaders={toggleRowHeaders}
       />
     </div>
   )
