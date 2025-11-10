@@ -1,0 +1,9 @@
+{
+  "openEditor.title": "打开表格编辑器",
+  "openEditorNewPanel.title": "打开表格编辑器（新面板）",
+  "selectTheme.title": "选择表格编辑器主题",
+  "config.theme.description": "表格编辑器主题。使用 'inherit' 跟随 VS Code 当前主题。其他格式为 'extensionId:path'。可以从 'Markdown Table Editor: Select Table Editor Theme' 命令中选择。",
+  "config.fontFamily.description": "表格编辑器中使用的字体系列。留空则使用 VS Code 的编辑器字体设置。",
+  "config.fontSize.description": "表格编辑器中使用的字体大小（像素）。设置为0则使用 VS Code 的编辑器字体大小设置。",
+  "config.language.description": "Markdown Table Editor 的显示语言。需要重新加载才能生效。"
+}
