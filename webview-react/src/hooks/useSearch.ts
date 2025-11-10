@@ -122,7 +122,7 @@ export function useSearch({
     if (results.length > 0 && onNavigateToResult) {
       onNavigateToResult(results[0])
     }
-  }, [searchState, tables, currentTableIndex, selectionRange, createSearchPattern, onNavigateToResult])
+  }, [searchState.searchText, searchState.scope, searchState.options, tables, currentTableIndex, selectionRange, createSearchPattern, onNavigateToResult])
 
   // 次の検索結果に移動
   const findNext = useCallback(() => {
@@ -135,7 +135,7 @@ export function useSearch({
     if (onNavigateToResult) {
       onNavigateToResult(results[nextIndex])
     }
-  }, [searchState, onNavigateToResult])
+  }, [searchState.results, searchState.currentResultIndex, onNavigateToResult])
 
   // 前の検索結果に移動
   const findPrevious = useCallback(() => {
@@ -148,18 +148,18 @@ export function useSearch({
     if (onNavigateToResult) {
       onNavigateToResult(results[prevIndex])
     }
-  }, [searchState, onNavigateToResult])
+  }, [searchState.results, searchState.currentResultIndex, onNavigateToResult])
 
   // 1件置換
   const replaceOne = useCallback(() => {
-    const { results, currentResultIndex, replaceText } = searchState
+    const { results, currentResultIndex, replaceText, searchText, options } = searchState
     if (results.length === 0 || currentResultIndex < 0) return
 
     const result = results[currentResultIndex]
     if (onUpdateCell) {
       const table = tables[result.tableIndex]
       const oldValue = table.rows[result.row][result.col]
-      const pattern = createSearchPattern(searchState.searchText, searchState.options)
+      const pattern = createSearchPattern(searchText, options)
 
       if (pattern) {
         const newValue = oldValue.replace(pattern, replaceText)
@@ -169,7 +169,7 @@ export function useSearch({
 
     // 置換後、次の結果に移動
     findNext()
-  }, [searchState, tables, onUpdateCell, createSearchPattern, findNext])
+  }, [searchState.results, searchState.currentResultIndex, searchState.replaceText, searchState.searchText, searchState.options, tables, onUpdateCell, createSearchPattern, findNext])
 
   // すべて置換
   const replaceAll = useCallback(() => {
@@ -207,7 +207,7 @@ export function useSearch({
 
     // 検索結果をクリア
     setSearchState(prev => ({ ...prev, results: [], currentResultIndex: -1 }))
-  }, [searchState, tables, createSearchPattern, onBulkUpdate])
+  }, [searchState.results, searchState.replaceText, searchState.searchText, searchState.options, tables, createSearchPattern, onBulkUpdate])
 
   // 検索バーを開く
   const openSearch = useCallback((withReplace = false) => {

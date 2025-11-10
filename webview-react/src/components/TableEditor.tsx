@@ -230,7 +230,9 @@ const TableEditor: React.FC<TableEditorProps> = ({
     if (searchState.isOpen && searchState.searchText) {
       performSearch()
     }
-  }, [searchState.options, searchState.scope, performSearch, searchState.isOpen, searchState.searchText])
+    // performSearchは依存配列から除外（ESLintの警告を抑制）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchState.options, searchState.scope, searchState.isOpen, searchState.searchText])
 
   // 検索結果かどうかを判定
   const isSearchResult = useCallback((row: number, col: number) => {
