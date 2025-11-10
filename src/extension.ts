@@ -11,8 +11,7 @@ import { normalizeForImport } from './encodingNormalizer';
 import { normalizeForShiftJisExport } from './encodingNormalizer';
 
 export function activate(context: vscode.ExtensionContext) {
-    // Note: VS Code automatically loads l10n files based on the user's language setting
-    // from the l10n/ directory. No manual initialization needed.
+    // VS Code automatically loads l10n files based on vscode.env.language
 
     // Initialize managers
     const webviewManager = WebviewManager.getInstance(context);
