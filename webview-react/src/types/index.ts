@@ -66,3 +66,33 @@ export interface EditorState {
   columnWidths: ColumnWidths
   headerConfig: HeaderConfig
 }
+
+// 検索範囲
+export type SearchScope = 'all' | 'current' | 'selection'
+
+// 検索オプション
+export interface SearchOptions {
+  caseSensitive: boolean      // 大文字小文字を区別
+  wholeWord: boolean           // 完全一致
+  regex: boolean               // 正規表現
+}
+
+// 検索結果
+export interface SearchResult {
+  tableIndex: number
+  row: number
+  col: number
+}
+
+// 検索状態
+export interface SearchState {
+  isOpen: boolean              // 検索バーを表示するか
+  showReplace: boolean         // 置換UIを表示するか
+  showAdvanced: boolean        // 詳細設定を表示するか
+  searchText: string           // 検索文字列
+  replaceText: string          // 置換文字列
+  scope: SearchScope           // 検索範囲
+  options: SearchOptions       // 検索オプション
+  results: SearchResult[]      // 検索結果
+  currentResultIndex: number   // 現在の検索結果のインデックス
+}

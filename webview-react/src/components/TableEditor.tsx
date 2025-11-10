@@ -6,16 +6,20 @@ import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
 import { useCSVExport } from '../hooks/useCSVExport'
 import { useDragDrop } from '../hooks/useDragDrop'
 import { useAutofill } from '../hooks/useAutofill'
+import { useSearch } from '../hooks/useSearch'
 import { useStatus } from '../contexts/StatusContext'
 import TableHeader from './TableHeader'
 import TableBody from './TableBody'
 import ContextMenu, { ContextMenuState } from './ContextMenu'
+import SearchBar from './SearchBar'
 
 interface TableEditorProps {
   tableData: TableData
   currentTableIndex?: number
+  allTables?: TableData[]
   onTableUpdate: (data: TableData) => void
   onSendMessage: (message: VSCodeMessage) => void
+  onTableSwitch?: (index: number) => void
   sortState?: SortState
   setSortState?: (updater: SortState | ((prev: SortState) => SortState)) => void
   headerConfig?: HeaderConfig
@@ -24,9 +28,11 @@ interface TableEditorProps {
 
 const TableEditor: React.FC<TableEditorProps> = ({
   tableData,
-  currentTableIndex,
+  currentTableIndex = 0,
+  allTables,
   onTableUpdate,
   onSendMessage,
+  onTableSwitch,
   sortState,
   setSortState,
   headerConfig,
@@ -171,6 +177,93 @@ const TableEditor: React.FC<TableEditorProps> = ({
       onSendMessage({ command: 'moveColumn', data: messageData })
     }
   })
+
+  // 検索機能
+  const effectiveTables = allTables || [tableData]
+  const {
+    searchState,
+    performSearch,
+    findNext,
+    findPrevious,
+    replaceOne,
+    replaceAll,
+    openSearch,
+    closeSearch,
+    setSearchText,
+    setReplaceText,
+    setScope,
+    toggleOption,
+    toggleAdvanced,
+    toggleReplace,
+    currentResultInfo
+  } = useSearch({
+    tables: effectiveTables,
+    currentTableIndex,
+    selectionRange: editorState.selectionRange,
+    onNavigateToResult: useCallback((result) => {
+      // 別のシートの場合は先にシートを切り替える
+      if (result.tableIndex !== currentTableIndex && onTableSwitch) {
+        onTableSwitch(result.tableIndex)
+        // シート切り替え後にセル選択とスクロールを実行
+        setTimeout(() => {
+          selectCell(result.row, result.col, false)
+          setTimeout(() => {
+            const cell = document.querySelector(`td[data-row="${result.row}"][data-col="${result.col}"]`)
+            if (cell) {
+              cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+            }
+          }, 100)
+        }, 100)
+      } else {
+        // 同じシート内の場合は即座に移動
+        selectCell(result.row, result.col, false)
+        setTimeout(() => {
+          const cell = document.querySelector(`td[data-row="${result.row}"][data-col="${result.col}"]`)
+          if (cell) {
+            cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+          }
+        }, 0)
+      }
+    }, [currentTableIndex, selectCell, onTableSwitch]),
+    onUpdateCell: useCallback((tableIndex, row, col, value) => {
+      if (tableIndex === currentTableIndex) {
+        updateCell(row, col, value)
+        onSendMessage({ command: 'updateCell', data: withTableIndex({ row, col, value }) })
+      }
+    }, [currentTableIndex, updateCell, onSendMessage, withTableIndex]),
+    onBulkUpdate: useCallback((tableIndex, updates) => {
+      if (tableIndex === currentTableIndex) {
+        updateCells(updates)
+        onSendMessage({ command: 'bulkUpdateCells', data: withTableIndex({ updates }) })
+      }
+    }, [currentTableIndex, updateCells, onSendMessage, withTableIndex])
+  })
+
+  // 検索オプション・範囲変更時に自動検索（検索テキストが存在し、結果がある場合のみ）
+  useEffect(() => {
+    if (searchState.isOpen && searchState.searchText && searchState.results.length > 0) {
+      performSearch()
+    }
+    // performSearchは依存配列から除外（ESLintの警告を抑制）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchState.options, searchState.scope])
+
+  // 検索結果かどうかを判定
+  const isSearchResult = useCallback((row: number, col: number) => {
+    return searchState.results.some(
+      result => result.tableIndex === currentTableIndex && result.row === row && result.col === col
+    )
+  }, [searchState.results, currentTableIndex])
+
+  // 現在の検索結果かどうかを判定
+  const isCurrentSearchResult = useCallback((row: number, col: number) => {
+    if (searchState.currentResultIndex < 0) return false
+    const currentResult = searchState.results[searchState.currentResultIndex]
+    return currentResult &&
+      currentResult.tableIndex === currentTableIndex &&
+      currentResult.row === row &&
+      currentResult.col === col
+  }, [searchState.results, searchState.currentResultIndex, currentTableIndex])
 
   // 列/行選択をUIイベントから受け取りやすい形でラップ
   const handleColumnSelect = useCallback((col: number, event: React.MouseEvent) => {
@@ -335,7 +428,13 @@ const TableEditor: React.FC<TableEditorProps> = ({
     onSetSelectionAnchor: setSelectionAnchor,
     onUndo: () => onSendMessage({ command: 'undo' }),
     onRedo: () => onSendMessage({ command: 'redo' }),
-    headerConfig: editorState.headerConfig
+    headerConfig: editorState.headerConfig,
+    onOpenSearch: useCallback((withReplace = false) => {
+      openSearch(withReplace)
+      if (withReplace) {
+        toggleReplace()
+      }
+    }, [openSearch, toggleReplace])
   })
 
   const handleExportCsv = useCallback(() => {
@@ -372,6 +471,21 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
   return (
     <div id="table-content" onContextMenu={handleEditorContextMenu}>
+      <SearchBar
+        searchState={searchState}
+        currentResultInfo={currentResultInfo}
+        onSearchTextChange={setSearchText}
+        onReplaceTextChange={setReplaceText}
+        onSearch={performSearch}
+        onFindNext={findNext}
+        onFindPrevious={findPrevious}
+        onReplaceOne={replaceOne}
+        onReplaceAll={replaceAll}
+        onClose={closeSearch}
+        onToggleOption={toggleOption}
+        onToggleAdvanced={toggleAdvanced}
+        onScopeChange={setScope}
+      />
       <div className="table-container">
         <table className="table-editor">
           <TableHeader
@@ -409,6 +523,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
             fillRange={fillRange}
             onFillHandleMouseDown={handleFillHandleMouseDown}
             headerConfig={editorState.headerConfig}
+            isSearchResult={isSearchResult}
+            isCurrentSearchResult={isCurrentSearchResult}
           />
         </table>
       </div>

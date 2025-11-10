@@ -1147,3 +1147,153 @@ textarea.cell-input[data-multiline="true"] {
         font-size: 12px;
     }
 }
+
+/* ====== 18. 検索バー ====== */
+.search-bar {
+    background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+    border-bottom: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.search-row,
+.replace-row,
+.advanced-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.search-input-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.search-icon {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.search-input {
+    flex: 1;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border, transparent);
+    padding: 4px 60px 4px 8px;
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size, 13px);
+    outline: none;
+}
+
+.search-input:focus {
+    border-color: var(--vscode-focusBorder, #007ACC);
+}
+
+.search-result-count {
+    position: absolute;
+    right: 8px;
+    font-size: 11px;
+    color: var(--vscode-input-placeholderForeground);
+    pointer-events: none;
+}
+
+.search-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.search-nav-button,
+.search-option-button,
+.search-advanced-button,
+.search-close-button,
+.replace-button,
+.replace-all-button {
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: var(--vscode-icon-foreground, var(--vscode-foreground));
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    border-radius: 2px;
+    transition: background-color 0.1s ease;
+}
+
+.search-nav-button:hover,
+.search-option-button:hover,
+.search-advanced-button:hover,
+.search-close-button:hover,
+.replace-button:hover,
+.replace-all-button:hover {
+    background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+}
+
+.search-nav-button:disabled,
+.replace-button:disabled,
+.replace-all-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.search-option-button.active,
+.search-advanced-button.active {
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+}
+
+.scope-label {
+    font-size: 12px;
+    color: var(--vscode-foreground);
+    margin-right: 4px;
+}
+
+.scope-select {
+    background-color: var(--vscode-dropdown-background);
+    color: var(--vscode-dropdown-foreground);
+    border: 1px solid var(--vscode-dropdown-border, transparent);
+    padding: 4px 8px;
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size, 13px);
+    cursor: pointer;
+    outline: none;
+}
+
+.scope-select:focus {
+    border-color: var(--vscode-focusBorder, #007ACC);
+}
+
+/* ====== 19. 検索結果ハイライト ====== */
+.table-editor td.data-cell.search-result {
+    /* 控えめな黄色のハイライト */
+    background-color: var(--vscode-editor-findMatchBackground, rgba(255, 230, 0, 0.12)) !important;
+    outline: 1px solid var(--vscode-editor-findMatchBorder, rgba(255, 200, 0, 0.35));
+    outline-offset: -1px;
+}
+
+.table-editor td.data-cell.current-search-result {
+    /* 現在の検索結果は少し濃いめのハイライト */
+    background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(255, 200, 0, 0.22)) !important;
+    outline: 2px solid var(--vscode-editor-findMatchHighlightBorder, rgba(255, 160, 0, 0.55));
+    outline-offset: -2px;
+}
+
+.table-editor td.data-cell.selected.search-result {
+    /* 選択中のセルは通常の選択色を優先し、枠線のみ追加 */
+    background-color: var(--vscode-list-activeSelectionBackground) !important;
+    outline: 1px solid var(--vscode-editor-findMatchBorder, rgba(255, 200, 0, 0.45));
+    outline-offset: -1px;
+}
+
+.table-editor td.data-cell.selected.current-search-result {
+    /* 選択中かつ現在の検索結果 */
+    background-color: var(--vscode-list-activeSelectionBackground) !important;
+    outline: 2px solid var(--vscode-editor-findMatchHighlightBorder, rgba(255, 160, 0, 0.65));
+    outline-offset: -2px;
+}

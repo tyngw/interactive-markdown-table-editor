@@ -17,6 +17,7 @@ interface KeyboardNavigationProps {
   onUndo: () => void
   onRedo: () => void
   headerConfig?: HeaderConfig
+  onOpenSearch?: (withReplace?: boolean) => void
 }
 
 export function useKeyboardNavigation({
@@ -34,7 +35,8 @@ export function useKeyboardNavigation({
   onSetSelectionAnchor,
   onUndo,
   onRedo,
-  headerConfig
+  headerConfig,
+  onOpenSearch
 }: KeyboardNavigationProps) {
 
   // Helper function to check if a cell has content (for smart navigation)
@@ -461,6 +463,24 @@ export function useKeyboardNavigation({
         break
       }
 
+      case 'f':
+      case 'F': {
+        if (cmdKey && onOpenSearch) {
+          event.preventDefault()
+          onOpenSearch(false) // 簡易検索モード
+        }
+        break
+      }
+
+      case 'h':
+      case 'H': {
+        if (cmdKey && onOpenSearch) {
+          event.preventDefault()
+          onOpenSearch(true) // 置換モード
+        }
+        break
+      }
+
       default:
         // 文字キーが押された場合は編集開始
         // 列ヘッダーOFF時は0行目（内部的にはrow=-1）が最上行
@@ -487,7 +507,8 @@ export function useKeyboardNavigation({
     onSetSelectionAnchor,
     onUndo,
     onRedo,
-    headerConfig
+    headerConfig,
+    onOpenSearch
   ])
 
   // キーアップイベントハンドラー（Shiftキーのクリア用）

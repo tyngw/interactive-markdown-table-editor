@@ -22,6 +22,8 @@ interface TableBodyProps {
   fillRange?: { start: CellPosition; end: CellPosition } | null
   onFillHandleMouseDown?: (event: React.MouseEvent) => void
   headerConfig?: HeaderConfig
+  isSearchResult?: (row: number, col: number) => boolean
+  isCurrentSearchResult?: (row: number, col: number) => boolean
 }
 
 const TableBody: React.FC<TableBodyProps> = ({
@@ -39,7 +41,9 @@ const TableBody: React.FC<TableBodyProps> = ({
   selectedRows,
   fillRange,
   onFillHandleMouseDown,
-  headerConfig
+  headerConfig,
+  isSearchResult,
+  isCurrentSearchResult
 }) => {
   const savedHeightsRef = useRef<Map<string, { original: number; rowMax: number }>>(new Map())
 
@@ -396,6 +400,8 @@ const TableBody: React.FC<TableBodyProps> = ({
             const isSelected = isCellSelected(-1, colIndex)
             const isInFillRange = isCellInFillRange(-1, colIndex)
             const showFillHandle = isBottomRightCell(-1, colIndex) && !isEditing
+            const isSResult = isSearchResult ? isSearchResult(-1, colIndex) : false
+            const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(-1, colIndex) : false
             const widthStyle = {
               width: `${storedWidth}px`,
               minWidth: `${storedWidth}px`,
@@ -410,7 +416,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                 id={cellId}
                 data-row={-1}
                 data-col={colIndex}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
                 style={{
                   ...widthStyle,
                   ...(isEditing
@@ -506,6 +512,8 @@ const TableBody: React.FC<TableBodyProps> = ({
             const isSelected = isCellSelected(rowIndex, colIndex)
             const isInFillRange = isCellInFillRange(rowIndex, colIndex)
             const showFillHandle = isBottomRightCell(rowIndex, colIndex) && !isEditing
+            const isSResult = isSearchResult ? isSearchResult(rowIndex, colIndex) : false
+            const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, colIndex) : false
             const widthStyle = {
               width: `${storedWidth}px`,
               minWidth: `${storedWidth}px`,
@@ -518,7 +526,7 @@ const TableBody: React.FC<TableBodyProps> = ({
               <td
                 key={colIndex}
                 id={cellId}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
                 onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                 onDoubleClick={() => startCellEdit(rowIndex, colIndex)}
                 data-row={rowIndex}

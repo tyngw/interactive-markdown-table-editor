@@ -12,6 +12,8 @@ interface TableCellProps {
   onDoubleClick: (row: number, col: number) => void
   onUpdate: (row: number, col: number, value: string) => void
   onEditComplete: () => void
+  isSearchResult?: boolean
+  isCurrentSearchResult?: boolean
 }
 
 const TableCell: React.FC<TableCellProps> = ({
@@ -24,7 +26,9 @@ const TableCell: React.FC<TableCellProps> = ({
   onClick,
   onDoubleClick,
   onUpdate,
-  onEditComplete
+  onEditComplete,
+  isSearchResult = false,
+  isCurrentSearchResult = false
 }) => {
   const [editValue, setEditValue] = useState(value)
   const [isComposing, setIsComposing] = useState(false)
@@ -137,7 +141,7 @@ const TableCell: React.FC<TableCellProps> = ({
     position: 'relative'
   }
 
-  const cellClassName = `table-cell ${isSelected ? 'selected' : ''}`
+  const cellClassName = `table-cell ${isSelected ? 'selected' : ''} ${isSearchResult ? 'search-result' : ''} ${isCurrentSearchResult ? 'current-search-result' : ''}`
 
   if (isEditing) {
     return (
