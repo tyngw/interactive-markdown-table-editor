@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import './i18n'
 import TableEditor from './components/TableEditor'
 import TableTabs from './components/TableTabs'
 import StatusBar from './components/StatusBar'
@@ -8,6 +10,8 @@ import { useCommunication } from './hooks/useCommunication'
 import { TableData, SortState } from './types'
 
 function AppContent() {
+  const { t } = useTranslation()
+
   if (process.env.NODE_ENV === 'development') {
     console.log('[React] AppContent initializing...')
   }
@@ -253,7 +257,7 @@ function AppContent() {
   if (loading) {
     return (
       <div className="loading">
-        テーブルデータを読み込み中...
+        {t('loading')}
       </div>
     )
   }
@@ -261,7 +265,7 @@ function AppContent() {
   if (error) {
     return (
       <div className="error">
-        エラー: {error}
+        {t('error', { message: error })}
       </div>
     )
   }
@@ -269,7 +273,7 @@ function AppContent() {
   if (!currentTableData) {
     return (
       <div className="error">
-        テーブルデータが見つかりません
+        {t('noTableData')}
       </div>
     )
   }
