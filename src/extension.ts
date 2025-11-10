@@ -10,14 +10,9 @@ import { decodeBuffer, detectTextEncoding, parseCsv, toRectangular } from './csv
 import { normalizeForImport } from './encodingNormalizer';
 import { normalizeForShiftJisExport } from './encodingNormalizer';
 
-export async function activate(context: vscode.ExtensionContext) {
-    // Initialize l10n with user's preferred language
-    const config = vscode.workspace.getConfiguration('markdownTableEditor');
-    const userLanguage = config.get<string>('language', '');
-    if (userLanguage) {
-        const l10nPath = vscode.Uri.joinPath(context.extensionUri, 'l10n', `bundle.l10n.${userLanguage}.json`);
-        await l10n.config({ uri: l10nPath.toString() });
-    }
+export function activate(context: vscode.ExtensionContext) {
+    // Note: VS Code automatically loads l10n files based on the user's language setting
+    // from the l10n/ directory. No manual initialization needed.
 
     // Initialize managers
     const webviewManager = WebviewManager.getInstance(context);
