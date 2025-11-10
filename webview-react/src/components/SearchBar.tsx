@@ -46,19 +46,21 @@ const SearchBar: React.FC<SearchBarProps> = ({
     if (e.key === 'Enter') {
       e.preventDefault()
       if (e.shiftKey) {
-        onFindPrevious()
-      } else {
-        if (searchState.results.length === 0) {
-          onSearch()
+        // Shift+Enter: 前の検索結果に移動（検索結果がある場合）
+        if (searchState.results.length > 0) {
+          onFindPrevious()
         } else {
-          onFindNext()
+          onSearch()
         }
+      } else {
+        // Enter: 検索を実行
+        onSearch()
       }
     } else if (e.key === 'Escape') {
       e.preventDefault()
       onClose()
     }
-  }, [onSearch, onFindNext, onFindPrevious, onClose, searchState.results.length])
+  }, [onSearch, onFindPrevious, onClose, searchState.results.length])
 
   const handleReplaceKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {

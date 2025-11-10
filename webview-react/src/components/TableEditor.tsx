@@ -225,14 +225,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
     }, [currentTableIndex, updateCells, onSendMessage, withTableIndex])
   })
 
-  // 検索オプション変更時に自動検索
+  // 検索オプション・範囲変更時に自動検索（検索テキストが存在し、結果がある場合のみ）
   useEffect(() => {
-    if (searchState.isOpen && searchState.searchText) {
+    if (searchState.isOpen && searchState.searchText && searchState.results.length > 0) {
       performSearch()
     }
     // performSearchは依存配列から除外（ESLintの警告を抑制）
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchState.options, searchState.scope, searchState.isOpen, searchState.searchText])
+  }, [searchState.options, searchState.scope])
 
   // 検索結果かどうかを判定
   const isSearchResult = useCallback((row: number, col: number) => {
