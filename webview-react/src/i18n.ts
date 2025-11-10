@@ -8,7 +8,8 @@ import zhCN from './locales/zh-cn.json';
 const getVSCodeLanguage = (): string => {
   try {
     // Try to get language from HTML attribute set by VS Code
-    const lang = document.documentElement.getAttribute('data-vscode-language');
+    // Use optional chaining to handle cases where document is not ready
+    const lang = document?.documentElement?.getAttribute('data-vscode-language');
     if (lang) {
       const lowerLang = lang.toLowerCase();
       // Map VS Code language codes to our supported languages
@@ -23,9 +24,9 @@ const getVSCodeLanguage = (): string => {
 
   // Fallback to browser language
   try {
-    const browserLang = navigator.language.toLowerCase();
-    if (browserLang.startsWith('ja')) return 'ja';
-    if (browserLang.startsWith('zh')) return 'zh-cn';
+    const browserLang = navigator?.language?.toLowerCase();
+    if (browserLang?.startsWith('ja')) return 'ja';
+    if (browserLang?.startsWith('zh')) return 'zh-cn';
   } catch (e) {
     console.warn('[i18n] Failed to get browser language', e);
   }
@@ -34,8 +35,14 @@ const getVSCodeLanguage = (): string => {
   return 'en';
 };
 
+// Initialize i18n synchronously but safely
+// Since the script tag is at the end of body, DOM should be ready
 const detectedLanguage = getVSCodeLanguage();
-console.log('[i18n] Detected language:', detectedLanguage);
+
+if (process.env.NODE_ENV === 'development') {
+  console.log('[i18n] Initializing with language:', detectedLanguage);
+  console.log('[i18n] Document ready state:', document?.readyState);
+}
 
 i18n
   .use(initReactI18next)
@@ -50,7 +57,8 @@ i18n
     interpolation: {
       escapeValue: false
     },
-    debug: false
+    // Only enable debug in development
+    debug: process.env.NODE_ENV === 'development'
   });
 
 export default i18n;
