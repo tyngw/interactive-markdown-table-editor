@@ -19,6 +19,7 @@ interface TableEditorProps {
   allTables?: TableData[]
   onTableUpdate: (data: TableData) => void
   onSendMessage: (message: VSCodeMessage) => void
+  onTableSwitch?: (index: number) => void
   sortState?: SortState
   setSortState?: (updater: SortState | ((prev: SortState) => SortState)) => void
   headerConfig?: HeaderConfig
@@ -31,6 +32,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
   allTables,
   onTableUpdate,
   onSendMessage,
+  onTableSwitch,
   sortState,
   setSortState,
   headerConfig,
@@ -199,10 +201,22 @@ const TableEditor: React.FC<TableEditorProps> = ({
     currentTableIndex,
     selectionRange: editorState.selectionRange,
     onNavigateToResult: useCallback((result) => {
-      // 検索結果のセルに移動
-      if (result.tableIndex === currentTableIndex) {
+      // 別のシートの場合は先にシートを切り替える
+      if (result.tableIndex !== currentTableIndex && onTableSwitch) {
+        onTableSwitch(result.tableIndex)
+        // シート切り替え後にセル選択とスクロールを実行
+        setTimeout(() => {
+          selectCell(result.row, result.col, false)
+          setTimeout(() => {
+            const cell = document.querySelector(`td[data-row="${result.row}"][data-col="${result.col}"]`)
+            if (cell) {
+              cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+            }
+          }, 100)
+        }, 100)
+      } else {
+        // 同じシート内の場合は即座に移動
         selectCell(result.row, result.col, false)
-        // セルを表示領域にスクロール
         setTimeout(() => {
           const cell = document.querySelector(`td[data-row="${result.row}"][data-col="${result.col}"]`)
           if (cell) {
@@ -210,7 +224,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
           }
         }, 0)
       }
-    }, [currentTableIndex, selectCell]),
+    }, [currentTableIndex, selectCell, onTableSwitch]),
     onUpdateCell: useCallback((tableIndex, row, col, value) => {
       if (tableIndex === currentTableIndex) {
         updateCell(row, col, value)

@@ -284,6 +284,7 @@ function AppContent() {
           allTables={allTables}
           onTableUpdate={handleTableUpdate}
           onSendMessage={communication.sendMessage}
+          onTableSwitch={handleTabChange}
           sortState={sortStates[currentTableIndex]}
           setSortState={(updater) => {
             setSortStates((prev) => {
