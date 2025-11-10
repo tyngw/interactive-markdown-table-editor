@@ -86,11 +86,16 @@ function resolveAssetUris(context: vscode.ExtensionContext, panel: vscode.Webvie
 export async function buildWebviewHtml(context: vscode.ExtensionContext, panel: vscode.WebviewPanel): Promise<string> {
     const assets = resolveAssetUris(context, panel);
 
+    // Get configured language
+    const config = vscode.workspace.getConfiguration('markdownTableEditor');
+    const userLanguage = config.get<string>('language', '');
+    const displayLanguage = userLanguage || vscode.env.language.split('-')[0] || 'en';
+
     const csp = buildCsp(panel);
     const bootstrapScript = buildBootstrapScript();
 
     return `<!DOCTYPE html>
-<html lang="ja">
+<html lang="${displayLanguage}" data-vscode-language="${displayLanguage}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

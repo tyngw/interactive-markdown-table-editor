@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as l10n from '@vscode/l10n';
 import { WebviewManager } from './webviewManager';
 import { TableDataManager, TableData } from './tableDataManager';
 import { MarkdownParser } from './markdownParser';
@@ -9,7 +10,15 @@ import { decodeBuffer, detectTextEncoding, parseCsv, toRectangular } from './csv
 import { normalizeForImport } from './encodingNormalizer';
 import { normalizeForShiftJisExport } from './encodingNormalizer';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+    // Initialize l10n with user's preferred language
+    const config = vscode.workspace.getConfiguration('markdownTableEditor');
+    const userLanguage = config.get<string>('language', '');
+    if (userLanguage) {
+        const l10nPath = vscode.Uri.joinPath(context.extensionUri, 'l10n', `bundle.l10n.${userLanguage}.json`);
+        await l10n.config({ uri: l10nPath.toString() });
+    }
+
     // Initialize managers
     const webviewManager = WebviewManager.getInstance(context);
     const markdownParser = new MarkdownParser();
@@ -39,14 +48,14 @@ export function activate(context: vscode.ExtensionContext) {
             if (!uri) {
                 const activeEditor = vscode.window.activeTextEditor;
                 if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
-                    vscode.window.showErrorMessage('Please open a Markdown file first.');
+                    vscode.window.showErrorMessage(l10n.t('error.noMarkdownFile'));
                     return;
                 }
                 uri = activeEditor.document.uri;
             }
 
             if (!uri) {
-                throw new Error('No valid URI available');
+                throw new Error(l10n.t('error.noValidUri'));
             }
 
             // Read the markdown file
@@ -55,7 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
             const tables = markdownParser.findTablesInDocument(ast);
 
             if (tables.length === 0) {
-                vscode.window.showInformationMessage('No tables found in this Markdown file.');
+                vscode.window.showInformationMessage(l10n.t('error.noTables'));
                 return;
             }
 
@@ -113,7 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         } catch (error) {
             console.error('Error opening table editor:', error);
-            vscode.window.showErrorMessage(`Failed to open table editor: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            vscode.window.showErrorMessage(l10n.t('error.openTableEditor', error instanceof Error ? error.message : 'Unknown error'));
         }
     });
 
@@ -125,14 +134,14 @@ export function activate(context: vscode.ExtensionContext) {
             if (!uri) {
                 const activeEditor = vscode.window.activeTextEditor;
                 if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
-                    vscode.window.showErrorMessage('Please open a Markdown file first.');
+                    vscode.window.showErrorMessage(l10n.t('error.noMarkdownFile'));
                     return;
                 }
                 uri = activeEditor.document.uri;
             }
 
             if (!uri) {
-                throw new Error('No valid URI available');
+                throw new Error(l10n.t('error.noValidUri'));
             }
 
             // Read the markdown file
@@ -141,7 +150,7 @@ export function activate(context: vscode.ExtensionContext) {
             const tables = markdownParser.findTablesInDocument(ast);
 
             if (tables.length === 0) {
-                vscode.window.showInformationMessage('No tables found in this Markdown file.');
+                vscode.window.showInformationMessage(l10n.t('error.noTables'));
                 return;
             }
 
@@ -199,7 +208,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         } catch (error) {
             console.error('Error opening table editor in new panel:', error);
-            vscode.window.showErrorMessage(`Failed to open table editor in new panel: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            vscode.window.showErrorMessage(l10n.t('error.openTableEditorNewPanel', error instanceof Error ? error.message : 'Unknown error'));
         }
     });
 
@@ -208,21 +217,21 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             const themes = getInstalledColorThemes();
             const items: vscode.QuickPickItem[] = [
-                { label: '$(color-mode) Inherit VS Code Theme', description: 'inherit' }
+                { label: `$(color-mode) ${l10n.t('selectTheme.inherit')}`, description: 'inherit' }
             ].concat(
                 themes.map(t => ({ label: t.label, description: t.id }))
             );
             const picked = await vscode.window.showQuickPick(items, {
-                placeHolder: 'Select Table Editor Theme',
+                placeHolder: l10n.t('selectTheme.placeholder'),
                 matchOnDescription: true
             });
             if (!picked) return;
             const themeId = picked.description === 'inherit' ? 'inherit' : picked.description || 'inherit';
             await vscode.workspace.getConfiguration('markdownTableEditor').update('theme', themeId, true);
             await applyConfiguredThemeToPanels();
-            vscode.window.showInformationMessage('Markdown Table Editor theme updated.');
+            vscode.window.showInformationMessage(l10n.t('selectTheme.updated'));
         } catch (err) {
-            vscode.window.showErrorMessage(`Failed to update Table Editor theme: ${err instanceof Error ? err.message : String(err)}`);
+            vscode.window.showErrorMessage(l10n.t('error.updateTheme', err instanceof Error ? err.message : String(err)));
         }
     });
 
@@ -1190,18 +1199,19 @@ export function activate(context: vscode.ExtensionContext) {
                     const { normalized, replacements } = normalizeForShiftJisExport(csvContent);
                     if (replacements.length > 0) {
                         const examples = Array.from(new Set(replacements.map(r => `${r.from}→${r.to}`))).slice(0, 5).join('、');
+                        const examplesStr = `${examples}${replacements.length > 5 ? '、他' : ''}`;
                         const confirm = await vscode.window.showWarningMessage(
-                            `Shift_JISで保存できない可能性のある文字が見つかりました。\n近似文字に置換して書き出しますか？\n例: ${examples}${replacements.length > 5 ? '、他' : ''}`,
+                            l10n.t('csv.shiftJisWarning', examplesStr),
                             { modal: true },
-                            '変換して保存',
-                            '変換しない'
+                            l10n.t('csv.convertAndSave'),
+                            l10n.t('csv.doNotConvert')
                         );
                         if (confirm === undefined) {
                                                         return;
                         }
-                        if (confirm === '変換して保存') {
+                        if (confirm === l10n.t('csv.convertAndSave')) {
                             contentToWrite = normalized;
-                        } else if (confirm === '変換しない') {
+                        } else if (confirm === l10n.t('csv.doNotConvert')) {
                             // 変換せずにSJISエンコードを試みる（非対応文字は '?' になる可能性あり）
                             contentToWrite = csvContent;
                         }
@@ -1220,8 +1230,8 @@ export function activate(context: vscode.ExtensionContext) {
 
                 await vscode.workspace.fs.writeFile(saveUri, buffer);
 
-                const encodingLabel = encoding === 'sjis' ? 'Shift_JIS' : 'UTF-8';
-                webviewManager.sendSuccess(panel, `CSV exported successfully to ${saveUri.fsPath} (${encodingLabel})`);
+                const encodingLabel = encoding === 'sjis' ? l10n.t('csv.encoding.sjis') : l10n.t('csv.encoding.utf8');
+                webviewManager.sendSuccess(panel, l10n.t('success.csvExported', saveUri.fsPath, encodingLabel));
                             } else {
                             }
         } catch (error) {
@@ -1301,11 +1311,11 @@ export function activate(context: vscode.ExtensionContext) {
 
             // 確認ダイアログ（モーダル）。承認時のみ上書き
             const confirm = await vscode.window.showWarningMessage(
-                'インポートしたCSVは現在のシートに上書きされます。\nよろしいですか？',
+                l10n.t('csv.importConfirm'),
                 { modal: true },
-                'はい'
+                l10n.t('csv.yes')
             )
-            if (confirm !== 'はい') {
+            if (confirm !== l10n.t('csv.yes')) {
                                 return
             }
 
@@ -1331,8 +1341,8 @@ export function activate(context: vscode.ExtensionContext) {
             })
             webviewManager.updateTableData(panel, allTableData, uri)
 
-            const label = enc === 'sjis' ? 'Shift_JIS' : 'UTF-8'
-            webviewManager.sendSuccess(panel, `CSV imported from ${csvUri.fsPath} (${label})`)
+            const label = enc === 'sjis' ? l10n.t('csv.encoding.sjis') : l10n.t('csv.encoding.utf8')
+            webviewManager.sendSuccess(panel, l10n.t('success.csvImported', csvUri.fsPath, label))
         } catch (error) {
             console.error('Error in importCSV:', error)
             const { panel } = resolvePanelContext(data?.uri, data?.panelId)
