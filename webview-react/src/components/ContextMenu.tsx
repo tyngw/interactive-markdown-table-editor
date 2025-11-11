@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 interface ContextMenuState {
   type: 'row' | 'column' | 'editor' | null
   index: number
@@ -56,6 +58,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onToggleColumnHeaders,
   onToggleRowHeaders
 }) => {
+  const { t } = useTranslation()
   if (!menuState.type) return null
 
   const handleAddRowAbove = () => {
@@ -196,29 +199,29 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={() => { onToggleColumnHeaders?.(); onClose(); }}>
             <span className="context-menu-icon">{headerConfig?.hasColumnHeaders ? '✓' : ''}</span>
-            <span className="context-menu-label">列ヘッダーを表示</span>
+            <span className="context-menu-label">{t('contextMenu.showColumnHeaders')}</span>
           </button>
           <button className="context-menu-item" onClick={() => { onToggleRowHeaders?.(); onClose(); }}>
             <span className="context-menu-icon">{headerConfig?.hasRowHeaders ? '✓' : ''}</span>
-            <span className="context-menu-label">行ヘッダーを表示</span>
+            <span className="context-menu-label">{t('contextMenu.showRowHeaders')}</span>
           </button>
           <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={() => { onResetSort?.(); onClose(); }} disabled={!hasActiveSort}>
             <span className="context-menu-icon">🗂️</span>
-            <span className="context-menu-label">ソートをリセット</span>
+            <span className="context-menu-label">{t('contextMenu.resetSort')}</span>
           </button>
           <button className="context-menu-item" onClick={() => { onCommitSort?.(); onClose(); }} disabled={!hasActiveSort}>
             <span className="context-menu-icon">💾</span>
-            <span className="context-menu-label">この順序を保存</span>
+            <span className="context-menu-label">{t('contextMenu.commitSort')}</span>
           </button>
           <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={() => { onExportCsv?.(); onClose(); }}>
             <span className="context-menu-icon">📄</span>
-            <span className="context-menu-label">Export CSV ({exportEncoding.toUpperCase()})</span>
+            <span className="context-menu-label">{t('contextMenu.exportCsv', { encoding: exportEncoding.toUpperCase() })}</span>
           </button>
           <button className="context-menu-item" onClick={() => { onExportTsv?.(); onClose(); }}>
             <span className="context-menu-icon">📋</span>
-            <span className="context-menu-label">Export TSV ({exportEncoding.toUpperCase()})</span>
+            <span className="context-menu-label">{t('contextMenu.exportTsv', { encoding: exportEncoding.toUpperCase() })}</span>
           </button>
           <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={() => { onChangeEncoding?.('utf8'); onClose(); }}>
@@ -264,25 +267,25 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             <span className="context-menu-icon">⬆️</span>
             <span className="context-menu-label">
               {getSelectedRows().size > 1 && isRowFullySelected(menuState.index)
-                ? `この上に${getSelectedRows().size}行を追加`
-                : 'この上に行を追加'}
+                ? t('contextMenu.addRowsAbove', { count: getSelectedRows().size })
+                : t('contextMenu.addRowAbove')}
             </span>
           </button>
           <button className="context-menu-item" onClick={handleAddRowBelow}>
             <span className="context-menu-icon">⬇️</span>
             <span className="context-menu-label">
               {getSelectedRows().size > 1 && isRowFullySelected(menuState.index)
-                ? `この下に${getSelectedRows().size}行を追加`
-                : 'この下に行を追加'}
+                ? t('contextMenu.addRowsBelow', { count: getSelectedRows().size })
+                : t('contextMenu.addRowBelow')}
             </span>
           </button>
           <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={handleDeleteRow}>
             <span className="context-menu-icon">🗑️</span>
             <span className="context-menu-label">
-              {getSelectedRows().size > 1 && isRowFullySelected(menuState.index) 
-                ? `選択した${getSelectedRows().size}行を削除` 
-                : 'この行を削除'}
+              {getSelectedRows().size > 1 && isRowFullySelected(menuState.index)
+                ? t('contextMenu.deleteSelectedRows', { count: getSelectedRows().size })
+                : t('contextMenu.deleteThisRow')}
             </span>
           </button>
         </div>
@@ -300,19 +303,19 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         >
           <button className="context-menu-item" onClick={handleAddColumnLeft}>
             <span className="context-menu-icon">⬅️</span>
-            <span className="context-menu-label">この左に列を追加</span>
+            <span className="context-menu-label">{t('contextMenu.addColumnLeft')}</span>
           </button>
           <button className="context-menu-item" onClick={handleAddColumnRight}>
             <span className="context-menu-icon">➡️</span>
-            <span className="context-menu-label">この右に列を追加</span>
+            <span className="context-menu-label">{t('contextMenu.addColumnRight')}</span>
           </button>
           <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={handleDeleteColumn}>
             <span className="context-menu-icon">🗑️</span>
             <span className="context-menu-label">
               {getSelectedColumns().size > 1 && getSelectedColumns().has(menuState.index)
-                ? `選択した${getSelectedColumns().size}列を削除`
-                : 'この列を削除'}
+                ? t('contextMenu.deleteSelectedColumns', { count: getSelectedColumns().size })
+                : t('contextMenu.deleteThisColumn')}
             </span>
           </button>
         </div>

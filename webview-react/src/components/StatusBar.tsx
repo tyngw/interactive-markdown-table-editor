@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next'
 import { useStatus } from '../contexts/StatusContext'
 import { useTheme } from '../contexts/ThemeContext'
 
 const StatusBar: React.FC = () => {
+  const { t } = useTranslation()
   const { status, tableInfo, saveStatus, sortState } = useStatus()
   const { getStyle } = useTheme()
 
@@ -10,9 +12,9 @@ const StatusBar: React.FC = () => {
       <div className="status-left">
         <div className="status-item" id="statusSelection">
           <span className={`save-indicator ${saveStatus ?? 'saved'}`}>
-            {saveStatus === 'saving' && '⏳ Saving...'}
-            {saveStatus === 'error' && '❌ Error'}
-            {(!saveStatus || saveStatus === 'saved') && '✓ Auto-saved'}
+            {saveStatus === 'saving' && `⏳ ${t('statusBar.saving')}`}
+            {saveStatus === 'error' && `❌ ${t('statusBar.error')}`}
+            {(!saveStatus || saveStatus === 'saved') && `✓ ${t('statusBar.saved')}`}
           </span>
           {status.selection && (
             <span className="status-selection">
@@ -24,7 +26,7 @@ const StatusBar: React.FC = () => {
       <div className="status-center">
         <div className="status-message" id="statusMessage">
           {sortState?.direction !== 'none' && (
-            <span className="status-message info">📊 表示順序はソートされています</span>
+            <span className="status-message info">📊 {t('statusBar.sorted')}</span>
           )}
           {status.message && (
             <span className={`status-message ${status.type}`}>
@@ -37,7 +39,7 @@ const StatusBar: React.FC = () => {
         <div className="status-item" id="statusInfo">
           {tableInfo && (
             <span>
-              {tableInfo.rows} rows × {tableInfo.columns} columns
+              {t('statusBar.rowsColumns', { rows: tableInfo.rows, columns: tableInfo.columns })}
             </span>
           )}
         </div>

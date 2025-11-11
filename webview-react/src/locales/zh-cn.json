@@ -25,5 +25,30 @@
   "nextMatch": "下一个匹配",
   "matchCount": "第{{current}}个，共{{total}}个",
   "noMatches": "无匹配项",
-  "closeSearch": "关闭搜索"
+  "closeSearch": "关闭搜索",
+  "contextMenu": {
+    "addRowAbove": "在上方添加行",
+    "addRowsAbove": "在上方添加{{count}}行",
+    "addRowBelow": "在下方添加行",
+    "addRowsBelow": "在下方添加{{count}}行",
+    "deleteThisRow": "删除此行",
+    "deleteSelectedRows": "删除{{count}}个选中的行",
+    "addColumnLeft": "在左侧添加列",
+    "addColumnRight": "在右侧添加列",
+    "deleteThisColumn": "删除此列",
+    "deleteSelectedColumns": "删除{{count}}个选中的列",
+    "showColumnHeaders": "显示列标题",
+    "showRowHeaders": "显示行标题",
+    "resetSort": "重置排序",
+    "commitSort": "保存此顺序",
+    "exportCsv": "导出CSV ({{encoding}})",
+    "exportTsv": "导出TSV ({{encoding}})"
+  },
+  "statusBar": {
+    "saving": "保存中...",
+    "error": "错误",
+    "saved": "已自动保存",
+    "sorted": "显示顺序已排序",
+    "rowsColumns": "{{rows}} 行 × {{columns}} 列"
+  }
 }

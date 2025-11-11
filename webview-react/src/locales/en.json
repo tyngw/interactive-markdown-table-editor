@@ -25,5 +25,30 @@
   "nextMatch": "Next Match",
   "matchCount": "{{current}} of {{total}}",
   "noMatches": "No matches",
-  "closeSearch": "Close Search"
+  "closeSearch": "Close Search",
+  "contextMenu": {
+    "addRowAbove": "Add row above",
+    "addRowsAbove": "Add {{count}} rows above",
+    "addRowBelow": "Add row below",
+    "addRowsBelow": "Add {{count}} rows below",
+    "deleteThisRow": "Delete this row",
+    "deleteSelectedRows": "Delete {{count}} selected rows",
+    "addColumnLeft": "Add column to left",
+    "addColumnRight": "Add column to right",
+    "deleteThisColumn": "Delete this column",
+    "deleteSelectedColumns": "Delete {{count}} selected columns",
+    "showColumnHeaders": "Show column headers",
+    "showRowHeaders": "Show row headers",
+    "resetSort": "Reset sort",
+    "commitSort": "Save this order",
+    "exportCsv": "Export CSV ({{encoding}})",
+    "exportTsv": "Export TSV ({{encoding}})"
+  },
+  "statusBar": {
+    "saving": "Saving...",
+    "error": "Error",
+    "saved": "Auto-saved",
+    "sorted": "Display order is sorted",
+    "rowsColumns": "{{rows}} rows × {{columns}} columns"
+  }
 }
