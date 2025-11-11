@@ -700,8 +700,6 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-                                                console.log('📊 Updates count:', updates.length);
-
             const panel = webviewManager.getPanel(actualPanelId);
             if (!panel) {
                                 return;
@@ -729,21 +727,17 @@ export function activate(context: vscode.ExtensionContext) {
                 maxRow = Math.max(maxRow, update.row);
                 maxCol = Math.max(maxCol, update.col);
             }
-            
+
             const currentTableData = tableDataManager.getTableData();
             const neededRows = Math.max(0, maxRow + 1 - currentTableData.rows.length);
             const neededCols = Math.max(0, maxCol + 1 - currentTableData.headers.length);
-            
-            console.log(`📏 Table expansion check: current(${currentTableData.rows.length}x${currentTableData.headers.length}), max needed(${maxRow + 1}x${maxCol + 1}), expansion(${neededRows}x${neededCols})`);
-            
+
             // 必要に応じてテーブルを拡張
             if (neededRows > 0) {
-                console.log(`📈 Adding ${neededRows} rows`);
                 tableDataManager.insertRows(currentTableData.rows.length, neededRows);
             }
-            
+
             if (neededCols > 0) {
-                console.log(`📈 Adding ${neededCols} columns`);
                 for (let i = 0; i < neededCols; i++) {
                     const newColIndex = currentTableData.headers.length + i;
                     const columnLetter = String.fromCharCode(65 + (newColIndex % 26)); // A, B, C...
@@ -754,7 +748,6 @@ export function activate(context: vscode.ExtensionContext) {
             // Apply all updates (now all positions should be valid)
             for (const update of updates) {
                 const { row, col, value } = update;
-                console.log(`🔧 Updating cell [${row}, ${col}] = "${value}"`);
                 tableDataManager.updateCell(row, col, value);
             }
 
@@ -768,8 +761,6 @@ export function activate(context: vscode.ExtensionContext) {
                 tableData.metadata.tableIndex,
                 updatedMarkdown
             );
-
-            console.log(`Bulk update completed successfully for ${updates.length} cells`);
         } catch (error) {
             console.error('Error in bulkUpdateCells:', error);
             const actualPanelId = data.panelId || data.uri || webviewManager.getActivePanelUri();
@@ -782,7 +773,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     const updateHeaderCommand = vscode.commands.registerCommand('markdownTableEditor.internal.updateHeader', async (data: any) => {
         try {
-            console.log('Internal command: updateHeader', data);
             const { uri, panelId, col, value, tableIndex } = data;
 
             // Get the URI string and panel ID to use for manager lookup
@@ -861,8 +851,6 @@ export function activate(context: vscode.ExtensionContext) {
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
 
-            console.log(`Updating table header at index ${tableData.metadata.tableIndex}, lines ${tableData.metadata.startLine}-${tableData.metadata.endLine}`);
-
             const fileUri = vscode.Uri.parse(uriString);
             await fileHandler.updateTableByIndex(
                 fileUri,
@@ -872,7 +860,6 @@ export function activate(context: vscode.ExtensionContext) {
 
             // Don't send any update back to webview to avoid re-rendering
             // The webview has already updated the header locally
-            console.log('Header update completed successfully without triggering webview re-render');
         } catch (error) {
             console.error('Error in updateHeader:', error);
             const actualPanelId = data.panelId || data.uri || webviewManager.getActivePanelUri();
@@ -979,7 +966,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     const sortCommand = vscode.commands.registerCommand('markdownTableEditor.internal.sort', async (data: any) => {
         try {
-            console.log('Internal command: sort', data);
             const { uri: rawUri, panelId, column, direction, tableIndex } = data;
             const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
 
@@ -1033,7 +1019,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     const moveRowCommand = vscode.commands.registerCommand('markdownTableEditor.internal.moveRow', async (data: any) => {
         try {
-            console.log('Internal command: moveRow', data);
             const { uri: rawUri, panelId, fromIndex, toIndex, tableIndex } = data;
             const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
 
@@ -1087,7 +1072,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     const moveColumnCommand = vscode.commands.registerCommand('markdownTableEditor.internal.moveColumn', async (data: any) => {
         try {
-            console.log('Internal command: moveColumn', data);
             const { uri: rawUri, panelId, fromIndex, toIndex, tableIndex } = data;
             const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
 
@@ -1141,7 +1125,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     const exportCSVCommand = vscode.commands.registerCommand('markdownTableEditor.internal.exportCSV', async (data: any) => {
         try {
-            console.log('Internal command: exportCSV', data);
             const { uri: rawUri, panelId, data: exportData } = data;
             const { uri, uriString, panel } = resolvePanelContext(rawUri, panelId);
             const csvContent = exportData?.csvContent;
@@ -1239,7 +1222,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     const importCSVCommand = vscode.commands.registerCommand('markdownTableEditor.internal.importCSV', async (data: any) => {
         try {
-            console.log('Internal command: importCSV', data)
             const { uri: rawUri, panelId, tableIndex } = data || {}
             const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId)
 
