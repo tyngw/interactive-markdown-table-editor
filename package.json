@@ -31,17 +31,17 @@
     "commands": [
       {
         "command": "markdownTableEditor.openEditor",
-        "title": "Open Table Editor",
+        "title": "%openEditor.title%",
         "category": "Markdown Table Editor"
       },
       {
         "command": "markdownTableEditor.openEditorNewPanel",
-        "title": "Open Table Editor (New Panel)",
+        "title": "%openEditorNewPanel.title%",
         "category": "Markdown Table Editor"
       },
       {
         "command": "markdownTableEditor.selectTheme",
-        "title": "Select Table Editor Theme",
+        "title": "%selectTheme.title%",
         "category": "Markdown Table Editor"
       }
     ],
@@ -65,25 +65,26 @@
         "markdownTableEditor.theme": {
           "type": "string",
           "default": "inherit",
-          "markdownDescription": "Table Editor のテーマ。`inherit` で VS Code の現在のテーマに追従。その他は 'extensionId:path' 形式のテーマID。コマンド 'Markdown Table Editor: Select Table Editor Theme' から選択できます。"
+          "markdownDescription": "%config.theme.description%"
         },
         "markdownTableEditor.fontFamily": {
           "type": "string",
           "default": "",
-          "markdownDescription": "テーブルエディターで使用するフォントファミリー。空の場合は VS Code のエディターフォント設定を使用します。"
+          "markdownDescription": "%config.fontFamily.description%"
         },
         "markdownTableEditor.fontSize": {
           "type": "number",
           "default": 0,
           "minimum": 0,
           "maximum": 100,
-          "markdownDescription": "テーブルエディターで使用するフォントサイズ（px）。0の場合は VS Code のエディターフォントサイズ設定を使用します。"
+          "markdownDescription": "%config.fontSize.description%"
         }
       }
     }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
+    "compile:debug": "MTE_KEEP_CONSOLE=1 npm run compile ",
     "compile": "tsc -p ./ && npm run build-webview:conditional && npm run copy-mock",
     "build-webview": "cd webview-react && npm install && npm run build && cd .. && mkdir -p out/webview && cp -r webview-dist/* out/webview/",
     "build-webview:conditional": "sh -c 'if [ \"$MTE_KEEP_CONSOLE\" = \"1\" ] || [ \"$MTE_KEEP_CONSOLE\" = \"true\" ]; then npm run build-webview:debug; else npm run build-webview; fi'",
@@ -108,6 +109,7 @@
     "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^5.45.0",
     "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/l10n-dev": "^0.0.35",
     "@vscode/test-electron": "^2.2.0",
     "@vscode/vsce": "^3.6.0",
     "eslint": "^8.28.0",
@@ -116,6 +118,7 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
+    "@vscode/l10n": "^0.0.18",
     "iconv-lite": "^0.6.3",
     "jaconv": "^1.1.2",
     "markdown-it": "^13.0.1"

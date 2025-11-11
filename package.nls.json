@@ -1,0 +1,8 @@
+{
+  "openEditor.title": "Open Table Editor",
+  "openEditorNewPanel.title": "Open Table Editor (New Panel)",
+  "selectTheme.title": "Select Table Editor Theme",
+  "config.theme.description": "Table Editor theme. Use 'inherit' to follow VS Code's current theme. Others use 'extensionId:path' format. You can select from 'Markdown Table Editor: Select Table Editor Theme' command.",
+  "config.fontFamily.description": "Font family to use in the table editor. Leave empty to use VS Code's editor font setting.",
+  "config.fontSize.description": "Font size (in pixels) to use in the table editor. Set to 0 to use VS Code's editor font size setting."
+}

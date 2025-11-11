@@ -414,12 +414,20 @@ export class WebviewManager {
                 // Try to read React build HTML
                 const htmlBuffer = await vscode.workspace.fs.readFile(indexHtmlPath);
                 html = Buffer.from(htmlBuffer).toString('utf8');
-                
+
                 if (!html || html.trim().length === 0) {
                     throw new Error('React build HTML is empty');
                 }
-                
+
                 console.log(`React build loaded successfully (${html.length} characters)`);
+
+                // Add language information
+                const vscodeLanguage = vscode.env.language;
+                const displayLanguage = vscodeLanguage.toLowerCase().split('-')[0];
+
+                // Add language attributes to html tag
+                html = html.replace(/<html([^>]*)>/i, `<html lang="${displayLanguage}" data-vscode-language="${vscodeLanguage}"$1>`);
+
                 buildReady = true;
                 
             } catch (buildError) {

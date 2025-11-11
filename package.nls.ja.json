@@ -1,0 +1,8 @@
+{
+  "openEditor.title": "テーブルエディターを開く",
+  "openEditorNewPanel.title": "テーブルエディターを開く（新しいパネル）",
+  "selectTheme.title": "テーブルエディターのテーマを選択",
+  "config.theme.description": "テーブルエディターのテーマ。'inherit' でVS Codeの現在のテーマに追従。その他は 'extensionId:path' 形式のテーマID。コマンド 'Markdown Table Editor: Select Table Editor Theme' から選択できます。",
+  "config.fontFamily.description": "テーブルエディターで使用するフォントファミリー。空の場合はVS Codeのエディターフォント設定を使用します。",
+  "config.fontSize.description": "テーブルエディターで使用するフォントサイズ（px）。0の場合はVS Codeのエディターフォントサイズ設定を使用します。"
+}

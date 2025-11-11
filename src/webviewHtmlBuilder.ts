@@ -86,11 +86,15 @@ function resolveAssetUris(context: vscode.ExtensionContext, panel: vscode.Webvie
 export async function buildWebviewHtml(context: vscode.ExtensionContext, panel: vscode.WebviewPanel): Promise<string> {
     const assets = resolveAssetUris(context, panel);
 
+    // Get VS Code's display language
+    const vscodeLanguage = vscode.env.language; // e.g., "ja", "en", "zh-cn"
+    const displayLanguage = vscodeLanguage.toLowerCase().split('-')[0]; // Extract base language code
+
     const csp = buildCsp(panel);
     const bootstrapScript = buildBootstrapScript();
 
     return `<!DOCTYPE html>
-<html lang="ja">
+<html lang="${displayLanguage}" data-vscode-language="${vscodeLanguage}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
