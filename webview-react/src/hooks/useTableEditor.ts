@@ -67,26 +67,16 @@ export function useTableEditor(
   }
 
   const { displayedData, viewToModelMap } = useMemo(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 [useTableEditor] useMemo sortState:', sortState)
-    }
-    
     // sortStateが未定義の場合のガード
     if (!sortState) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️ [useTableEditor] sortState is undefined, returning original data')
-      }
       return {
         displayedData: tableData,
         viewToModelMap: tableData.rows.map((_, index) => index),
       }
     }
-    
+
     const { column, direction } = sortState
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 [useTableEditor] Sort parameters - column:', column, 'direction:', direction)
-    }
-    
+
     if (direction === 'none' || column < 0) {
       return {
         displayedData: tableData,
@@ -207,7 +197,6 @@ export function useTableEditor(
 
   const updateCell = useCallback((viewIndex: number, col: number, value: string) => {
     markInternalUpdate()
-    console.log('[MTE][useTableEditor] updateCell called', { viewIndex, col, valueLength: value?.length ?? 0 })
     const modelIndex = viewToModelMap[viewIndex]
     if (modelIndex === undefined) return
 
@@ -221,7 +210,6 @@ export function useTableEditor(
 
   const updateCells = useCallback((updates: Array<{ row: number; col: number; value: string }>) => {
     markInternalUpdate()
-    console.log('[MTE][useTableEditor] updateCells called', { count: updates?.length || 0 })
     setTableData(prev => {
       const newRows = [...prev.rows]
       updates.forEach(({ row: viewIndex, col, value }) => {
@@ -237,7 +225,6 @@ export function useTableEditor(
 
   const addRow = useCallback((viewIndex?: number) => {
     markInternalUpdate()
-    console.log('🔍 [useTableEditor] addRow called, sortState:', sortState)
     const isSorted = sortState?.direction !== 'none'
     setTableData(prev => {
       const newRows = [...prev.rows]
@@ -301,7 +288,6 @@ export function useTableEditor(
 
   const moveRow = useCallback((fromIndex: number, toIndex: number) => {
     markInternalUpdate()
-    console.log('🔍 [useTableEditor] moveRow called, sortState:', sortState)
     if (sortState?.direction !== 'none') return;
     setTableData(prev => {
       const newRows = [...prev.rows]
@@ -352,13 +338,10 @@ export function useTableEditor(
   }, [setHeaderConfig])
 
   const editorState: EditorState = useMemo(() => {
-    console.log('🔍 [useTableEditor] Building editorState with sortState:', sortState)
-
     // sortStateが未定義の場合のデフォルト値を設定
     const safeSortState = sortState || { column: -1, direction: 'none' as const }
-    console.log('🔍 [useTableEditor] Using safeSortState:', safeSortState)
 
-    const state = {
+    return {
       currentEditingCell,
       selectedCells: selection.selectionState.selectedCells,
       selectionRange: selection.selectionState.selectionRange,
@@ -367,8 +350,6 @@ export function useTableEditor(
       columnWidths,
       headerConfig
     }
-    console.log('🔍 [useTableEditor] Built editorState:', state)
-    return state
   }, [currentEditingCell, selection.selectionState, sortState, columnWidths, headerConfig])
 
   return {

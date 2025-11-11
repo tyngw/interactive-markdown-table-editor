@@ -23,25 +23,16 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       const cssVarName = `--vscode-${styleKey.replace('.', '-')}`
       const computedStyle = getComputedStyle(document.documentElement)
       const cssValue = computedStyle.getPropertyValue(cssVarName).trim()
-      
-      // Debug logging for first few calls
-      if (Math.random() < 0.1) { // Log 10% of calls to avoid spam
-        console.log(`=== STYLE DEBUG: getStyle('${styleKey}') ===`)
-        console.log(`CSS Variable: ${cssVarName}`)
-        console.log(`CSS Value: "${cssValue}"`)
-        console.log(`Theme Value: "${theme[styleKey as keyof typeof theme]}"`)
-        console.log(`Fallback: "${fallback}"`)
-      }
-      
+
       if (cssValue) {
         return cssValue
       }
-      
+
       // Fallback to theme object value
       const themeValue = theme[styleKey as keyof typeof theme] || fallback
       return themeValue
     } catch (error) {
-      console.warn('=== STYLE DEBUG: Error getting theme style ===', error)
+      console.warn('Error getting theme style', error)
       return fallback
     }
   }

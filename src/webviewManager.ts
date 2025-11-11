@@ -306,11 +306,8 @@ export class WebviewManager {
             }
         }
 
-        console.log('Creating webview panel for:', panelId, forceNewPanel ? '(forced new panel)' : '');
-
         // If panel already exists for the same file and not forcing new panel, reveal it
         if (!forceNewPanel && this.panels.has(panelId)) {
-            console.log('Panel already exists for same file, revealing...');
             const existingPanel = this.panels.get(panelId)!;
             existingPanel.reveal();
             this.updateTableData(existingPanel, tableData, uri);
@@ -319,7 +316,6 @@ export class WebviewManager {
 
         // If any table editor panel is already open and not forcing new panel, reuse it for the new file
         if (!forceNewPanel && this.panels.size > 0) {
-            console.log('Existing table editor panel found, reusing for new file...');
             const existingPanelEntry = Array.from(this.panels.entries())[0];
             const [oldPanelId, existingPanel] = existingPanelEntry;
             
@@ -335,8 +331,6 @@ export class WebviewManager {
             this.updateTableData(existingPanel, tableData, uri);
             return existingPanel;
         }
-
-        console.log('Creating new webview panel...');
 
         // Generate appropriate title
         let panelTitle = `${path.basename(uri.fsPath)} - Table Editor`;
@@ -377,8 +371,6 @@ export class WebviewManager {
             throw new Error(`Failed to create webview panel: ${panelError instanceof Error ? panelError.message : String(panelError)}`);
         }
 
-        console.log('Webview panel created, setting HTML content...');
-
         // Use React build for webview with enhanced error handling and retry logic
         const reactBuildPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview-dist');
         
@@ -390,22 +382,18 @@ export class WebviewManager {
         
         for (let attempt = 1; attempt <= maxRetries && !buildReady; attempt++) {
             try {
-                console.log(`Attempting to load React build (attempt ${attempt}/${maxRetries})...`);
-                
                 // Check if React build directory exists first
                 try {
                     await vscode.workspace.fs.stat(reactBuildPath);
-                    console.log('React build directory exists');
                 } catch (dirError) {
                     console.error('React build directory not found:', reactBuildPath.toString());
                     throw new Error(`React build directory not accessible: ${dirError}`);
                 }
-                
+
                 // Check if index.html exists
                 const indexHtmlPath = vscode.Uri.joinPath(reactBuildPath, 'index.html');
                 try {
                     await vscode.workspace.fs.stat(indexHtmlPath);
-                    console.log('React build index.html found');
                 } catch (htmlError) {
                     console.error('React build index.html not found:', indexHtmlPath.toString());
                     throw new Error(`React build index.html not accessible: ${htmlError}`);
@@ -419,8 +407,6 @@ export class WebviewManager {
                     throw new Error('React build HTML is empty');
                 }
 
-                console.log(`React build loaded successfully (${html.length} characters)`);
-
                 // Add language information
                 const vscodeLanguage = vscode.env.language;
                 const displayLanguage = vscodeLanguage.toLowerCase().split('-')[0];
@@ -429,12 +415,9 @@ export class WebviewManager {
                 html = html.replace(/<html([^>]*)>/i, `<html lang="${displayLanguage}" data-vscode-language="${vscodeLanguage}"$1>`);
 
                 buildReady = true;
-                
+
             } catch (buildError) {
-                console.warn(`Build loading attempt ${attempt} failed:`, buildError);
-                
                 if (attempt < maxRetries) {
-                    console.log(`Retrying in ${retryDelay}ms...`);
                     await new Promise(resolve => setTimeout(resolve, retryDelay));
                 } else {
                     console.error('All build loading attempts failed');
@@ -474,12 +457,7 @@ export class WebviewManager {
                     throw new Error(`Failed to create safe webview URI for assets: ${fallbackError}`);
                 }
             }
-            
-            console.log('React build path:', reactBuildPath.toString());
-            console.log('Assets path:', assetsPath.toString());
-            console.log('Assets URI:', assetsUriString);
-            console.log('Original HTML:', html);
-            
+
             // Replace asset paths with webview URIs (be careful not to double-replace)
             const originalHtml = html;
             // First replace relative paths
@@ -488,10 +466,7 @@ export class WebviewManager {
             // Then replace any remaining absolute paths that weren't already replaced
             html = html.replace(/src="\/assets\//g, `src="${assetsUriString}/`);
             html = html.replace(/href="\/assets\//g, `href="${assetsUriString}/`);
-            
-            console.log('HTML after asset path replacement:', html);
-            console.log('Asset path replacements made:', originalHtml !== html);
-            
+
             // Update CSP to allow React and webview resources
             // Note: Do NOT add "https://file+.vscode-resource.vscode-cdn.net". The '+' is encoded in actual host (file%2B...),
             // and hardcoding it causes CSP warnings. Use only panel.webview.cspSource as recommended by VS Code docs.
@@ -499,10 +474,6 @@ export class WebviewManager {
 
             // 既存の全てのCSPメタタグを削除（バリエーションを広くカバー）
             const cspMetaPattern = /<meta\s+[^>]*http-equiv=["']Content-Security-Policy["'][^>]*>/gi;
-            const beforeRemovalCount = (html.match(cspMetaPattern) || []).length;
-            if (beforeRemovalCount > 0) {
-                console.log('Existing CSP meta tag count before removal:', beforeRemovalCount);
-            }
             html = html.replace(cspMetaPattern, '');
 
             // <head>タグ直後にCSPメタタグを挿入（viewport 有無によらず確実に先頭近くに配置）
@@ -510,43 +481,6 @@ export class WebviewManager {
                 /(<head[^>]*>)/i,
                 `$1\n    <meta http-equiv="Content-Security-Policy" content="${cspContent}">`
             );
-
-            // 診断ログ: CSP メタの件数と位置を詳細に出力
-            const headStartIndex = html.toLowerCase().indexOf('<head');
-            const headOpenEnd = headStartIndex >= 0 ? html.indexOf('>', headStartIndex) : -1;
-            const headEndIndex = html.toLowerCase().indexOf('</head>');
-            const cspMatches: Array<{ index: number; snippet: string }> = [];
-            let m: RegExpExecArray | null;
-            const scanRe = new RegExp(cspMetaPattern);
-            while ((m = scanRe.exec(html)) !== null) {
-                cspMatches.push({ index: m.index, snippet: html.substring(m.index, Math.min(m.index + 120, html.length)) });
-            }
-            console.log('CSP processing completed');
-            console.log('CSP meta tag count after insertion:', cspMatches.length);
-            console.log('HTML contains CSP meta tag:', cspMatches.length > 0);
-            console.log('HTML structure analysis:');
-            console.log('Head open tag index:', headStartIndex, 'head open end:', headOpenEnd);
-            console.log('Head end index:', headEndIndex);
-            cspMatches.forEach((mm, i) => {
-                const insideHead = headOpenEnd >= 0 && headEndIndex >= 0 && mm.index > headOpenEnd && mm.index < headEndIndex;
-                console.log(`CSP[${i}] index:`, mm.index, 'inside <head>:', insideHead);
-            });
-
-            // 最終保険: どれかが head 範囲外にあれば修正を試みる
-            const hasOutside = cspMatches.some(mm => !(headOpenEnd >= 0 && headEndIndex >= 0 && mm.index > headOpenEnd && mm.index < headEndIndex));
-            if (hasOutside) {
-                console.warn('Detected CSP meta tag(s) outside <head>. Applying final repositioning.');
-                html = html.replace(cspMetaPattern, '');
-                html = html.replace(
-                    /(<head[^>]*>)/i,
-                    `$1\n    <meta http-equiv="Content-Security-Policy" content="${cspContent}">`
-                );
-                console.log('Final CSP fix applied');
-            }
-
-            console.log('Using React build for webview');
-            console.log('Modified HTML length:', html.length);
-            console.log('Final HTML being sent to webview:', html);
         } catch (error) {
             console.error('Failed to load React build:', error);
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -554,8 +488,6 @@ export class WebviewManager {
         }
 
         panel.webview.html = html;
-
-        console.log('HTML content set, storing panel reference...');
 
         // Store panel reference
         this.panels.set(panelId, panel);
@@ -604,13 +536,9 @@ export class WebviewManager {
         const commManager = new ExtensionCommunicationManager(panel);
         this.communicationManagers.set(panelId, commManager);
         this.setupCommunicationHandlers(commManager, panel, uri);
-        console.log('[MTE][Ext] Communication manager initialized for panel:', panelId);
-
-        console.log('Setting up initial data timeout...');
 
         // Send initial data after webview is fully ready
         setTimeout(() => {
-            console.log('Sending initial table data to webview...');
             this.updateTableData(panel, tableData, uri);
             // Apply theme shortly after data is sent to avoid race with script init
             this.applyThemeToPanel(panel);
@@ -618,7 +546,6 @@ export class WebviewManager {
 
             // Send a second update after another delay to ensure it's received
             setTimeout(() => {
-                console.log('Sending table data to webview...');
                 this.updateTableData(panel, tableData, uri);
                 // Re-apply theme again to cover late-initialized listeners
                 this.applyThemeToPanel(panel);
@@ -626,7 +553,6 @@ export class WebviewManager {
             }, 1000);
         }, 500);
 
-        console.log('Webview panel setup complete');
         return panel;
     }
 
@@ -739,8 +665,6 @@ export class WebviewManager {
      * Handle request for table data
      */
     private async handleRequestTableData(panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Table data requested for:', uri.toString());
-
         const actualPanelId = this.findPanelId(panel);
 
         // Emit custom event that can be handled by the extension
@@ -822,10 +746,6 @@ export class WebviewManager {
      * Handle bulk cell update
      */
     private async handleBulkUpdateCells(data: { updates: Array<{ row: number; col: number; value: string }>; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('🔧 WebviewManager: Bulk cell update received from React:');
-        console.log('📦 Raw React Data:', JSON.stringify(data, null, 2));
-        console.log('📊 Bulk update tableIndex from React:', data.tableIndex);
-
         // Save state before making changes for undo functionality
         await this.undoRedoManager.saveState(uri, 'Bulk cell update');
 
@@ -838,8 +758,6 @@ export class WebviewManager {
             tableIndex: data.tableIndex
         };
 
-        console.log('📤 Sending bulk command data to Extension:', JSON.stringify(commandData, null, 2));
-
         // Emit custom event that can be handled by the extension
         vscode.commands.executeCommand('markdownTableEditor.internal.bulkUpdateCells', commandData);
     }
@@ -848,10 +766,6 @@ export class WebviewManager {
      * Handle cell update
      */
     private async handleCellUpdate(data: { row: number; col: number; value: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('🔧 WebviewManager: Cell update received from React:');
-        console.log('📦 Raw React Data:', JSON.stringify(data, null, 2));
-        console.log('📊 Cell update tableIndex from React:', data.tableIndex);
-
         const actualPanelId = this.findPanelId(panel);
         const safeUriString = this.getSafeUriString(uri);
 
@@ -869,8 +783,6 @@ export class WebviewManager {
             tableIndex: data.tableIndex
         };
 
-        console.log('📤 Sending command data to Extension:', JSON.stringify(commandData, null, 2));
-
         // Emit custom event that can be handled by the extension
         vscode.commands.executeCommand('markdownTableEditor.internal.updateCell', commandData);
     }
@@ -879,9 +791,6 @@ export class WebviewManager {
      * Handle header update
      */
     private async handleHeaderUpdate(data: { col: number; value: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Header update:', data, 'for file:', uri.toString());
-        console.log('Header update tableIndex:', data.tableIndex);
-
         const actualPanelId = this.findPanelId(panel);
         const safeUriString = this.getSafeUriString(uri);
 
@@ -898,8 +807,6 @@ export class WebviewManager {
             tableIndex: data.tableIndex
         };
 
-        console.log('Sending header command data:', commandData);
-
         // Emit custom event that can be handled by the extension
         vscode.commands.executeCommand('markdownTableEditor.internal.updateHeader', commandData);
     }
@@ -908,8 +815,6 @@ export class WebviewManager {
      * Handle add row
      */
     private async handleAddRow(data: { index?: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Add row:', data, 'for file:', uri.toString());
-
         const actualPanelId = this.findPanelId(panel);
 
         vscode.commands.executeCommand('markdownTableEditor.internal.addRow', {
@@ -924,8 +829,6 @@ export class WebviewManager {
      * Handle delete multiple rows
      */
     private async handleDeleteRows(data: { indices: number[]; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Delete rows:', data, 'for file:', uri.toString());
-
         const actualPanelId = this.findPanelId(panel);
 
         vscode.commands.executeCommand('markdownTableEditor.internal.deleteRows', {
@@ -940,8 +843,6 @@ export class WebviewManager {
      * Handle add column
      */
     private async handleAddColumn(data: { index?: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Add column:', data, 'for file:', uri.toString());
-
         const actualPanelId = this.findPanelId(panel);
 
         vscode.commands.executeCommand('markdownTableEditor.internal.addColumn', {
@@ -956,8 +857,6 @@ export class WebviewManager {
      * Handle delete multiple columns
      */
     private async handleDeleteColumns(data: { indices: number[]; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Delete columns:', data, 'for file:', uri.toString());
-
         const actualPanelId = this.findPanelId(panel);
 
         vscode.commands.executeCommand('markdownTableEditor.internal.deleteColumns', {
@@ -972,8 +871,6 @@ export class WebviewManager {
      * Handle sort
      */
     private async handleSort(data: { column: number; direction: string; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Sort:', data, 'for file:', uri.toString());
-
         // データの検証
         if (!data || typeof data.column !== 'number' || !data.direction) {
             console.error('Invalid sort data:', data);
@@ -1008,8 +905,6 @@ export class WebviewManager {
      * Handle move row
      */
     private async handleMoveRow(data: { fromIndex: number; toIndex: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Move row:', data, 'for file:', uri.toString());
-
         // Validate indices
         if (typeof data.fromIndex !== 'number' || typeof data.toIndex !== 'number') {
             const error = `Failed to move row: Invalid row indices: from ${data.fromIndex}, to ${data.toIndex}`;
@@ -1055,8 +950,6 @@ export class WebviewManager {
      * Handle move column
      */
     private async handleMoveColumn(data: { fromIndex: number; toIndex: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Move column:', data, 'for file:', uri.toString());
-
         // Validate indices
         if (typeof data.fromIndex !== 'number' || typeof data.toIndex !== 'number') {
             const error = `Failed to move column: Invalid column indices: from ${data.fromIndex}, to ${data.toIndex}`;
@@ -1121,8 +1014,6 @@ export class WebviewManager {
      * Handle export CSV
      */
     private async handleExportCSV(data: { tableIndex?: number; csvContent?: string; filename?: string; encoding?: string }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        console.log('Export CSV:', data, 'for file:', uri.toString());
-
         const actualPanelId = this.findPanelId(panel);
 
         vscode.commands.executeCommand('markdownTableEditor.internal.exportCSV', {

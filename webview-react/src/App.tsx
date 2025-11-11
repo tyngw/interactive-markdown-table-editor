@@ -12,9 +12,6 @@ import { TableData, SortState } from './types'
 function AppContent() {
   const { t } = useTranslation()
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[React] AppContent initializing...')
-  }
   const [allTables, setAllTables] = useState<TableData[]>([])
   const [currentTableIndex, setCurrentTableIndex] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -45,18 +42,6 @@ function AppContent() {
 
   const currentTableData = allTables[currentTableIndex] || null
 
-  // Debug: Current table index
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📊 App: currentTableIndex updated to:', currentTableIndex);
-      console.log('📊 App: Total tables:', allTables.length);
-    }
-  }, [currentTableIndex, allTables.length])
-
-  // Debug: Log when currentTableData changes to track rendering
-  useEffect(() => {
-    // currentTableData change tracking disabled for production
-  }, [currentTableData, currentTableIndex, allTables.length])
 
   const communication = useCommunication({
     onTableData: (data: TableData | TableData[]) => {
@@ -236,19 +221,13 @@ function AppContent() {
     // refから最新の値を取得（依存配列から除外してコールバックを安定化）
     const currentTables = allTablesRef.current
     const currentIdx = currentIndexRef.current
-    
+
     // データが実際に変更されているかチェック（無限ループ防止）
     const currentData = currentTables[currentIdx]
     if (currentData && JSON.stringify(currentData) === JSON.stringify(updatedData)) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[App] Skipping table update - no actual changes')
-      }
       return
     }
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[App] Applying table update - changes detected')
-    }
+
     const newTables = [...currentTables]
     newTables[currentIdx] = updatedData
     setAllTables(newTables)

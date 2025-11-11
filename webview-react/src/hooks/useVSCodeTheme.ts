@@ -118,11 +118,8 @@ export function useVSCodeTheme() {
   // Get theme colors from VSCode
   const getThemeColors = useCallback(() => {
     try {
-      console.log('=== THEME DEBUG: getThemeColors called ===')
-      
       // Wait a bit for DOM to be ready
       if (!document.documentElement) {
-        console.log('=== THEME DEBUG: DOM not ready, retrying in 50ms ===')
         setTimeout(getThemeColors, 50)
         return
       }
@@ -130,8 +127,7 @@ export function useVSCodeTheme() {
       // VSCode provides theme colors through CSS custom properties
   const hostEl = (document.getElementById('mte-root') || document.getElementById('root') || document.documentElement) as HTMLElement
   const computedStyle = getComputedStyle(hostEl)
-      console.log('=== THEME DEBUG: Getting computed styles ===')
-      
+
       const themeColors: Partial<VSCodeTheme> = {
         'editor.background': computedStyle.getPropertyValue('--vscode-editor-background').trim(),
         'editor.foreground': computedStyle.getPropertyValue('--vscode-editor-foreground').trim(),
@@ -199,20 +195,11 @@ export function useVSCodeTheme() {
         'charts.red': computedStyle.getPropertyValue('--vscode-charts-red').trim(),
       }
 
-      console.log('=== THEME DEBUG: Theme colors extracted ===')
-      console.log('Sample theme colors:', {
-        'editor.background': themeColors['editor.background'],
-        'editor.foreground': themeColors['editor.foreground'],
-        'sideBar.background': themeColors['sideBar.background'],
-        'panel.border': themeColors['panel.border']
-      })
-      
       setTheme(themeColors)
       setIsLoaded(true)
       setInitialLoadDone(true)
-      console.log('=== THEME DEBUG: Theme loaded successfully ===')
     } catch (error) {
-      console.error('=== THEME DEBUG: Failed to load VSCode theme colors ===', error)
+      console.error('Failed to load VSCode theme colors', error)
       // VSCode Webview ではテーマ変数が提供される前提。フォールバックは行わず、ログのみに留める。
       setIsLoaded(true)
       setInitialLoadDone(true)
@@ -221,12 +208,9 @@ export function useVSCodeTheme() {
 
   // Function to apply theme variables (compatible with original implementation)
   const applyThemeVariables = useCallback((data: any) => {
-    console.log('=== THEME DEBUG: Applying theme variables ===', data)
-    
     try {
       // Handle cssText format (original implementation)
   if (data && data.cssText) {
-    console.log('=== THEME DEBUG: Applying cssText ===', data.cssText)
         
     // Scope :root to #mte-root to avoid clobbering VS Code globals
     const scopeSelector = '#mte-root'
@@ -239,9 +223,7 @@ export function useVSCodeTheme() {
           document.head.appendChild(styleEl)
         }
   styleEl.textContent = scopedCss
-        
-        console.log('=== THEME DEBUG: Applied cssText to style element ===')
-        
+
         // Extract updated theme colors immediately after applying CSS
         // but don't trigger getThemeColors() to avoid infinite loop
   const hostEl = (document.getElementById('mte-root') || document.getElementById('root') || document.documentElement) as HTMLElement
@@ -260,20 +242,16 @@ export function useVSCodeTheme() {
           ...prevTheme,
           ...updatedTheme
         }))
-        
-        console.log('=== THEME DEBUG: Theme updated from applied CSS variables ===')
       }
-      
+
       // Handle direct variables format
       else if (data && typeof data === 'object') {
-        console.log('=== THEME DEBUG: Applying direct variables ===')
         
   const root = (document.getElementById('mte-root') || document.getElementById('root') || document.documentElement) as HTMLElement
         Object.entries(data).forEach(([key, value]) => {
           // Convert key format if needed (e.g., 'editor.background' -> '--vscode-editor-background')
           const cssVarName = key.startsWith('--') ? key : `--vscode-${key.replace(/\./g, '-')}`
           root.style.setProperty(cssVarName, value as string)
-          console.log(`Set ${cssVarName} = ${value}`)
         })
         
         // Update theme state with the new values
@@ -288,9 +266,9 @@ export function useVSCodeTheme() {
           ...newThemeValues
         }))
       }
-      
+
     } catch (error) {
-      console.error('=== THEME DEBUG: Error applying theme variables ===', error)
+      console.error('Error applying theme variables', error)
     }
   }, [])
 
@@ -300,9 +278,8 @@ export function useVSCodeTheme() {
   useEffect(() => {
     // Load theme colors only once during initial load
     if (!initialLoadDone) {
-      console.log('=== THEME DEBUG: Initial theme load ===')
       const timeoutId = setTimeout(getThemeColors, 100)
-      
+
       return () => {
         clearTimeout(timeoutId)
       }
