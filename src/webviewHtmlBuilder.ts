@@ -90,8 +90,19 @@ export async function buildWebviewHtml(context: vscode.ExtensionContext, panel: 
     const vscodeLanguage = vscode.env.language; // e.g., "ja", "en", "zh-cn"
     const displayLanguage = vscodeLanguage.toLowerCase().split('-')[0]; // Extract base language code
 
+    // Debug log
+    console.log('[Webview] Building HTML with language:', vscodeLanguage, '-> display:', displayLanguage);
+
     const csp = buildCsp(panel);
     const bootstrapScript = buildBootstrapScript();
+
+    // Add language detection script for debugging
+    const languageDebugScript = `
+    <script>
+        console.log('[Webview HTML] vscode.env.language from extension:', '${vscodeLanguage}');
+        console.log('[Webview HTML] data-vscode-language attribute:', document.documentElement.getAttribute('data-vscode-language'));
+    </script>
+    `;
 
     return `<!DOCTYPE html>
 <html lang="${displayLanguage}" data-vscode-language="${vscodeLanguage}">
@@ -101,6 +112,7 @@ export async function buildWebviewHtml(context: vscode.ExtensionContext, panel: 
     <meta http-equiv="Content-Security-Policy" content="${csp}">
     <title>Markdown Table Editor</title>
     ${bootstrapScript}
+    ${languageDebugScript}
     <link rel="stylesheet" href="${assets.style.toString()}">
 </head>
 <body>
