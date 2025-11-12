@@ -241,10 +241,10 @@ describe('useClipboard', () => {
       updateCells: mockUpdateCells,
       selectCell: mockSelectCell
     }))
-    
-    // 複数データをモック
+
+    // 複数データをモック (1行3列)
     ;(navigator.clipboard.readText as jest.Mock).mockResolvedValueOnce('X\tY\tZ')
-    
+
     const selectedCells = new Set(['1-0', '1-2', '2-1']) // 複数セル選択
     const pasteResult = await result.current.pasteFromClipboard(
       mockTableData,
@@ -252,10 +252,45 @@ describe('useClipboard', () => {
       selectedCells,
       null
     )
-    
+
     expect(pasteResult.success).toBe(true)
-    // 最初と最後の選択されたセルの範囲を選択
+    // 複数セルコピーの場合、コピーしたセル数だけ貼り付け（選択範囲を無視）
+    // 1x3のデータなので (1,0) から (1,2) まで貼り付け
     expect(mockSelectCell).toHaveBeenCalledWith(1, 0) // 最初のセル
-    expect(mockSelectCell).toHaveBeenCalledWith(2, 1, true) // 最後のセルまで拡張選択
+    expect(mockSelectCell).toHaveBeenCalledWith(1, 2, true) // 貼り付けた範囲の最後のセルまで拡張選択
+  })
+
+  test('pastes single cell value to all selected cells', async () => {
+    const mockSelectCell = jest.fn()
+    const mockUpdateCells = jest.fn()
+    const { result } = renderHook(() => useClipboard({
+      addRow: () => {},
+      addColumn: () => {},
+      updateCells: mockUpdateCells,
+      selectCell: mockSelectCell
+    }))
+
+    // 単一セルのデータをモック
+    ;(navigator.clipboard.readText as jest.Mock).mockResolvedValueOnce('Test')
+
+    const selectedCells = new Set(['0-0', '0-1', '1-0', '1-1']) // 4セル選択
+    const pasteResult = await result.current.pasteFromClipboard(
+      mockTableData,
+      null,
+      selectedCells,
+      null
+    )
+
+    expect(pasteResult.success).toBe(true)
+    // 単一セルコピーの場合、全ての選択されたセルに同じ値を貼り付け
+    expect(mockUpdateCells).toHaveBeenCalledWith([
+      { row: 0, col: 0, value: 'Test' },
+      { row: 0, col: 1, value: 'Test' },
+      { row: 1, col: 0, value: 'Test' },
+      { row: 1, col: 1, value: 'Test' }
+    ])
+    // 選択範囲は維持される
+    expect(mockSelectCell).toHaveBeenCalledWith(0, 0) // 最初のセル
+    expect(mockSelectCell).toHaveBeenCalledWith(1, 1, true) // 最後のセルまで拡張選択
   })
 })

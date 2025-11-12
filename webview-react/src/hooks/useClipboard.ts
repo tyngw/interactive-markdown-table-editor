@@ -219,40 +219,68 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
         startPos = { row: 0, col: 0 }
       }
 
+      // ペーストデータが単一セルの場合と複数セルの場合で処理を分岐
+      const pasteRows = pastedData.length
+      const pasteCols = pastedData[0]?.length || 0
+      const isSingleCellPaste = pasteRows === 1 && pasteCols === 1
+
       // 複数セル選択時の特別な処理
-      if (selectedCells && selectedCells.size > 1 && !selectionRange) {
+      if (selectedCells && selectedCells.size > 1) {
         const sortedCells = Array.from(selectedCells).map(cellKey => {
           const [row, col] = cellKey.split('-').map(Number)
           return { row, col, key: cellKey }
         }).sort((a, b) => a.row !== b.row ? a.row - b.row : a.col - b.col)
 
-        const flatData = pastedData.flat()
         const updates: Array<{ row: number; col: number; value: string }> = []
 
-        for (let i = 0; i < Math.min(sortedCells.length, flatData.length); i++) {
-          const cell = sortedCells[i]
-          const value = flatData[i] || ''
-          updates.push({ row: cell.row, col: cell.col, value })
+        // 単一セルのコピー → 複数セル選択: 全ての選択セルに同じ値を貼り付け
+        if (isSingleCellPaste) {
+          const singleValue = pastedData[0][0]
+          for (const cell of sortedCells) {
+            updates.push({ row: cell.row, col: cell.col, value: singleValue })
+          }
+        }
+        // 複数セルのコピー → 複数セル選択: コピーしたセル数だけ貼り付け（選択範囲を無視）
+        else {
+          // 選択範囲の開始位置から貼り付け
+          const firstCell = sortedCells[0]
+          for (let rowOffset = 0; rowOffset < pasteRows; rowOffset++) {
+            for (let colOffset = 0; colOffset < pasteCols; colOffset++) {
+              const targetRow = firstCell.row + rowOffset
+              const targetCol = firstCell.col + colOffset
+              const value = pastedData[rowOffset]?.[colOffset] || ''
+              if (targetRow >= 0 && targetCol >= 0) {
+                updates.push({ row: targetRow, col: targetCol, value })
+              }
+            }
+          }
         }
 
         if (updates.length > 0) {
           updateCells(updates)
-          
+
           // 貼り付けた範囲を選択状態にする
           if (selectCell && sortedCells.length > 0) {
-            const firstCell = sortedCells[0]
-            const lastCell = sortedCells[Math.min(sortedCells.length, updates.length) - 1]
-            
-            // 単一セルの場合は単純選択、複数セルの場合は範囲選択
-            if (updates.length === 1) {
+            if (isSingleCellPaste) {
+              // 単一セル貼り付けの場合は選択範囲を維持
+              const firstCell = sortedCells[0]
+              const lastCell = sortedCells[sortedCells.length - 1]
               selectCell(firstCell.row, firstCell.col)
+              if (sortedCells.length > 1) {
+                selectCell(lastCell.row, lastCell.col, true)
+              }
             } else {
-              // 最初のセルを選択してから、最後のセルまで拡張選択
+              // 複数セル貼り付けの場合は貼り付けた範囲を選択
+              const firstCell = sortedCells[0]
+              const endRow = firstCell.row + pasteRows - 1
+              const endCol = firstCell.col + pasteCols - 1
               selectCell(firstCell.row, firstCell.col)
-              selectCell(lastCell.row, lastCell.col, true) // extend=true
+              if (pasteRows > 1 || pasteCols > 1) {
+                selectCell(endRow, endCol, true)
+              }
             }
           }
-          
+
           return {
             success: true,
             message: `選択されたセルにペーストしました（${updates.length}セル）`,
@@ -263,8 +291,6 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       }
 
       // 通常の矩形範囲ペースト処理
-      const pasteRows = pastedData.length
-      const pasteCols = pastedData[0]?.length || 0
       const targetEndRow = startPos.row + pasteRows - 1
       const targetEndCol = startPos.col + pasteCols - 1
 
