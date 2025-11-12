@@ -31,13 +31,18 @@ const CellEditor: React.FC<CellEditorProps> = ({
   // TableBody からの heightUpdate で受け取った実測値を保持
   const measuredRef = useRef<{ original?: number; rowMax?: number }>({})
 
+  // 初回マウント時のみカーソルを末尾に設定
   useLayoutEffect(() => {
     const textarea = textareaRef.current
     if (!textarea) return
-
     textarea.focus()
     const textLength = textarea.value.length
     textarea.setSelectionRange(textLength, textLength)
+  }, []) // 空の依存配列で初回のみ実行
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
 
     const adjustHeight = () => {
       // DOM操作前に選択状態を保存
