@@ -484,7 +484,15 @@ const TableEditor: React.FC<TableEditorProps> = ({
         setInitialCellInput(null)
       }
     }
-  }, [editorState.currentEditingCell, editorState.selectionRange, initialCellInput, setInitialCellInput])
+  }, [
+    editorState.currentEditingCell,
+    editorState.selectionRange?.start.row,
+    editorState.selectionRange?.start.col,
+    editorState.selectionRange?.end.row,
+    editorState.selectionRange?.end.col,
+    initialCellInput,
+    setInitialCellInput
+  ])
 
   useKeyboardNavigation({
     tableData: displayedTableData,
@@ -565,13 +573,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
         type="text"
         className="input-capture"
         style={{
-          position: 'absolute',
+          position: 'fixed',
           opacity: 0,
           pointerEvents: 'none',
           width: '1px',
           height: '1px',
-          left: '-9999px',
-          zIndex: 1000
+          left: '0',
+          top: '0',
+          zIndex: -1
         }}
         onCompositionStart={handleInputCaptureCompositionStart}
         onCompositionEnd={handleInputCaptureCompositionEnd}
