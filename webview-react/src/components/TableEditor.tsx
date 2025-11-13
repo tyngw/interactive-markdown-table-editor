@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import { TableData, VSCodeMessage, SortState, HeaderConfig } from '../types'
 import { useTableEditor } from '../hooks/useTableEditor'
 import { useClipboard } from '../hooks/useClipboard'
@@ -57,6 +57,10 @@ const TableEditor: React.FC<TableEditorProps> = ({
   })
   const [exportEncoding, setExportEncoding] = useState<'utf8' | 'sjis'>('utf8')
 
+  // 非表示の入力キャプチャ（IME入力対応）
+  const inputCaptureRef = useRef<HTMLInputElement>(null)
+  const [isComposing, setIsComposing] = useState(false)
+
   const { updateStatus, updateTableInfo, updateSaveStatus, updateSortState } = useStatus()
 
   // 送信データに tableIndex を必要に応じて付与
@@ -81,6 +85,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
     selectColumn,
     selectAll,
     setCurrentEditingCell,
+    initialCellInput,
+    setInitialCellInput,
     setSelectionAnchor,
     setColumnWidth,
     setRowHeight,
@@ -413,6 +419,59 @@ const TableEditor: React.FC<TableEditorProps> = ({
     }
   }, [editorState.selectedCells, mapUpdatesToModel, onSendMessage, updateCells, updateStatus, withTableIndex])
 
+  // 入力キャプチャのイベントハンドラー（IME対応）
+  const handleInputCaptureCompositionStart = useCallback(() => {
+    setIsComposing(true)
+  }, [])
+
+  const handleInputCaptureCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
+    setIsComposing(false)
+    const input = e.currentTarget
+    const value = input.value
+
+    // 選択されているセルを取得
+    const currentPos = editorState.selectionRange?.end || editorState.selectionRange?.start
+    if (currentPos && value && !editorState.currentEditingCell) {
+      // IME確定後、編集モードに入る
+      setInitialCellInput(value)
+      setCurrentEditingCell(currentPos)
+    }
+
+    // 入力をクリア
+    input.value = ''
+  }, [editorState.selectionRange, editorState.currentEditingCell, setCurrentEditingCell, setInitialCellInput])
+
+  const handleInputCaptureInput = useCallback((e: React.FormEvent<HTMLInputElement>) => {
+    // IME入力中は処理しない
+    if (isComposing) return
+
+    const input = e.currentTarget
+    const value = input.value
+
+    // 選択されているセルを取得
+    const currentPos = editorState.selectionRange?.end || editorState.selectionRange?.start
+    if (currentPos && value && !editorState.currentEditingCell) {
+      // 非IME入力の場合、即座に編集モードに入る
+      setInitialCellInput(value)
+      setCurrentEditingCell(currentPos)
+    }
+
+    // 入力をクリア
+    input.value = ''
+  }, [isComposing, editorState.selectionRange, editorState.currentEditingCell, setCurrentEditingCell, setInitialCellInput])
+
+  // セル選択時に入力キャプチャにフォーカス
+  useEffect(() => {
+    // 編集中でない場合、inputCaptureにフォーカス
+    if (!editorState.currentEditingCell && inputCaptureRef.current && editorState.selectionRange) {
+      inputCaptureRef.current.focus()
+      // 編集モード終了時に初期入力をクリア
+      if (initialCellInput) {
+        setInitialCellInput(null)
+      }
+    }
+  }, [editorState.currentEditingCell, editorState.selectionRange, initialCellInput, setInitialCellInput])
+
   useKeyboardNavigation({
     tableData: displayedTableData,
     currentEditingCell: editorState.currentEditingCell,
@@ -486,6 +545,24 @@ const TableEditor: React.FC<TableEditorProps> = ({
         onToggleAdvanced={toggleAdvanced}
         onScopeChange={setScope}
       />
+      {/* 非表示の入力キャプチャ（IME入力対応） */}
+      <input
+        ref={inputCaptureRef}
+        type="text"
+        style={{
+          position: 'absolute',
+          opacity: 0,
+          pointerEvents: 'none',
+          width: '1px',
+          height: '1px',
+          left: '-9999px'
+        }}
+        onCompositionStart={handleInputCaptureCompositionStart}
+        onCompositionEnd={handleInputCaptureCompositionEnd}
+        onInput={handleInputCaptureInput}
+        aria-hidden="true"
+        tabIndex={-1}
+      />
       <div className="table-container">
         <table className="table-editor">
           <TableHeader
@@ -513,6 +590,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
             onHeaderUpdate={handleHeaderUpdate}
             onCellSelect={selectCell}
             onCellEdit={setCurrentEditingCell}
+            initialCellInput={initialCellInput}
             onAddRow={addRow}
             onDeleteRow={handleDeleteRow}
             onRowSelect={handleRowSelect}
