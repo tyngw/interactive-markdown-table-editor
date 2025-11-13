@@ -57,9 +57,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
   })
   const [exportEncoding, setExportEncoding] = useState<'utf8' | 'sjis'>('utf8')
 
-  // 非表示の入力キャプチャ（IME入力対応）
+  // IME対応の透明入力要素（Googleスプレッドシート方式）
   const inputCaptureRef = useRef<HTMLInputElement>(null)
-  const tableContainerRef = useRef<HTMLDivElement>(null)
   const [isComposing, setIsComposing] = useState(false)
   const compositionHandledRef = useRef(false)
 
@@ -475,24 +474,17 @@ const TableEditor: React.FC<TableEditorProps> = ({
     input.value = ''
   }, [isComposing, editorState.selectionRange, editorState.currentEditingCell, setCurrentEditingCell, setInitialCellInput])
 
-  // セル選択時にtable-containerにフォーカス（キーボードナビゲーションのため）
+  // セル選択時にinputCaptureに常にフォーカス（IME対応）
   useEffect(() => {
-    // 編集中でない場合、table-containerにフォーカス
-    if (!editorState.currentEditingCell && tableContainerRef.current && editorState.selectionRange) {
-      tableContainerRef.current.focus()
+    // 編集中でない場合、inputCaptureにフォーカス
+    if (!editorState.currentEditingCell && inputCaptureRef.current && editorState.selectionRange) {
+      inputCaptureRef.current.focus()
       // 編集モード終了時に初期入力をクリア
       if (initialCellInput) {
         setInitialCellInput(null)
       }
     }
   }, [editorState.currentEditingCell, editorState.selectionRange, initialCellInput, setInitialCellInput])
-
-  // 文字キー入力時にinputCaptureにフォーカスを移す関数
-  const handleStartTyping = useCallback(() => {
-    if (inputCaptureRef.current && !editorState.currentEditingCell) {
-      inputCaptureRef.current.focus()
-    }
-  }, [editorState.currentEditingCell])
 
   useKeyboardNavigation({
     tableData: displayedTableData,
@@ -515,8 +507,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
       if (withReplace) {
         toggleReplace()
       }
-    }, [openSearch, toggleReplace]),
-    onStartTyping: handleStartTyping
+    }, [openSearch, toggleReplace])
   })
 
   const handleExportCsv = useCallback(() => {
@@ -568,7 +559,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
         onToggleAdvanced={toggleAdvanced}
         onScopeChange={setScope}
       />
-      {/* 非表示の入力キャプチャ（IME入力対応） */}
+      {/* IME対応の透明入力要素（Googleスプレッドシート方式） */}
       <input
         ref={inputCaptureRef}
         type="text"
@@ -578,15 +569,15 @@ const TableEditor: React.FC<TableEditorProps> = ({
           pointerEvents: 'none',
           width: '1px',
           height: '1px',
-          left: '-9999px'
+          left: '-9999px',
+          zIndex: 1000
         }}
         onCompositionStart={handleInputCaptureCompositionStart}
         onCompositionEnd={handleInputCaptureCompositionEnd}
         onInput={handleInputCaptureInput}
-        aria-hidden="true"
-        tabIndex={-1}
+        aria-label="Cell input capture"
       />
-      <div className="table-container" ref={tableContainerRef} tabIndex={0}>
+      <div className="table-container">
         <table className="table-editor">
           <TableHeader
             headers={displayedTableData.headers}
