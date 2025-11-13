@@ -15,6 +15,7 @@ export function useTableEditor(
 ) {
   const [tableData, setTableData] = useState<TableData>(initialData)
   const [currentEditingCell, setCurrentEditingCell] = useState<CellPosition | null>(null)
+  const [initialCellInput, setInitialCellInput] = useState<string | null>(null)
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>({})
   const [internalHeaderConfig, setInternalHeaderConfig] = useState<HeaderConfig>(
     (initialData as any).headerConfig || {
@@ -373,6 +374,8 @@ export function useTableEditor(
     selectAll: selection.selectAll,
     clearSelection: selection.clearSelection,
     setCurrentEditingCell,
+    initialCellInput,
+    setInitialCellInput,
     setSelectionAnchor: selection.setSelectionAnchor,
     setColumnWidth,
     moveRow,

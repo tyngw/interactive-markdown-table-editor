@@ -12,6 +12,7 @@ interface TableBodyProps {
   onHeaderUpdate?: (col: number, value: string) => void
   onCellSelect: (row: number, col: number, extend?: boolean, toggle?: boolean) => void
   onCellEdit: (position: CellPosition | null) => void
+  initialCellInput?: string | null
   onAddRow: (index?: number) => void
   onDeleteRow: (index: number) => void
   onRowSelect?: (row: number, event: React.MouseEvent) => void
@@ -34,6 +35,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   onHeaderUpdate,
   onCellSelect,
   onCellEdit,
+  initialCellInput,
   onRowSelect,
   onShowRowContextMenu,
   getDragProps,
@@ -546,7 +548,7 @@ const TableBody: React.FC<TableBodyProps> = ({
               >
                 {isEditing ? (
                   <CellEditor
-                    value={processCellContentForEditing(cell || '')}
+                    value={initialCellInput ?? processCellContentForEditing(cell || '')}
                     onCommit={(value, move) => commitCellEdit(rowIndex, colIndex, value, move)}
                     onCancel={() => {
                       if (editorState.currentEditingCell) {
