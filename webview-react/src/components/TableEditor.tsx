@@ -60,6 +60,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
   // 非表示の入力キャプチャ（IME入力対応）
   const inputCaptureRef = useRef<HTMLInputElement>(null)
   const [isComposing, setIsComposing] = useState(false)
+  const compositionHandledRef = useRef(false) // compositionendで処理済みかのフラグ
 
   const { updateStatus, updateTableInfo, updateSaveStatus, updateSortState } = useStatus()
 
@@ -422,10 +423,10 @@ const TableEditor: React.FC<TableEditorProps> = ({
   // 入力キャプチャのイベントハンドラー（IME対応）
   const handleInputCaptureCompositionStart = useCallback(() => {
     setIsComposing(true)
+    compositionHandledRef.current = false
   }, [])
 
   const handleInputCaptureCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
-    setIsComposing(false)
     const input = e.currentTarget
     const value = input.value
 
@@ -435,15 +436,28 @@ const TableEditor: React.FC<TableEditorProps> = ({
       // IME確定後、編集モードに入る
       setInitialCellInput(value)
       setCurrentEditingCell(currentPos)
+      compositionHandledRef.current = true // 処理済みフラグを立てる
     }
 
     // 入力をクリア
     input.value = ''
+
+    // isComposingをfalseにする前に、次のinputイベントを無視するため少し待つ
+    setTimeout(() => {
+      setIsComposing(false)
+      compositionHandledRef.current = false
+    }, 0)
   }, [editorState.selectionRange, editorState.currentEditingCell, setCurrentEditingCell, setInitialCellInput])
 
   const handleInputCaptureInput = useCallback((e: React.FormEvent<HTMLInputElement>) => {
     // IME入力中は処理しない
     if (isComposing) return
+
+    // compositionendで既に処理済みの場合は無視
+    if (compositionHandledRef.current) {
+      compositionHandledRef.current = false
+      return
+    }
 
     const input = e.currentTarget
     const value = input.value
