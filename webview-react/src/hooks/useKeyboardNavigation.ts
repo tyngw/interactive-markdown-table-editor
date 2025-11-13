@@ -18,7 +18,6 @@ interface KeyboardNavigationProps {
   onRedo: () => void
   headerConfig?: HeaderConfig
   onOpenSearch?: (withReplace?: boolean) => void
-  onStartTyping?: () => void
 }
 
 export function useKeyboardNavigation({
@@ -37,8 +36,7 @@ export function useKeyboardNavigation({
   onUndo,
   onRedo,
   headerConfig,
-  onOpenSearch,
-  onStartTyping
+  onOpenSearch
 }: KeyboardNavigationProps) {
 
   // Helper function to check if a cell has content (for smart navigation)
@@ -484,15 +482,9 @@ export function useKeyboardNavigation({
       }
 
       default:
-        // 文字キーが押された場合は入力キャプチャにフォーカスを移す
+        // 文字キーが押された場合は何もしない
+        // inputCaptureが処理する
         // 列ヘッダーOFF時は0行目（内部的にはrow=-1）が最上行
-        const minRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
-        if (key.length === 1 && !cmdKey && currentPos.row >= minRow) {
-          // IME入力をサポートするため、inputCaptureにフォーカスを移す
-          if (onStartTyping) {
-            onStartTyping()
-          }
-        }
         break
     }
   }, [
@@ -513,8 +505,7 @@ export function useKeyboardNavigation({
     onUndo,
     onRedo,
     headerConfig,
-    onOpenSearch,
-    onStartTyping
+    onOpenSearch
   ])
 
   // キーアップイベントハンドラー（Shiftキーのクリア用）
