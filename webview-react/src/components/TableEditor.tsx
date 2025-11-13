@@ -508,9 +508,9 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
     if (cellElement) {
       const rect = cellElement.getBoundingClientRect()
-      const container = document.querySelector('.table-container') as HTMLElement | null
       const computedStyle = window.getComputedStyle(cellElement)
 
+      // CellEditorと同じスタイルを適用
       setInputCaptureStyle({
         position: 'fixed',
         left: `${rect.left}px`,
@@ -519,13 +519,21 @@ const TableEditor: React.FC<TableEditorProps> = ({
         height: `${rect.height}px`,
         fontSize: computedStyle.fontSize,
         fontFamily: computedStyle.fontFamily,
-        padding: computedStyle.padding,
-        border: '2px solid #0066cc',
-        backgroundColor: 'white',
+        padding: '4px 6px', // CellEditorと同じパディング
+        border: 'none', // CellEditorと同じ
+        backgroundColor: 'transparent', // 既存のセル内容を表示
         boxSizing: 'border-box',
         zIndex: 1000,
         pointerEvents: 'none',
-        outline: 'none'
+        outline: 'none',
+        resize: 'none',
+        lineHeight: '1.2',
+        verticalAlign: 'top',
+        textAlign: 'left',
+        color: computedStyle.color,
+        whiteSpace: 'pre-wrap',
+        wordWrap: 'break-word',
+        overflow: 'hidden'
       })
     }
   }, [editorState.selectionRange, editorState.currentEditingCell])
@@ -535,7 +543,12 @@ const TableEditor: React.FC<TableEditorProps> = ({
     // 編集中でない場合、inputCaptureにフォーカス
     if (!editorState.currentEditingCell && inputCaptureRef.current && editorState.selectionRange) {
       updateInputCapturePosition()
-      inputCaptureRef.current.focus()
+      // 少し遅延を入れてフォーカスを確実に設定（マウスクリック時のため）
+      setTimeout(() => {
+        if (inputCaptureRef.current && !editorState.currentEditingCell) {
+          inputCaptureRef.current.focus()
+        }
+      }, 0)
       // 編集モード終了時に初期入力をクリア
       if (initialCellInput) {
         setInitialCellInput(null)
