@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { EditorState, CellPosition, HeaderConfig } from '../types'
 import { processCellContent, processCellContentForEditing, processCellContentForStorage } from '../utils/contentConverter'
 import CellEditor from './CellEditor'
 import { getColumnLetter } from '../utils/tableUtils'
+import { cleanupCellVisualArtifacts, queryCellElement } from '../utils/cellDomUtils'
 
 interface TableBodyProps {
   headers: string[]
@@ -48,6 +49,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   isCurrentSearchResult
 }) => {
   const savedHeightsRef = useRef<Map<string, { original: number; rowMax: number }>>(new Map())
+  void onHeaderUpdate
 
   const handleCellMouseDown = useCallback((row: number, col: number, event: React.MouseEvent) => {
     if ((event.target as HTMLElement).classList.contains('cell-input')) {
@@ -77,25 +79,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   }, [editorState.currentEditingCell])
 
   const cleanupCellVisualState = useCallback((row: number, col: number) => {
-    try {
-      const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
-      if (cellElement instanceof HTMLElement) {
-        delete cellElement.dataset.originalHeight
-        delete cellElement.dataset.rowMaxHeight
-        delete cellElement.dataset.maxOtherHeight
-
-        const rowElement = cellElement.parentElement
-        if (rowElement) {
-          rowElement.querySelectorAll('.height-spacer').forEach((el) => el.parentElement?.removeChild(el))
-          rowElement.querySelectorAll('td[data-col]').forEach((td) => {
-            if (td instanceof HTMLElement) {
-              td.style.minHeight = ''
-            }
-          })
-        }
-      }
-    } catch (_) { /* noop */ }
-
+    cleanupCellVisualArtifacts({ row, col })
     try {
       savedHeightsRef.current.delete(`${row}-${col}`)
     } catch (_) { /* noop */ }
@@ -188,8 +172,8 @@ const TableBody: React.FC<TableBodyProps> = ({
     // DOM更新後にデータを保存
     requestAnimationFrame(() => {
       try {
-        const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
-        if (cellElement instanceof HTMLElement) {
+  const cellElement = queryCellElement({ row, col })
+  if (cellElement) {
           // 測定した高さ情報を保存
           cellElement.dataset.originalHeight = measuredHeights.original.toString()
           cellElement.dataset.rowMaxHeight = measuredHeights.maxInRow.toString()
@@ -201,11 +185,11 @@ const TableBody: React.FC<TableBodyProps> = ({
           // エディターに高さ更新を通知
           const editorTextarea = cellElement.querySelector('textarea')
           if (editorTextarea instanceof HTMLTextAreaElement) {
-            const event = new CustomEvent('heightUpdate', { 
-              detail: { 
-                originalHeight: measuredHeights.original, 
-                rowMaxHeight: measuredHeights.maxInRow 
-              } 
+            const event = new CustomEvent('heightUpdate', {
+              detail: {
+                originalHeight: measuredHeights.original,
+                rowMaxHeight: measuredHeights.maxInRow
+              }
             })
             editorTextarea.dispatchEvent(event)
           }

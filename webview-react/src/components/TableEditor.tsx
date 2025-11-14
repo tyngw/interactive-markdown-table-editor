@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import { TableData, VSCodeMessage, SortState, HeaderConfig, CellPosition, SearchResult } from '../types'
+import {
+  cleanupCellVisualArtifacts,
+  clearCellTemporaryMarker,
+  markCellAsTemporarilyEmpty,
+  queryCellElement
+} from '../utils/cellDomUtils'
 import { useTableEditor } from '../hooks/useTableEditor'
 import { useClipboard } from '../hooks/useClipboard'
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
@@ -150,59 +156,11 @@ const TableEditor: React.FC<TableEditorProps> = ({
   }, [toModelRow])
 
   // IME入力で一時的に適用した高さ調整や不可視スペーサーを確実に片付ける
-  const queryCellElement = useCallback((position?: CellPosition | null) => {
-    if (!position) {
-      return null
+  const markCellAsTempEmptyWithTracking = useCallback((position: CellPosition) => {
+    if (markCellAsTemporarilyEmpty(position)) {
+      pendingCompositionCleanupRef.current = { ...position }
     }
-    return document.querySelector(
-      `td[data-row="${position.row}"][data-col="${position.col}"]`
-    ) as HTMLElement | null
-  }, [])
-
-  const markCellAsTemporarilyEmpty = useCallback((position: CellPosition) => {
-    const cellElement = queryCellElement(position)
-    if (!cellElement) {
-      return
-    }
-    cellElement.dataset.tempEmpty = 'true'
-    pendingCompositionCleanupRef.current = { ...position }
-  }, [queryCellElement])
-
-  const clearCellTemporaryMarker = useCallback((position: CellPosition) => {
-    const cellElement = queryCellElement(position)
-    if (!cellElement) {
-      return
-    }
-    delete cellElement.dataset.tempEmpty
-  }, [queryCellElement])
-
-  const cleanupCellVisualArtifacts = useCallback((position: CellPosition) => {
-    const cellElement = queryCellElement(position)
-    if (!cellElement) {
-      return
-    }
-
-    delete cellElement.dataset.tempEmpty
-    delete cellElement.dataset.originalHeight
-    delete cellElement.dataset.rowMaxHeight
-    cellElement.style.minHeight = ''
-
-    const rowElement = cellElement.parentElement
-    if (rowElement instanceof HTMLElement) {
-      rowElement.querySelectorAll('.height-spacer').forEach((el) => {
-        const parent = el.parentElement
-        if (parent) {
-          parent.removeChild(el)
-        }
-      })
-
-      rowElement.querySelectorAll('td[data-col]').forEach((td) => {
-        if (td instanceof HTMLElement) {
-          td.style.minHeight = ''
-        }
-      })
-    }
-  }, [queryCellElement])
+  }, [markCellAsTemporarilyEmpty])
 
   const selectedRows = useMemo(() => {
     const rows = new Set<number>();
@@ -527,9 +485,9 @@ const TableEditor: React.FC<TableEditorProps> = ({
     const currentPos = editorState.selectionRange?.end || editorState.selectionRange?.start
     if (currentPos && !editorState.currentEditingCell) {
       console.debug('[input-capture] marking cell visually empty (compositionstart)', currentPos)
-      markCellAsTemporarilyEmpty(currentPos)
+      markCellAsTempEmptyWithTracking(currentPos)
     }
-  }, [editorState.selectionRange, editorState.currentEditingCell, markCellAsTemporarilyEmpty])
+  }, [editorState.selectionRange, editorState.currentEditingCell, markCellAsTempEmptyWithTracking])
 
   const handleInputCaptureCompositionEnd = useCallback((e: React.CompositionEvent<HTMLTextAreaElement>) => {
     const input = e.currentTarget
@@ -606,7 +564,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
       // 非IME入力の場合もモデルを即座にクリアせず、表示のみ隠してから編集モードへ遷移する
       console.debug('[input-capture] marking cell visually empty (non-IME)', currentPos)
-      markCellAsTemporarilyEmpty(currentPos)
+  markCellAsTempEmptyWithTracking(currentPos)
 
       // 編集モードに入る（モデル更新は CellEditor 側の commit で行う）
       setInitialCellInput(value)
@@ -621,7 +579,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
     // 入力をクリア
     input.value = ''
-  }, [isComposing, editorState.selectionRange, editorState.currentEditingCell, markCellAsTemporarilyEmpty, clearCellTemporaryMarker, setCurrentEditingCell, setInitialCellInput])
+  }, [isComposing, editorState.selectionRange, editorState.currentEditingCell, markCellAsTempEmptyWithTracking, clearCellTemporaryMarker, setCurrentEditingCell, setInitialCellInput])
 
   const handleInputCaptureKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && (isComposing || compositionHandledRef.current)) {
