@@ -533,7 +533,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
         color: computedStyle.color,
         whiteSpace: 'pre-wrap',
         wordWrap: 'break-word',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        caretColor: 'transparent' // カーソルを非表示
       })
     }
   }, [editorState.selectionRange, editorState.currentEditingCell])

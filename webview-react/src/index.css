@@ -435,7 +435,7 @@ body {
     border: 1px solid var(--vscode-panel-border);
     font-weight: 700;
     text-align: left;
-    vertical-align: middle;
+    vertical-align: top;
     padding: 0 8px;
     width: 60px;
     min-width: 60px;
