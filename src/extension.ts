@@ -741,7 +741,7 @@ export function activate(context: vscode.ExtensionContext) {
                 for (let i = 0; i < neededCols; i++) {
                     const newColIndex = currentTableData.headers.length + i;
                     const columnLetter = String.fromCharCode(65 + (newColIndex % 26)); // A, B, C...
-                    tableDataManager.addColumn(undefined, `Column ${columnLetter}`);
+                    tableDataManager.addColumn(undefined, 1, `Column ${columnLetter}`);
                 }
             }
 

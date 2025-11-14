@@ -163,7 +163,7 @@ export class TableDataManager {
 
         // Add multiple columns at once
         const headersToAdd: string[] = [];
-        const alignmentsToAdd: string[] = [];
+        const alignmentsToAdd: ('left' | 'center' | 'right')[] = [];
         for (let i = 0; i < count; i++) {
             const columnHeader = header || `Column ${insertIndex + i + 1}`;
             headersToAdd.push(columnHeader);
