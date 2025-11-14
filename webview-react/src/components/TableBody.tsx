@@ -77,6 +77,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   }, [editorState.currentEditingCell])
 
   const startCellEdit = useCallback((row: number, col: number) => {
+    console.debug('[TableBody] startCellEdit called', { row, col })
     // 編集開始前に行全体の高さ情報を測定
   const measuredHeights = { original: 0, maxInRow: 0, rowCellHeights: [] as number[] }
     
@@ -196,9 +197,9 @@ const TableBody: React.FC<TableBodyProps> = ({
 
     try {
       const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
-        if (cellElement instanceof HTMLElement) {
-        if (cellElement.dataset.originalHeight) delete cellElement.dataset.originalHeight
-        if (cellElement.dataset.rowMaxHeight) delete cellElement.dataset.rowMaxHeight
+  if (cellElement instanceof HTMLElement) {
+  if (cellElement.dataset.originalHeight) delete cellElement.dataset.originalHeight
+  if (cellElement.dataset.rowMaxHeight) delete cellElement.dataset.rowMaxHeight
         // 不可視のスペーサーを除去
         try {
           const rowElement = cellElement.parentElement
@@ -253,9 +254,9 @@ const TableBody: React.FC<TableBodyProps> = ({
   const cancelCellEdit = useCallback((row: number, col: number) => {
     try {
       const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
-      if (cellElement instanceof HTMLElement) {
-        if (cellElement.dataset.originalHeight) delete cellElement.dataset.originalHeight
-        if (cellElement.dataset.maxOtherHeight) delete cellElement.dataset.maxOtherHeight
+  if (cellElement instanceof HTMLElement) {
+  if (cellElement.dataset.originalHeight) delete cellElement.dataset.originalHeight
+  if (cellElement.dataset.maxOtherHeight) delete cellElement.dataset.maxOtherHeight
         // 不可視スペーサーを除去し、min-height を元に戻す
         try {
           const rowElement = cellElement.parentElement

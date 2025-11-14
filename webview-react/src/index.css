@@ -512,6 +512,11 @@ body {
     color: var(--vscode-editor-foreground, var(--vscode-foreground, #333333));
 }
 
+/* 入力キャプチャが始まった際に既存表示を一時的に隠すためのフラグ */
+td[data-temp-empty="true"] .cell-content {
+    visibility: hidden;
+}
+
 .empty-cell {
     color: var(--vscode-descriptionForeground);
     font-style: italic;
@@ -529,6 +534,7 @@ body {
     width: 1px;
     opacity: 0;
 }
+
 
 /* ====== 7. セル編集関連 ====== */
 /* テキスト選択制御 */

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useMemo, useRef } from 'react'
-import { TableData, VSCodeMessage, SortState, HeaderConfig } from '../types'
+import { TableData, VSCodeMessage, SortState, HeaderConfig, CellPosition, SearchResult } from '../types'
 import { useTableEditor } from '../hooks/useTableEditor'
 import { useClipboard } from '../hooks/useClipboard'
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
@@ -58,9 +58,10 @@ const TableEditor: React.FC<TableEditorProps> = ({
   const [exportEncoding, setExportEncoding] = useState<'utf8' | 'sjis'>('utf8')
 
   // IME対応の透明入力要素（Googleスプレッドシート方式）
-  const inputCaptureRef = useRef<HTMLInputElement>(null)
+  const inputCaptureRef = useRef<HTMLTextAreaElement>(null)
   const [isComposing, setIsComposing] = useState(false)
   const compositionHandledRef = useRef(false)
+  const pendingCompositionCleanupRef = useRef<CellPosition | null>(null)
   const [inputCaptureStyle, setInputCaptureStyle] = useState<React.CSSProperties>({
     position: 'fixed',
     opacity: 0,
@@ -100,7 +101,6 @@ const TableEditor: React.FC<TableEditorProps> = ({
     setInitialCellInput,
     setSelectionAnchor,
     setColumnWidth,
-    setRowHeight,
     sortColumn,
     moveRow,
     moveColumn,
@@ -117,6 +117,23 @@ const TableEditor: React.FC<TableEditorProps> = ({
     { headerConfig: effectiveHeaderConfig, setHeaderConfig: effectiveSetHeaderConfig }
   )
 
+  // initialCellInput を遅延クリアするためのタイムアウト参照
+  const clearInitialInputTimeoutRef = useRef<number | null>(null)
+
+  // 編集開始や initialCellInput の変更時に遅延クリアのタイムアウトをキャンセル
+  useEffect(() => {
+    if (editorState.currentEditingCell && (clearInitialInputTimeoutRef as any).current) {
+      window.clearTimeout((clearInitialInputTimeoutRef as any).current)
+      ;(clearInitialInputTimeoutRef as any).current = null
+    }
+    return () => {
+      if ((clearInitialInputTimeoutRef as any).current) {
+        window.clearTimeout((clearInitialInputTimeoutRef as any).current)
+        ;(clearInitialInputTimeoutRef as any).current = null
+      }
+    }
+  }, [editorState.currentEditingCell, initialCellInput])
+
   const toModelRow = useCallback((viewRow: number): number => {
     if (!Array.isArray(viewToModelMap)) {
       return viewRow
@@ -132,6 +149,36 @@ const TableEditor: React.FC<TableEditorProps> = ({
     }))
   }, [toModelRow])
 
+  // IME入力で一時的に適用した高さ調整や不可視スペーサーを確実に片付ける
+  const cleanupCellVisualArtifacts = useCallback((position: CellPosition) => {
+    const cellSelector = `td[data-row="${position.row}"][data-col="${position.col}"]`
+    const cellElement = document.querySelector(cellSelector) as HTMLElement | null
+    if (!cellElement) {
+      return
+    }
+
+    delete cellElement.dataset.tempEmpty
+    delete cellElement.dataset.originalHeight
+    delete cellElement.dataset.rowMaxHeight
+    cellElement.style.minHeight = ''
+
+    const rowElement = cellElement.parentElement
+    if (rowElement instanceof HTMLElement) {
+      rowElement.querySelectorAll('.height-spacer').forEach((el) => {
+        const parent = el.parentElement
+        if (parent) {
+          parent.removeChild(el)
+        }
+      })
+
+      rowElement.querySelectorAll('td[data-col]').forEach((td) => {
+        if (td instanceof HTMLElement) {
+          td.style.minHeight = ''
+        }
+      })
+    }
+  }, [])
+
   const selectedRows = useMemo(() => {
     const rows = new Set<number>();
     editorState.selectedCells.forEach(cellKey => {
@@ -139,6 +186,21 @@ const TableEditor: React.FC<TableEditorProps> = ({
     });
     return rows;
   }, [editorState.selectedCells]);
+
+  useEffect(() => {
+    if (editorState.currentEditingCell) {
+      return
+    }
+
+    const cleanupTarget = pendingCompositionCleanupRef.current
+      || editorState.selectionRange?.end
+      || editorState.selectionRange?.start
+
+    if (cleanupTarget) {
+      cleanupCellVisualArtifacts(cleanupTarget)
+    }
+    pendingCompositionCleanupRef.current = null
+  }, [editorState.currentEditingCell, editorState.selectionRange, cleanupCellVisualArtifacts])
 
   const selectedCols = useMemo(() => {
     const cols = new Set<number>();
@@ -157,7 +219,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
   const { exportToCSV, exportToTSV } = useCSVExport()
 
-  const { isDragging: isAutofilling, fillRange, handleFillHandleMouseDown } = useAutofill({
+  const { fillRange, handleFillHandleMouseDown } = useAutofill({
     selectionRange: editorState.selectionRange,
     onUpdateCells: (updates) => {
       updateCells(updates)
@@ -217,7 +279,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     tables: effectiveTables,
     currentTableIndex,
     selectionRange: editorState.selectionRange,
-    onNavigateToResult: useCallback((result) => {
+  onNavigateToResult: useCallback((result: SearchResult) => {
       // 別のシートの場合は先にシートを切り替える
       if (result.tableIndex !== currentTableIndex && onTableSwitch) {
         onTableSwitch(result.tableIndex)
@@ -241,14 +303,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
           }
         }, 0)
       }
-    }, [currentTableIndex, selectCell, onTableSwitch]),
-    onUpdateCell: useCallback((tableIndex, row, col, value) => {
+  }, [currentTableIndex, selectCell, onTableSwitch]),
+  onUpdateCell: useCallback((tableIndex: number, row: number, col: number, value: string) => {
       if (tableIndex === currentTableIndex) {
         updateCell(row, col, value)
         onSendMessage({ command: 'updateCell', data: withTableIndex({ row, col, value }) })
       }
-    }, [currentTableIndex, updateCell, onSendMessage, withTableIndex]),
-    onBulkUpdate: useCallback((tableIndex, updates) => {
+  }, [currentTableIndex, updateCell, onSendMessage, withTableIndex]),
+  onBulkUpdate: useCallback((tableIndex: number, updates: Array<{ row: number; col: number; value: string }>) => {
       if (tableIndex === currentTableIndex) {
         updateCells(updates)
         onSendMessage({ command: 'bulkUpdateCells', data: withTableIndex({ updates }) })
@@ -434,32 +496,82 @@ const TableEditor: React.FC<TableEditorProps> = ({
   const handleInputCaptureCompositionStart = useCallback(() => {
     setIsComposing(true)
     compositionHandledRef.current = false
-  }, [])
+    // 未編集セルに対して IME による入力が始まったら、
+    // モデルを即座にクリアするのではなく、表示のみ隠す（data-temp-empty）
+    // ことで race を回避する（実際のモデル更新は commit 時に行う）
+    const currentPos = editorState.selectionRange?.end || editorState.selectionRange?.start
+    if (currentPos && !editorState.currentEditingCell) {
+      const cellElem = document.querySelector(
+        `td[data-row="${currentPos.row}"][data-col="${currentPos.col}"]`
+      ) as HTMLElement | null
+      if (cellElem) {
+        console.debug('[input-capture] marking cell visually empty (compositionstart)', currentPos)
+        cellElem.dataset.tempEmpty = 'true'
+        pendingCompositionCleanupRef.current = { ...currentPos }
+      }
+    }
+  }, [editorState.selectionRange, editorState.currentEditingCell])
 
-  const handleInputCaptureCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
+  const handleInputCaptureCompositionEnd = useCallback((e: React.CompositionEvent<HTMLTextAreaElement>) => {
     const input = e.currentTarget
     const value = input.value
 
     // 選択されているセルを取得
-    const currentPos = editorState.selectionRange?.end || editorState.selectionRange?.start
-    if (currentPos && value && !editorState.currentEditingCell) {
-      // IME確定後、編集モードに入る
+    const selectionPos = editorState.selectionRange?.end || editorState.selectionRange?.start
+    const targetPos = selectionPos || pendingCompositionCleanupRef.current
+    const shouldDeferModelUpdate = !editorState.currentEditingCell
+
+    if (targetPos && value && !editorState.currentEditingCell) {
+      // IME確定後、編集モードに入る（モデルはここでクリアしない）
+      console.debug('[input-capture] compositionend value:', value, 'pos:', targetPos)
       setInitialCellInput(value)
-      setCurrentEditingCell(currentPos)
+      console.debug('[input-capture] setInitialCellInput ->', value)
+      setCurrentEditingCell(targetPos)
+      console.debug('[input-capture] setCurrentEditingCell ->', targetPos)
       compositionHandledRef.current = true // 処理済みフラグを立てる
+    }
+
+    // IME 確定時には既存のセル値を上書きしたいのでモデルを更新する
+    // （compositionend のあとで行うため IME の組成を壊さない）
+    if (selectionPos && value && !shouldDeferModelUpdate) {
+      try {
+        console.debug('[input-capture] compositionend -> updating model cell', selectionPos, value)
+        handleCellUpdate(selectionPos.row, selectionPos.col, value)
+      } catch (err) {
+        console.debug('[input-capture] failed to update model on compositionend', err)
+        try {
+          updateCell(selectionPos.row, selectionPos.col, value)
+        } catch (e) {
+          console.debug('[input-capture] fallback updateCell failed', e)
+        }
+      }
     }
 
     // 入力をクリア
     input.value = ''
+
+    // 編集モードに入ったので見た目の非表示フラグを解除
+    // 編集モードに入ったので見た目の非表示フラグを解除
+    if (targetPos) {
+      const cellElem = document.querySelector(
+        `td[data-row="${targetPos.row}"][data-col="${targetPos.col}"]`
+      ) as HTMLElement | null
+      if (cellElem) {
+        console.debug('[input-capture] removing data-temp-empty on', cellElem)
+        delete cellElem.dataset.tempEmpty
+      }
+    }
 
     // isComposingをfalseにする前に、次のinputイベントを無視するため少し待つ
     setTimeout(() => {
       setIsComposing(false)
       compositionHandledRef.current = false
     }, 0)
-  }, [editorState.selectionRange, editorState.currentEditingCell, setCurrentEditingCell, setInitialCellInput])
+  }, [editorState.selectionRange, editorState.currentEditingCell, handleCellUpdate, setCurrentEditingCell, setInitialCellInput, updateCell])
 
-  const handleInputCaptureInput = useCallback((e: React.FormEvent<HTMLInputElement>) => {
+  // (no composition update handling)
+
+  const handleInputCaptureInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
     // IME入力中は処理しない
     if (isComposing) return
 
@@ -471,18 +583,46 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
     const input = e.currentTarget
     const value = input.value
+    console.debug('[input-capture] input event value:', JSON.stringify(value))
 
     // 選択されているセルを取得
     const currentPos = editorState.selectionRange?.end || editorState.selectionRange?.start
     if (currentPos && value && !editorState.currentEditingCell) {
-      // 非IME入力の場合、即座に編集モードに入る
+      console.debug('[input-capture] non-IME input at', currentPos, 'value=', JSON.stringify(value))
+
+      // 非IME入力の場合もモデルを即座にクリアせず、表示のみ隠してから編集モードへ遷移する
+      const cellElem = document.querySelector(
+        `td[data-row="${currentPos.row}"][data-col="${currentPos.col}"]`
+      ) as HTMLElement | null
+      if (cellElem) {
+        console.debug('[input-capture] marking cell visually empty (non-IME)', currentPos)
+        cellElem.dataset.tempEmpty = 'true'
+        pendingCompositionCleanupRef.current = { ...currentPos }
+      }
+
+      // 編集モードに入る（モデル更新は CellEditor 側の commit で行う）
       setInitialCellInput(value)
+      console.debug('[input-capture] setInitialCellInput ->', value)
       setCurrentEditingCell(currentPos)
+      console.debug('[input-capture] setCurrentEditingCell ->', currentPos)
+
+      // 編集モードに入ったら見た目のフラグは解除
+      if (cellElem) {
+        console.debug('[input-capture] removing data-temp-empty (non-IME) on', cellElem)
+        delete cellElem.dataset.tempEmpty
+      }
     }
 
     // 入力をクリア
     input.value = ''
   }, [isComposing, editorState.selectionRange, editorState.currentEditingCell, setCurrentEditingCell, setInitialCellInput])
+
+  const handleInputCaptureKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (isComposing || compositionHandledRef.current)) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }, [isComposing])
 
   // 選択セルの位置にinputCaptureを配置
   const updateInputCapturePosition = useCallback(() => {
@@ -506,7 +646,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
       `td[data-row="${currentPos.row}"][data-col="${currentPos.col}"]`
     ) as HTMLElement | null
 
-    if (cellElement) {
+      if (cellElement) {
       const rect = cellElement.getBoundingClientRect()
       const computedStyle = window.getComputedStyle(cellElement)
 
@@ -516,10 +656,15 @@ const TableEditor: React.FC<TableEditorProps> = ({
         left: `${rect.left}px`,
         top: `${rect.top}px`,
         width: `${rect.width}px`,
+        // 明示的に height を設定し、テキストがセル上端に来るようにする
+        height: `${rect.height}px`,
         minHeight: `${rect.height}px`,
         fontSize: computedStyle.fontSize,
         fontFamily: computedStyle.fontFamily,
+        // CellEditor と同じ外側のパディングを適用しつつ、
+        // paddingTop を明示することでテキストを上寄せにする
         padding: '4px 6px', // CellEditorと同じパディング
+        paddingTop: '4px',
         border: 'none', // CellEditorと同じ
         backgroundColor: 'transparent', // 既存のセル内容を表示
         boxSizing: 'border-box',
@@ -528,6 +673,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
         outline: 'none',
         resize: 'none',
         lineHeight: '1.2',
+        // 明示的に display:block にして既定のインラインセンタリング影響を避ける
+        display: 'block',
         textAlign: 'left',
         color: computedStyle.color,
         whiteSpace: 'pre-wrap',
@@ -549,9 +696,19 @@ const TableEditor: React.FC<TableEditorProps> = ({
           inputCaptureRef.current.focus()
         }
       }, 0)
-      // 編集モード終了時に初期入力をクリア
+      // 編集モード終了時に初期入力をクリアするが、
+      // initialCellInput が直近に設定されて編集開始へ遷移するケースで
+      // レースが起きるため、即時クリアではなく短い遅延で消去する
+      // （編集開始が行われたら editorState.currentEditingCell が set され、
+      // タイムアウト内でキャンセルされる）
       if (initialCellInput) {
-        setInitialCellInput(null)
+        // clearInitialInputTimeoutRef を作成してタイムアウトを管理
+        if (!(clearInitialInputTimeoutRef as any).current) {
+          ;(clearInitialInputTimeoutRef as any).current = window.setTimeout(() => {
+            setInitialCellInput(null)
+            ;(clearInitialInputTimeoutRef as any).current = null
+          }, 100)
+        }
       }
     } else {
       updateInputCapturePosition()
@@ -661,15 +818,16 @@ const TableEditor: React.FC<TableEditorProps> = ({
         onScopeChange={setScope}
       />
       {/* IME対応の透明入力要素（Googleスプレッドシート方式） */}
-      <input
+      <textarea
         ref={inputCaptureRef}
-        type="text"
         className="input-capture"
         style={inputCaptureStyle}
         onCompositionStart={handleInputCaptureCompositionStart}
         onCompositionEnd={handleInputCaptureCompositionEnd}
         onInput={handleInputCaptureInput}
+        onKeyDown={handleInputCaptureKeyDown}
         aria-label="Cell input capture"
+        rows={1}
       />
       <div className="table-container">
         <table className="table-editor">
