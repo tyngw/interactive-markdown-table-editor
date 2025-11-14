@@ -35,6 +35,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
   useLayoutEffect(() => {
     const textarea = textareaRef.current
     if (!textarea) return
+    console.debug('[CellEditor] mounted; initial value length=', textarea.value.length)
     textarea.focus()
     const textLength = textarea.value.length
     textarea.setSelectionRange(textLength, textLength)
@@ -201,6 +202,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
 
   // 値が外部から変化した場合（通常は編集開始時のみ）、履歴を初期化
   useEffect(() => {
+    console.debug('[CellEditor] prop value changed ->', value)
     setCurrentValue(value)
     setHistory([value])
     setRedoStack([])

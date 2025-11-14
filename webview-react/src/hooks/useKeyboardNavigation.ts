@@ -218,13 +218,16 @@ export function useKeyboardNavigation({
     }
     // If focus is inside any input/textarea/contenteditable (e.g., header editor),
     // don't trigger table keyboard navigation.
+    // Exception: input-capture element should allow keyboard navigation.
     const activeEl = (document.activeElement as HTMLElement | null)
     if (activeEl) {
       const tag = activeEl.tagName?.toLowerCase()
+      const isInputCapture = activeEl.classList?.contains('input-capture')
       const isFormField = tag === 'input' || tag === 'textarea' || activeEl.isContentEditable
       const isHeaderEditing = activeEl.classList?.contains('header-input')
       const isCellEditing = activeEl.classList?.contains('cell-input')
-      if (isFormField || isHeaderEditing || isCellEditing) {
+      // Allow keyboard navigation for input-capture element
+      if (!isInputCapture && (isFormField || isHeaderEditing || isCellEditing)) {
         return
       }
     }
@@ -482,12 +485,9 @@ export function useKeyboardNavigation({
       }
 
       default:
-        // 文字キーが押された場合は編集開始
+        // 文字キーが押された場合は何もしない
+        // inputCaptureが処理する
         // 列ヘッダーOFF時は0行目（内部的にはrow=-1）が最上行
-        const minRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
-        if (key.length === 1 && !cmdKey && currentPos.row >= minRow) {
-          onCellEdit(currentPos)
-        }
         break
     }
   }, [
