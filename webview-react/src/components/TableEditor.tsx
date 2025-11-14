@@ -150,9 +150,34 @@ const TableEditor: React.FC<TableEditorProps> = ({
   }, [toModelRow])
 
   // IME入力で一時的に適用した高さ調整や不可視スペーサーを確実に片付ける
+  const queryCellElement = useCallback((position?: CellPosition | null) => {
+    if (!position) {
+      return null
+    }
+    return document.querySelector(
+      `td[data-row="${position.row}"][data-col="${position.col}"]`
+    ) as HTMLElement | null
+  }, [])
+
+  const markCellAsTemporarilyEmpty = useCallback((position: CellPosition) => {
+    const cellElement = queryCellElement(position)
+    if (!cellElement) {
+      return
+    }
+    cellElement.dataset.tempEmpty = 'true'
+    pendingCompositionCleanupRef.current = { ...position }
+  }, [queryCellElement])
+
+  const clearCellTemporaryMarker = useCallback((position: CellPosition) => {
+    const cellElement = queryCellElement(position)
+    if (!cellElement) {
+      return
+    }
+    delete cellElement.dataset.tempEmpty
+  }, [queryCellElement])
+
   const cleanupCellVisualArtifacts = useCallback((position: CellPosition) => {
-    const cellSelector = `td[data-row="${position.row}"][data-col="${position.col}"]`
-    const cellElement = document.querySelector(cellSelector) as HTMLElement | null
+    const cellElement = queryCellElement(position)
     if (!cellElement) {
       return
     }
@@ -177,7 +202,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
         }
       })
     }
-  }, [])
+  }, [queryCellElement])
 
   const selectedRows = useMemo(() => {
     const rows = new Set<number>();
@@ -501,16 +526,10 @@ const TableEditor: React.FC<TableEditorProps> = ({
     // ことで race を回避する（実際のモデル更新は commit 時に行う）
     const currentPos = editorState.selectionRange?.end || editorState.selectionRange?.start
     if (currentPos && !editorState.currentEditingCell) {
-      const cellElem = document.querySelector(
-        `td[data-row="${currentPos.row}"][data-col="${currentPos.col}"]`
-      ) as HTMLElement | null
-      if (cellElem) {
-        console.debug('[input-capture] marking cell visually empty (compositionstart)', currentPos)
-        cellElem.dataset.tempEmpty = 'true'
-        pendingCompositionCleanupRef.current = { ...currentPos }
-      }
+      console.debug('[input-capture] marking cell visually empty (compositionstart)', currentPos)
+      markCellAsTemporarilyEmpty(currentPos)
     }
-  }, [editorState.selectionRange, editorState.currentEditingCell])
+  }, [editorState.selectionRange, editorState.currentEditingCell, markCellAsTemporarilyEmpty])
 
   const handleInputCaptureCompositionEnd = useCallback((e: React.CompositionEvent<HTMLTextAreaElement>) => {
     const input = e.currentTarget
@@ -553,13 +572,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
     // 編集モードに入ったので見た目の非表示フラグを解除
     // 編集モードに入ったので見た目の非表示フラグを解除
     if (targetPos) {
-      const cellElem = document.querySelector(
-        `td[data-row="${targetPos.row}"][data-col="${targetPos.col}"]`
-      ) as HTMLElement | null
-      if (cellElem) {
-        console.debug('[input-capture] removing data-temp-empty on', cellElem)
-        delete cellElem.dataset.tempEmpty
-      }
+      console.debug('[input-capture] removing data-temp-empty on', targetPos)
+      clearCellTemporaryMarker(targetPos)
     }
 
     // isComposingをfalseにする前に、次のinputイベントを無視するため少し待つ
@@ -567,7 +581,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
       setIsComposing(false)
       compositionHandledRef.current = false
     }, 0)
-  }, [editorState.selectionRange, editorState.currentEditingCell, handleCellUpdate, setCurrentEditingCell, setInitialCellInput, updateCell])
+  }, [editorState.selectionRange, editorState.currentEditingCell, clearCellTemporaryMarker, handleCellUpdate, setCurrentEditingCell, setInitialCellInput, updateCell])
 
   // (no composition update handling)
 
@@ -591,14 +605,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
       console.debug('[input-capture] non-IME input at', currentPos, 'value=', JSON.stringify(value))
 
       // 非IME入力の場合もモデルを即座にクリアせず、表示のみ隠してから編集モードへ遷移する
-      const cellElem = document.querySelector(
-        `td[data-row="${currentPos.row}"][data-col="${currentPos.col}"]`
-      ) as HTMLElement | null
-      if (cellElem) {
-        console.debug('[input-capture] marking cell visually empty (non-IME)', currentPos)
-        cellElem.dataset.tempEmpty = 'true'
-        pendingCompositionCleanupRef.current = { ...currentPos }
-      }
+      console.debug('[input-capture] marking cell visually empty (non-IME)', currentPos)
+      markCellAsTemporarilyEmpty(currentPos)
 
       // 編集モードに入る（モデル更新は CellEditor 側の commit で行う）
       setInitialCellInput(value)
@@ -607,15 +615,13 @@ const TableEditor: React.FC<TableEditorProps> = ({
       console.debug('[input-capture] setCurrentEditingCell ->', currentPos)
 
       // 編集モードに入ったら見た目のフラグは解除
-      if (cellElem) {
-        console.debug('[input-capture] removing data-temp-empty (non-IME) on', cellElem)
-        delete cellElem.dataset.tempEmpty
-      }
+      console.debug('[input-capture] removing data-temp-empty (non-IME) on', currentPos)
+      clearCellTemporaryMarker(currentPos)
     }
 
     // 入力をクリア
     input.value = ''
-  }, [isComposing, editorState.selectionRange, editorState.currentEditingCell, setCurrentEditingCell, setInitialCellInput])
+  }, [isComposing, editorState.selectionRange, editorState.currentEditingCell, markCellAsTemporarilyEmpty, clearCellTemporaryMarker, setCurrentEditingCell, setInitialCellInput])
 
   const handleInputCaptureKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && (isComposing || compositionHandledRef.current)) {
@@ -642,11 +648,9 @@ const TableEditor: React.FC<TableEditorProps> = ({
     }
 
     const currentPos = editorState.selectionRange.end || editorState.selectionRange.start
-    const cellElement = document.querySelector(
-      `td[data-row="${currentPos.row}"][data-col="${currentPos.col}"]`
-    ) as HTMLElement | null
+    const cellElement = queryCellElement(currentPos)
 
-      if (cellElement) {
+    if (cellElement) {
       const rect = cellElement.getBoundingClientRect()
       const computedStyle = window.getComputedStyle(cellElement)
 
@@ -683,7 +687,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
         caretColor: 'transparent' // カーソルを非表示
       })
     }
-  }, [editorState.selectionRange, editorState.currentEditingCell])
+  }, [editorState.selectionRange, editorState.currentEditingCell, queryCellElement])
 
   // セル選択時にinputCaptureに常にフォーカス（IME対応）
   useEffect(() => {

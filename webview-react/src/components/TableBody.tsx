@@ -76,6 +76,31 @@ const TableBody: React.FC<TableBodyProps> = ({
            editorState.currentEditingCell?.col === col
   }, [editorState.currentEditingCell])
 
+  const cleanupCellVisualState = useCallback((row: number, col: number) => {
+    try {
+      const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
+      if (cellElement instanceof HTMLElement) {
+        delete cellElement.dataset.originalHeight
+        delete cellElement.dataset.rowMaxHeight
+        delete cellElement.dataset.maxOtherHeight
+
+        const rowElement = cellElement.parentElement
+        if (rowElement) {
+          rowElement.querySelectorAll('.height-spacer').forEach((el) => el.parentElement?.removeChild(el))
+          rowElement.querySelectorAll('td[data-col]').forEach((td) => {
+            if (td instanceof HTMLElement) {
+              td.style.minHeight = ''
+            }
+          })
+        }
+      }
+    } catch (_) { /* noop */ }
+
+    try {
+      savedHeightsRef.current.delete(`${row}-${col}`)
+    } catch (_) { /* noop */ }
+  }, [])
+
   const startCellEdit = useCallback((row: number, col: number) => {
     console.debug('[TableBody] startCellEdit called', { row, col })
     // 編集開始前に行全体の高さ情報を測定
@@ -195,35 +220,7 @@ const TableBody: React.FC<TableBodyProps> = ({
     const storageValue = processCellContentForStorage(value)
     onCellUpdate(row, col, storageValue)
 
-    try {
-      const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
-  if (cellElement instanceof HTMLElement) {
-  if (cellElement.dataset.originalHeight) delete cellElement.dataset.originalHeight
-  if (cellElement.dataset.rowMaxHeight) delete cellElement.dataset.rowMaxHeight
-        // 不可視のスペーサーを除去
-        try {
-          const rowElement = cellElement.parentElement
-          if (rowElement) {
-            rowElement.querySelectorAll('.height-spacer').forEach((el) => el.parentElement?.removeChild(el))
-          }
-        } catch (_) { /* noop */ }
-        // インライン minHeight をリセット
-        try {
-          const rowElement = cellElement.parentElement
-          if (rowElement) {
-            rowElement.querySelectorAll('td[data-col]').forEach((td) => {
-              if (td instanceof HTMLElement) td.style.minHeight = ''
-            })
-          }
-        } catch (_) { /* noop */ }
-      }
-    } catch (error) {
-      // console.warn('Failed to cleanup original height:', error)
-    }
-    // 保存していた測定データもクリーンアップ
-    try {
-  savedHeightsRef.current.delete(`${row}-${col}`)
-    } catch (_) { /* noop */ }
+    cleanupCellVisualState(row, col)
 
     onCellEdit(null)
     if (typeof move !== 'undefined') {
@@ -252,32 +249,9 @@ const TableBody: React.FC<TableBodyProps> = ({
   }, [onCellUpdate, onCellEdit, onCellSelect, rows.length, headers.length, headerConfig])
 
   const cancelCellEdit = useCallback((row: number, col: number) => {
-    try {
-      const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
-  if (cellElement instanceof HTMLElement) {
-  if (cellElement.dataset.originalHeight) delete cellElement.dataset.originalHeight
-  if (cellElement.dataset.maxOtherHeight) delete cellElement.dataset.maxOtherHeight
-        // 不可視スペーサーを除去し、min-height を元に戻す
-        try {
-          const rowElement = cellElement.parentElement
-          if (rowElement) {
-            rowElement.querySelectorAll('.height-spacer').forEach((el) => el.parentElement?.removeChild(el))
-            rowElement.querySelectorAll('td[data-col]').forEach((td) => {
-              if (td instanceof HTMLElement) td.style.minHeight = ''
-            })
-          }
-        } catch (_) { /* noop */ }
-      }
-    } catch (error) {
-      // console.warn('Failed to cleanup original height:', error)
-    }
-    // 保存していた測定データもクリーンアップ
-    try {
-      savedHeightsRef.current.delete(`${row}-${col}`)
-    } catch (_) { /* noop */ }
-    
+    cleanupCellVisualState(row, col)
     onCellEdit(null)
-  }, [onCellEdit])
+  }, [cleanupCellVisualState, onCellEdit])
 
   // フィル範囲内のセルかどうかを判定
   const isCellInFillRange = useCallback((row: number, col: number) => {
@@ -292,9 +266,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   // 選択範囲の右下セルかどうかを判定
   const isBottomRightCell = useCallback((row: number, col: number) => {
     if (!editorState.selectionRange) return false
-    const startRow = Math.min(editorState.selectionRange.start.row, editorState.selectionRange.end.row)
     const endRow = Math.max(editorState.selectionRange.start.row, editorState.selectionRange.end.row)
-    const startCol = Math.min(editorState.selectionRange.start.col, editorState.selectionRange.end.col)
     const endCol = Math.max(editorState.selectionRange.start.col, editorState.selectionRange.end.col)
     return row === endRow && col === endCol
   }, [editorState.selectionRange])
