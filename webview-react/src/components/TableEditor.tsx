@@ -371,13 +371,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
   const handleAddRow = useCallback((index?: number, count?: number) => {
     // Add rows locally (for immediate UI feedback)
-    if (count && count > 1) {
-      for (let i = 0; i < count; i++) {
-        addRow(index)
-      }
-    } else {
-      addRow(index)
-    }
+    addRow(index, count || 1)
     // Send message to backend with count parameter
     onSendMessage({ command: 'addRow', data: withTableIndex({ index, count }) })
   }, [addRow, onSendMessage, withTableIndex])

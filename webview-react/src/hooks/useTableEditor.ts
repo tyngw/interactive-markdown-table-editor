@@ -224,13 +224,12 @@ export function useTableEditor(
     })
   }, [viewToModelMap])
 
-  const addRow = useCallback((viewIndex?: number) => {
+  const addRow = useCallback((viewIndex?: number, count: number = 1) => {
     markInternalUpdate()
     const isSorted = sortState?.direction !== 'none'
     setTableData(prev => {
       const newRows = [...prev.rows]
-      const newRow = new Array(prev.headers.length).fill('')
-      
+
       let insertIndex = viewIndex
       if (isSorted || viewIndex === undefined) {
         insertIndex = newRows.length
@@ -239,7 +238,13 @@ export function useTableEditor(
         insertIndex = modelIndex !== undefined ? modelIndex : newRows.length
       }
 
-      newRows.splice(insertIndex, 0, newRow)
+      // Add multiple rows at once
+      const rowsToAdd: string[][] = []
+      for (let i = 0; i < count; i++) {
+        rowsToAdd.push(new Array(prev.headers.length).fill(''))
+      }
+      newRows.splice(insertIndex, 0, ...rowsToAdd)
+
       return { ...prev, rows: newRows }
     })
   }, [sortState?.direction, viewToModelMap])
