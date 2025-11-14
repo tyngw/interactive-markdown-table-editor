@@ -15,7 +15,19 @@ import {
   generateMessageId,
   CommunicationConfig,
   DEFAULT_CONFIG,
-  ErrorCode
+  ErrorCode,
+  AddRowData,
+  DeleteRowsData,
+  AddColumnData,
+  DeleteColumnsData,
+  UpdateCellData,
+  UpdateHeaderData,
+  BulkUpdateCellsData,
+  SortData,
+  MoveData,
+  ExportCSVData,
+  SwitchTableData,
+  WebviewCommandDataMap
 } from '../../../src/communication/protocol';
 
 interface PendingRequest {
@@ -228,9 +240,12 @@ export class WebviewCommunicationManager {
   }
 
   /**
-   * 通知メッセージの送信（レスポンス不要）
+   * 通知メッセージの送信（レスポンス不要）- 型安全版
    */
-  public sendNotification(command: WebviewCommand, data?: any): void {
+  public sendNotification<C extends WebviewCommand>(
+    command: C,
+    data?: WebviewCommandDataMap[C]
+  ): void {
     const message: NotificationMessage = {
       id: generateMessageId(),
       type: MessageType.NOTIFICATION,
@@ -365,84 +380,101 @@ export class WebviewCommunicationManager {
    * セルを更新
    */
   public updateCell(row: number, col: number, value: string, tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.UPDATE_CELL, { row, col, value, tableIndex });
+    const data: UpdateCellData = { row, col, value, tableIndex };
+    this.sendNotification(WebviewCommand.UPDATE_CELL, data);
   }
 
   /**
    * 複数セルを一括更新
    */
   public bulkUpdateCells(updates: Array<{ row: number; col: number; value: string }>, tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.BULK_UPDATE_CELLS, { updates, tableIndex });
+    const data: BulkUpdateCellsData = { updates, tableIndex };
+    this.sendNotification(WebviewCommand.BULK_UPDATE_CELLS, data);
   }
 
   /**
    * ヘッダーを更新
    */
   public updateHeader(col: number, value: string, tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.UPDATE_HEADER, { col, value, tableIndex });
+    const data: UpdateHeaderData = { col, value, tableIndex };
+    this.sendNotification(WebviewCommand.UPDATE_HEADER, data);
   }
 
   /**
    * 行を追加
+   *
+   * 型安全性の向上：
+   * - データオブジェクトを明示的に AddRowData 型として宣言
+   * - これにより、protocol.ts で定義された型と一致していることをコンパイラが保証
+   * - count フィールドの欠落などのバグをコンパイル時に検出可能
    */
   public addRow(index?: number, count?: number, tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.ADD_ROW, { index, count, tableIndex });
+    const data: AddRowData = { index, count, tableIndex };
+    this.sendNotification(WebviewCommand.ADD_ROW, data);
   }
 
   /**
    * 行を削除
    */
   public deleteRows(indices: number[], tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.DELETE_ROWS, { indices, tableIndex });
+    const data: DeleteRowsData = { indices, tableIndex };
+    this.sendNotification(WebviewCommand.DELETE_ROWS, data);
   }
 
   /**
    * 列を追加
    */
   public addColumn(index?: number, tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.ADD_COLUMN, { index, tableIndex });
+    const data: AddColumnData = { index, tableIndex };
+    this.sendNotification(WebviewCommand.ADD_COLUMN, data);
   }
 
   /**
    * 列を削除
    */
   public deleteColumns(indices: number[], tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.DELETE_COLUMNS, { indices, tableIndex });
+    const data: DeleteColumnsData = { indices, tableIndex };
+    this.sendNotification(WebviewCommand.DELETE_COLUMNS, data);
   }
 
   /**
    * ソート
    */
   public sort(column: number, direction: 'asc' | 'desc' | 'none', tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.SORT, { column, direction, tableIndex });
+    const data: SortData = { column, direction, tableIndex };
+    this.sendNotification(WebviewCommand.SORT, data);
   }
 
   /**
    * 行を移動
    */
   public moveRow(fromIndex: number, toIndex: number, tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.MOVE_ROW, { fromIndex, toIndex, tableIndex });
+    const data: MoveData = { fromIndex, toIndex, tableIndex };
+    this.sendNotification(WebviewCommand.MOVE_ROW, data);
   }
 
   /**
    * 列を移動
    */
   public moveColumn(fromIndex: number, toIndex: number, tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.MOVE_COLUMN, { fromIndex, toIndex, tableIndex });
+    const data: MoveData = { fromIndex, toIndex, tableIndex };
+    this.sendNotification(WebviewCommand.MOVE_COLUMN, data);
   }
 
   /**
    * CSVエクスポート
    */
   public exportCSV(csvContent: string, filename?: string, encoding?: string, tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.EXPORT_CSV, { csvContent, filename, encoding, tableIndex });
+    const data: ExportCSVData = { csvContent, filename, encoding, tableIndex };
+    this.sendNotification(WebviewCommand.EXPORT_CSV, data);
   }
 
   /**
    * テーブル切り替え
    */
   public switchTable(index: number): void {
-    this.sendNotification(WebviewCommand.SWITCH_TABLE, { index });
+    const data: SwitchTableData = { index };
+    this.sendNotification(WebviewCommand.SWITCH_TABLE, data);
   }
 
   /**

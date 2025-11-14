@@ -176,6 +176,40 @@ export interface TableData {
   alignment?: string[];
 }
 
+/**
+ * コマンドとデータ型のマッピング（型安全性の向上）
+ *
+ * このマッピングにより、各コマンドに対して正しいデータ型が強制されます。
+ * 例：
+ * - ADD_ROW コマンドは必ず AddRowData 型のデータを受け取る
+ * - もし count フィールドを追加したい場合、AddRowData に追加すれば
+ *   WebviewCommunicationManager のメソッドシグネチャも自動的に型チェックされる
+ *
+ * これにより、通信レイヤー全体で型の整合性が保証され、
+ * パラメータの欠落などのバグをコンパイル時に検出できます。
+ */
+export type WebviewCommandDataMap = {
+  [WebviewCommand.REQUEST_TABLE_DATA]: void;
+  [WebviewCommand.UPDATE_CELL]: UpdateCellData;
+  [WebviewCommand.BULK_UPDATE_CELLS]: BulkUpdateCellsData;
+  [WebviewCommand.UPDATE_HEADER]: UpdateHeaderData;
+  [WebviewCommand.ADD_ROW]: AddRowData;
+  [WebviewCommand.DELETE_ROWS]: DeleteRowsData;
+  [WebviewCommand.ADD_COLUMN]: AddColumnData;
+  [WebviewCommand.DELETE_COLUMNS]: DeleteColumnsData;
+  [WebviewCommand.SORT]: SortData;
+  [WebviewCommand.MOVE_ROW]: MoveData;
+  [WebviewCommand.MOVE_COLUMN]: MoveData;
+  [WebviewCommand.EXPORT_CSV]: ExportCSVData;
+  [WebviewCommand.SWITCH_TABLE]: SwitchTableData;
+  [WebviewCommand.REQUEST_THEME_VARIABLES]: void;
+  [WebviewCommand.UNDO]: void;
+  [WebviewCommand.REDO]: void;
+  [WebviewCommand.PONG]: { timestamp: number };
+  [WebviewCommand.REQUEST_SYNC]: void;
+  [WebviewCommand.STATE_UPDATE]: any;
+};
+
 export interface SyncStateData {
   tableData: TableData | TableData[];
   activeTableIndex?: number;
