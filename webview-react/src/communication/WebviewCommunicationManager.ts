@@ -385,8 +385,8 @@ export class WebviewCommunicationManager {
   /**
    * 行を追加
    */
-  public addRow(index?: number, tableIndex?: number): void {
-    this.sendNotification(WebviewCommand.ADD_ROW, { index, tableIndex });
+  public addRow(index?: number, count?: number, tableIndex?: number): void {
+    this.sendNotification(WebviewCommand.ADD_ROW, { index, count, tableIndex });
   }
 
   /**
