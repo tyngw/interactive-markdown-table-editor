@@ -50,5 +50,34 @@
     "saved": "已自动保存",
     "sorted": "显示顺序已排序",
     "rowsColumns": "{{rows}} 行 × {{columns}} 列"
-  }
+  },
+  "tableTabs": {
+    "tableLabel": "表 {{index}}"
+  },
+  "searchBar": {
+    "searchPlaceholder": "搜索...",
+    "noMatches": "无匹配项",
+    "previousTitle": "上一个匹配 (Shift+Enter)",
+    "nextTitle": "下一个匹配 (Enter)",
+    "caseSensitiveTitle": "区分大小写",
+    "wholeWordTitle": "全字匹配",
+    "regexTitle": "正则表达式",
+    "advancedTitle": "高级设置",
+    "closeTitle": "关闭 (Esc)",
+    "replacePlaceholder": "替换...",
+    "replaceTitle": "替换",
+    "replaceButton": "替换",
+    "replaceAllTitle": "全部替换",
+    "replaceAllButton": "全部替换",
+    "scopeLabel": "搜索范围:",
+    "scopeAll": "所有表格",
+    "scopeCurrent": "当前表格",
+    "scopeSelection": "选中的单元格"
+  },
+  "sortActions": {
+    "viewingSorted": "📊 查看已排序的数据",
+    "restoreOriginal": "📄 恢复原始顺序",
+    "saveSortToFile": "💾 保存排序到文件"
+  },
+  "importCsvAuto": "导入CSV (自动)"
 }

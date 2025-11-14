@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { TableData } from '../types'
 
 interface TableTabsProps {
@@ -11,6 +12,8 @@ const TableTabs: React.FC<TableTabsProps> = ({
   currentTableIndex,
   onTabChange
 }) => {
+  const { t } = useTranslation()
+
   if (tables.length <= 1) {
     return null
   }
@@ -25,7 +28,7 @@ const TableTabs: React.FC<TableTabsProps> = ({
             onTabChange(index)
           }}
         >
-          表 {index + 1}
+          {t('tableTabs.tableLabel', { index: index + 1 })}
         </button>
       ))}
     </div>
