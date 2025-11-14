@@ -29,6 +29,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
   onSort,
   onColumnResize,
   onSelectAll,
+  onColumnSelect,
   onShowColumnContextMenu,
   getDragProps,
   getDropProps,
@@ -113,9 +114,11 @@ const TableHeader: React.FC<TableHeaderProps> = ({
     if ((event.target as HTMLElement).closest('.resize-handle')) return
     if ((event.target as HTMLElement).closest('.sort-indicator')) return
 
-    // ヘッダクリック時はソートを実行しない（ソートボタンのみで実行）
-    // onSort(col)
-  }, [resizing])
+    // 列ヘッダークリックで列全体を選択（Shift押下で範囲選択）
+    if (onColumnSelect) {
+      onColumnSelect(col, event)
+    }
+  }, [resizing, onColumnSelect])
 
   return (
     <thead>

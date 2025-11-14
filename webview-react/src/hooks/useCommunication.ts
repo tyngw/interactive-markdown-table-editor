@@ -175,7 +175,7 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
         }
         break;
       case 'addColumn':
-        manager.addColumn(messageData?.index, messageData?.tableIndex);
+        manager.addColumn(messageData?.index, messageData?.count, messageData?.tableIndex);
         break;
       case 'deleteColumns':
         if (messageData) {
@@ -266,10 +266,10 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     manager.deleteRows(indices, tableIndex);
   }, []);
 
-  const addColumn = useCallback((index?: number, tableIndex?: number) => {
+  const addColumn = useCallback((index?: number, count?: number, tableIndex?: number) => {
     const manager = commManagerRef.current;
     if (!manager) return;
-    manager.addColumn(index, tableIndex);
+    manager.addColumn(index, count, tableIndex);
   }, []);
 
   const deleteColumns = useCallback((indices: number[], tableIndex?: number) => {

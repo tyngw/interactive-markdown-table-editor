@@ -741,7 +741,7 @@ export function activate(context: vscode.ExtensionContext) {
                 for (let i = 0; i < neededCols; i++) {
                     const newColIndex = currentTableData.headers.length + i;
                     const columnLetter = String.fromCharCode(65 + (newColIndex % 26)); // A, B, C...
-                    tableDataManager.addColumn(undefined, `Column ${columnLetter}`);
+                    tableDataManager.addColumn(undefined, 1, `Column ${columnLetter}`);
                 }
             }
 
@@ -909,9 +909,13 @@ export function activate(context: vscode.ExtensionContext) {
     const addColumnCommand = vscode.commands.registerCommand('markdownTableEditor.internal.addColumn', async (data: any) => {
         await runTableEdit(data, {
             operationName: 'Add column',
-            getSuccessMessage: () => 'Column added successfully',
+            getSuccessMessage: () => {
+                const count = data?.data?.count || 1;
+                return count > 1 ? `${count} columns added successfully` : 'Column added successfully';
+            },
             mutate: ({ manager, commandData }) => {
-                manager.addColumn(commandData?.index, commandData?.header);
+                const count = commandData?.count || 1;
+                manager.addColumn(commandData?.index, count, commandData?.header);
             },
             getErrorMessage: (error) => `Failed to add column: ${error instanceof Error ? error.message : 'Unknown error'}`
         });

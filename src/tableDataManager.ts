@@ -150,24 +150,36 @@ export class TableDataManager {
     /**
      * Add new column
      */
-    addColumn(index?: number, header?: string): void {
+    addColumn(index?: number, count: number = 1, header?: string): void {
         const insertIndex = index !== undefined ? index : this.tableData.headers.length;
 
         if (insertIndex < 0 || insertIndex > this.tableData.headers.length) {
             throw new Error(`Invalid column index: ${insertIndex}`);
         }
 
-        const columnHeader = header || `Column ${insertIndex + 1}`;
+        if (count < 1) {
+            throw new Error(`Invalid column count: ${count}`);
+        }
 
-        // Add header
-        this.tableData.headers.splice(insertIndex, 0, columnHeader);
+        // Add multiple columns at once
+        const headersToAdd: string[] = [];
+        const alignmentsToAdd: ('left' | 'center' | 'right')[] = [];
+        for (let i = 0; i < count; i++) {
+            const columnHeader = header || `Column ${insertIndex + i + 1}`;
+            headersToAdd.push(columnHeader);
+            alignmentsToAdd.push('left');
+        }
 
-        // Add alignment
-        this.tableData.alignment.splice(insertIndex, 0, 'left');
+        // Add headers
+        this.tableData.headers.splice(insertIndex, 0, ...headersToAdd);
 
-        // Add cells to all rows
+        // Add alignments
+        this.tableData.alignment.splice(insertIndex, 0, ...alignmentsToAdd);
+
+        // Add empty cells to all rows
         for (const row of this.tableData.rows) {
-            row.splice(insertIndex, 0, '');
+            const cellsToAdd = new Array(count).fill('');
+            row.splice(insertIndex, 0, ...cellsToAdd);
         }
 
         this.updateMetadata();

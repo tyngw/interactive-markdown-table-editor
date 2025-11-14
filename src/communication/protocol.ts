@@ -138,6 +138,7 @@ export interface DeleteRowsData {
 
 export interface AddColumnData {
   index?: number;
+  count?: number; // Number of columns to add (default: 1)
   header?: string;
   tableIndex?: number;
 }

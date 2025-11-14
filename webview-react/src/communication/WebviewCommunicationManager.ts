@@ -423,9 +423,14 @@ export class WebviewCommunicationManager {
 
   /**
    * 列を追加
+   *
+   * 型安全性の向上：
+   * - データオブジェクトを明示的に AddColumnData 型として宣言
+   * - これにより、protocol.ts で定義された型と一致していることをコンパイラが保証
+   * - count フィールドの欠落などのバグをコンパイル時に検出可能
    */
-  public addColumn(index?: number, tableIndex?: number): void {
-    const data: AddColumnData = { index, tableIndex };
+  public addColumn(index?: number, count?: number, tableIndex?: number): void {
+    const data: AddColumnData = { index, count, tableIndex };
     this.sendNotification(WebviewCommand.ADD_COLUMN, data);
   }
 

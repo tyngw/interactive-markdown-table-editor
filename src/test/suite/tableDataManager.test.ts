@@ -85,8 +85,8 @@ suite('TableDataManager Test Suite', () => {
     });
 
     test('should add column at end', () => {
-        manager.addColumn(undefined, 'Country');
-        
+        manager.addColumn(undefined, 1, 'Country');
+
         const tableData = manager.getTableData();
         assert.strictEqual(tableData.headers.length, 4);
         assert.strictEqual(tableData.headers[3], 'Country');
@@ -96,8 +96,8 @@ suite('TableDataManager Test Suite', () => {
     });
 
     test('should add column at specific index', () => {
-        manager.addColumn(1, 'Email');
-        
+        manager.addColumn(1, 1, 'Email');
+
         const tableData = manager.getTableData();
         assert.strictEqual(tableData.headers.length, 4);
         assert.strictEqual(tableData.headers[1], 'Email');
@@ -1194,8 +1194,8 @@ suite('TableDataManager Test Suite', () => {
         // Perform various operations
         indexedManager.updateCell(0, 0, 'Updated');
         indexedManager.addRow();
-        indexedManager.addColumn(undefined, 'New Column');
-        
+        indexedManager.addColumn(undefined, 1, 'New Column');
+
         const tableData = indexedManager.getTableData();
         assert.strictEqual(tableData.metadata.tableIndex, 3); // Should remain unchanged
     });
