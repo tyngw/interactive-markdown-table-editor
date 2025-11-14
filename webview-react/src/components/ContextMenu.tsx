@@ -194,7 +194,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         >
           <button className="context-menu-item" onClick={() => { onImportCsv?.(); onClose(); }}>
             <span className="context-menu-icon">📥</span>
-            <span className="context-menu-label">Import CSV (Auto)</span>
+            <span className="context-menu-label">{t('importCsvAuto')}</span>
           </button>
           <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={() => { onToggleColumnHeaders?.(); onClose(); }}>

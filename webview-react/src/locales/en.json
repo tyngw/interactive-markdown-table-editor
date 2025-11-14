@@ -50,5 +50,34 @@
     "saved": "Auto-saved",
     "sorted": "Display order is sorted",
     "rowsColumns": "{{rows}} rows × {{columns}} columns"
-  }
+  },
+  "tableTabs": {
+    "tableLabel": "Table {{index}}"
+  },
+  "searchBar": {
+    "searchPlaceholder": "Search...",
+    "noMatches": "No matches",
+    "previousTitle": "Previous Match (Shift+Enter)",
+    "nextTitle": "Next Match (Enter)",
+    "caseSensitiveTitle": "Match Case",
+    "wholeWordTitle": "Match Whole Word",
+    "regexTitle": "Use Regular Expression",
+    "advancedTitle": "Advanced Settings",
+    "closeTitle": "Close (Esc)",
+    "replacePlaceholder": "Replace...",
+    "replaceTitle": "Replace",
+    "replaceButton": "Replace",
+    "replaceAllTitle": "Replace All",
+    "replaceAllButton": "Replace All",
+    "scopeLabel": "Search Scope:",
+    "scopeAll": "All Tables",
+    "scopeCurrent": "Current Table",
+    "scopeSelection": "Selected Cells"
+  },
+  "sortActions": {
+    "viewingSorted": "📊 Viewing sorted data",
+    "restoreOriginal": "📄 Restore Original",
+    "saveSortToFile": "💾 Save Sort to File"
+  },
+  "importCsvAuto": "Import CSV (Auto)"
 }

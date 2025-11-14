@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { SearchState, SearchScope } from '../types'
 
 interface SearchBarProps {
@@ -32,6 +33,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   onToggleAdvanced,
   onScopeChange
 }) => {
+  const { t } = useTranslation()
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // 検索バーが開いたときに検索入力にフォーカス
@@ -85,7 +87,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
             ref={searchInputRef}
             type="text"
             className="search-input"
-            placeholder="検索..."
+            placeholder={t('searchBar.searchPlaceholder')}
             value={searchState.searchText}
             onChange={(e) => onSearchTextChange(e.target.value)}
             onKeyDown={handleSearchKeyDown}
@@ -94,14 +96,14 @@ const SearchBar: React.FC<SearchBarProps> = ({
             <span className="search-result-count">
               {currentResultInfo.total > 0
                 ? `${currentResultInfo.current}/${currentResultInfo.total}`
-                : '一致なし'}
+                : t('searchBar.noMatches')}
             </span>
           )}
         </div>
         <div className="search-actions">
           <button
             className="search-nav-button"
-            title="前を検索 (Shift+Enter)"
+            title={t('searchBar.previousTitle')}
             onClick={onFindPrevious}
             disabled={currentResultInfo.total === 0}
           >
@@ -109,7 +111,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           </button>
           <button
             className="search-nav-button"
-            title="次を検索 (Enter)"
+            title={t('searchBar.nextTitle')}
             onClick={onFindNext}
             disabled={currentResultInfo.total === 0}
           >
@@ -117,35 +119,35 @@ const SearchBar: React.FC<SearchBarProps> = ({
           </button>
           <button
             className={`search-option-button ${searchState.options.caseSensitive ? 'active' : ''}`}
-            title="大文字小文字を区別"
+            title={t('searchBar.caseSensitiveTitle')}
             onClick={() => onToggleOption('caseSensitive')}
           >
             Aa
           </button>
           <button
             className={`search-option-button ${searchState.options.wholeWord ? 'active' : ''}`}
-            title="完全一致"
+            title={t('searchBar.wholeWordTitle')}
             onClick={() => onToggleOption('wholeWord')}
           >
             Ab
           </button>
           <button
             className={`search-option-button ${searchState.options.regex ? 'active' : ''}`}
-            title="正規表現"
+            title={t('searchBar.regexTitle')}
             onClick={() => onToggleOption('regex')}
           >
             .*
           </button>
           <button
             className={`search-advanced-button ${searchState.showAdvanced ? 'active' : ''}`}
-            title="詳細設定"
+            title={t('searchBar.advancedTitle')}
             onClick={onToggleAdvanced}
           >
             ⚙
           </button>
           <button
             className="search-close-button"
-            title="閉じる (Esc)"
+            title={t('searchBar.closeTitle')}
             onClick={onClose}
           >
             ✕
@@ -160,7 +162,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
             <input
               type="text"
               className="search-input"
-              placeholder="置換..."
+              placeholder={t('searchBar.replacePlaceholder')}
               value={searchState.replaceText}
               onChange={(e) => onReplaceTextChange(e.target.value)}
               onKeyDown={handleReplaceKeyDown}
@@ -169,19 +171,19 @@ const SearchBar: React.FC<SearchBarProps> = ({
           <div className="search-actions">
             <button
               className="replace-button"
-              title="置換"
+              title={t('searchBar.replaceTitle')}
               onClick={onReplaceOne}
               disabled={currentResultInfo.total === 0}
             >
-              置換
+              {t('searchBar.replaceButton')}
             </button>
             <button
               className="replace-all-button"
-              title="すべて置換"
+              title={t('searchBar.replaceAllTitle')}
               onClick={onReplaceAll}
               disabled={currentResultInfo.total === 0}
             >
-              すべて置換
+              {t('searchBar.replaceAllButton')}
             </button>
           </div>
         </div>
@@ -189,15 +191,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
       {searchState.showAdvanced && (
         <div className="advanced-row">
-          <label className="scope-label">検索範囲:</label>
+          <label className="scope-label">{t('searchBar.scopeLabel')}</label>
           <select
             className="scope-select"
             value={searchState.scope}
             onChange={(e) => onScopeChange(e.target.value as SearchScope)}
           >
-            <option value="all">すべてのシート</option>
-            <option value="current">現在のシート</option>
-            <option value="selection">選択中のセル</option>
+            <option value="all">{t('searchBar.scopeAll')}</option>
+            <option value="current">{t('searchBar.scopeCurrent')}</option>
+            <option value="selection">{t('searchBar.scopeSelection')}</option>
           </select>
         </div>
       )}

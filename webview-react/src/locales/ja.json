@@ -50,5 +50,34 @@
     "saved": "自動保存済み",
     "sorted": "表示順序はソートされています",
     "rowsColumns": "{{rows}} 行 × {{columns}} 列"
-  }
+  },
+  "tableTabs": {
+    "tableLabel": "表 {{index}}"
+  },
+  "searchBar": {
+    "searchPlaceholder": "検索...",
+    "noMatches": "一致なし",
+    "previousTitle": "前を検索 (Shift+Enter)",
+    "nextTitle": "次を検索 (Enter)",
+    "caseSensitiveTitle": "大文字小文字を区別",
+    "wholeWordTitle": "完全一致",
+    "regexTitle": "正規表現",
+    "advancedTitle": "詳細設定",
+    "closeTitle": "閉じる (Esc)",
+    "replacePlaceholder": "置換...",
+    "replaceTitle": "置換",
+    "replaceButton": "置換",
+    "replaceAllTitle": "すべて置換",
+    "replaceAllButton": "すべて置換",
+    "scopeLabel": "検索範囲:",
+    "scopeAll": "すべてのシート",
+    "scopeCurrent": "現在のシート",
+    "scopeSelection": "選択中のセル"
+  },
+  "sortActions": {
+    "viewingSorted": "📊 ソート済みデータを表示中",
+    "restoreOriginal": "📄 元の順序を復元",
+    "saveSortToFile": "💾 ソート順をファイルに保存"
+  },
+  "importCsvAuto": "Import CSV (Auto)"
 }
