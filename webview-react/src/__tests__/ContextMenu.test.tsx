@@ -26,7 +26,7 @@ describe('ContextMenu', () => {
   })
 
   describe('複数行選択時の行追加機能', () => {
-    it('複数行が全選択された状態で"この上に行を追加"をクリックすると、最初の選択行の上に1行追加される', async () => {
+    it('複数行が全選択された状態で"この上に行を追加"をクリックすると、選択行数分の行が追加される', async () => {
       const user = userEvent.setup()
       
       // 1行目と2行目を全選択したセル
@@ -57,20 +57,21 @@ describe('ContextMenu', () => {
       )
 
       // メニューの表示を確認
-      expect(screen.getByText('この上に行を追加')).toBeInTheDocument()
+      expect(screen.getByText('この上に2行を追加')).toBeInTheDocument()
 
-      // "この上に行を追加" をクリック
-      await user.click(screen.getByText('この上に行を追加'))
+      // "この上に2行を追加" をクリック
+      await user.click(screen.getByText('この上に2行を追加'))
 
-      // onAddRowが1回だけ呼び出されることを確認（最初の選択行の位置に追加）
-      expect(mockOnAddRow).toHaveBeenCalledTimes(1)
-      expect(mockOnAddRow).toHaveBeenCalledWith(0) // 最初の選択行（0行目）の位置に追加
+      // onAddRowが選択行数（2回）呼び出されることを確認
+      expect(mockOnAddRow).toHaveBeenCalledTimes(2)
+      expect(mockOnAddRow).toHaveBeenNthCalledWith(1, 0) // 最初の選択行（0行目）の位置に追加
+      expect(mockOnAddRow).toHaveBeenNthCalledWith(2, 0) // 同じ位置にもう1行追加
 
       // メニューが閉じられることを確認
       expect(mockOnClose).toHaveBeenCalledTimes(1)
     })
 
-    it('複数行が全選択された状態で"この下に行を追加"をクリックすると、最後の選択行の後に1行追加される', async () => {
+    it('複数行が全選択された状態で"この下に行を追加"をクリックすると、選択行数分の行が最後の選択行の後に追加される', async () => {
       const user = userEvent.setup()
       
       // 1行目と2行目を全選択したセル
@@ -101,14 +102,15 @@ describe('ContextMenu', () => {
       )
 
       // メニューの表示を確認
-      expect(screen.getByText('この下に行を追加')).toBeInTheDocument()
+      expect(screen.getByText('この下に2行を追加')).toBeInTheDocument()
 
-      // "この下に行を追加" をクリック
-      await user.click(screen.getByText('この下に行を追加'))
+      // "この下に2行を追加" をクリック
+      await user.click(screen.getByText('この下に2行を追加'))
 
-      // onAddRowが1回だけ呼び出されることを確認（最後の選択行の後に追加）
-      expect(mockOnAddRow).toHaveBeenCalledTimes(1)
-      expect(mockOnAddRow).toHaveBeenCalledWith(2) // 最後の選択行（1行目）の後（2の位置）に追加
+      // onAddRowが選択行数（2回）呼び出されることを確認
+      expect(mockOnAddRow).toHaveBeenCalledTimes(2)
+      expect(mockOnAddRow).toHaveBeenNthCalledWith(1, 2) // 最後の選択行（1行目）の後（2の位置）に追加
+      expect(mockOnAddRow).toHaveBeenNthCalledWith(2, 2) // 同じ位置にもう1行追加
 
       // メニューが閉じられることを確認
       expect(mockOnClose).toHaveBeenCalledTimes(1)
@@ -187,14 +189,16 @@ describe('ContextMenu', () => {
       )
 
       // メニューの表示を確認
-      expect(screen.getByText('この下に行を追加')).toBeInTheDocument()
+      expect(screen.getByText('この下に3行を追加')).toBeInTheDocument()
 
-      // "この下に行を追加" をクリック
-      await user.click(screen.getByText('この下に行を追加'))
+      // "この下に3行を追加" をクリック
+      await user.click(screen.getByText('この下に3行を追加'))
 
-      // onAddRowが1回だけ呼び出されることを確認（最後の選択行の後に追加）
-      expect(mockOnAddRow).toHaveBeenCalledTimes(1)
-      expect(mockOnAddRow).toHaveBeenCalledWith(3) // 最後の選択行（2行目）の後（3の位置）に追加
+      // onAddRowが3回呼び出されることを確認
+      expect(mockOnAddRow).toHaveBeenCalledTimes(3)
+      expect(mockOnAddRow).toHaveBeenNthCalledWith(1, 3) // 最後の選択行（2行目）の後（3の位置）に追加
+      expect(mockOnAddRow).toHaveBeenNthCalledWith(2, 3) // 同じ位置にもう1行追加
+      expect(mockOnAddRow).toHaveBeenNthCalledWith(3, 3) // 同じ位置にもう1行追加
 
       expect(mockOnClose).toHaveBeenCalledTimes(1)
     })

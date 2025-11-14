@@ -64,12 +64,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   const handleAddRowAbove = () => {
     const selectedRows = getSelectedRows()
     const isCurrentRowFullySelected = isRowFullySelected(menuState.index)
-
+    
     if (selectedRows.size > 1 && isCurrentRowFullySelected) {
-      // Multiple rows selected - add one row above the first selected row
+      // Multiple rows selected - add the same number of rows above the first selected row
       const selectedRowArray = Array.from(selectedRows).sort((a, b) => a - b)
       const firstRowIndex = selectedRowArray[0]
-      onAddRow(firstRowIndex)
+      const selectedRowCount = selectedRows.size
+      
+      // Add rows one by one at the same position (they'll stack up above)
+      for (let i = 0; i < selectedRowCount; i++) {
+        onAddRow(firstRowIndex)
+      }
     } else {
       // Single row - add one row above
       onAddRow(menuState.index)
@@ -80,12 +85,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   const handleAddRowBelow = () => {
     const selectedRows = getSelectedRows()
     const isCurrentRowFullySelected = isRowFullySelected(menuState.index)
-
+    
     if (selectedRows.size > 1 && isCurrentRowFullySelected) {
-      // Multiple rows selected - add one row below the last selected row
+      // Multiple rows selected - add the same number of rows below the last selected row
       const selectedRowArray = Array.from(selectedRows).sort((a, b) => b - a) // Sort descending
       const lastRowIndex = selectedRowArray[0] // Highest index
-      onAddRow(lastRowIndex + 1)
+      const selectedRowCount = selectedRows.size
+      
+      // Add rows one by one after the last selected row
+      for (let i = 0; i < selectedRowCount; i++) {
+        onAddRow(lastRowIndex + 1)
+      }
     } else {
       // Single row - add one row below
       onAddRow(menuState.index + 1)
@@ -256,13 +266,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           <button className="context-menu-item" onClick={handleAddRowAbove}>
             <span className="context-menu-icon">⬆️</span>
             <span className="context-menu-label">
-              {t('contextMenu.addRowAbove')}
+              {getSelectedRows().size > 1 && isRowFullySelected(menuState.index)
+                ? t('contextMenu.addRowsAbove', { count: getSelectedRows().size })
+                : t('contextMenu.addRowAbove')}
             </span>
           </button>
           <button className="context-menu-item" onClick={handleAddRowBelow}>
             <span className="context-menu-icon">⬇️</span>
             <span className="context-menu-label">
-              {t('contextMenu.addRowBelow')}
+              {getSelectedRows().size > 1 && isRowFullySelected(menuState.index)
+                ? t('contextMenu.addRowsBelow', { count: getSelectedRows().size })
+                : t('contextMenu.addRowBelow')}
             </span>
           </button>
           <div className="context-menu-separator"></div>
