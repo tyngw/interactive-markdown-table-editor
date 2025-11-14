@@ -84,23 +84,14 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile:debug": "MTE_KEEP_CONSOLE=1 npm run compile ",
-    "compile": "tsc -p ./ && npm run build-webview:conditional && npm run copy-mock",
+    "compile": "tsc -p ./ && npm run build-webview && npm run copy-mock",
+    "compile:debug": "MTE_KEEP_CONSOLE=1 tsc -p ./ && npm run build-webview:debug && npm run copy-mock",
     "build-webview": "cd webview-react && npm install && npm run build && cd .. && mkdir -p out/webview && cp -r webview-dist/* out/webview/",
-    "build-webview:conditional": "sh -c 'if [ \"$MTE_KEEP_CONSOLE\" = \"1\" ] || [ \"$MTE_KEEP_CONSOLE\" = \"true\" ]; then npm run build-webview:debug; else npm run build-webview; fi'",
     "build-webview:debug": "cd webview-react && npm install && npm run build:debug && cd .. && mkdir -p out/webview && cp -r webview-dist/* out/webview/",
-    "copy-webview": "cp -r webview out/",
     "copy-mock": "mkdir -p out/src/mock && cp test/mock/* out/src/mock/",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/src/test/runTest.js",
-    "test:integration": "npm run compile && node ./out/test/runIntegrationTests.js",
-    "test:all": "npm run test && npm run test:integration",
-    "dev": "node dev/start-dev-server.js",
-    "dev:watch": "node dev/start-dev-server.js --watch",
-    "dev:webview": "cd webview-react && npm run dev",
-    "setup:webview": "cd webview-react && npm install"
+    "test": "npm run compile && npm run lint && node ./out/src/test/runTest.js"
   },
   "devDependencies": {
     "@types/glob": "^8.0.0",
