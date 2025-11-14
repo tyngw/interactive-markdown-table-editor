@@ -261,19 +261,26 @@ export function useTableEditor(
     })
   }, [viewToModelMap])
 
-  const addColumn = useCallback((index?: number) => {
+  const addColumn = useCallback((index?: number, count: number = 1) => {
     markInternalUpdate()
     setTableData(prev => {
       const insertIndex = index !== undefined ? index : prev.headers.length
       const newHeaders = [...prev.headers]
-      newHeaders.splice(insertIndex, 0, `Column ${insertIndex + 1}`)
-      
+
+      // Add multiple columns at once
+      const headersToAdd: string[] = []
+      for (let i = 0; i < count; i++) {
+        headersToAdd.push(`Column ${insertIndex + i + 1}`)
+      }
+      newHeaders.splice(insertIndex, 0, ...headersToAdd)
+
       const newRows = prev.rows.map(row => {
         const newRow = [...row]
-        newRow.splice(insertIndex, 0, '')
+        const cellsToAdd = new Array(count).fill('')
+        newRow.splice(insertIndex, 0, ...cellsToAdd)
         return newRow
       })
-      
+
       return { ...prev, headers: newHeaders, rows: newRows }
     })
   }, [])

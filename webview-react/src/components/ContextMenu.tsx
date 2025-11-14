@@ -16,7 +16,7 @@ interface ContextMenuProps {
   onAddRow: (index?: number, count?: number) => void
   onDeleteRow: (index: number) => void
   onDeleteRows?: (indices: number[]) => void
-  onAddColumn: (index?: number) => void
+  onAddColumn: (index?: number, count?: number) => void
   onDeleteColumn: (index: number) => void
   onDeleteColumns?: (indices: number[]) => void
   onClose: () => void
@@ -132,6 +132,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     return true
   }
 
+  // Check if a column is fully selected
+  const isColumnFullySelected = (colIndex: number) => {
+    if (!selectedCells || !tableData) return false
+    for (let row = 0; row < tableData.rows.length; row++) {
+      if (!selectedCells.has(`${row}-${colIndex}`)) {
+        return false
+      }
+    }
+    return true
+  }
+
   const handleDeleteRow = () => {
     const selectedRows = getSelectedRows()
     const isCurrentRowFullySelected = isRowFullySelected(menuState.index)
@@ -148,12 +159,40 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   }
 
   const handleAddColumnLeft = () => {
-    onAddColumn(menuState.index)
+    const selectedColumns = getSelectedColumns()
+    const isCurrentColumnFullySelected = isColumnFullySelected(menuState.index)
+
+    if (selectedColumns.size > 1 && isCurrentColumnFullySelected) {
+      // Multiple columns selected - add the same number of columns to the left of the first selected column
+      const selectedColumnArray = Array.from(selectedColumns).sort((a, b) => a - b)
+      const firstColumnIndex = selectedColumnArray[0]
+      const selectedColumnCount = selectedColumns.size
+
+      // Add multiple columns at once using count parameter
+      onAddColumn(firstColumnIndex, selectedColumnCount)
+    } else {
+      // Single column - add one column to the left
+      onAddColumn(menuState.index)
+    }
     onClose()
   }
 
   const handleAddColumnRight = () => {
-    onAddColumn(menuState.index + 1)
+    const selectedColumns = getSelectedColumns()
+    const isCurrentColumnFullySelected = isColumnFullySelected(menuState.index)
+
+    if (selectedColumns.size > 1 && isCurrentColumnFullySelected) {
+      // Multiple columns selected - add the same number of columns to the right of the last selected column
+      const selectedColumnArray = Array.from(selectedColumns).sort((a, b) => b - a) // Sort descending
+      const lastColumnIndex = selectedColumnArray[0] // Highest index
+      const selectedColumnCount = selectedColumns.size
+
+      // Add multiple columns at once using count parameter
+      onAddColumn(lastColumnIndex + 1, selectedColumnCount)
+    } else {
+      // Single column - add one column to the right
+      onAddColumn(menuState.index + 1)
+    }
     onClose()
   }
 
@@ -299,11 +338,19 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         >
           <button className="context-menu-item" onClick={handleAddColumnLeft}>
             <span className="context-menu-icon">⬅️</span>
-            <span className="context-menu-label">{t('contextMenu.addColumnLeft')}</span>
+            <span className="context-menu-label">
+              {getSelectedColumns().size > 1 && isColumnFullySelected(menuState.index)
+                ? t('contextMenu.addColumnsLeft', { count: getSelectedColumns().size })
+                : t('contextMenu.addColumnLeft')}
+            </span>
           </button>
           <button className="context-menu-item" onClick={handleAddColumnRight}>
             <span className="context-menu-icon">➡️</span>
-            <span className="context-menu-label">{t('contextMenu.addColumnRight')}</span>
+            <span className="context-menu-label">
+              {getSelectedColumns().size > 1 && isColumnFullySelected(menuState.index)
+                ? t('contextMenu.addColumnsRight', { count: getSelectedColumns().size })
+                : t('contextMenu.addColumnRight')}
+            </span>
           </button>
           <div className="context-menu-separator"></div>
           <button className="context-menu-item" onClick={handleDeleteColumn}>

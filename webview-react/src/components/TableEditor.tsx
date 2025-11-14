@@ -389,9 +389,12 @@ const TableEditor: React.FC<TableEditorProps> = ({
     handleDeleteRows([index])
   }, [handleDeleteRows])
 
-  const handleAddColumn = useCallback((index?: number) => {
-    addColumn(index)
-    onSendMessage({ command: 'addColumn', data: withTableIndex({ index }) })
+  const handleAddColumn = useCallback((index?: number, count?: number) => {
+    // Add columns locally (for immediate UI feedback)
+    const columnCount = count || 1
+    addColumn(index, columnCount)
+    // Send message to backend with count parameter (always include count, even if it's 1)
+    onSendMessage({ command: 'addColumn', data: withTableIndex({ index, count: columnCount }) })
   }, [addColumn, onSendMessage, withTableIndex])
 
   const handleDeleteColumns = useCallback((indices: number[]) => {
