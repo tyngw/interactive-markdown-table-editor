@@ -911,8 +911,8 @@ textarea.cell-input[data-multiline="true"] {
 }
 
 .context-menu-item:hover:not(.disabled) {
-    background-color: var(--vscode-list-hoverBackground);
-    color: var(--vscode-menu-foreground);
+    background-color: var(--vscode-menu-selectionBackground);
+    color: var(--vscode-menu-selectionForeground);
     opacity: 1;
 }
 
