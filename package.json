@@ -27,6 +27,7 @@
     "onCommand:markdownTableEditor.openEditor"
   ],
   "main": "./out/src/extension.js",
+  "l10n": "./l10n",
   "contributes": {
     "commands": [
       {

@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as l10n from '@vscode/l10n';
 import { WebviewManager } from './webviewManager';
 import { TableDataManager, TableData } from './tableDataManager';
 import { MarkdownParser } from './markdownParser';
@@ -42,14 +41,14 @@ export function activate(context: vscode.ExtensionContext) {
             if (!uri) {
                 const activeEditor = vscode.window.activeTextEditor;
                 if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
-                    vscode.window.showErrorMessage(l10n.t('error.noMarkdownFile'));
+                    vscode.window.showErrorMessage(vscode.l10n.t('error.noMarkdownFile'));
                     return;
                 }
                 uri = activeEditor.document.uri;
             }
 
             if (!uri) {
-                throw new Error(l10n.t('error.noValidUri'));
+                throw new Error(vscode.l10n.t('error.noValidUri'));
             }
 
             // Read the markdown file
@@ -58,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
             const tables = markdownParser.findTablesInDocument(ast);
 
             if (tables.length === 0) {
-                vscode.window.showInformationMessage(l10n.t('error.noTables'));
+                vscode.window.showInformationMessage(vscode.l10n.t('error.noTables'));
                 return;
             }
 
@@ -116,7 +115,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         } catch (error) {
             console.error('Error opening table editor:', error);
-            vscode.window.showErrorMessage(l10n.t('error.openTableEditor', error instanceof Error ? error.message : 'Unknown error'));
+            vscode.window.showErrorMessage(vscode.l10n.t('error.openTableEditor', error instanceof Error ? error.message : 'Unknown error'));
         }
     });
 
@@ -128,14 +127,14 @@ export function activate(context: vscode.ExtensionContext) {
             if (!uri) {
                 const activeEditor = vscode.window.activeTextEditor;
                 if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
-                    vscode.window.showErrorMessage(l10n.t('error.noMarkdownFile'));
+                    vscode.window.showErrorMessage(vscode.l10n.t('error.noMarkdownFile'));
                     return;
                 }
                 uri = activeEditor.document.uri;
             }
 
             if (!uri) {
-                throw new Error(l10n.t('error.noValidUri'));
+                throw new Error(vscode.l10n.t('error.noValidUri'));
             }
 
             // Read the markdown file
@@ -144,7 +143,7 @@ export function activate(context: vscode.ExtensionContext) {
             const tables = markdownParser.findTablesInDocument(ast);
 
             if (tables.length === 0) {
-                vscode.window.showInformationMessage(l10n.t('error.noTables'));
+                vscode.window.showInformationMessage(vscode.l10n.t('error.noTables'));
                 return;
             }
 
@@ -202,7 +201,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         } catch (error) {
             console.error('Error opening table editor in new panel:', error);
-            vscode.window.showErrorMessage(l10n.t('error.openTableEditorNewPanel', error instanceof Error ? error.message : 'Unknown error'));
+            vscode.window.showErrorMessage(vscode.l10n.t('error.openTableEditorNewPanel', error instanceof Error ? error.message : 'Unknown error'));
         }
     });
 
@@ -211,21 +210,21 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             const themes = getInstalledColorThemes();
             const items: vscode.QuickPickItem[] = [
-                { label: `$(color-mode) ${l10n.t('selectTheme.inherit')}`, description: 'inherit' }
+                { label: `$(color-mode) ${vscode.l10n.t('selectTheme.inherit')}`, description: 'inherit' }
             ].concat(
                 themes.map(t => ({ label: t.label, description: t.id }))
             );
             const picked = await vscode.window.showQuickPick(items, {
-                placeHolder: l10n.t('selectTheme.placeholder'),
+                placeHolder: vscode.l10n.t('selectTheme.placeholder'),
                 matchOnDescription: true
             });
             if (!picked) return;
             const themeId = picked.description === 'inherit' ? 'inherit' : picked.description || 'inherit';
             await vscode.workspace.getConfiguration('markdownTableEditor').update('theme', themeId, true);
             await applyConfiguredThemeToPanels();
-            vscode.window.showInformationMessage(l10n.t('selectTheme.updated'));
+            vscode.window.showInformationMessage(vscode.l10n.t('selectTheme.updated'));
         } catch (err) {
-            vscode.window.showErrorMessage(l10n.t('error.updateTheme', err instanceof Error ? err.message : String(err)));
+            vscode.window.showErrorMessage(vscode.l10n.t('error.updateTheme', err instanceof Error ? err.message : String(err)));
         }
     });
 
@@ -1186,17 +1185,17 @@ export function activate(context: vscode.ExtensionContext) {
                         const examples = Array.from(new Set(replacements.map(r => `${r.from}→${r.to}`))).slice(0, 5).join('、');
                         const examplesStr = `${examples}${replacements.length > 5 ? '、他' : ''}`;
                         const confirm = await vscode.window.showWarningMessage(
-                            l10n.t('csv.shiftJisWarning', examplesStr),
+                            vscode.l10n.t('csv.shiftJisWarning', examplesStr),
                             { modal: true },
-                            l10n.t('csv.convertAndSave'),
-                            l10n.t('csv.doNotConvert')
+                            vscode.l10n.t('csv.convertAndSave'),
+                            vscode.l10n.t('csv.doNotConvert')
                         );
                         if (confirm === undefined) {
                                                         return;
                         }
-                        if (confirm === l10n.t('csv.convertAndSave')) {
+                        if (confirm === vscode.l10n.t('csv.convertAndSave')) {
                             contentToWrite = normalized;
-                        } else if (confirm === l10n.t('csv.doNotConvert')) {
+                        } else if (confirm === vscode.l10n.t('csv.doNotConvert')) {
                             // 変換せずにSJISエンコードを試みる（非対応文字は '?' になる可能性あり）
                             contentToWrite = csvContent;
                         }
@@ -1215,8 +1214,8 @@ export function activate(context: vscode.ExtensionContext) {
 
                 await vscode.workspace.fs.writeFile(saveUri, buffer);
 
-                const encodingLabel = encoding === 'sjis' ? l10n.t('csv.encoding.sjis') : l10n.t('csv.encoding.utf8');
-                webviewManager.sendSuccess(panel, l10n.t('success.csvExported', saveUri.fsPath, encodingLabel));
+                const encodingLabel = encoding === 'sjis' ? vscode.l10n.t('csv.encoding.sjis') : vscode.l10n.t('csv.encoding.utf8');
+                webviewManager.sendSuccess(panel, vscode.l10n.t('success.csvExported', saveUri.fsPath, encodingLabel));
                             } else {
                             }
         } catch (error) {
@@ -1242,14 +1241,14 @@ export function activate(context: vscode.ExtensionContext) {
                 return
             }
             if (!tableManagersMap) {
-                webviewManager.sendError(panel, l10n.t('error.tableManagersNotFound'))
+                webviewManager.sendError(panel, vscode.l10n.t('error.tableManagersNotFound'))
                 return
             }
 
             const targetTableIndex = typeof tableIndex === 'number' ? tableIndex : 0
             const tableDataManager = tableManagersMap.get(targetTableIndex)
             if (!tableDataManager) {
-                webviewManager.sendError(panel, l10n.t('error.tableManagerNotFoundForIndex', targetTableIndex))
+                webviewManager.sendError(panel, vscode.l10n.t('error.tableManagerNotFoundForIndex', targetTableIndex))
                 return
             }
 
@@ -1262,7 +1261,7 @@ export function activate(context: vscode.ExtensionContext) {
                     'CSV Files': ['csv'],
                     'All Files': ['*']
                 },
-                title: l10n.t('csv.selectFileTitle')
+                title: vscode.l10n.t('csv.selectFileTitle')
             })
             if (!openUris || openUris.length === 0) {
                                 return
@@ -1279,13 +1278,13 @@ export function activate(context: vscode.ExtensionContext) {
             // 解析
             const rows = parseCsv(text)
             if (!rows || rows.length === 0) {
-                webviewManager.sendError(panel, l10n.t('error.csvEmpty'))
+                webviewManager.sendError(panel, vscode.l10n.t('error.csvEmpty'))
                 return
             }
             // 有効性の軽い検証（いずれかのセルに内容があるか）
             const hasAnyValue = rows.some(r => r.some(c => (c || '').trim().length > 0))
             if (!hasAnyValue) {
-                webviewManager.sendError(panel, l10n.t('error.csvNoValues'))
+                webviewManager.sendError(panel, vscode.l10n.t('error.csvNoValues'))
                 return
             }
             const rectangular = toRectangular(rows)
@@ -1296,11 +1295,11 @@ export function activate(context: vscode.ExtensionContext) {
 
             // 確認ダイアログ（モーダル）。承認時のみ上書き
             const confirm = await vscode.window.showWarningMessage(
-                l10n.t('csv.importConfirm'),
+                vscode.l10n.t('csv.importConfirm'),
                 { modal: true },
-                l10n.t('csv.yes')
+                vscode.l10n.t('csv.yes')
             )
-            if (confirm !== l10n.t('csv.yes')) {
+            if (confirm !== vscode.l10n.t('csv.yes')) {
                                 return
             }
 
@@ -1326,8 +1325,8 @@ export function activate(context: vscode.ExtensionContext) {
             })
             webviewManager.updateTableData(panel, allTableData, uri)
 
-            const label = enc === 'sjis' ? l10n.t('csv.encoding.sjis') : l10n.t('csv.encoding.utf8')
-            webviewManager.sendSuccess(panel, l10n.t('success.csvImported', csvUri.fsPath, label))
+            const label = enc === 'sjis' ? vscode.l10n.t('csv.encoding.sjis') : vscode.l10n.t('csv.encoding.utf8')
+            webviewManager.sendSuccess(panel, vscode.l10n.t('success.csvImported', csvUri.fsPath, label))
         } catch (error) {
             console.error('Error in importCSV:', error)
             const { panel } = resolvePanelContext(data?.uri, data?.panelId)
