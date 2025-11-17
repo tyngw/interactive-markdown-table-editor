@@ -26,6 +26,7 @@ import {
   SortData,
   MoveData,
   ExportCSVData,
+  ImportCSVData,
   SwitchTableData,
   WebviewCommandDataMap
 } from '../../../src/communication/protocol';
@@ -472,6 +473,14 @@ export class WebviewCommunicationManager {
   public exportCSV(csvContent: string, filename?: string, encoding?: string, tableIndex?: number): void {
     const data: ExportCSVData = { csvContent, filename, encoding, tableIndex };
     this.sendNotification(WebviewCommand.EXPORT_CSV, data);
+  }
+
+  /**
+   * CSVインポート
+   */
+  public importCSV(tableIndex?: number): void {
+    const data: ImportCSVData = { tableIndex };
+    this.sendNotification(WebviewCommand.IMPORT_CSV, data);
   }
 
   /**

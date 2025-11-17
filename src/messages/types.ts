@@ -11,6 +11,7 @@ export type WebviewCommand =
   | 'moveRow'
   | 'moveColumn'
   | 'exportCSV'
+  | 'importCSV'
   | 'pong'
   | 'switchTable'
   | 'requestThemeVariables'
@@ -82,6 +83,10 @@ export interface ExportCSVData {
   csvContent: string;
   filename?: string;
   encoding?: string;
+}
+
+export interface ImportCSVData {
+  tableIndex?: number;
 }
 
 export interface SwitchTableData { index: number }
