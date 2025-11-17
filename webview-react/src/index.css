@@ -573,6 +573,17 @@ table.table-editor tbody tr td.editable-cell.selected:not(.anchor) {
     z-index: 20;
 }
 
+/* Single cell selection - no background color */
+table.table-editor tbody tr td.data-cell.selected.anchor.single-selection,
+table.table-editor tbody tr td.editable-cell.selected.anchor.single-selection {
+    background-color: transparent;
+}
+
+table.table-editor tbody tr td.data-cell.selected:not(.anchor).single-selection,
+table.table-editor tbody tr td.editable-cell.selected:not(.anchor).single-selection {
+    background-color: transparent;
+}
+
 /* Add borders only on selection range edges */
 table.table-editor tbody tr td.data-cell.selected.border-top,
 table.table-editor tbody tr td.editable-cell.selected.border-top {
