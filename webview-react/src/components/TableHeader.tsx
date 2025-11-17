@@ -39,11 +39,21 @@ const TableHeader: React.FC<TableHeaderProps> = ({
   // theme context はここでは未使用
   const [editingHeader, setEditingHeader] = useState<number | null>(null)
   const [resizing, setResizing] = useState<{ col: number; startX: number; startWidth: number } | null>(null)
+  const [clickTimer, setClickTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
-  // ヘッダー編集開始
+  // ヘッダー編集開始（ダブルクリック時）
   const handleHeaderDoubleClick = useCallback((col: number) => {
-    setEditingHeader(col)
-  }, [])
+    // クリックタイマーをキャンセル（シングルクリックの処理を防ぐ）
+    if (clickTimer) {
+      clearTimeout(clickTimer)
+      setClickTimer(null)
+    }
+
+    // 列ヘッダがONの場合のみ編集可能
+    if (headerConfig?.hasColumnHeaders !== false) {
+      setEditingHeader(col)
+    }
+  }, [clickTimer, headerConfig])
 
   // ヘッダー編集完了
   const handleHeaderBlur = useCallback((col: number, value: string) => {
@@ -96,6 +106,15 @@ const TableHeader: React.FC<TableHeaderProps> = ({
     }
   }, [resizing, handleMouseMove, handleMouseUp])
 
+  // クリックタイマーのクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (clickTimer) {
+        clearTimeout(clickTimer)
+      }
+    }
+  }, [clickTimer])
+
   // 列記号はユーティリティから提供
 
   // Auto-fit column width to content (Excel-like double-click behavior)
@@ -114,11 +133,36 @@ const TableHeader: React.FC<TableHeaderProps> = ({
     if ((event.target as HTMLElement).closest('.resize-handle')) return
     if ((event.target as HTMLElement).closest('.sort-indicator')) return
 
-    // 列ヘッダークリックで列全体を選択（Shift押下で範囲選択）
-    if (onColumnSelect) {
-      onColumnSelect(col, event)
+    // React合成イベントのプロパティを先に取得（イベントプーリングのため）
+    const shiftKey = event.shiftKey
+    const ctrlKey = event.ctrlKey
+    const metaKey = event.metaKey
+
+    // 既存のタイマーがあればキャンセル
+    if (clickTimer) {
+      clearTimeout(clickTimer)
     }
-  }, [resizing, onColumnSelect])
+
+    // シングルクリックの処理を遅延させる（ダブルクリック検出のため）
+    // ダブルクリックが発生した場合、このタイマーはキャンセルされる
+    const timer = setTimeout(() => {
+      // 列ヘッダークリックで列全体を選択（Shift押下で範囲選択）
+      if (onColumnSelect) {
+        // イベントオブジェクトを再構築
+        const syntheticEvent = {
+          shiftKey,
+          ctrlKey,
+          metaKey,
+          preventDefault: () => {},
+          stopPropagation: () => {}
+        } as React.MouseEvent
+        onColumnSelect(col, syntheticEvent)
+      }
+      setClickTimer(null)
+    }, 250) // 250ms待機してダブルクリックを検出
+
+    setClickTimer(timer)
+  }, [resizing, onColumnSelect, clickTimer])
 
   return (
     <thead>
