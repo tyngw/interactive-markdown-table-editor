@@ -558,6 +558,7 @@ table.table-editor tbody tr td.editable-cell.selected.anchor {
     height: auto;
     position: relative;
     z-index: 20;
+    overflow: visible;
 }
 
 /* Non-anchor selected cells - no border by default, only on edges */
@@ -571,6 +572,7 @@ table.table-editor tbody tr td.editable-cell.selected:not(.anchor) {
     height: auto;
     position: relative;
     z-index: 20;
+    overflow: visible;
 }
 
 /* Single cell selection - no background color */
