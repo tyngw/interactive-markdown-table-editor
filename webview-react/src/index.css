@@ -557,7 +557,7 @@ table.table-editor tbody tr td.editable-cell.selected.anchor {
     min-height: 32px;
     height: auto;
     position: relative;
-    z-index: 200;
+    z-index: 15;
 }
 
 /* Non-anchor selected cells - no border by default, only on edges */
@@ -570,7 +570,7 @@ table.table-editor tbody tr td.editable-cell.selected:not(.anchor) {
     min-height: 32px;
     height: auto;
     position: relative;
-    z-index: 200;
+    z-index: 15;
 }
 
 /* Add borders only on selection range edges */
