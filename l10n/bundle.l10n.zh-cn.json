@@ -45,6 +45,7 @@
   "error.exportCsv": "导出CSV失败: {0}",
   "csv.encoding.utf8": "UTF-8",
   "csv.encoding.sjis": "Shift_JIS",
+  "csv.selectFileTitle": "选择要导入的CSV文件",
   "csv.shiftJisWarning": "发现可能无法以Shift_JIS保存的字符。\n是否用近似字符替换后导出？\n示例: {0}",
   "csv.convertAndSave": "转换并保存",
   "csv.doNotConvert": "不转换",
