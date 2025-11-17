@@ -5,6 +5,7 @@ import {
   DeleteColumnsData,
   DeleteRowsData,
   ExportCSVData,
+  ImportCSVData,
   MoveData,
   SortData,
   SwitchTableData,
@@ -16,7 +17,7 @@ import {
 
 export const validCommands: WebviewCommand[] = [
   'requestTableData', 'updateCell', 'bulkUpdateCells', 'updateHeader', 'addRow', 'deleteRows',
-  'addColumn', 'deleteColumns', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'pong', 'switchTable', 'requestThemeVariables', 'undo', 'redo',
+  'addColumn', 'deleteColumns', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'importCSV', 'pong', 'switchTable', 'requestThemeVariables', 'undo', 'redo',
   'webviewError', 'webviewUnhandledRejection', 'diag'
 ];
 
@@ -77,6 +78,9 @@ export function validateMessageData(message: WebviewMessage): boolean {
       // if filename is provided, it must be a non-empty string
       if ('filename' in v && (typeof (v as any).filename !== 'string' || (v as any).filename.trim().length === 0)) return false;
       return true;
+    }
+    case 'importCSV': {
+      const v = d as ImportCSVData; return v === undefined || isObject(v);
     }
     case 'switchTable': {
       const v = d as SwitchTableData; return isObject(v) && typeof v.index === 'number' && v.index >= 0;

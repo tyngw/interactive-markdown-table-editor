@@ -202,6 +202,9 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
           manager.exportCSV(messageData.csvContent, messageData.filename, messageData.encoding, messageData.tableIndex);
         }
         break;
+      case 'importCSV':
+        manager.importCSV(messageData?.tableIndex);
+        break;
       case 'switchTable':
         if (messageData) {
           manager.switchTable(messageData.index);
@@ -302,6 +305,12 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     manager.exportCSV(csvContent, filename, encoding, tableIndex);
   }, []);
 
+  const importCSV = useCallback((tableIndex?: number) => {
+    const manager = commManagerRef.current;
+    if (!manager) return;
+    manager.importCSV(tableIndex);
+  }, []);
+
   const switchTable = useCallback((index: number) => {
     const manager = commManagerRef.current;
     if (!manager) return;
@@ -348,6 +357,7 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     moveRow,
     moveColumn,
     exportCSV,
+    importCSV,
     switchTable,
     requestThemeVariables,
     undo,
