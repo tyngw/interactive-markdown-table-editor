@@ -45,6 +45,7 @@
   "error.exportCsv": "CSVのエクスポートに失敗しました: {0}",
   "csv.encoding.utf8": "UTF-8",
   "csv.encoding.sjis": "Shift_JIS",
+  "csv.selectFileTitle": "インポートするCSVファイルを選択",
   "csv.shiftJisWarning": "Shift_JISで保存できない可能性のある文字が見つかりました。\n近似文字に置換して書き出しますか？\n例: {0}",
   "csv.convertAndSave": "変換して保存",
   "csv.doNotConvert": "変換しない",

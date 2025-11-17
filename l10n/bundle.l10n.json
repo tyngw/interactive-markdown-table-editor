@@ -45,6 +45,7 @@
   "error.exportCsv": "Failed to export CSV: {0}",
   "csv.encoding.utf8": "UTF-8",
   "csv.encoding.sjis": "Shift_JIS",
+  "csv.selectFileTitle": "Select CSV file to import",
   "csv.shiftJisWarning": "Characters that may not be saved in Shift_JIS were found.\nDo you want to replace them with approximate characters?\nExamples: {0}",
   "csv.convertAndSave": "Convert and Save",
   "csv.doNotConvert": "Do Not Convert",
