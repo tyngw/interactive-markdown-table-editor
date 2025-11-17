@@ -1242,14 +1242,14 @@ export function activate(context: vscode.ExtensionContext) {
                 return
             }
             if (!tableManagersMap) {
-                webviewManager.sendError(panel, 'Table managers not found')
+                webviewManager.sendError(panel, l10n.t('error.tableManagersNotFound'))
                 return
             }
 
             const targetTableIndex = typeof tableIndex === 'number' ? tableIndex : 0
             const tableDataManager = tableManagersMap.get(targetTableIndex)
             if (!tableDataManager) {
-                webviewManager.sendError(panel, `Table manager not found for table ${targetTableIndex}`)
+                webviewManager.sendError(panel, l10n.t('error.tableManagerNotFoundForIndex', targetTableIndex))
                 return
             }
 
@@ -1261,7 +1261,8 @@ export function activate(context: vscode.ExtensionContext) {
                 filters: {
                     'CSV Files': ['csv'],
                     'All Files': ['*']
-                }
+                },
+                title: l10n.t('csv.selectFileTitle')
             })
             if (!openUris || openUris.length === 0) {
                                 return
@@ -1278,13 +1279,13 @@ export function activate(context: vscode.ExtensionContext) {
             // 解析
             const rows = parseCsv(text)
             if (!rows || rows.length === 0) {
-                webviewManager.sendError(panel, 'CSV appears to be empty')
+                webviewManager.sendError(panel, l10n.t('error.csvEmpty'))
                 return
             }
             // 有効性の軽い検証（いずれかのセルに内容があるか）
             const hasAnyValue = rows.some(r => r.some(c => (c || '').trim().length > 0))
             if (!hasAnyValue) {
-                webviewManager.sendError(panel, 'CSV appears to contain no values')
+                webviewManager.sendError(panel, l10n.t('error.csvNoValues'))
                 return
             }
             const rectangular = toRectangular(rows)
