@@ -97,6 +97,7 @@ export enum WebviewCommand {
   MOVE_ROW = 'moveRow',
   MOVE_COLUMN = 'moveColumn',
   EXPORT_CSV = 'exportCSV',
+  IMPORT_CSV = 'importCSV',
   SWITCH_TABLE = 'switchTable',
   REQUEST_THEME_VARIABLES = 'requestThemeVariables',
   UNDO = 'undo',
@@ -167,6 +168,10 @@ export interface ExportCSVData {
   tableIndex?: number;
 }
 
+export interface ImportCSVData {
+  tableIndex?: number;
+}
+
 export interface SwitchTableData {
   index: number;
 }
@@ -202,6 +207,7 @@ export type WebviewCommandDataMap = {
   [WebviewCommand.MOVE_ROW]: MoveData;
   [WebviewCommand.MOVE_COLUMN]: MoveData;
   [WebviewCommand.EXPORT_CSV]: ExportCSVData;
+  [WebviewCommand.IMPORT_CSV]: ImportCSVData;
   [WebviewCommand.SWITCH_TABLE]: SwitchTableData;
   [WebviewCommand.REQUEST_THEME_VARIABLES]: void;
   [WebviewCommand.UNDO]: void;
