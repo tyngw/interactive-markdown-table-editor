@@ -547,8 +547,9 @@ td[data-temp-empty="true"] .cell-content {
 }
 
 /* Enhanced selection styles */
-.table-editor td.data-cell.selected,
-.table-editor td.editable-cell.selected {
+/* Anchor cell - full border on all sides */
+.table-editor td.data-cell.selected.anchor,
+.table-editor td.editable-cell.selected.anchor {
     background-color: var(--vscode-list-activeSelectionBackground) !important;
     color: var(--vscode-list-activeSelectionForeground) !important;
     box-shadow: 0 0 0 2px var(--vscode-focusBorder) !important;
@@ -557,6 +558,98 @@ td[data-temp-empty="true"] .cell-content {
     height: auto !important;
     position: relative !important;
     z-index: 10 !important;
+}
+
+/* Non-anchor selected cells - no border by default, only on edges */
+.table-editor td.data-cell.selected:not(.anchor),
+.table-editor td.editable-cell.selected:not(.anchor) {
+    background-color: var(--vscode-list-activeSelectionBackground) !important;
+    color: var(--vscode-list-activeSelectionForeground) !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+    min-height: 32px !important;
+    height: auto !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+/* Add borders only on selection range edges */
+.table-editor td.data-cell.selected.border-top,
+.table-editor td.editable-cell.selected.border-top {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-bottom,
+.table-editor td.editable-cell.selected.border-bottom {
+    box-shadow: 0 2px 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-left,
+.table-editor td.editable-cell.selected.border-left {
+    box-shadow: -2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-right,
+.table-editor td.editable-cell.selected.border-right {
+    box-shadow: 2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+/* Combine multiple borders */
+.table-editor td.data-cell.selected.border-top.border-right,
+.table-editor td.editable-cell.selected.border-top.border-right {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-top.border-left,
+.table-editor td.editable-cell.selected.border-top.border-left {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-bottom.border-right,
+.table-editor td.editable-cell.selected.border-bottom.border-right {
+    box-shadow: 0 2px 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-bottom.border-left,
+.table-editor td.editable-cell.selected.border-bottom.border-left {
+    box-shadow: 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-top.border-bottom,
+.table-editor td.editable-cell.selected.border-top.border-bottom {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-left.border-right,
+.table-editor td.editable-cell.selected.border-left.border-right {
+    box-shadow: -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+/* All four sides (corners) */
+.table-editor td.data-cell.selected.border-top.border-bottom.border-left.border-right,
+.table-editor td.editable-cell.selected.border-top.border-bottom.border-left.border-right {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+/* Three sides combinations */
+.table-editor td.data-cell.selected.border-top.border-left.border-right,
+.table-editor td.editable-cell.selected.border-top.border-left.border-right {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-bottom.border-left.border-right,
+.table-editor td.editable-cell.selected.border-bottom.border-left.border-right {
+    box-shadow: 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-top.border-bottom.border-left,
+.table-editor td.editable-cell.selected.border-top.border-bottom.border-left {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder) !important;
+}
+
+.table-editor td.data-cell.selected.border-top.border-bottom.border-right,
+.table-editor td.editable-cell.selected.border-top.border-bottom.border-right {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
 }
 
 .table-editor td.data-cell.cell-multi-selected,
@@ -641,25 +734,7 @@ textarea.cell-input[data-multiline="true"] {
 }
 
 /* ====== 8. 選択・ハイライト関連 ====== */
-.table-editor td.data-cell.selected {
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
-    color: var(--vscode-list-activeSelectionForeground) !important;
-    box-shadow: 0 0 0 2px var(--vscode-focusBorder) !important;
-    box-sizing: border-box !important;
-    height: auto !important;
-    position: relative !important;
-    z-index: 10 !important;
-}
-
-.table-editor td.editable-cell.selected {
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
-    color: var(--vscode-list-activeSelectionForeground) !important;
-    box-shadow: 0 0 0 2px var(--vscode-focusBorder) !important;
-    box-sizing: border-box !important;
-    height: auto !important;
-    position: relative !important;
-    z-index: 10 !important;
-}
+/* These styles are now defined in section 7 above with anchor and border-* classes */
 
 .table-editor td.data-cell.cell-multi-selected {
     background-color: var(--vscode-list-inactiveSelectionBackground) !important;

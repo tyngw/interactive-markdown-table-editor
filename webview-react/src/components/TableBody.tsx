@@ -73,6 +73,32 @@ const TableBody: React.FC<TableBodyProps> = ({
     return editorState.selectedCells.has(`${row}-${col}`)
   }, [editorState.selectedCells])
 
+  // アンカーセルかどうかを判定
+  const isAnchorCell = useCallback((row: number, col: number) => {
+    if (!editorState.selectionRange) return false
+    return editorState.selectionRange.start.row === row && editorState.selectionRange.start.col === col
+  }, [editorState.selectionRange])
+
+  // 選択範囲の境界にあるかどうかを判定
+  const getSelectionBorders = useCallback((row: number, col: number) => {
+    if (!editorState.selectionRange || !isCellSelected(row, col)) {
+      return { top: false, bottom: false, left: false, right: false }
+    }
+
+    const { start, end } = editorState.selectionRange
+    const minRow = Math.min(start.row, end.row)
+    const maxRow = Math.max(start.row, end.row)
+    const minCol = Math.min(start.col, end.col)
+    const maxCol = Math.max(start.col, end.col)
+
+    return {
+      top: row === minRow,
+      bottom: row === maxRow,
+      left: col === minCol,
+      right: col === maxCol
+    }
+  }, [editorState.selectionRange, isCellSelected])
+
   const isCellEditing = useCallback((row: number, col: number) => {
     return editorState.currentEditingCell?.row === row && 
            editorState.currentEditingCell?.col === col
@@ -357,6 +383,8 @@ const TableBody: React.FC<TableBodyProps> = ({
             const storedWidth = editorState.columnWidths[colIndex] || 150
             const isEditing = isCellEditing(-1, colIndex)
             const isSelected = isCellSelected(-1, colIndex)
+            const isAnchor = isAnchorCell(-1, colIndex)
+            const borders = getSelectionBorders(-1, colIndex)
             const isInFillRange = isCellInFillRange(-1, colIndex)
             const showFillHandle = isBottomRightCell(-1, colIndex) && !isEditing
             const isSResult = isSearchResult ? isSearchResult(-1, colIndex) : false
@@ -375,7 +403,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                 id={cellId}
                 data-row={-1}
                 data-col={colIndex}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? (isAnchor ? 'selected anchor' : `selected ${borders.top ? 'border-top' : ''} ${borders.bottom ? 'border-bottom' : ''} ${borders.left ? 'border-left' : ''} ${borders.right ? 'border-right' : ''}`.trim()) : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
                 style={{
                   ...widthStyle,
                   ...(isEditing
@@ -469,6 +497,8 @@ const TableBody: React.FC<TableBodyProps> = ({
             const storedWidth = editorState.columnWidths[colIndex] || 150
             const isEditing = isCellEditing(rowIndex, colIndex)
             const isSelected = isCellSelected(rowIndex, colIndex)
+            const isAnchor = isAnchorCell(rowIndex, colIndex)
+            const borders = getSelectionBorders(rowIndex, colIndex)
             const isInFillRange = isCellInFillRange(rowIndex, colIndex)
             const showFillHandle = isBottomRightCell(rowIndex, colIndex) && !isEditing
             const isSResult = isSearchResult ? isSearchResult(rowIndex, colIndex) : false
@@ -485,7 +515,7 @@ const TableBody: React.FC<TableBodyProps> = ({
               <td
                 key={colIndex}
                 id={cellId}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? (isAnchor ? 'selected anchor' : `selected ${borders.top ? 'border-top' : ''} ${borders.bottom ? 'border-bottom' : ''} ${borders.left ? 'border-left' : ''} ${borders.right ? 'border-right' : ''}`.trim()) : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
                 onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                 onDoubleClick={() => startCellEdit(rowIndex, colIndex)}
                 data-row={rowIndex}
