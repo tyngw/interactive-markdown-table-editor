@@ -547,12 +547,16 @@ td[data-temp-empty="true"] .cell-content {
 }
 
 /* Enhanced selection styles */
-/* Anchor cell - full border on all sides */
+/* Anchor cell - full border on all sides, 1px inside cell edge */
 table.table-editor tbody tr td.data-cell.selected.anchor,
 table.table-editor tbody tr td.editable-cell.selected.anchor {
     background-color: rgba(120, 160, 255, 0.3);
     color: var(--vscode-editor-foreground);
-    box-shadow: inset 0 0 0 2px var(--vscode-focusBorder);
+    box-shadow:
+        inset 0 1px 0 2px var(--vscode-focusBorder),
+        inset 0 -1px 0 2px var(--vscode-focusBorder),
+        inset 1px 0 0 2px var(--vscode-focusBorder),
+        inset -1px 0 0 2px var(--vscode-focusBorder);
     box-sizing: border-box;
     min-height: 32px;
     height: auto;
@@ -586,83 +590,83 @@ table.table-editor tbody tr td.editable-cell.selected:not(.anchor).single-select
     background-color: transparent;
 }
 
-/* Add borders only on selection range edges */
+/* Add borders only on selection range edges, 1px inside cell edge */
 table.table-editor tbody tr td.data-cell.selected.border-top,
 table.table-editor tbody tr td.editable-cell.selected.border-top {
-    box-shadow: inset 0 2px 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 1px 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-bottom,
 table.table-editor tbody tr td.editable-cell.selected.border-bottom {
-    box-shadow: inset 0 -2px 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 -1px 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-left,
 table.table-editor tbody tr td.editable-cell.selected.border-left {
-    box-shadow: inset 2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 1px 0 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-right,
 table.table-editor tbody tr td.editable-cell.selected.border-right {
-    box-shadow: inset -2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset -1px 0 0 2px var(--vscode-focusBorder);
 }
 
-/* Combine multiple borders */
+/* Combine multiple borders, 1px inside cell edge */
 table.table-editor tbody tr td.data-cell.selected.border-top.border-right,
 table.table-editor tbody tr td.editable-cell.selected.border-top.border-right {
-    box-shadow: inset 0 2px 0 0 var(--vscode-focusBorder), inset -2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 1px 0 2px var(--vscode-focusBorder), inset -1px 0 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-top.border-left,
 table.table-editor tbody tr td.editable-cell.selected.border-top.border-left {
-    box-shadow: inset 0 2px 0 0 var(--vscode-focusBorder), inset 2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 1px 0 2px var(--vscode-focusBorder), inset 1px 0 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-bottom.border-right,
 table.table-editor tbody tr td.editable-cell.selected.border-bottom.border-right {
-    box-shadow: inset 0 -2px 0 0 var(--vscode-focusBorder), inset -2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 -1px 0 2px var(--vscode-focusBorder), inset -1px 0 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-bottom.border-left,
 table.table-editor tbody tr td.editable-cell.selected.border-bottom.border-left {
-    box-shadow: inset 0 -2px 0 0 var(--vscode-focusBorder), inset 2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 -1px 0 2px var(--vscode-focusBorder), inset 1px 0 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-top.border-bottom,
 table.table-editor tbody tr td.editable-cell.selected.border-top.border-bottom {
-    box-shadow: inset 0 2px 0 0 var(--vscode-focusBorder), inset 0 -2px 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 1px 0 2px var(--vscode-focusBorder), inset 0 -1px 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-left.border-right,
 table.table-editor tbody tr td.editable-cell.selected.border-left.border-right {
-    box-shadow: inset 2px 0 0 0 var(--vscode-focusBorder), inset -2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 1px 0 0 2px var(--vscode-focusBorder), inset -1px 0 0 2px var(--vscode-focusBorder);
 }
 
 /* All four sides (corners) */
 table.table-editor tbody tr td.data-cell.selected.border-top.border-bottom.border-left.border-right,
 table.table-editor tbody tr td.editable-cell.selected.border-top.border-bottom.border-left.border-right {
-    box-shadow: inset 0 2px 0 0 var(--vscode-focusBorder), inset 0 -2px 0 0 var(--vscode-focusBorder), inset 2px 0 0 0 var(--vscode-focusBorder), inset -2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 1px 0 2px var(--vscode-focusBorder), inset 0 -1px 0 2px var(--vscode-focusBorder), inset 1px 0 0 2px var(--vscode-focusBorder), inset -1px 0 0 2px var(--vscode-focusBorder);
 }
 
 /* Three sides combinations */
 table.table-editor tbody tr td.data-cell.selected.border-top.border-left.border-right,
 table.table-editor tbody tr td.editable-cell.selected.border-top.border-left.border-right {
-    box-shadow: inset 0 2px 0 0 var(--vscode-focusBorder), inset 2px 0 0 0 var(--vscode-focusBorder), inset -2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 1px 0 2px var(--vscode-focusBorder), inset 1px 0 0 2px var(--vscode-focusBorder), inset -1px 0 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-bottom.border-left.border-right,
 table.table-editor tbody tr td.editable-cell.selected.border-bottom.border-left.border-right {
-    box-shadow: inset 0 -2px 0 0 var(--vscode-focusBorder), inset 2px 0 0 0 var(--vscode-focusBorder), inset -2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 -1px 0 2px var(--vscode-focusBorder), inset 1px 0 0 2px var(--vscode-focusBorder), inset -1px 0 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-top.border-bottom.border-left,
 table.table-editor tbody tr td.editable-cell.selected.border-top.border-bottom.border-left {
-    box-shadow: inset 0 2px 0 0 var(--vscode-focusBorder), inset 0 -2px 0 0 var(--vscode-focusBorder), inset 2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 1px 0 2px var(--vscode-focusBorder), inset 0 -1px 0 2px var(--vscode-focusBorder), inset 1px 0 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.selected.border-top.border-bottom.border-right,
 table.table-editor tbody tr td.editable-cell.selected.border-top.border-bottom.border-right {
-    box-shadow: inset 0 2px 0 0 var(--vscode-focusBorder), inset 0 -2px 0 0 var(--vscode-focusBorder), inset -2px 0 0 0 var(--vscode-focusBorder);
+    box-shadow: inset 0 1px 0 2px var(--vscode-focusBorder), inset 0 -1px 0 2px var(--vscode-focusBorder), inset -1px 0 0 2px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.cell-multi-selected,
