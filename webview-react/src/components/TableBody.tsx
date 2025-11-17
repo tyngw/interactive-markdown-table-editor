@@ -79,6 +79,11 @@ const TableBody: React.FC<TableBodyProps> = ({
     return editorState.selectionRange.start.row === row && editorState.selectionRange.start.col === col
   }, [editorState.selectionRange])
 
+  // 単一セル選択かどうかを判定
+  const isSingleCellSelection = useCallback(() => {
+    return editorState.selectedCells.size === 1
+  }, [editorState.selectedCells])
+
   // 選択範囲の境界にあるかどうかを判定
   const getSelectionBorders = useCallback((row: number, col: number) => {
     if (!editorState.selectionRange || !isCellSelected(row, col)) {
@@ -397,13 +402,15 @@ const TableBody: React.FC<TableBodyProps> = ({
 
             const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
 
+            const isSingleSelection = isSingleCellSelection()
+
             return (
               <td
                 key={colIndex}
                 id={cellId}
                 data-row={-1}
                 data-col={colIndex}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? (isAnchor ? 'selected anchor' : `selected ${borders.top ? 'border-top' : ''} ${borders.bottom ? 'border-bottom' : ''} ${borders.left ? 'border-left' : ''} ${borders.right ? 'border-right' : ''}`.trim()) : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? (isAnchor ? `selected anchor ${isSingleSelection ? 'single-selection' : ''}` : `selected ${isSingleSelection ? 'single-selection' : ''} ${borders.top ? 'border-top' : ''} ${borders.bottom ? 'border-bottom' : ''} ${borders.left ? 'border-left' : ''} ${borders.right ? 'border-right' : ''}`.trim()) : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
                 style={{
                   ...widthStyle,
                   ...(isEditing
@@ -510,12 +517,13 @@ const TableBody: React.FC<TableBodyProps> = ({
             }
 
             const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
+            const isSingleSelection = isSingleCellSelection()
 
             return (
               <td
                 key={colIndex}
                 id={cellId}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? (isAnchor ? 'selected anchor' : `selected ${borders.top ? 'border-top' : ''} ${borders.bottom ? 'border-bottom' : ''} ${borders.left ? 'border-left' : ''} ${borders.right ? 'border-right' : ''}`.trim()) : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
+                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? (isAnchor ? `selected anchor ${isSingleSelection ? 'single-selection' : ''}` : `selected ${isSingleSelection ? 'single-selection' : ''} ${borders.top ? 'border-top' : ''} ${borders.bottom ? 'border-bottom' : ''} ${borders.left ? 'border-left' : ''} ${borders.right ? 'border-right' : ''}`.trim()) : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
                 onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
                 onDoubleClick={() => startCellEdit(rowIndex, colIndex)}
                 data-row={rowIndex}
