@@ -547,6 +547,12 @@ td[data-temp-empty="true"] .cell-content {
 }
 
 /* Enhanced selection styles */
+/* Selected cells - remove normal borders to show only selection outline */
+table.table-editor tbody tr td.data-cell.selected,
+table.table-editor tbody tr td.editable-cell.selected {
+    border-color: transparent;
+}
+
 /* Anchor cell - full border on all sides, 1px inside cell edge */
 table.table-editor tbody tr td.data-cell.selected.anchor,
 table.table-editor tbody tr td.editable-cell.selected.anchor {
