@@ -230,11 +230,11 @@ body {
     z-index: 1;
 }
 
-.table-editor thead {
+table.table-editor thead {
     background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background));
     /* Ensure thead has proper stacking context */
     position: relative;
-    z-index: 150 !important;
+    z-index: 150;
 }
 
 /* Row/column header highlighting for selection */
@@ -274,13 +274,13 @@ body {
 }
 
 /* ====== 4. テーブルヘッダー関連 ====== */
-.table-editor th {
+table.table-editor thead th {
     background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background));
     border: 1px solid var(--vscode-panel-border);
     padding: 10px 12px;
     text-align: left;
-    position: sticky !important;
-    top: 0 !important;
+    position: sticky;
+    top: 0;
     font-weight: 600;
     cursor: pointer;
     user-select: none;
@@ -288,28 +288,28 @@ body {
     transition: background-color 0.15s ease;
     box-sizing: border-box;
     /* Much lower than header-corner (1000) */
-    z-index: 50 !important;
-    opacity: 1 !important;
+    z-index: 50;
+    opacity: 1;
     background-clip: padding-box;
     overflow: hidden;
 }
 
 /* Apply 150px width only to normal column headers (not corner) */
-.table-editor th.column-header {
+table.table-editor thead th.column-header {
     width: 150px;
     min-width: 150px;
 }
 
 /* Specific override for header corner to ensure it's always on top */
-.table-editor th.header-corner {
-    z-index: 1000 !important;
+table.table-editor thead th.header-corner {
+    z-index: 1000;
     transform: translateZ(0);
     will-change: transform;
 }
 
 /* Ensure header corner has fixed smaller width */
-.table-editor th.header-corner,
-.header-corner {
+table.table-editor thead th.header-corner,
+table.table-editor thead .header-corner {
     width: 60px;
     min-width: 60px;
     max-width: 60px;
@@ -332,42 +332,42 @@ body {
     margin-bottom: 2px;
 }
 
-.table-editor th.user-resized {
+table.table-editor thead th.user-resized {
     min-width: 10px;
 }
 
-.table-editor th:first-child {
+table.table-editor thead th:first-child {
     border-left: 1px solid var(--vscode-panel-border);
 }
 
-.table-editor th:last-child {
+table.table-editor thead th:last-child {
     border-right: 1px solid var(--vscode-panel-border);
 }
 
-.table-editor th.editing {
-    background-color: var(--vscode-input-background) !important;
+table.table-editor thead th.editing {
+    background-color: var(--vscode-input-background);
     outline: 2px solid var(--vscode-inputOption-activeBorder);
     outline-offset: -1px;
 }
 
-.header-input {
-    border: none !important;
-    background: transparent !important;
-    color: inherit !important;
-    font-family: inherit !important;
-    font-size: inherit !important;
-    font-weight: inherit !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    outline: none !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    text-align: left !important;
+table.table-editor thead th input.header-input {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    padding: 0;
+    margin: 0;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
 }
 
-.header-input:focus {
-    background: transparent !important;
-    box-shadow: none !important;
+table.table-editor thead th input.header-input:focus {
+    background: transparent;
+    box-shadow: none;
 }
 
 .column-title {
@@ -397,19 +397,19 @@ body {
 }
 
 /* Header corner cell */
-.header-corner {
-    background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background)) !important;
+table.table-editor thead th.header-corner {
+    background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background));
     border: 1px solid var(--vscode-panel-border);
     width: 60px;
     min-width: 60px;
     max-width: 60px;
-    position: sticky !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: sticky;
+    left: 0;
+    top: 0;
     /* Ensure corner header overlays column headers during horizontal scroll */
     /* Higher than thead (150) to be on top in all cases */
     /* Use very high z-index and transform to create new stacking context */
-    z-index: 1000 !important;
+    z-index: 1000;
     transform: translateZ(0);
     cursor: pointer;
     text-align: center;
@@ -418,13 +418,13 @@ body {
     color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
     padding: 4px;
     background-clip: padding-box;
-    opacity: 1 !important;
+    opacity: 1;
     /* Force hardware acceleration and isolation */
     will-change: transform;
 }
 
 /* ====== 5. 行番号セル ====== */
-.table-editor td.row-number {
+table.table-editor tbody tr td.row-number {
     background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background));
     border: 1px solid var(--vscode-panel-border);
     font-weight: 700;
@@ -438,29 +438,29 @@ body {
     color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
     cursor: pointer;
     /* Sticky position with relative context for resize handle */
-    position: sticky !important;
-    left: 0 !important;
+    position: sticky;
+    left: 0;
     /* Lower than both header corner (1000) and regular headers (50) */
-    z-index: 25 !important;
+    z-index: 25;
     box-sizing: border-box;
-    opacity: 1 !important;
+    opacity: 1;
     background-clip: padding-box;
 }
 
-.table-editor td.row-number.selected,
-.column-header.selected {
-    background: rgba(160, 120, 255, 0.3) !important;
-    color: var(--vscode-editor-foreground) !important;
-    box-sizing: border-box !important;
-    font-weight: 700 !important;
+table.table-editor tbody tr td.row-number.selected,
+table.table-editor thead th.column-header.selected {
+    background: rgba(120, 160, 255, 0.3);
+    color: var(--vscode-editor-foreground);
+    box-sizing: border-box;
+    font-weight: 700;
 }
 
 /* ====== 6. データセル ====== */
-.table-editor td.data-cell,
-.table-editor td.editable-cell {
+table.table-editor tbody tr td.data-cell,
+table.table-editor tbody tr td.editable-cell {
     background-color: var(--vscode-editor-background);
     border: 1px solid var(--vscode-panel-border);
-    padding: 0 !important;
+    padding: 0;
     text-align: left;
     position: relative;
     width: 150px;
@@ -477,8 +477,8 @@ body {
     vertical-align: top;
 }
 
-.table-editor td.data-cell.user-resized,
-.table-editor td.editable-cell.user-resized {
+table.table-editor tbody tr td.data-cell.user-resized,
+table.table-editor tbody tr td.editable-cell.user-resized {
     min-width: 10px;
 }
 
@@ -487,21 +487,21 @@ body {
     box-sizing: border-box;
 }
 
-.cell-content {
+table.table-editor tbody tr td .cell-content {
     word-wrap: break-word;
     word-break: break-all;
     overflow-wrap: break-word;
     white-space: pre-wrap;
     overflow: hidden;
-    line-height: 1.2 !important;
+    line-height: 1.2;
     display: block;
     max-width: 100%;
     box-sizing: border-box;
     text-align: left;
     height: auto;
     min-height: 1.2em;
-    margin: 0 !important;
-    padding: 4px 6px !important;
+    margin: 0;
+    padding: 4px 6px;
     width: 100%;
     box-sizing: border-box;
     color: var(--vscode-editor-foreground, var(--vscode-foreground, #333333));
@@ -548,139 +548,139 @@ td[data-temp-empty="true"] .cell-content {
 
 /* Enhanced selection styles */
 /* Anchor cell - full border on all sides */
-.table-editor td.data-cell.selected.anchor,
-.table-editor td.editable-cell.selected.anchor {
-    background-color: rgba(160, 120, 255, 0.3) !important;
-    color: var(--vscode-editor-foreground) !important;
-    box-shadow: 0 0 0 2px var(--vscode-focusBorder) !important;
-    box-sizing: border-box !important;
-    min-height: 32px !important;
-    height: auto !important;
-    position: relative !important;
-    z-index: 10 !important;
+table.table-editor tbody tr td.data-cell.selected.anchor,
+table.table-editor tbody tr td.editable-cell.selected.anchor {
+    background-color: rgba(120, 160, 255, 0.3);
+    color: var(--vscode-editor-foreground);
+    box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+    box-sizing: border-box;
+    min-height: 32px;
+    height: auto;
+    position: relative;
+    z-index: 200;
 }
 
 /* Non-anchor selected cells - no border by default, only on edges */
-.table-editor td.data-cell.selected:not(.anchor),
-.table-editor td.editable-cell.selected:not(.anchor) {
-    background-color: rgba(160, 120, 255, 0.3) !important;
-    color: var(--vscode-editor-foreground) !important;
-    box-shadow: none !important;
-    box-sizing: border-box !important;
-    min-height: 32px !important;
-    height: auto !important;
-    position: relative !important;
-    z-index: 10 !important;
+table.table-editor tbody tr td.data-cell.selected:not(.anchor),
+table.table-editor tbody tr td.editable-cell.selected:not(.anchor) {
+    background-color: rgba(120, 160, 255, 0.3);
+    color: var(--vscode-editor-foreground);
+    box-shadow: none;
+    box-sizing: border-box;
+    min-height: 32px;
+    height: auto;
+    position: relative;
+    z-index: 200;
 }
 
 /* Add borders only on selection range edges */
-.table-editor td.data-cell.selected.border-top,
-.table-editor td.editable-cell.selected.border-top {
-    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-top,
+table.table-editor tbody tr td.editable-cell.selected.border-top {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-bottom,
-.table-editor td.editable-cell.selected.border-bottom {
-    box-shadow: 0 2px 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-bottom,
+table.table-editor tbody tr td.editable-cell.selected.border-bottom {
+    box-shadow: 0 2px 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-left,
-.table-editor td.editable-cell.selected.border-left {
-    box-shadow: -2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-left,
+table.table-editor tbody tr td.editable-cell.selected.border-left {
+    box-shadow: -2px 0 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-right,
-.table-editor td.editable-cell.selected.border-right {
-    box-shadow: 2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-right,
+table.table-editor tbody tr td.editable-cell.selected.border-right {
+    box-shadow: 2px 0 0 0 var(--vscode-focusBorder);
 }
 
 /* Combine multiple borders */
-.table-editor td.data-cell.selected.border-top.border-right,
-.table-editor td.editable-cell.selected.border-top.border-right {
-    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-top.border-right,
+table.table-editor tbody tr td.editable-cell.selected.border-top.border-right {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-top.border-left,
-.table-editor td.editable-cell.selected.border-top.border-left {
-    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-top.border-left,
+table.table-editor tbody tr td.editable-cell.selected.border-top.border-left {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-bottom.border-right,
-.table-editor td.editable-cell.selected.border-bottom.border-right {
-    box-shadow: 0 2px 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-bottom.border-right,
+table.table-editor tbody tr td.editable-cell.selected.border-bottom.border-right {
+    box-shadow: 0 2px 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-bottom.border-left,
-.table-editor td.editable-cell.selected.border-bottom.border-left {
-    box-shadow: 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-bottom.border-left,
+table.table-editor tbody tr td.editable-cell.selected.border-bottom.border-left {
+    box-shadow: 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-top.border-bottom,
-.table-editor td.editable-cell.selected.border-top.border-bottom {
-    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-top.border-bottom,
+table.table-editor tbody tr td.editable-cell.selected.border-top.border-bottom {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-left.border-right,
-.table-editor td.editable-cell.selected.border-left.border-right {
-    box-shadow: -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-left.border-right,
+table.table-editor tbody tr td.editable-cell.selected.border-left.border-right {
+    box-shadow: -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder);
 }
 
 /* All four sides (corners) */
-.table-editor td.data-cell.selected.border-top.border-bottom.border-left.border-right,
-.table-editor td.editable-cell.selected.border-top.border-bottom.border-left.border-right {
-    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-top.border-bottom.border-left.border-right,
+table.table-editor tbody tr td.editable-cell.selected.border-top.border-bottom.border-left.border-right {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder);
 }
 
 /* Three sides combinations */
-.table-editor td.data-cell.selected.border-top.border-left.border-right,
-.table-editor td.editable-cell.selected.border-top.border-left.border-right {
-    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-top.border-left.border-right,
+table.table-editor tbody tr td.editable-cell.selected.border-top.border-left.border-right {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-bottom.border-left.border-right,
-.table-editor td.editable-cell.selected.border-bottom.border-left.border-right {
-    box-shadow: 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-bottom.border-left.border-right,
+table.table-editor tbody tr td.editable-cell.selected.border-bottom.border-left.border-right {
+    box-shadow: 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-top.border-bottom.border-left,
-.table-editor td.editable-cell.selected.border-top.border-bottom.border-left {
-    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-top.border-bottom.border-left,
+table.table-editor tbody tr td.editable-cell.selected.border-top.border-bottom.border-left {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder), -2px 0 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.selected.border-top.border-bottom.border-right,
-.table-editor td.editable-cell.selected.border-top.border-bottom.border-right {
-    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.selected.border-top.border-bottom.border-right,
+table.table-editor tbody tr td.editable-cell.selected.border-top.border-bottom.border-right {
+    box-shadow: 0 -2px 0 0 var(--vscode-focusBorder), 0 2px 0 0 var(--vscode-focusBorder), 2px 0 0 0 var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.cell-multi-selected,
-.table-editor td.editable-cell.cell-multi-selected {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    box-shadow: 0 0 0 1px var(--vscode-list-activeSelectionForeground) !important;
-    box-sizing: border-box !important;
-    min-height: 32px !important;
-    height: auto !important;
-    position: relative !important;
-    z-index: 10 !important;
+table.table-editor tbody tr td.data-cell.cell-multi-selected,
+table.table-editor tbody tr td.editable-cell.cell-multi-selected {
+    background-color: var(--vscode-list-inactiveSelectionBackground);
+    box-shadow: 0 0 0 1px var(--vscode-list-activeSelectionForeground);
+    box-sizing: border-box;
+    min-height: 32px;
+    height: auto;
+    position: relative;
+    z-index: 10;
 }
 
-.table-editor td.data-cell.editing,
-.table-editor td.editable-cell.editing {
-    padding: 0 !important;
+table.table-editor tbody tr td.data-cell.editing,
+table.table-editor tbody tr td.editable-cell.editing {
+    padding: 0;
     background-color: var(--vscode-input-background);
     outline: 2px solid var(--vscode-inputOption-activeBorder);
     outline-offset: -1px;
     box-sizing: border-box;
-    height: auto !important;
+    height: auto;
     position: relative;
-    vertical-align: top !important;
-    text-align: left !important;
+    vertical-align: top;
+    text-align: left;
 }
 
-textarea.cell-input {
+table.table-editor tbody tr td textarea.cell-input {
     border: none;
     background-color: var(--vscode-input-background);
     color: var(--vscode-foreground);
-    padding: 4px 6px !important;
+    padding: 4px 6px;
     font-family: inherit;
     font-size: inherit;
     outline: none;
@@ -692,9 +692,9 @@ textarea.cell-input {
     word-break: break-word;
     overflow-wrap: break-word;
     overflow: hidden;
-    line-height: 1.2 !important;
-    vertical-align: top !important;
-    text-align: left !important;
+    line-height: 1.2;
+    vertical-align: top;
+    text-align: left;
 }
 
 .cell-input:focus {
@@ -702,22 +702,22 @@ textarea.cell-input {
     box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
 }
 
-.table-editor td.data-cell.editing textarea.cell-input,
-.table-editor td.editable-cell.editing textarea.cell-input {
+table.table-editor tbody tr td.data-cell.editing textarea.cell-input,
+table.table-editor tbody tr td.editable-cell.editing textarea.cell-input {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     z-index: 5;
     box-sizing: border-box;
-    padding: 4px 6px !important;
-    line-height: 1.2 !important;
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    overflow-wrap: break-word !important;
-    vertical-align: top !important;
-    text-align: left !important;
+    padding: 4px 6px;
+    line-height: 1.2;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    vertical-align: top;
+    text-align: left;
     resize: none;
     overflow: hidden;
 }
@@ -728,46 +728,46 @@ textarea.cell-input[data-multiline="true"] {
     resize: none;
 }
 
-.cell-editing-focus {
-    box-shadow: 0 0 0 2px var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.cell-editing-focus {
+    box-shadow: 0 0 0 2px var(--vscode-focusBorder);
     z-index: 10;
 }
 
 /* ====== 8. 選択・ハイライト関連 ====== */
 /* These styles are now defined in section 7 above with anchor and border-* classes */
 
-.table-editor td.data-cell.cell-multi-selected {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    box-shadow: 0 0 0 1px var(--vscode-list-activeSelectionForeground) !important;
-    box-sizing: border-box !important;
-    height: auto !important;
-    position: relative !important;
-    z-index: 10 !important;
+table.table-editor tbody tr td.data-cell.cell-multi-selected {
+    background-color: var(--vscode-list-inactiveSelectionBackground);
+    box-shadow: 0 0 0 1px var(--vscode-list-activeSelectionForeground);
+    box-sizing: border-box;
+    height: auto;
+    position: relative;
+    z-index: 10;
 }
 
-.table-editor td.editable-cell.cell-multi-selected {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    box-shadow: 0 0 0 1px var(--vscode-list-activeSelectionForeground) !important;
-    box-sizing: border-box !important;
-    height: auto !important;
-    position: relative !important;
-    z-index: 10 !important;
+table.table-editor tbody tr td.editable-cell.cell-multi-selected {
+    background-color: var(--vscode-list-inactiveSelectionBackground);
+    box-shadow: 0 0 0 1px var(--vscode-list-activeSelectionForeground);
+    box-sizing: border-box;
+    height: auto;
+    position: relative;
+    z-index: 10;
 }
 
-.table-editor td.data-cell.column-selected {
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
+table.table-editor tbody tr td.data-cell.column-selected {
+    background-color: var(--vscode-list-activeSelectionBackground);
 }
 
-.table-editor td.editable-cell.column-selected {
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
+table.table-editor tbody tr td.editable-cell.column-selected {
+    background-color: var(--vscode-list-activeSelectionBackground);
 }
 
-.table-editor td.data-cell.row-selected {
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
+table.table-editor tbody tr td.data-cell.row-selected {
+    background-color: var(--vscode-list-activeSelectionBackground);
 }
 
-.table-editor td.editable-cell.row-selected {
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
+table.table-editor tbody tr td.editable-cell.row-selected {
+    background-color: var(--vscode-list-activeSelectionBackground);
 }
 
 /* ====== 9. リサイズ機能 ====== */
@@ -838,28 +838,31 @@ textarea.cell-input[data-multiline="true"] {
 
 
 /* ====== 11. ドラッグ&ドロップ ====== */
-.dragging {
-    opacity: 0.6 !important;
+table.table-editor thead th.dragging,
+table.table-editor tbody tr td.dragging {
+    opacity: 0.6;
     transform: rotate(1deg) scale(1.02);
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     z-index: 1000;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 122, 204, 0.1);
-    border: 2px solid rgba(0, 122, 204, 0.5) !important;
+    border: 2px solid rgba(0, 122, 204, 0.5);
 }
 
-.drag-over {
-    background-color: var(--vscode-list-dropBackground) !important;
-    border: 2px solid var(--vscode-focusBorder) !important;
+table.table-editor thead th.drag-over,
+table.table-editor tbody tr td.drag-over {
+    background-color: var(--vscode-list-dropBackground);
+    border: 2px solid var(--vscode-focusBorder);
     transition: all 0.2s ease;
 }
 
-.drop-zone {
-    background-color: var(--vscode-list-focusBackground) !important;
-    border: 2px dashed var(--vscode-focusBorder) !important;
+table.table-editor thead th.drop-zone,
+table.table-editor tbody tr td.drop-zone {
+    background-color: var(--vscode-list-focusBackground);
+    border: 2px dashed var(--vscode-focusBorder);
 }
 
-.drag-selecting {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
+table.table-editor tbody tr td.drag-selecting {
+    background-color: var(--vscode-list-inactiveSelectionBackground);
 }
 
 .drop-indicator {
@@ -1192,7 +1195,7 @@ textarea.cell-input[data-multiline="true"] {
     background-color: var(--vscode-focusBorder, #007ACC);
     border: 1px solid var(--vscode-editor-background, #fff);
     cursor: crosshair;
-    z-index: 100;
+    z-index: 250;
     border-radius: 50%;
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
 }
@@ -1203,9 +1206,9 @@ textarea.cell-input[data-multiline="true"] {
     transition: transform 0.1s ease;
 }
 
-.table-editor td.data-cell.fill-range {
-    background-color: var(--vscode-list-inactiveSelectionBackground) !important;
-    border: 1px dashed var(--vscode-focusBorder) !important;
+table.table-editor tbody tr td.data-cell.fill-range {
+    background-color: var(--vscode-list-inactiveSelectionBackground);
+    border: 1px dashed var(--vscode-focusBorder);
 }
 
 /* ====== 17. レスポンシブ対応 ====== */
@@ -1352,34 +1355,34 @@ textarea.cell-input[data-multiline="true"] {
 }
 
 /* ====== 19. 検索結果ハイライト ====== */
-.table-editor td.data-cell.search-result {
-    /* 控えめな黄色のハイライト */
-    background-color: var(--vscode-editor-findMatchBackground, rgba(255, 230, 0, 0.12)) !important;
-    box-shadow: 0 0 0 1px var(--vscode-editor-findMatchBorder, rgba(255, 200, 0, 0.35)) !important;
-    position: relative !important;
-    z-index: 10 !important;
+table.table-editor tbody tr td.data-cell.search-result {
+    /* ライトグリーンのハイライト */
+    background-color: var(--vscode-editor-findMatchBackground, rgba(150, 255, 150, 0.2));
+    box-shadow: 0 0 0 1px var(--vscode-editor-findMatchBorder, rgba(100, 200, 100, 0.4));
+    position: relative;
+    z-index: 10;
 }
 
-.table-editor td.data-cell.current-search-result {
+table.table-editor tbody tr td.data-cell.current-search-result {
     /* 現在の検索結果は少し濃いめのハイライト */
-    background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(255, 200, 0, 0.22)) !important;
-    box-shadow: 0 0 0 2px var(--vscode-editor-findMatchHighlightBorder, rgba(255, 160, 0, 0.55)) !important;
-    position: relative !important;
-    z-index: 10 !important;
+    background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(150, 255, 150, 0.3));
+    box-shadow: 0 0 0 2px var(--vscode-editor-findMatchHighlightBorder, rgba(100, 200, 100, 0.6));
+    position: relative;
+    z-index: 10;
 }
 
-.table-editor td.data-cell.selected.search-result {
+table.table-editor tbody tr td.data-cell.selected.search-result {
     /* 選択中のセルは通常の選択色を優先し、枠線のみ追加 */
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
-    box-shadow: 0 0 0 1px var(--vscode-editor-findMatchBorder, rgba(255, 200, 0, 0.45)) !important;
-    position: relative !important;
-    z-index: 10 !important;
+    background-color: var(--vscode-list-activeSelectionBackground);
+    box-shadow: 0 0 0 1px var(--vscode-editor-findMatchBorder, rgba(100, 200, 100, 0.5));
+    position: relative;
+    z-index: 10;
 }
 
-.table-editor td.data-cell.selected.current-search-result {
+table.table-editor tbody tr td.data-cell.selected.current-search-result {
     /* 選択中かつ現在の検索結果 */
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
-    box-shadow: 0 0 0 2px var(--vscode-editor-findMatchHighlightBorder, rgba(255, 160, 0, 0.65)) !important;
-    position: relative !important;
-    z-index: 10 !important;
+    background-color: var(--vscode-list-activeSelectionBackground);
+    box-shadow: 0 0 0 2px var(--vscode-editor-findMatchHighlightBorder, rgba(100, 200, 100, 0.7));
+    position: relative;
+    z-index: 10;
 }
