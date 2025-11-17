@@ -1031,6 +1031,19 @@ export class WebviewManager {
     }
 
     /**
+     * Handle import CSV
+     */
+    private async handleImportCSV(data: { tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        const actualPanelId = this.findPanelId(panel);
+
+        vscode.commands.executeCommand('markdownTableEditor.internal.importCSV', {
+            uri: uri.toString(),
+            panelId: actualPanelId,
+            tableIndex: data?.tableIndex
+        });
+    }
+
+    /**
      * Build initial theme CSS synchronously for faster panel startup
      */
     private buildInitialThemeCssSync(): string {
@@ -1482,6 +1495,12 @@ export class WebviewManager {
         commManager.registerHandler(WebviewCommand.EXPORT_CSV, async (data) => {
             console.log('[MTE][Ext] Handler: EXPORT_CSV', data);
             await this.handleExportCSV(data, panel, uri);
+            return { success: true };
+        });
+
+        commManager.registerHandler(WebviewCommand.IMPORT_CSV, async (data) => {
+            console.log('[MTE][Ext] Handler: IMPORT_CSV', data);
+            await this.handleImportCSV(data, panel, uri);
             return { success: true };
         });
 
