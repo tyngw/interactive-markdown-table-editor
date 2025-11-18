@@ -398,10 +398,41 @@ export function useKeyboardNavigation({
           onCellSelect(nextPos.row, nextPos.col, false)
           setTimeout(() => scrollCellIntoView(nextPos.row, nextPos.col), 0)
         } else {
-          // Enter: 編集開始
-          if (currentPos.row >= minRow) {
-            onCellEdit(currentPos)
-            setTimeout(() => scrollCellIntoView(currentPos.row, currentPos.col), 0)
+          // Check if multiple cells are selected
+          const isMultipleSelection = selectionRange && (
+            selectionRange.start.row !== selectionRange.end.row ||
+            selectionRange.start.col !== selectionRange.end.col
+          )
+
+          if (isMultipleSelection && selectionRange) {
+            // Multiple selection: cycle anchor cell within selection range
+            const minSelRow = Math.min(selectionRange.start.row, selectionRange.end.row)
+            const maxSelRow = Math.max(selectionRange.start.row, selectionRange.end.row)
+            const minSelCol = Math.min(selectionRange.start.col, selectionRange.end.col)
+            const maxSelCol = Math.max(selectionRange.start.col, selectionRange.end.col)
+
+            let nextRow = currentPos.row + 1
+            let nextCol = currentPos.col
+
+            // If we're at the bottom of the selection range, wrap around
+            if (nextRow > maxSelRow) {
+              nextRow = minSelRow
+              nextCol = currentPos.col + 1
+              // If we're at the rightmost column, wrap to first column
+              if (nextCol > maxSelCol) {
+                nextCol = minSelCol
+              }
+            }
+
+            // Move anchor within selection range
+            onCellSelect(nextRow, nextCol, false)
+            setTimeout(() => scrollCellIntoView(nextRow, nextCol), 0)
+          } else {
+            // Single selection: Enter editing mode
+            if (currentPos.row >= minRow) {
+              onCellEdit(currentPos)
+              setTimeout(() => scrollCellIntoView(currentPos.row, currentPos.col), 0)
+            }
           }
         }
         break

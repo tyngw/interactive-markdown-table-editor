@@ -553,10 +553,10 @@ table.table-editor tbody tr td.editable-cell.selected {
     border-color: transparent;
 }
 
-/* Anchor cell - full border on all sides */
+/* Anchor cell - full border on all sides, lighter background than non-anchor cells */
 table.table-editor tbody tr td.data-cell.selected.anchor,
 table.table-editor tbody tr td.editable-cell.selected.anchor {
-    background-color: rgba(120, 160, 255, 0.3);
+    background-color: rgba(120, 160, 255, 0.15);
     color: var(--vscode-editor-foreground);
     box-shadow: 0 0 0 2px var(--vscode-focusBorder);
     box-sizing: border-box;
