@@ -424,8 +424,9 @@ export function useKeyboardNavigation({
               }
             }
 
-            // Move anchor within selection range
-            onCellSelect(nextRow, nextCol, false)
+            // Move anchor within selection range, maintaining the selection
+            // Use extend=true to keep the selection range intact
+            onCellSelect(nextRow, nextCol, true)
             setTimeout(() => scrollCellIntoView(nextRow, nextCol), 0)
           } else {
             // Single selection: Enter editing mode
