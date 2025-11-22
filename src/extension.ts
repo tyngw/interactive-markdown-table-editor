@@ -744,11 +744,8 @@ export function activate(context: vscode.ExtensionContext) {
                 }
             }
 
-            // Apply all updates (now all positions should be valid)
-            for (const update of updates) {
-                const { row, col, value } = update;
-                tableDataManager.updateCell(row, col, value);
-            }
+            // Apply all updates using batchUpdateCells (supports row=-1 for header row)
+            tableDataManager.batchUpdateCells(updates);
 
             // Update the file once after all updates
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
