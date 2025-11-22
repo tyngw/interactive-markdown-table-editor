@@ -249,7 +249,8 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
               const targetRow = firstCell.row + rowOffset
               const targetCol = firstCell.col + colOffset
               const value = pastedData[rowOffset]?.[colOffset] || ''
-              if (targetRow >= 0 && targetCol >= 0) {
+              // row=-1（列ヘッダーOFF時のヘッダー行）も許可
+              if (targetRow >= -1 && targetCol >= 0) {
                 updates.push({ row: targetRow, col: targetCol, value })
               }
             }
@@ -312,11 +313,11 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
           const targetRow = startPos.row + rowOffset
           const targetCol = startPos.col + colOffset
           
-          // 基本的な座標検証のみ（負の値チェック）
-          if (targetRow >= 0 && targetCol >= 0) {
+          // 基本的な座標検証のみ（row=-1は列ヘッダーOFF時のヘッダー行なので許可）
+          if (targetRow >= -1 && targetCol >= 0) {
             updates.push({ row: targetRow, col: targetCol, value: cellValue })
           } else {
-            console.warn('Invalid target position (negative):', { targetRow, targetCol })
+            console.warn('Invalid target position:', { targetRow, targetCol })
           }
         })
       })
