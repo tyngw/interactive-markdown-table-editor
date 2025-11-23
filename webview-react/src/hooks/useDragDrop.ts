@@ -49,11 +49,12 @@ export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
       // 列の場合は縦線を表示
       indicator.style.width = '4px'
       indicator.style.height = `${container.scrollHeight}px`
-      
+
+      // スクロール位置を考慮してインジケーターを配置
       if (position === 'before') {
-        indicator.style.left = `${rect.left - containerRect.left - 3}px`
+        indicator.style.left = `${rect.left - containerRect.left + container.scrollLeft - 3}px`
       } else {
-        indicator.style.left = `${rect.right - containerRect.left - 3}px`
+        indicator.style.left = `${rect.right - containerRect.left + container.scrollLeft - 3}px`
       }
       indicator.style.top = '0'
     } else {
@@ -61,11 +62,12 @@ export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
       indicator.style.width = `${container.scrollWidth}px`
       indicator.style.height = '4px'
       indicator.style.left = '0'
-      
+
+      // スクロール位置を考慮してインジケーターを配置
       if (position === 'before') {
-        indicator.style.top = `${rect.top - containerRect.top - 3}px`
+        indicator.style.top = `${rect.top - containerRect.top + container.scrollTop - 3}px`
       } else {
-        indicator.style.top = `${rect.bottom - containerRect.top - 3}px`
+        indicator.style.top = `${rect.bottom - containerRect.top + container.scrollTop - 3}px`
       }
     }
     

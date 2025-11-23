@@ -755,15 +755,27 @@ export class TableDataManager {
      * Batch update multiple cells
      */
     batchUpdateCells(updates: Array<{ row: number; col: number; value: string }>): void {
+        // Validate all positions first
         for (const update of updates) {
-            if (!this.isValidPosition(update.row, update.col)) {
+            // row=-1 is header row (when column headers are off)
+            if (update.row === -1) {
+                if (!this.isValidColumnIndex(update.col)) {
+                    throw new Error(`Invalid column position in batch update: col ${update.col}`);
+                }
+            } else if (!this.isValidPosition(update.row, update.col)) {
                 throw new Error(`Invalid cell position in batch update: row ${update.row}, col ${update.col}`);
             }
         }
 
         // Apply all updates
         for (const update of updates) {
-            this.tableData.rows[update.row][update.col] = update.value;
+            if (update.row === -1) {
+                // Update header row
+                this.tableData.headers[update.col] = update.value;
+            } else {
+                // Update data row
+                this.tableData.rows[update.row][update.col] = update.value;
+            }
         }
 
         this.updateMetadata();

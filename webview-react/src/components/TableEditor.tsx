@@ -594,6 +594,17 @@ const TableEditor: React.FC<TableEditorProps> = ({
     }
   }, [isComposing])
 
+  // input-captureでのペーストを処理（編集モードに遷移を防止）
+  // 実際のペースト処理はuseKeyboardNavigationで行われる
+  const handleInputCapturePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault()
+    // textareaの値をクリア（inputイベントが発火しないように）
+    if (e.currentTarget) {
+      e.currentTarget.value = ''
+    }
+    // handlePaste()は呼ばない - useKeyboardNavigationで処理される
+  }, [])
+
   // 選択セルの位置にinputCaptureを配置
   const updateInputCapturePosition = useCallback(() => {
     if (!editorState.selectionRange || editorState.currentEditingCell) {
@@ -794,6 +805,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
         onCompositionEnd={handleInputCaptureCompositionEnd}
         onInput={handleInputCaptureInput}
         onKeyDown={handleInputCaptureKeyDown}
+        onPaste={handleInputCapturePaste}
         aria-label="Cell input capture"
         rows={1}
       />

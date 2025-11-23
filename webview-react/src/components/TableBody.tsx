@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useMemo } from 'react'
 import { EditorState, CellPosition, HeaderConfig } from '../types'
 import { processCellContent, processCellContentForEditing, processCellContentForStorage } from '../utils/contentConverter'
 import CellEditor from './CellEditor'
@@ -361,224 +361,145 @@ const TableBody: React.FC<TableBodyProps> = ({
   // rows / headers が変わると行高さも変わり得るため依存に含める
   }, [editorState.currentEditingCell, rows, headers])
 
+  // 表示する行を統一形式で作成（列ヘッダーOFF時はheadersをrow=-1として先頭に追加）
+  const allRows = useMemo(() => {
+    const result: Array<{ rowIndex: number; cells: string[] }> = []
+
+    // 列ヘッダーがOFFの場合、headersを先頭行（row=-1）として追加
+    if (headerConfig?.hasColumnHeaders === false) {
+      result.push({ rowIndex: -1, cells: headers })
+    }
+
+    // データ行を追加
+    rows.forEach((row, index) => {
+      result.push({ rowIndex: index, cells: row })
+    })
+
+    return result
+  }, [headerConfig?.hasColumnHeaders, headers, rows])
+
   return (
     <tbody>
-      {/* hasColumnHeaders が false の場合、ヘッダー行を0行目として通常のデータセルと同様に表示 */}
-      {headerConfig?.hasColumnHeaders === false && (
-        <tr key={-1} data-row={-1}>
-          <td
-            className="row-number"
-            onClick={(e) => {
-              if (onRowSelect) {
-                onRowSelect(-1, e)
-              }
-            }}
-            title="Row 0"
-          >
-            0
-          </td>
-          {headers.map((header, colIndex) => {
-            // 行ヘッダーONの場合、先頭列をスキップ
-            if (headerConfig?.hasRowHeaders && colIndex === 0) {
-              return null
-            }
-            const cellId = `cell--1-${colIndex}`
-            const isEmpty = !header || header.trim() === ''
-            const cellClass = isEmpty ? 'empty-cell' : ''
-            const storedWidth = editorState.columnWidths[colIndex] || 150
-            const isEditing = isCellEditing(-1, colIndex)
-            const isSelected = isCellSelected(-1, colIndex)
-            const isAnchor = isAnchorCell(-1, colIndex)
-            const borders = getSelectionBorders(-1, colIndex)
-            const isInFillRange = isCellInFillRange(-1, colIndex)
-            const showFillHandle = isBottomRightCell(-1, colIndex) && !isEditing
-            const isSResult = isSearchResult ? isSearchResult(-1, colIndex) : false
-            const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(-1, colIndex) : false
-            const widthStyle = {
-              width: `${storedWidth}px`,
-              minWidth: `${storedWidth}px`,
-              maxWidth: `${storedWidth}px`
-            }
+      {allRows.map(({ rowIndex, cells }) => {
+        const rowHeaderValue = headerConfig?.hasRowHeaders ? (cells[0] || '') : ''
+        // 表示行番号を計算（row=-1の場合は0、それ以外は1始まり）
+        const displayRowNumber = rowIndex === -1 ? 0 : rowIndex + 1
 
-            const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
-
-            const isSingleSelection = isSingleCellSelection()
-
-            return (
-              <td
-                key={colIndex}
-                id={cellId}
-                data-row={-1}
-                data-col={colIndex}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? (isAnchor ? `selected anchor ${isSingleSelection ? 'single-selection' : ''}` : `selected ${isSingleSelection ? 'single-selection' : ''} ${borders.top ? 'border-top' : ''} ${borders.bottom ? 'border-bottom' : ''} ${borders.left ? 'border-left' : ''} ${borders.right ? 'border-right' : ''}`.trim()) : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
-                style={{
-                  ...widthStyle,
-                  ...(isEditing
-                    ? {
-                        // 編集時はmaxHeightを解除して自由に拡張できるようにする
-                        minHeight: (savedHeightsRef.current.get(`-1-${colIndex}`)?.rowMax || 32) + 'px',
-                        height: 'auto',
-                        maxHeight: 'none'
-                      }
-                    : {})
-                }}
-                onMouseDown={(e) => handleCellMouseDown(-1, colIndex, e)}
-                onDoubleClick={() => startCellEdit(-1, colIndex)}
-                title={`Cell ${getColumnLetter(colIndex)}0`}
-              >
-                {isEditing ? (
-                  <CellEditor
-                    value={processCellContentForEditing(header)}
-                    onCommit={(value, move) => commitCellEdit(-1, colIndex, value, move)}
-                    onCancel={() => cancelCellEdit(-1, colIndex)}
-                    rowIndex={-1}
-                    colIndex={colIndex}
-                    originalHeight={savedHeightsRef.current.get(`-1-${colIndex}`)?.original}
-                    rowMaxHeight={savedHeightsRef.current.get(`-1-${colIndex}`)?.rowMax}
-                  />
-                ) : (
-                  <>
-                    <div className="cell-content">
-                      {header && header.trim() !== '' ? (
-                        <span dangerouslySetInnerHTML={{ __html: processCellContent(header) }} />
-                      ) : (
-                        <span className="empty-cell-placeholder">&nbsp;</span>
-                      )}
-                    </div>
-                    {showFillHandle && onFillHandleMouseDown && (
-                      <div
-                        className="fill-handle"
-                        onMouseDown={onFillHandleMouseDown}
-                        title="ドラッグしてオートフィル"
-                      />
-                    )}
-                  </>
-                )}
-              </td>
-            )
-          })}
-        </tr>
-      )}
-
-      {rows.map((row, rowIndex) => {
-        const rowHeaderValue = headerConfig?.hasRowHeaders ? (row[0] || '') : ''
-        // hasColumnHeaders が false の場合、表示行番号を +1 する
-        const displayRowNumber = headerConfig?.hasColumnHeaders === false ? rowIndex + 1 : rowIndex + 1
         return (
-        <tr key={rowIndex} data-row={rowIndex}>
-          <td
-            className={`row-number ${selectedRows?.has(rowIndex) ? 'highlighted' : ''} ${headerConfig?.hasRowHeaders ? 'row-header-with-value' : ''}`}
-            onClick={(e) => {
-              if (onRowSelect) {
-                onRowSelect(rowIndex, e)
+          <tr key={rowIndex} data-row={rowIndex}>
+            <td
+              className={`row-number ${selectedRows?.has(rowIndex) ? 'highlighted' : ''} ${headerConfig?.hasRowHeaders ? 'row-header-with-value' : ''}`}
+              onClick={(e) => {
+                if (onRowSelect) {
+                  onRowSelect(rowIndex, e)
+                }
+              }}
+              onMouseDown={(_e) => {
+                if (getDragProps) {
+                  // Handle drag start
+                }
+              }}
+              onContextMenu={(e) => handleRowContextMenu(e, rowIndex)}
+              title={headerConfig?.hasRowHeaders ? `Row ${displayRowNumber}: ${rowHeaderValue}` : `Row ${displayRowNumber}`}
+              {...(getDragProps ? getDragProps('row', rowIndex) : {})}
+              {...(getDropProps ? getDropProps('row', rowIndex) : {})}
+            >
+              {headerConfig?.hasRowHeaders ? (
+                <div className="row-header-content">
+                  <div className="row-number-label">{displayRowNumber}</div>
+                  <div className="row-header-title">{rowHeaderValue}</div>
+                </div>
+              ) : (
+                displayRowNumber
+              )}
+            </td>
+
+            {cells.map((cell, colIndex) => {
+              // 行ヘッダーONの場合、先頭列をスキップ
+              if (headerConfig?.hasRowHeaders && colIndex === 0) {
+                return null
               }
-            }}
-            onMouseDown={(_e) => {
-              if (getDragProps) {
-                // Handle drag start
+              const cellId = `cell-${rowIndex}-${colIndex}`
+              const isEmpty = !cell || cell.trim() === ''
+              const cellClass = isEmpty ? 'empty-cell' : ''
+              const storedWidth = editorState.columnWidths[colIndex] || 150
+              const isEditing = isCellEditing(rowIndex, colIndex)
+              const isSelected = isCellSelected(rowIndex, colIndex)
+              const isAnchor = isAnchorCell(rowIndex, colIndex)
+              const borders = getSelectionBorders(rowIndex, colIndex)
+              const isInFillRange = isCellInFillRange(rowIndex, colIndex)
+              const showFillHandle = isBottomRightCell(rowIndex, colIndex) && !isEditing
+              const isSResult = isSearchResult ? isSearchResult(rowIndex, colIndex) : false
+              const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, colIndex) : false
+              const widthStyle = {
+                width: `${storedWidth}px`,
+                minWidth: `${storedWidth}px`,
+                maxWidth: `${storedWidth}px`
               }
-            }}
-            onContextMenu={(e) => handleRowContextMenu(e, rowIndex)}
-            title={headerConfig?.hasRowHeaders ? `Row ${displayRowNumber}: ${rowHeaderValue}` : `Row ${displayRowNumber}`}
-            {...(getDragProps ? getDragProps('row', rowIndex) : {})}
-            {...(getDropProps ? getDropProps('row', rowIndex) : {})}
-          >
-            {headerConfig?.hasRowHeaders ? (
-              <div className="row-header-content">
-                <div className="row-number-label">{displayRowNumber}</div>
-                <div className="row-header-title">{rowHeaderValue}</div>
-              </div>
-            ) : (
-              displayRowNumber
-            )}
-          </td>
 
-          {row.map((cell, colIndex) => {
-            // 行ヘッダーONの場合、先頭列をスキップ
-            if (headerConfig?.hasRowHeaders && colIndex === 0) {
-              return null
-            }
-            const cellId = `cell-${rowIndex}-${colIndex}`
-            const isEmpty = !cell || cell.trim() === ''
-            const cellClass = isEmpty ? 'empty-cell' : ''
-            const storedWidth = editorState.columnWidths[colIndex] || 150
-            const isEditing = isCellEditing(rowIndex, colIndex)
-            const isSelected = isCellSelected(rowIndex, colIndex)
-            const isAnchor = isAnchorCell(rowIndex, colIndex)
-            const borders = getSelectionBorders(rowIndex, colIndex)
-            const isInFillRange = isCellInFillRange(rowIndex, colIndex)
-            const showFillHandle = isBottomRightCell(rowIndex, colIndex) && !isEditing
-            const isSResult = isSearchResult ? isSearchResult(rowIndex, colIndex) : false
-            const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, colIndex) : false
-            const widthStyle = {
-              width: `${storedWidth}px`,
-              minWidth: `${storedWidth}px`,
-              maxWidth: `${storedWidth}px`
-            }
+              const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
+              const isSingleSelection = isSingleCellSelection()
 
-            const userResizedClass = editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150 ? 'user-resized' : ''
-            const isSingleSelection = isSingleCellSelection()
-
-            return (
-              <td
-                key={colIndex}
-                id={cellId}
-                className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? (isAnchor ? `selected anchor ${isSingleSelection ? 'single-selection' : ''}` : `selected ${isSingleSelection ? 'single-selection' : ''} ${borders.top ? 'border-top' : ''} ${borders.bottom ? 'border-bottom' : ''} ${borders.left ? 'border-left' : ''} ${borders.right ? 'border-right' : ''}`.trim()) : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
-                onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
-                onDoubleClick={() => startCellEdit(rowIndex, colIndex)}
-                data-row={rowIndex}
-                data-col={colIndex}
-                style={{
-                  ...widthStyle,
-                  ...(isEditing
-                    ? {
-                        // 編集時はmaxHeightを解除して自由に拡張できるようにする
-                        minHeight: (savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax || 32) + 'px',
-                        height: 'auto',
-                        maxHeight: 'none'
-                      }
-                    : {})
-                }}
-                title={`Cell ${getColumnLetter(colIndex)}${rowIndex + 1}`}
-              >
-                {isEditing ? (
-                  <CellEditor
-                    value={initialCellInput ?? processCellContentForEditing(cell || '')}
-                    onCommit={(value, move) => commitCellEdit(rowIndex, colIndex, value, move)}
-                    onCancel={() => {
-                      if (editorState.currentEditingCell) {
-                        cancelCellEdit(editorState.currentEditingCell.row, editorState.currentEditingCell.col)
-                      } else {
-                        onCellEdit(null)
-                      }
-                    }}
-                    rowIndex={rowIndex}
-                    colIndex={colIndex}
-                    originalHeight={savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.original}
-                    rowMaxHeight={savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax}
-                  />
-                ) : (
-                  <>
-                    <div className="cell-content">
-                      {cell && cell.trim() !== '' ? (
-                        <span dangerouslySetInnerHTML={{ __html: processCellContent(cell) }} />
-                      ) : (
-                        <span className="empty-cell-placeholder">&nbsp;</span>
+              return (
+                <td
+                  key={colIndex}
+                  id={cellId}
+                  className={`data-cell ${cellClass} ${userResizedClass} ${isSelected ? (isAnchor ? `selected anchor ${isSingleSelection ? 'single-selection' : ''}` : `selected ${isSingleSelection ? 'single-selection' : ''} ${borders.top ? 'border-top' : ''} ${borders.bottom ? 'border-bottom' : ''} ${borders.left ? 'border-left' : ''} ${borders.right ? 'border-right' : ''}`.trim()) : ''} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSResult ? 'search-result' : ''} ${isCSResult ? 'current-search-result' : ''}`}
+                  onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
+                  onDoubleClick={() => startCellEdit(rowIndex, colIndex)}
+                  data-row={rowIndex}
+                  data-col={colIndex}
+                  style={{
+                    ...widthStyle,
+                    ...(isEditing
+                      ? {
+                          // 編集時はmaxHeightを解除して自由に拡張できるようにする
+                          minHeight: (savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax || 32) + 'px',
+                          height: 'auto',
+                          maxHeight: 'none'
+                        }
+                      : {})
+                  }}
+                  title={`Cell ${getColumnLetter(colIndex)}${displayRowNumber}`}
+                >
+                  {isEditing ? (
+                    <CellEditor
+                      value={initialCellInput ?? processCellContentForEditing(cell || '')}
+                      onCommit={(value, move) => commitCellEdit(rowIndex, colIndex, value, move)}
+                      onCancel={() => {
+                        if (editorState.currentEditingCell) {
+                          cancelCellEdit(editorState.currentEditingCell.row, editorState.currentEditingCell.col)
+                        } else {
+                          onCellEdit(null)
+                        }
+                      }}
+                      rowIndex={rowIndex}
+                      colIndex={colIndex}
+                      originalHeight={savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.original}
+                      rowMaxHeight={savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)?.rowMax}
+                    />
+                  ) : (
+                    <>
+                      <div className="cell-content">
+                        {cell && cell.trim() !== '' ? (
+                          <span dangerouslySetInnerHTML={{ __html: processCellContent(cell) }} />
+                        ) : (
+                          <span className="empty-cell-placeholder">&nbsp;</span>
+                        )}
+                      </div>
+                      {showFillHandle && onFillHandleMouseDown && (
+                        <div
+                          className="fill-handle"
+                          onMouseDown={onFillHandleMouseDown}
+                          title="ドラッグしてオートフィル"
+                        />
                       )}
-                    </div>
-                    {showFillHandle && onFillHandleMouseDown && (
-                      <div 
-                        className="fill-handle"
-                        onMouseDown={onFillHandleMouseDown}
-                        title="ドラッグしてオートフィル"
-                      />
-                    )}
-                  </>
-                )}
-              </td>
-            )
-          })}
-        </tr>
+                    </>
+                  )}
+                </td>
+              )
+            })}
+          </tr>
         )
       })}
     </tbody>
