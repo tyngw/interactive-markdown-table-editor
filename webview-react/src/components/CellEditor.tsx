@@ -31,6 +31,31 @@ const CellEditor: React.FC<CellEditorProps> = ({
   // TableBody からの heightUpdate で受け取った実測値を保持
   const measuredRef = useRef<{ original?: number; rowMax?: number }>({})
 
+  // Cleanup on unmount - remove height-spacers and inline styles
+  useEffect(() => {
+    return () => {
+      if (_rowIndex === undefined) return
+
+      const editingCell = document.querySelector(`td[data-row="${_rowIndex}"][data-col="${_colIndex}"]`)
+      const row = editingCell?.parentElement
+      if (!row) return
+
+      const cells = row.querySelectorAll('td[data-col]')
+      cells.forEach((cell) => {
+        if (cell instanceof HTMLElement) {
+          // Remove spacer
+          const spacer = cell.querySelector('.height-spacer')
+          if (spacer) {
+            spacer.remove()
+          }
+          // Reset inline styles
+          cell.style.minHeight = ''
+          delete cell.dataset.rowMaxHeight
+        }
+      })
+    }
+  }, [_rowIndex, _colIndex])
+
   // 初回マウント時のみカーソルを末尾に設定
   useLayoutEffect(() => {
     const textarea = textareaRef.current
