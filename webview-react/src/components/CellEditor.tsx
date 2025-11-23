@@ -339,7 +339,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
         margin: 0,
         whiteSpace: 'pre-wrap',
         wordWrap: 'break-word',
-        wordBreak: 'break-word',
+        wordBreak: 'break-all',
         overflowWrap: 'break-word',
         overflow: 'hidden',
         lineHeight: '1.2',

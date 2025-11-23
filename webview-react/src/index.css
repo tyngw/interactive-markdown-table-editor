@@ -708,7 +708,7 @@ table.table-editor tbody tr td textarea.cell-input {
     margin: 0;
     white-space: pre-wrap;
     word-wrap: break-word;
-    word-break: break-word;
+    word-break: break-all;
     overflow-wrap: break-word;
     overflow: hidden;
     line-height: 1.2;
@@ -718,7 +718,6 @@ table.table-editor tbody tr td textarea.cell-input {
 
 .cell-input:focus {
     background-color: var(--vscode-input-background);
-    box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
 }
 
 table.table-editor tbody tr td.data-cell.editing textarea.cell-input,
@@ -733,7 +732,7 @@ table.table-editor tbody tr td.editable-cell.editing textarea.cell-input {
     line-height: 1.2;
     white-space: pre-wrap;
     word-wrap: break-word;
-    word-break: break-word;
+    word-break: break-all;
     overflow-wrap: break-word;
     vertical-align: top;
     text-align: left;
