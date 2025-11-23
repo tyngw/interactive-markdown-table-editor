@@ -157,7 +157,7 @@ const TableCell: React.FC<TableCellProps> = ({
           style={{
             width: '100%',
             minHeight: '20px',
-            border: '2px solid var(--vscode-focusBorder)',
+            border: '1px solid var(--vscode-focusBorder)',
             background: 'var(--vscode-input-background)',
             color: 'var(--vscode-input-foreground)',
             fontFamily: 'inherit',

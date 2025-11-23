@@ -346,8 +346,8 @@ table.table-editor thead th:last-child {
 
 table.table-editor thead th.editing {
     background-color: var(--vscode-input-background);
-    outline: 2px solid var(--vscode-inputOption-activeBorder);
-    outline-offset: -1px;
+    outline: 1px solid var(--vscode-inputOption-activeBorder);
+    outline-offset: 0px;
 }
 
 table.table-editor thead th input.header-input {
@@ -686,8 +686,8 @@ table.table-editor tbody tr td.data-cell.editing,
 table.table-editor tbody tr td.editable-cell.editing {
     padding: 0;
     background-color: var(--vscode-input-background);
-    outline: 2px solid var(--vscode-inputOption-activeBorder);
-    outline-offset: -1px;
+    outline: 1px solid var(--vscode-inputOption-activeBorder);
+    outline-offset: 0px;
     box-sizing: border-box;
     height: auto;
     position: relative;
@@ -748,7 +748,7 @@ textarea.cell-input[data-multiline="true"] {
 }
 
 table.table-editor tbody tr td.cell-editing-focus {
-    box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder);
     z-index: 10;
 }
 
