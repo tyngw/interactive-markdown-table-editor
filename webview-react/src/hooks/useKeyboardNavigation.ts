@@ -62,19 +62,19 @@ export function useKeyboardNavigation({
 
     switch (direction) {
       case 'up':
-        if (hasContent(row, col)) {
-          // Move up until we find an empty cell or reach the top
-          while (targetRow > 0 && hasContent(targetRow - 1, col)) {
-            targetRow--
-          }
-        } else {
-          // Move up until we find a cell with content or reach the top
-          while (targetRow > 0 && !hasContent(targetRow - 1, col)) {
-            targetRow--
-          }
-          if (targetRow > 0) {
-            // Move to the last cell with content in this group
-            while (targetRow > 0 && hasContent(targetRow - 1, col)) {
+        if (targetRow > 0) {
+          const currentHasContent = hasContent(row, col)
+          const nextHasContent = hasContent(row - 1, col)
+
+          if (currentHasContent === nextHasContent) {
+            // Next cell has same state: jump to end of current state range
+            while (targetRow > 0 && hasContent(targetRow - 1, col) === currentHasContent) {
+              targetRow--
+            }
+          } else {
+            // Next cell has different state: jump to end of next state range
+            targetRow-- // Move to next cell first
+            while (targetRow > 0 && hasContent(targetRow - 1, col) === nextHasContent) {
               targetRow--
             }
           }
@@ -82,19 +82,19 @@ export function useKeyboardNavigation({
         break
 
       case 'down':
-        if (hasContent(row, col)) {
-          // Move down until we find an empty cell or reach the bottom
-          while (targetRow < totalRows - 1 && hasContent(targetRow + 1, col)) {
-            targetRow++
-          }
-        } else {
-          // Move down until we find a cell with content or reach the bottom
-          while (targetRow < totalRows - 1 && !hasContent(targetRow + 1, col)) {
-            targetRow++
-          }
-          if (targetRow < totalRows - 1) {
-            // Move to the last cell with content in this group
-            while (targetRow < totalRows - 1 && hasContent(targetRow + 1, col)) {
+        if (targetRow < totalRows - 1) {
+          const currentHasContent = hasContent(row, col)
+          const nextHasContent = hasContent(row + 1, col)
+
+          if (currentHasContent === nextHasContent) {
+            // Next cell has same state: jump to end of current state range
+            while (targetRow < totalRows - 1 && hasContent(targetRow + 1, col) === currentHasContent) {
+              targetRow++
+            }
+          } else {
+            // Next cell has different state: jump to end of next state range
+            targetRow++ // Move to next cell first
+            while (targetRow < totalRows - 1 && hasContent(targetRow + 1, col) === nextHasContent) {
               targetRow++
             }
           }
@@ -102,19 +102,19 @@ export function useKeyboardNavigation({
         break
 
       case 'left':
-        if (hasContent(row, col)) {
-          // Move left until we find an empty cell or reach the leftmost
-          while (targetCol > 0 && hasContent(row, targetCol - 1)) {
-            targetCol--
-          }
-        } else {
-          // Move left until we find a cell with content or reach the leftmost
-          while (targetCol > 0 && !hasContent(row, targetCol - 1)) {
-            targetCol--
-          }
-          if (targetCol > 0) {
-            // Move to the last cell with content in this group
-            while (targetCol > 0 && hasContent(row, targetCol - 1)) {
+        if (targetCol > 0) {
+          const currentHasContent = hasContent(row, col)
+          const nextHasContent = hasContent(row, col - 1)
+
+          if (currentHasContent === nextHasContent) {
+            // Next cell has same state: jump to end of current state range
+            while (targetCol > 0 && hasContent(row, targetCol - 1) === currentHasContent) {
+              targetCol--
+            }
+          } else {
+            // Next cell has different state: jump to end of next state range
+            targetCol-- // Move to next cell first
+            while (targetCol > 0 && hasContent(row, targetCol - 1) === nextHasContent) {
               targetCol--
             }
           }
@@ -122,19 +122,19 @@ export function useKeyboardNavigation({
         break
 
       case 'right':
-        if (hasContent(row, col)) {
-          // Move right until we find an empty cell or reach the rightmost
-          while (targetCol < totalCols - 1 && hasContent(row, targetCol + 1)) {
-            targetCol++
-          }
-        } else {
-          // Move right until we find a cell with content or reach the rightmost
-          while (targetCol < totalCols - 1 && !hasContent(row, targetCol + 1)) {
-            targetCol++
-          }
-          if (targetCol < totalCols - 1) {
-            // Move to the last cell with content in this group
-            while (targetCol < totalCols - 1 && hasContent(row, targetCol + 1)) {
+        if (targetCol < totalCols - 1) {
+          const currentHasContent = hasContent(row, col)
+          const nextHasContent = hasContent(row, col + 1)
+
+          if (currentHasContent === nextHasContent) {
+            // Next cell has same state: jump to end of current state range
+            while (targetCol < totalCols - 1 && hasContent(row, targetCol + 1) === currentHasContent) {
+              targetCol++
+            }
+          } else {
+            // Next cell has different state: jump to end of next state range
+            targetCol++ // Move to next cell first
+            while (targetCol < totalCols - 1 && hasContent(row, targetCol + 1) === nextHasContent) {
               targetCol++
             }
           }
