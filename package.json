@@ -1,7 +1,7 @@
 {
   "name": "interactive-markdown-table-editor",
   "displayName": "Interactive Markdown Table Editor",
-  "description": "Edit Markdown tables with a spreadsheet-like interface",
+  "description": "Edit Markdown tables with an intuitive interface",
   "version": "0.13.1",
   "publisher": "tyngw",
   "repository": {
@@ -13,8 +13,7 @@
   "keywords": [
     "markdown",
     "table",
-    "editor",
-    "spreadsheet"
+    "editor"
   ],
   "engines": {
     "vscode": "^1.74.0"
