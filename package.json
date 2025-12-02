@@ -2,14 +2,14 @@
   "name": "interactive-markdown-table-editor",
   "displayName": "Interactive Markdown Table Editor",
   "description": "Edit Markdown tables with an intuitive interface",
-  "version": "0.13.1",
+  "version": "1.0.0",
   "publisher": "tyngw",
   "repository": {
     "type": "git",
     "url": "https://github.com/tyngw/interactive-markdown-table-editor.git"
   },
   "license": "MIT",
-  "icon": "icon.png",
+  "icon": "public/icons/icon.png",
   "keywords": [
     "markdown",
     "table",
