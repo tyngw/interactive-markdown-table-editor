@@ -11,8 +11,8 @@
 export function processCellContent(content: string): string {
   if (!content) return ''
   
-  // Convert <br> and <br/> tags to actual HTML <br> tags for display
-  let processedContent = content
+  // Unescape pipe characters for display
+  let processedContent = unescapePipeCharacters(content)
     .replace(/<br\s*\/?>/gi, '<br>')
     .replace(/<BR\s*\/?>/gi, '<br>')
   
@@ -25,9 +25,12 @@ export function processCellContentForEditing(content: string): string {
   if (!content) return ''
   
   // Convert <br> and <br/> tags to newlines for text editing
-  return content
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<BR\s*\/?>/gi, '\n')
+  // Also unescape pipe characters for editing
+  return unescapePipeCharacters(
+    content
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<BR\s*\/?>/gi, '\n')
+  )
 }
 
 // Convert newlines back to <br/> tags for storage
@@ -35,7 +38,8 @@ export function processCellContentForStorage(content: string): string {
   if (!content) return ''
   
   // Convert newlines to <br/> tags for Markdown storage
-  return content.replace(/\n/g, '<br/>')
+  // Also escape pipe characters for Markdown table format
+  return escapePipeCharacters(content.replace(/\n/g, '<br/>'))
 }
 
 /**
@@ -58,6 +62,28 @@ export function convertNewlinesToBrTags(content: string): string {
   
   // Convert newlines to <br/> tags
   return content.replace(/\n/g, '<br/>')
+}
+
+/**
+ * Escape pipe characters for Markdown table cells
+ * Pipes (|) are table separators in Markdown and must be escaped
+ */
+export function escapePipeCharacters(content: string): string {
+  if (!content) return ''
+  
+  // エスケープ済みのパイプ文字は保護し、未エスケープのパイプ文字のみをエスケープ
+  return content.replace(/(?<!\\)\|/g, '\\|')
+}
+
+/**
+ * Unescape pipe characters for display and editing
+ * Converts \| back to |
+ */
+export function unescapePipeCharacters(content: string): string {
+  if (!content) return ''
+  
+  // エスケープされたパイプ文字を元に戻す
+  return content.replace(/\\\|/g, '|')
 }
 
 /**
