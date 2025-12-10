@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { TableData, CellPosition, SelectionRange } from '../types'
-import { convertBrTagsToNewlines, convertNewlinesToBrTags, escapeTSVField } from '../utils/contentConverter'
+import { convertBrTagsToNewlines, convertNewlinesToBrTags, escapeTSVField, escapePipeCharacters } from '../utils/contentConverter'
 
 // フックが受け取る依存関数の型を定義
 interface ClipboardDependencies {
@@ -130,7 +130,9 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       
       // 空行でない場合のみ追加
       if (row.length > 0 && !(row.length === 1 && row[0] === '')) {
-        result.push(row)
+        // 各セルのパイプ文字をエスケープ
+        const escapedRow = row.map(cell => escapePipeCharacters(cell))
+        result.push(escapedRow)
       }
     }
     

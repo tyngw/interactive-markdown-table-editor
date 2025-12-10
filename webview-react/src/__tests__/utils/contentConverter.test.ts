@@ -4,7 +4,9 @@ import {
   escapeCSVField,
   escapeTSVField,
   processCellContentForEditing,
-  processCellContentForStorage
+  processCellContentForStorage,
+  escapePipeCharacters,
+  unescapePipeCharacters
 } from '../../utils/contentConverter'
 
 describe('contentConverter', () => {
@@ -125,6 +127,50 @@ describe('contentConverter', () => {
     })
   })
 
+  describe('escapePipeCharacters', () => {
+    it('should escape pipe characters', () => {
+      expect(escapePipeCharacters('text | with | pipes')).toBe('text \\| with \\| pipes')
+    })
+
+    it('should not double-escape already escaped pipes', () => {
+      expect(escapePipeCharacters('text \\| already escaped')).toBe('text \\| already escaped')
+    })
+
+    it('should handle mixed escaped and unescaped pipes', () => {
+      expect(escapePipeCharacters('text | unescaped \\| escaped')).toBe('text \\| unescaped \\| escaped')
+    })
+
+    it('should handle multiple consecutive pipes', () => {
+      expect(escapePipeCharacters('text || double')).toBe('text \\|\\| double')
+    })
+
+    it('should return empty string for empty input', () => {
+      expect(escapePipeCharacters('')).toBe('')
+    })
+
+    it('should handle text without pipes', () => {
+      expect(escapePipeCharacters('no pipes here')).toBe('no pipes here')
+    })
+  })
+
+  describe('unescapePipeCharacters', () => {
+    it('should unescape pipe characters', () => {
+      expect(unescapePipeCharacters('text \\| with \\| pipes')).toBe('text | with | pipes')
+    })
+
+    it('should handle multiple escaped pipes', () => {
+      expect(unescapePipeCharacters('text \\|\\| double')).toBe('text || double')
+    })
+
+    it('should return empty string for empty input', () => {
+      expect(unescapePipeCharacters('')).toBe('')
+    })
+
+    it('should handle text without escaped pipes', () => {
+      expect(unescapePipeCharacters('no escaped pipes')).toBe('no escaped pipes')
+    })
+  })
+
   describe('round-trip conversion', () => {
     it('should maintain data integrity through editing and storage', () => {
       const original = 'Line 1<br/>Line 2<br/>Line 3'
@@ -140,6 +186,23 @@ describe('contentConverter', () => {
       const backToNewlines = convertBrTagsToNewlines(toBrTags)
       
       expect(backToNewlines).toBe(original)
+    })
+
+    it('should maintain data integrity with pipe characters', () => {
+      const original = 'text | with | pipes'
+      const escaped = escapePipeCharacters(original)
+      const unescaped = unescapePipeCharacters(escaped)
+      
+      expect(escaped).toBe('text \\| with \\| pipes')
+      expect(unescaped).toBe(original)
+    })
+
+    it('should handle pipe characters through editing and storage cycle', () => {
+      const userInput = 'data | with | pipes'
+      const stored = processCellContentForStorage(userInput)
+      const forEditing = processCellContentForEditing(stored)
+      
+      expect(forEditing).toBe(userInput)
     })
   })
 })

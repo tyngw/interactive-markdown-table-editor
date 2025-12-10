@@ -293,4 +293,57 @@ describe('useClipboard', () => {
     expect(mockSelectCell).toHaveBeenCalledWith(0, 0) // 最初のセル
     expect(mockSelectCell).toHaveBeenCalledWith(1, 1, true) // 最後のセルまで拡張選択
   })
+
+  // パイプ文字のエスケープ処理テスト
+  describe('parseTSV with pipe characters', () => {
+    test('should escape pipe characters when pasting data', () => {
+      const { result } = renderHook(() => useClipboard())
+      
+      // パイプ文字を含むTSVデータ
+      const tsvData = 'Column A | B\tColumn C'
+      const parsed = result.current.parseTSV(tsvData)
+      
+      // パイプ文字がエスケープされていることを確認
+      expect(parsed).toEqual([['Column A \\| B', 'Column C']])
+    })
+
+    test('should handle multiple cells with pipe characters', () => {
+      const { result } = renderHook(() => useClipboard())
+      
+      const tsvData = 'A | B\tC | D\nE | F\tG | H'
+      const parsed = result.current.parseTSV(tsvData)
+      
+      expect(parsed).toEqual([
+        ['A \\| B', 'C \\| D'],
+        ['E \\| F', 'G \\| H']
+      ])
+    })
+
+    test('should preserve already escaped pipes', () => {
+      const { result } = renderHook(() => useClipboard())
+      
+      const tsvData = 'Already \\| escaped\tNew | pipe'
+      const parsed = result.current.parseTSV(tsvData)
+      
+      expect(parsed).toEqual([['Already \\| escaped', 'New \\| pipe']])
+    })
+
+    test('should handle quoted cells with pipes', () => {
+      const { result } = renderHook(() => useClipboard())
+      
+      const tsvData = '"Quoted | pipe"\tNormal | pipe'
+      const parsed = result.current.parseTSV(tsvData)
+      
+      expect(parsed).toEqual([['Quoted \\| pipe', 'Normal \\| pipe']])
+    })
+
+    test('should handle complex data with pipes, newlines, and tabs', () => {
+      const { result } = renderHook(() => useClipboard())
+      
+      const tsvData = '"Multi\nline | pipe"\tSimple | text'
+      const parsed = result.current.parseTSV(tsvData)
+      
+      expect(parsed).toEqual([['Multi<br/>line \\| pipe', 'Simple \\| text']])
+    })
+  })
 })
