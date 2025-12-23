@@ -323,6 +323,26 @@ export class WebviewManager {
             this.panels.delete(oldPanelId);
             this.panels.set(panelId, existingPanel);
             
+            // Update connection health mapping
+            const oldHealth = this.connectionHealthMap.get(oldPanelId);
+            if (oldHealth) {
+                this.connectionHealthMap.delete(oldPanelId);
+                this.connectionHealthMap.set(panelId, oldHealth);
+            }
+            
+            // Re-setup communication handlers with new URI
+            const oldCommManager = this.communicationManagers.get(oldPanelId);
+            if (oldCommManager) {
+                // Dispose old handlers and create new ones
+                oldCommManager.dispose();
+                this.communicationManagers.delete(oldPanelId);
+            }
+            
+            // Create new communication manager with new URI
+            const newCommManager = new ExtensionCommunicationManager(existingPanel);
+            this.communicationManagers.set(panelId, newCommManager);
+            this.setupCommunicationHandlers(newCommManager, existingPanel, uri);
+            
             // Update panel title
             existingPanel.title = `${path.basename(uri.fsPath)} - Table Editor`;
             
