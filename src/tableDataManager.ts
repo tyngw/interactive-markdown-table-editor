@@ -8,6 +8,7 @@ export interface TableData {
     headers: string[];
     rows: string[][];
     alignment: ('left' | 'center' | 'right')[];
+    separatorLine?: string; // オリジナルの区切り線を保持
     metadata: TableMetadata;
 }
 
@@ -58,6 +59,7 @@ export class TableDataManager {
             headers: [...tableNode.headers],
             rows: tableNode.rows.map(row => [...row]),
             alignment: [...tableNode.alignment],
+            separatorLine: tableNode.separatorLine, // オリジナルの区切り線を保持
             metadata: {
                 sourceUri,
                 startLine: tableNode.startLine,
@@ -182,6 +184,9 @@ export class TableDataManager {
             row.splice(insertIndex, 0, ...cellsToAdd);
         }
 
+        // Update separator line to match new column count
+        this.updateSeparatorLineForColumnChange(insertIndex, count, 'add');
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -208,6 +213,9 @@ export class TableDataManager {
         for (const row of this.tableData.rows) {
             row.splice(index, 1);
         }
+
+        // Update separator line to match new column count
+        this.updateSeparatorLineForColumnChange(index, 1, 'delete');
 
         this.updateMetadata();
         this.notifyChange();
@@ -278,6 +286,9 @@ export class TableDataManager {
             const cell = row.splice(fromIndex, 1)[0];
             row.splice(toIndex, 0, cell);
         }
+
+        // Move separator in separator line
+        this.updateSeparatorLineForColumnMove(fromIndex, toIndex);
 
         this.updateMetadata();
         this.notifyChange();
@@ -580,24 +591,29 @@ export class TableDataManager {
         const escapedHeaders = this.tableData.headers.map(h => this.escapePipeCharacters(h));
         markdown += '| ' + escapedHeaders.join(' | ') + ' |\n';
 
-        // Separator row
-        markdown += '|';
-        for (const alignment of this.tableData.alignment) {
-            let separator = '';
-            switch (alignment) {
-                case 'left':
-                    separator = ' :--- ';
-                    break;
-                case 'center':
-                    separator = ' :---: ';
-                    break;
-                case 'right':
-                    separator = ' ---: ';
-                    break;
+        // Separator row - use original separator line if available
+        if (this.tableData.separatorLine) {
+            markdown += this.tableData.separatorLine + '\n';
+        } else {
+            // Fallback to generated separator if original is not available
+            markdown += '|';
+            for (const alignment of this.tableData.alignment) {
+                let separator = '';
+                switch (alignment) {
+                    case 'left':
+                        separator = ' :--- ';
+                        break;
+                    case 'center':
+                        separator = ' :---: ';
+                        break;
+                    case 'right':
+                        separator = ' ---: ';
+                        break;
+                }
+                markdown += separator + '|';
             }
-            markdown += separator + '|';
+            markdown += '\n';
         }
-        markdown += '\n';
 
         // Data rows - escape pipe characters in cells
         for (const row of this.tableData.rows) {
@@ -763,6 +779,71 @@ export class TableDataManager {
         }
     }
 
+    /**
+     * Update separator line when columns are added or deleted
+     * 列の追加・削除時に区切り線を更新
+     */
+    private updateSeparatorLineForColumnChange(index: number, count: number, operation: 'add' | 'delete'): void {
+        if (!this.tableData.separatorLine) {
+            // 区切り線が保存されていない場合は何もしない
+            return;
+        }
+
+        // 区切り線をパースして各列のセパレータを抽出
+        const separatorLine = this.tableData.separatorLine.trim();
+        if (!separatorLine.startsWith('|') || !separatorLine.endsWith('|')) {
+            // 不正な形式の場合は区切り線をクリア
+            this.tableData.separatorLine = undefined;
+            return;
+        }
+
+        // パイプで分割してセパレータ部分を取得
+        const parts = separatorLine.slice(1, -1).split('|');
+        
+        if (operation === 'add') {
+            // 列を追加: デフォルトのセパレータを挿入
+            const defaultSeparator = ' --- ';
+            for (let i = 0; i < count; i++) {
+                parts.splice(index, 0, defaultSeparator);
+            }
+        } else if (operation === 'delete') {
+            // 列を削除: 該当位置のセパレータを削除
+            parts.splice(index, count);
+        }
+
+        // 区切り線を再構築
+        this.tableData.separatorLine = '|' + parts.join('|') + '|';
+    }
+
+    /**
+     * Update separator line when column is moved
+     * 列移動時に区切り線を更新
+     */
+    private updateSeparatorLineForColumnMove(fromIndex: number, toIndex: number): void {
+        if (!this.tableData.separatorLine) {
+            // 区切り線が保存されていない場合は何もしない
+            return;
+        }
+
+        // 区切り線をパースして各列のセパレータを抽出
+        const separatorLine = this.tableData.separatorLine.trim();
+        if (!separatorLine.startsWith('|') || !separatorLine.endsWith('|')) {
+            // 不正な形式の場合は区切り線をクリア
+            this.tableData.separatorLine = undefined;
+            return;
+        }
+
+        // パイプで分割してセパレータ部分を取得
+        const parts = separatorLine.slice(1, -1).split('|');
+        
+        // セパレータを移動
+        const separator = parts.splice(fromIndex, 1)[0];
+        parts.splice(toIndex, 0, separator);
+
+        // 区切り線を再構築
+        this.tableData.separatorLine = '|' + parts.join('|') + '|';
+    }
+
     // Advanced CRUD Operations
 
     /**
@@ -813,6 +894,8 @@ export class TableDataManager {
         this.tableData.headers = headers.slice()
         this.tableData.rows = rows.map(r => r.slice())
         this.tableData.alignment = align
+        // CSVインポート等で内容を置換する場合は、区切り線をクリア
+        this.tableData.separatorLine = undefined
         this.updateMetadata()
         this.notifyChange()
     }
@@ -893,6 +976,9 @@ export class TableDataManager {
             row.splice(startIndex, 0, ...newCells);
         }
 
+        // Update separator line to match new column count
+        this.updateSeparatorLineForColumnChange(startIndex, count, 'add');
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -925,6 +1011,9 @@ export class TableDataManager {
             for (const row of this.tableData.rows) {
                 row.splice(index, 1);
             }
+
+            // Update separator line for each deletion
+            this.updateSeparatorLineForColumnChange(index, 1, 'delete');
         }
 
         this.updateMetadata();
