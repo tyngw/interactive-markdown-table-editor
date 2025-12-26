@@ -173,6 +173,46 @@ suite('TableDataManager Test Suite', () => {
         assert.ok(markdown.includes('| Bob | 35 | Chicago |'));
     });
 
+    test('should escape pipe characters when serializing to markdown', () => {
+        // Create a table with pipe characters in cells
+        const tableNode: TableNode = {
+            startLine: 0,
+            endLine: 2,
+            headers: ['Column A | B', 'Column C'],
+            rows: [
+                ['Value | with | pipes', 'Normal value'],
+                ['Another | pipe', 'Test']
+            ],
+            alignment: ['left', 'left']
+        };
+        
+        const pipeManager = new TableDataManager(tableNode);
+        const markdown = pipeManager.serializeToMarkdown();
+        
+        // Verify pipe characters are escaped
+        assert.ok(markdown.includes('| Column A \\| B | Column C |'));
+        assert.ok(markdown.includes('| Value \\| with \\| pipes | Normal value |'));
+        assert.ok(markdown.includes('| Another \\| pipe | Test |'));
+    });
+
+    test('should not double-escape already escaped pipes', () => {
+        // Create a table with already escaped pipe characters
+        const tableNode: TableNode = {
+            startLine: 0,
+            endLine: 1,
+            headers: ['Header'],
+            rows: [['Already \\| escaped']],
+            alignment: ['left']
+        };
+        
+        const pipeManager = new TableDataManager(tableNode);
+        const markdown = pipeManager.serializeToMarkdown();
+        
+        // Verify pipe characters are not double-escaped
+        assert.ok(markdown.includes('| Already \\| escaped |'));
+        assert.ok(!markdown.includes('\\\\|')); // Should not have double backslash
+    });
+
     test('should validate table structure', () => {
         const validTableNode: TableNode = {
             startLine: 0,

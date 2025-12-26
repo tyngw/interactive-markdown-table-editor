@@ -559,13 +559,26 @@ export class TableDataManager {
     }
 
     /**
+     * Escape pipe characters in cell content for Markdown table format
+     * Pipes (|) are table separators and must be escaped as \|
+     */
+    private escapePipeCharacters(content: string): string {
+        if (!content) {
+            return '';
+        }
+        // エスケープ済みのパイプ文字は保護し、未エスケープのパイプ文字のみをエスケープ
+        return content.replace(/(?<!\\)\|/g, '\\|');
+    }
+
+    /**
      * Serialize table to Markdown format
      */
     serializeToMarkdown(): string {
         let markdown = '';
 
-        // Header row
-        markdown += '| ' + this.tableData.headers.join(' | ') + ' |\n';
+        // Header row - escape pipe characters in headers
+        const escapedHeaders = this.tableData.headers.map(h => this.escapePipeCharacters(h));
+        markdown += '| ' + escapedHeaders.join(' | ') + ' |\n';
 
         // Separator row
         markdown += '|';
@@ -586,9 +599,10 @@ export class TableDataManager {
         }
         markdown += '\n';
 
-        // Data rows
+        // Data rows - escape pipe characters in cells
         for (const row of this.tableData.rows) {
-            markdown += '| ' + row.join(' | ') + ' |\n';
+            const escapedRow = row.map(cell => this.escapePipeCharacters(cell));
+            markdown += '| ' + escapedRow.join(' | ') + ' |\n';
         }
 
         // Remove trailing newline to prevent empty lines when splitting
