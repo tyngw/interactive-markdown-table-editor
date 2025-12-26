@@ -34,6 +34,7 @@ export interface TableNode {
     headers: string[];
     rows: string[][];
     alignment: ('left' | 'center' | 'right')[];
+    separatorLine?: string; // オリジナルの区切り線を保持
 }
 
 export interface MarkdownAST {
@@ -248,7 +249,8 @@ export class MarkdownParser {
                 endLine,
                 headers,
                 rows,
-                alignment
+                alignment,
+                separatorLine: this.extractSeparatorLine(content, { startLine, endLine, headers, rows, alignment })
             };
 
             return tableNode;
@@ -480,6 +482,25 @@ export class MarkdownParser {
             endLine: actualEndLine,
             actualContent: lines.slice(actualStartLine, actualEndLine + 1)
         };
+    }
+
+    /**
+     * Extract separator line from table content
+     * 区切り線（2行目）を抽出してTableNodeに保存
+     */
+    extractSeparatorLine(content: string, tableNode: TableNode): string | undefined {
+        const lines = content.split('\n');
+        const boundaries = this.getTableBoundaries(content, tableNode);
+        
+        // テーブルの2行目が区切り線
+        if (boundaries.actualContent.length >= 2) {
+            const separatorLine = boundaries.actualContent[1];
+            if (this.isTableSeparatorLine(separatorLine)) {
+                return separatorLine;
+            }
+        }
+        
+        return undefined;
     }
 
     /**
