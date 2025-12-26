@@ -130,9 +130,8 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       
       // 空行でない場合のみ追加
       if (row.length > 0 && !(row.length === 1 && row[0] === '')) {
-        // 各セルのパイプ文字をエスケープ
-        const escapedRow = row.map(cell => escapePipeCharacters(cell))
-        result.push(escapedRow)
+        // パイプ文字はExtension側でエスケープするため、ここではエスケープしない
+        result.push(row)
       }
     }
     

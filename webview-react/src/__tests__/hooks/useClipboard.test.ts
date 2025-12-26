@@ -296,15 +296,15 @@ describe('useClipboard', () => {
 
   // パイプ文字のエスケープ処理テスト
   describe('parseTSV with pipe characters', () => {
-    test('should escape pipe characters when pasting data', () => {
+    test('should NOT escape pipe characters when pasting data (handled by Extension)', () => {
       const { result } = renderHook(() => useClipboard())
       
       // パイプ文字を含むTSVデータ
       const tsvData = 'Column A | B\tColumn C'
       const parsed = result.current.parseTSV(tsvData)
       
-      // パイプ文字がエスケープされていることを確認
-      expect(parsed).toEqual([['Column A \\| B', 'Column C']])
+      // パイプ文字はそのまま保存される（Extension側でエスケープ）
+      expect(parsed).toEqual([['Column A | B', 'Column C']])
     })
 
     test('should handle multiple cells with pipe characters', () => {
@@ -314,18 +314,9 @@ describe('useClipboard', () => {
       const parsed = result.current.parseTSV(tsvData)
       
       expect(parsed).toEqual([
-        ['A \\| B', 'C \\| D'],
-        ['E \\| F', 'G \\| H']
+        ['A | B', 'C | D'],
+        ['E | F', 'G | H']
       ])
-    })
-
-    test('should preserve already escaped pipes', () => {
-      const { result } = renderHook(() => useClipboard())
-      
-      const tsvData = 'Already \\| escaped\tNew | pipe'
-      const parsed = result.current.parseTSV(tsvData)
-      
-      expect(parsed).toEqual([['Already \\| escaped', 'New \\| pipe']])
     })
 
     test('should handle quoted cells with pipes', () => {
@@ -334,7 +325,7 @@ describe('useClipboard', () => {
       const tsvData = '"Quoted | pipe"\tNormal | pipe'
       const parsed = result.current.parseTSV(tsvData)
       
-      expect(parsed).toEqual([['Quoted \\| pipe', 'Normal \\| pipe']])
+      expect(parsed).toEqual([['Quoted | pipe', 'Normal | pipe']])
     })
 
     test('should handle complex data with pipes, newlines, and tabs', () => {
@@ -343,7 +334,7 @@ describe('useClipboard', () => {
       const tsvData = '"Multi\nline | pipe"\tSimple | text'
       const parsed = result.current.parseTSV(tsvData)
       
-      expect(parsed).toEqual([['Multi<br/>line \\| pipe', 'Simple \\| text']])
+      expect(parsed).toEqual([['Multi<br/>line | pipe', 'Simple | text']])
     })
   })
 })
