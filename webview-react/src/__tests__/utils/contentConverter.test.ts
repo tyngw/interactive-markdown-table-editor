@@ -125,6 +125,14 @@ describe('contentConverter', () => {
     it('should handle multiple newlines', () => {
       expect(processCellContentForStorage('A\nB\nC')).toBe('A<br/>B<br/>C')
     })
+
+    it('should NOT escape pipe characters (handled by Extension)', () => {
+      expect(processCellContentForStorage('text | with | pipes')).toBe('text | with | pipes')
+    })
+
+    it('should handle newlines and pipes together', () => {
+      expect(processCellContentForStorage('line1 | pipe\nline2 | pipe')).toBe('line1 | pipe<br/>line2 | pipe')
+    })
   })
 
   describe('escapePipeCharacters', () => {
@@ -197,11 +205,13 @@ describe('contentConverter', () => {
       expect(unescaped).toBe(original)
     })
 
-    it('should handle pipe characters through editing and storage cycle', () => {
+    it('should handle pipe characters in storage (not escaped in Webview)', () => {
       const userInput = 'data | with | pipes'
       const stored = processCellContentForStorage(userInput)
       const forEditing = processCellContentForEditing(stored)
       
+      // パイプ文字はWebview側ではエスケープされない
+      expect(stored).toBe('data | with | pipes')
       expect(forEditing).toBe(userInput)
     })
   })

@@ -38,8 +38,8 @@ export function processCellContentForStorage(content: string): string {
   if (!content) return ''
   
   // Convert newlines to <br/> tags for Markdown storage
-  // Also escape pipe characters for Markdown table format
-  return escapePipeCharacters(content.replace(/\n/g, '<br/>'))
+  // パイプ文字のエスケープはExtension側で行うため、ここでは不要
+  return content.replace(/\n/g, '<br/>')
 }
 
 /**
