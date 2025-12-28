@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { CellPosition, SelectionRange } from '../types'
 
 export interface SelectionState {
@@ -48,6 +48,7 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       setSelectedCells(new Set(['0-0']))
       setSelectionRange({ start: firstCell, end: firstCell })
       setSelectionAnchor(firstCell)
+      selectionAnchorRef.current = firstCell
     } else {
       clearSelection()
     }
@@ -60,20 +61,29 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     const maxRow = Math.max(start.row, end.row)
     const minCol = Math.min(start.col, end.col)
     const maxCol = Math.max(start.col, end.col)
-    
+
     for (let r = minRow; r <= maxRow; r++) {
       for (let c = minCol; c <= maxCol; c++) {
         newSelectedCells.add(`${r}-${c}`)
       }
     }
-    
+
     return newSelectedCells
   }, [])
+
+  // selectionAnchorの最新値を保持するRef（コールバックの依存関係を切るため）
+  const selectionAnchorRef = useRef<CellPosition | null>(null)
+
+  // StateとRefを同期
+  useEffect(() => {
+    selectionAnchorRef.current = selectionAnchor
+  }, [selectionAnchor])
 
   // セルを選択
   const selectCell = useCallback((row: number, col: number, extend = false, toggle = false) => {
     const cellKey = `${row}-${col}`
-    console.log('[useSelection] selectCell called:', { row, col, extend, toggle, selectionAnchor })
+    const currentAnchor = selectionAnchorRef.current
+    console.log('[useSelection] selectCell called:', { row, col, extend, toggle, currentAnchor })
 
     if (toggle) {
       const newSelectedCells = new Set(selectedCells)
@@ -87,15 +97,15 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       }
       setSelectedCells(newSelectedCells)
       setSelectionRange({ start: { row, col }, end: { row, col } })
-    } else if (extend && selectionAnchor) {
+    } else if (extend && currentAnchor) {
       // Shift+矢印キー：selectionAnchorを起点として範囲選択
-      console.log('[useSelection] Using selectionAnchor for extend:', selectionAnchor)
+      console.log('[useSelection] Using selectionAnchor for extend:', currentAnchor)
       const newRange: SelectionRange = {
-        start: selectionAnchor,
+        start: currentAnchor,
         end: { row, col }
       }
       setSelectionRange(newRange)
-      setSelectedCells(generateCellKeysInRange(selectionAnchor, { row, col }))
+      setSelectedCells(generateCellKeysInRange(currentAnchor, { row, col }))
     } else if (extend && selectionRange) {
       // マウス範囲選択：現在のselectionRangeを拡張
       console.log('[useSelection] Using selectionRange for extend:', selectionRange.start)
@@ -111,26 +121,28 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       setSelectedCells(new Set([cellKey]))
       setSelectionRange({ start: { row, col }, end: { row, col } })
       setSelectionAnchor({ row, col })
+      // Refも即時更新（次のイベントハンドラ呼び出しに備える）
+      selectionAnchorRef.current = { row, col }
     }
-  }, [selectionRange, selectedCells, selectionAnchor, generateCellKeysInRange])
+  }, [selectionRange, selectedCells, generateCellKeysInRange])
 
   // 行全体を選択
   const selectRow = useCallback((rowIndex: number, extend = false) => {
     const newSelectedCells = new Set<string>()
-    
+
     if (extend && selectionRange) {
       // 範囲選択
       const startRow = selectionRange.start.row
       const endRow = rowIndex
       const minRow = Math.min(startRow, endRow)
       const maxRow = Math.max(startRow, endRow)
-      
+
       for (let row = minRow; row <= maxRow; row++) {
         for (let col = 0; col < tableColCount; col++) {
           newSelectedCells.add(`${row}-${col}`)
         }
       }
-      
+
       setSelectionRange({
         start: selectionRange.start,
         end: { row: rowIndex, col: tableColCount - 1 }
@@ -140,33 +152,33 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       for (let col = 0; col < tableColCount; col++) {
         newSelectedCells.add(`${rowIndex}-${col}`)
       }
-      
+
       setSelectionRange({
         start: { row: rowIndex, col: 0 },
         end: { row: rowIndex, col: tableColCount - 1 }
       })
     }
-    
+
     setSelectedCells(newSelectedCells)
   }, [tableColCount, selectionRange])
 
   // 列全体を選択
   const selectColumn = useCallback((colIndex: number, extend = false) => {
     const newSelectedCells = new Set<string>()
-    
+
     if (extend && selectionRange) {
       // 範囲選択
       const startCol = selectionRange.start.col
       const endCol = colIndex
       const minCol = Math.min(startCol, endCol)
       const maxCol = Math.max(startCol, endCol)
-      
+
       for (let row = 0; row < tableRowCount; row++) {
         for (let col = minCol; col <= maxCol; col++) {
           newSelectedCells.add(`${row}-${col}`)
         }
       }
-      
+
       setSelectionRange({
         start: selectionRange.start,
         end: { row: tableRowCount - 1, col: colIndex }
@@ -176,26 +188,26 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       for (let row = 0; row < tableRowCount; row++) {
         newSelectedCells.add(`${row}-${colIndex}`)
       }
-      
+
       setSelectionRange({
         start: { row: 0, col: colIndex },
         end: { row: tableRowCount - 1, col: colIndex }
       })
     }
-    
+
     setSelectedCells(newSelectedCells)
   }, [tableRowCount, selectionRange])
 
   // 全選択
   const selectAll = useCallback(() => {
     const newSelectedCells = new Set<string>()
-    
+
     for (let row = 0; row < tableRowCount; row++) {
       for (let col = 0; col < tableColCount; col++) {
         newSelectedCells.add(`${row}-${col}`)
       }
     }
-    
+
     setSelectedCells(newSelectedCells)
     setSelectionRange({
       start: { row: 0, col: 0 },
@@ -210,10 +222,10 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     const cellKey = `${row}-${col}`
     const newSelectedCells = new Set([cellKey])
     const newSelectionRange = { start: { row, col }, end: { row, col } }
-    
+
     dragSelectionRef.current.currentSelectedCells = newSelectedCells
     dragSelectionRef.current.currentSelectionRange = newSelectionRange
-    
+
     // 即座に表示を更新
     setSelectedCells(newSelectedCells)
     setSelectionRange(newSelectionRange)
@@ -224,14 +236,14 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     if (!dragSelectionRef.current.isSelecting || !dragSelectionRef.current.startCell) {
       return
     }
-    
+
     const startCell = dragSelectionRef.current.startCell
     const newRange = { start: startCell, end: { row, col } }
     const newSelectedCells = generateCellKeysInRange(startCell, { row, col })
-    
+
     dragSelectionRef.current.currentSelectedCells = newSelectedCells
     dragSelectionRef.current.currentSelectionRange = newRange
-    
+
     // RequestAnimationFrameを使って適度にUIを更新
     requestAnimationFrame(() => {
       if (dragSelectionRef.current.isSelecting) {
@@ -247,7 +259,7 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       setSelectedCells(new Set(dragSelectionRef.current.currentSelectedCells))
       setSelectionRange(dragSelectionRef.current.currentSelectionRange)
       setIsSelecting(false)
-      
+
       // Refをリセット
       dragSelectionRef.current.isSelecting = false
       dragSelectionRef.current.startCell = null
