@@ -87,8 +87,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
   }, [currentTableIndex])
 
   const {
-  tableData: displayedTableData,
-  modelTableData,
+    tableData: displayedTableData,
+    modelTableData,
     editorState,
     selectionAnchor,
     updateCell,
@@ -130,12 +130,12 @@ const TableEditor: React.FC<TableEditorProps> = ({
   useEffect(() => {
     if (editorState.currentEditingCell && (clearInitialInputTimeoutRef as any).current) {
       window.clearTimeout((clearInitialInputTimeoutRef as any).current)
-      ;(clearInitialInputTimeoutRef as any).current = null
+        ; (clearInitialInputTimeoutRef as any).current = null
     }
     return () => {
       if ((clearInitialInputTimeoutRef as any).current) {
         window.clearTimeout((clearInitialInputTimeoutRef as any).current)
-        ;(clearInitialInputTimeoutRef as any).current = null
+          ; (clearInitialInputTimeoutRef as any).current = null
       }
     }
   }, [editorState.currentEditingCell, initialCellInput])
@@ -192,6 +192,30 @@ const TableEditor: React.FC<TableEditorProps> = ({
     });
     return cols;
   }, [editorState.selectedCells]);
+
+  // セル選択が変わった時にIME関連の状態をクリア
+  const prevSelectionRef = useRef<{ row: number; col: number } | null>(null)
+  useEffect(() => {
+    const currentPos = editorState.selectionRange?.start
+    const prevPos = prevSelectionRef.current
+
+    // セル位置が変わった場合
+    if (currentPos && prevPos && (currentPos.row !== prevPos.row || currentPos.col !== prevPos.col)) {
+      // IME関連の状態をクリア
+      if (imeCompleteTimerRef.current) {
+        window.clearTimeout(imeCompleteTimerRef.current)
+        imeCompleteTimerRef.current = null
+      }
+      pendingImeValueRef.current = ''
+      if (inputCaptureRef.current) {
+        inputCaptureRef.current.value = ''
+      }
+      console.debug('[input-capture] cell selection changed, cleared IME state')
+    }
+
+    // 現在の位置を保存
+    prevSelectionRef.current = currentPos ? { row: currentPos.row, col: currentPos.col } : null
+  }, [editorState.selectionRange?.start?.row, editorState.selectionRange?.start?.col])
 
   const { copySelectedCells, pasteFromClipboard } = useClipboard({
     addRow,
@@ -262,7 +286,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     tables: effectiveTables,
     currentTableIndex,
     selectionRange: editorState.selectionRange,
-  onNavigateToResult: useCallback((result: SearchResult) => {
+    onNavigateToResult: useCallback((result: SearchResult) => {
       // 別のシートの場合は先にシートを切り替える
       if (result.tableIndex !== currentTableIndex && onTableSwitch) {
         onTableSwitch(result.tableIndex)
@@ -286,14 +310,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
           }
         }, 0)
       }
-  }, [currentTableIndex, selectCell, onTableSwitch]),
-  onUpdateCell: useCallback((tableIndex: number, row: number, col: number, value: string) => {
+    }, [currentTableIndex, selectCell, onTableSwitch]),
+    onUpdateCell: useCallback((tableIndex: number, row: number, col: number, value: string) => {
       if (tableIndex === currentTableIndex) {
         updateCell(row, col, value)
         onSendMessage({ command: 'updateCell', data: withTableIndex({ row, col, value }) })
       }
-  }, [currentTableIndex, updateCell, onSendMessage, withTableIndex]),
-  onBulkUpdate: useCallback((tableIndex: number, updates: Array<{ row: number; col: number; value: string }>) => {
+    }, [currentTableIndex, updateCell, onSendMessage, withTableIndex]),
+    onBulkUpdate: useCallback((tableIndex: number, updates: Array<{ row: number; col: number; value: string }>) => {
       if (tableIndex === currentTableIndex) {
         updateCells(updates)
         onSendMessage({ command: 'bulkUpdateCells', data: withTableIndex({ updates }) })
@@ -419,10 +443,10 @@ const TableEditor: React.FC<TableEditorProps> = ({
     commitSort();
     updateStatus('success', '現在の表示順序を保存しました');
 
-  onSendMessage({
-    command: 'sort',
-    data: withTableIndex({ column, direction })
-  });
+    onSendMessage({
+      command: 'sort',
+      data: withTableIndex({ column, direction })
+    });
   }, [commitSort, editorState.sortState, onSendMessage, updateStatus, withTableIndex]);
 
   const handleResetSort = useCallback(() => {
@@ -481,10 +505,23 @@ const TableEditor: React.FC<TableEditorProps> = ({
     }
   }, [editorState.selectedCells, mapUpdatesToModel, onSendMessage, updateCells, updateStatus, withTableIndex])
 
+  // IME入力完了後に編集モードに遷移するためのタイマー
+  const imeCompleteTimerRef = useRef<number | null>(null)
+  const pendingImeValueRef = useRef<string>('')
+
   // 入力キャプチャのイベントハンドラー（IME対応）
   const handleInputCaptureCompositionStart = useCallback(() => {
     setIsComposing(true)
     compositionHandledRef.current = false
+
+    // ライブ変換で連続してcompositionstart/endが発火する場合、
+    // 前のcompositionendで設定されたタイマーをキャンセル
+    if (imeCompleteTimerRef.current) {
+      console.debug('[input-capture] compositionstart: cancelling pending IME complete timer')
+      window.clearTimeout(imeCompleteTimerRef.current)
+      imeCompleteTimerRef.current = null
+    }
+
     // 未編集セルに対して IME による入力が始まったら、
     // モデルを即座にクリアするのではなく、表示のみ隠す（data-temp-empty）
     // ことで race を回避する（実際のモデル更新は commit 時に行う）
@@ -499,78 +536,97 @@ const TableEditor: React.FC<TableEditorProps> = ({
     const input = e.currentTarget
     const value = input.value
 
+    console.debug('[input-capture] compositionend fired, value:', JSON.stringify(value))
+
     // 選択されているセルを取得
     const selectionPos = editorState.selectionRange?.end || editorState.selectionRange?.start
     const targetPos = selectionPos || pendingCompositionCleanupRef.current
-    const shouldDeferModelUpdate = !editorState.currentEditingCell
 
-    if (targetPos && value && !editorState.currentEditingCell) {
-      // IME確定後、編集モードに入る（モデルはここでクリアしない）
-      console.debug('[input-capture] compositionend value:', value, 'pos:', targetPos)
-      setInitialCellInput(value)
-      console.debug('[input-capture] setInitialCellInput ->', value)
-      setCurrentEditingCell(targetPos)
-      console.debug('[input-capture] setCurrentEditingCell ->', targetPos)
-      compositionHandledRef.current = true // 処理済みフラグを立てる
+    // 値を保存（現在のinput.valueが最新の確定済み文字列）
+    // ライブ変換では compositionend が複数回発火するが、
+    // 各 compositionend 時点での input.value には確定済みの全文字列が含まれている
+    pendingImeValueRef.current = value
+    console.debug('[input-capture] pendingImeValueRef updated to:', JSON.stringify(value))
+
+    // 既存のタイマーをクリア
+    if (imeCompleteTimerRef.current) {
+      window.clearTimeout(imeCompleteTimerRef.current)
     }
 
-    // IME 確定時には既存のセル値を上書きしたいのでモデルを更新する
-    // （compositionend のあとで行うため IME の組成を壊さない）
-    if (selectionPos && value && !shouldDeferModelUpdate) {
-      try {
-        console.debug('[input-capture] compositionend -> updating model cell', selectionPos, value)
-        handleCellUpdate(selectionPos.row, selectionPos.col, value)
-      } catch (err) {
-        console.debug('[input-capture] failed to update model on compositionend', err)
-        try {
-          updateCell(selectionPos.row, selectionPos.col, value)
-        } catch (e) {
-          console.debug('[input-capture] fallback updateCell failed', e)
+    // 少し待ってから編集モードに遷移（ライブ変換で連続してcompositionstart/endが発火する場合に対応）
+    // 新しいcompositionstartが発火したらタイマーはキャンセルされる
+    imeCompleteTimerRef.current = window.setTimeout(() => {
+      // タイマー発火時点での pendingImeValueRef.current を使用
+      const finalValue = pendingImeValueRef.current
+      console.debug('[input-capture] IME complete timer fired, finalValue:', JSON.stringify(finalValue), 'targetPos:', targetPos)
+
+      if (targetPos && finalValue && !editorState.currentEditingCell) {
+        // IME確定後、編集モードに入る
+        console.debug('[input-capture] entering edit mode with value:', finalValue, 'pos:', targetPos)
+        setInitialCellInput(finalValue)
+        setCurrentEditingCell(targetPos)
+        compositionHandledRef.current = true
+
+        // 編集モードに遷移したので、input-captureの値をクリア
+        if (inputCaptureRef.current) {
+          inputCaptureRef.current.value = ''
         }
+        pendingImeValueRef.current = ''
+
+        // 見た目の非表示フラグを解除
+        clearCellTemporaryMarker(targetPos)
       }
-    }
 
-    // 入力をクリア
-    input.value = ''
+      imeCompleteTimerRef.current = null
+    }, 100) // 100ms待つ（ライブ変換の連続イベントを待つ）
 
-    // 編集モードに入ったので見た目の非表示フラグを解除
-    // 編集モードに入ったので見た目の非表示フラグを解除
-    if (targetPos) {
-      console.debug('[input-capture] removing data-temp-empty on', targetPos)
-      clearCellTemporaryMarker(targetPos)
-    }
-
-    // isComposingをfalseにする前に、次のinputイベントを無視するため少し待つ
+    // isComposingをfalseにする
     setTimeout(() => {
       setIsComposing(false)
       compositionHandledRef.current = false
     }, 0)
-  }, [editorState.selectionRange, editorState.currentEditingCell, clearCellTemporaryMarker, handleCellUpdate, setCurrentEditingCell, setInitialCellInput, updateCell])
+  }, [editorState.selectionRange, editorState.currentEditingCell, clearCellTemporaryMarker, setCurrentEditingCell, setInitialCellInput])
 
   // (no composition update handling)
 
   const handleInputCaptureInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
-    // IME入力中は処理しない
-    if (isComposing) return
-
     // compositionendで既に処理済みの場合は無視
     if (compositionHandledRef.current) {
       compositionHandledRef.current = false
       return
     }
 
+    // IME確定待ちタイマーが動いている場合は、そのタイマー処理に任せてinputイベントは無視する
+    // （ライブ変換のEnter確定時に未変換文字列で上書きされるのを防ぐ）
+    if (imeCompleteTimerRef.current) {
+      console.debug('[input-capture] input event ignored because IME completion timer is pending')
+      return
+    }
+
     const input = e.currentTarget
     const value = input.value
-    console.debug('[input-capture] input event value:', JSON.stringify(value))
+    // ネイティブイベントの isComposing を確認（Macのライブ変換対応）
+    const nativeEvent = e.nativeEvent as InputEvent
+    const isNativeComposing = nativeEvent.isComposing ?? isComposing
+    console.debug('[input-capture] input event value:', JSON.stringify(value), 'isComposing:', isComposing, 'nativeIsComposing:', isNativeComposing)
 
     // 選択されているセルを取得
     const currentPos = editorState.selectionRange?.end || editorState.selectionRange?.start
+
+    // IME入力中の場合は値をクリアせず、compositionendを待つ
+    // isNativeComposing が正（IME変換中）なら入力を無視して compositionend を待つ
+    if (isNativeComposing) {
+      console.debug('[input-capture] IME composing, keeping value in textarea')
+      return
+    }
+
+    // 非IME入力の場合
     if (currentPos && value && !editorState.currentEditingCell) {
       console.debug('[input-capture] non-IME input at', currentPos, 'value=', JSON.stringify(value))
 
       // 非IME入力の場合もモデルを即座にクリアせず、表示のみ隠してから編集モードへ遷移する
       console.debug('[input-capture] marking cell visually empty (non-IME)', currentPos)
-  markCellAsTempEmptyWithTracking(currentPos)
+      markCellAsTempEmptyWithTracking(currentPos)
 
       // 編集モードに入る（モデル更新は CellEditor 側の commit で行う）
       setInitialCellInput(value)
@@ -581,16 +637,35 @@ const TableEditor: React.FC<TableEditorProps> = ({
       // 編集モードに入ったら見た目のフラグは解除
       console.debug('[input-capture] removing data-temp-empty (non-IME) on', currentPos)
       clearCellTemporaryMarker(currentPos)
-    }
 
-    // 入力をクリア
-    input.value = ''
+      // 非IME入力の場合のみ入力をクリア
+      input.value = ''
+    }
   }, [isComposing, editorState.selectionRange, editorState.currentEditingCell, markCellAsTempEmptyWithTracking, clearCellTemporaryMarker, setCurrentEditingCell, setInitialCellInput])
 
   const handleInputCaptureKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (isComposing || compositionHandledRef.current)) {
-      e.preventDefault()
-      e.stopPropagation()
+    // Reactの isComposing はタイミングによって更新が遅れることがあるため、
+    // ネイティブイベントの isComposing も合わせてチェックする
+    const nativeEvent = e.nativeEvent
+    // isComposing プロパティが存在しない古いブラウザ等のフォールバック
+    const isNativeComposing = typeof nativeEvent.isComposing === 'boolean'
+      ? nativeEvent.isComposing
+      : isComposing
+
+    if (e.key === 'Enter') {
+      if (isNativeComposing || isComposing) {
+        // IME入力中のEnterはデフォルト動作（確定）をさせるためにpreventDefaultしない
+        // これによりブラウザが正しく確定処理を行い、compositionendが発火する
+        // ただし、親への伝播（TableEditorのナビゲーション）は止める
+        e.stopPropagation()
+        return
+      }
+      if (compositionHandledRef.current) {
+        // compositionend直後のEnterは無視する（改行挿入などを防ぐ）
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
     }
   }, [isComposing])
 
@@ -683,9 +758,9 @@ const TableEditor: React.FC<TableEditorProps> = ({
       if (initialCellInput) {
         // clearInitialInputTimeoutRef を作成してタイムアウトを管理
         if (!(clearInitialInputTimeoutRef as any).current) {
-          ;(clearInitialInputTimeoutRef as any).current = window.setTimeout(() => {
+          ; (clearInitialInputTimeoutRef as any).current = window.setTimeout(() => {
             setInitialCellInput(null)
-            ;(clearInitialInputTimeoutRef as any).current = null
+              ; (clearInitialInputTimeoutRef as any).current = null
           }, 100)
         }
       }
@@ -855,11 +930,11 @@ const TableEditor: React.FC<TableEditorProps> = ({
 
       <ContextMenu
         menuState={contextMenuState}
-  onAddRow={handleAddRow}
-    onDeleteRow={handleDeleteRow}
+        onAddRow={handleAddRow}
+        onDeleteRow={handleDeleteRow}
         onDeleteRows={handleDeleteRows}
-  onAddColumn={handleAddColumn}
-    onDeleteColumn={handleDeleteColumn}
+        onAddColumn={handleAddColumn}
+        onDeleteColumn={handleDeleteColumn}
         onDeleteColumns={handleDeleteColumns}
         onClose={closeContextMenu}
         selectedCells={editorState.selectedCells}
