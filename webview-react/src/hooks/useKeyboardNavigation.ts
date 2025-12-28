@@ -44,8 +44,8 @@ export function useKeyboardNavigation({
     if (row < 0 || row >= tableData.rows.length || col < 0 || col >= tableData.headers.length) {
       return false
     }
-  const cellValue = tableData.rows[row][col]
-  return String(cellValue ?? '').trim() !== ''
+    const cellValue = tableData.rows[row][col]
+    return String(cellValue ?? '').trim() !== ''
   }, [tableData])
 
   // Smart navigation (Excel-like Ctrl+Arrow behavior)
@@ -251,12 +251,17 @@ export function useKeyboardNavigation({
       return
     }
 
-    // 現在選択されているセルを取得（範囲選択中はendを使用）
-    const currentPos = selectionRange?.end || selectionRange?.start
-    if (!currentPos) return
-
     const { key, shiftKey, ctrlKey, metaKey } = event
     const cmdKey = ctrlKey || metaKey
+
+    // 現在選択されているセルを取得
+    // Shiftキーが押されていない（移動モード）場合は、アンカー（選択開始位置）を基準にする
+    // Shiftキーが押されている（拡張モード）場合は、現在の範囲の端（endまたはstart）を基準にする
+    const currentPos = (!shiftKey && selectionAnchor)
+      ? selectionAnchor
+      : (selectionRange?.end || selectionRange?.start)
+
+    if (!currentPos) return
 
     // Undo/Redo（編集モード外ではVSCode側に委譲）
     if (cmdKey && (key.toLowerCase() === 'z' || key.toLowerCase() === 'y')) {
@@ -368,7 +373,7 @@ export function useKeyboardNavigation({
         const minRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
         const nextRow = Math.max(minRow, currentPos.row - 10)
         onCellSelect(nextRow, currentPos.col, false)
-  setTimeout(() => scrollCellIntoView(nextRow, currentPos.col), 0)
+        setTimeout(() => scrollCellIntoView(nextRow, currentPos.col), 0)
         break
       }
 
@@ -376,7 +381,7 @@ export function useKeyboardNavigation({
         event.preventDefault()
         const nextRow = Math.min(tableData.rows.length - 1, currentPos.row + 10)
         onCellSelect(nextRow, currentPos.col, false)
-  setTimeout(() => scrollCellIntoView(nextRow, currentPos.col), 0)
+        setTimeout(() => scrollCellIntoView(nextRow, currentPos.col), 0)
         break
       }
 
@@ -384,7 +389,7 @@ export function useKeyboardNavigation({
         event.preventDefault()
         const nextPos = getTabNextPosition(currentPos, shiftKey)
         onCellSelect(nextPos.row, nextPos.col, false)
-  setTimeout(() => scrollCellIntoView(nextPos.row, nextPos.col), 0)
+        setTimeout(() => scrollCellIntoView(nextPos.row, nextPos.col), 0)
         break
       }
 
@@ -546,22 +551,13 @@ export function useKeyboardNavigation({
     onOpenSearch
   ])
 
-  // キーアップイベントハンドラー（Shiftキーのクリア用）
-  const handleKeyUp = useCallback((event: KeyboardEvent) => {
-    if (event.key === 'Shift') {
-      onSetSelectionAnchor(null)
-    }
-  }, [onSetSelectionAnchor])
-
   // キーボードイベントリスナーの設定
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown)
-    document.addEventListener('keyup', handleKeyUp)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.removeEventListener('keyup', handleKeyUp)
     }
-  }, [handleKeyDown, handleKeyUp])
+  }, [handleKeyDown])
 
   // 旧Shiftキーイベントリスナーの設定は削除
   // useEffect(() => {
