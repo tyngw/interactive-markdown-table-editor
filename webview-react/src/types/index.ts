@@ -60,6 +60,8 @@ export interface ColumnWidths {
 export interface EditorState {
   currentEditingCell: CellPosition | null
   selectedCells: Set<string>
+  fullySelectedRows: Set<number>
+  fullySelectedCols: Set<number>
   selectionRange: SelectionRange | null
   isSelecting: boolean
   sortState: SortState

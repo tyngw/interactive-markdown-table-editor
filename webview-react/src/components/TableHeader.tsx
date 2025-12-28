@@ -18,6 +18,7 @@ interface TableHeaderProps {
   getDragProps?: (type: 'row' | 'column', index: number) => any
   getDropProps?: (type: 'row' | 'column', index: number) => any
   selectedCols?: Set<number>
+  fullySelectedCols?: Set<number>
   headerConfig?: HeaderConfig
 }
 
@@ -34,6 +35,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
   getDragProps,
   getDropProps,
   selectedCols,
+  fullySelectedCols,
   headerConfig
 }) => {
   // theme context はここでは未使用
@@ -83,7 +85,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
   // 列リサイズ中
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!resizing) return
-    
+
     const deltaX = e.clientX - resizing.startX
     const newWidth = Math.max(50, resizing.startWidth + deltaX)
     onColumnResize(resizing.col, newWidth)
@@ -153,8 +155,8 @@ const TableHeader: React.FC<TableHeaderProps> = ({
           shiftKey,
           ctrlKey,
           metaKey,
-          preventDefault: () => {},
-          stopPropagation: () => {}
+          preventDefault: () => { },
+          stopPropagation: () => { }
         } as React.MouseEvent
         onColumnSelect(col, syntheticEvent)
       }
@@ -168,14 +170,14 @@ const TableHeader: React.FC<TableHeaderProps> = ({
     <thead>
       <tr>
         {/* Header corner cell (select all) */}
-        <th 
-          className="header-corner" 
+        <th
+          className="header-corner"
           onClick={onSelectAll}
           title="Select All"
         >
           ⚏
         </th>
-        
+
         {/* Column headers with enhanced styling */}
         {headers.map((header, col) => {
           const columnLetter = getColumnLetter(col)
@@ -186,9 +188,11 @@ const TableHeader: React.FC<TableHeaderProps> = ({
             maxWidth: `${storedWidth}px`
           }
           const userResizedClass = columnWidths[col] && columnWidths[col] !== 150 ? 'user-resized' : ''
-          
+          const isSelected = selectedCols?.has(col)
+          const isFullySelected = fullySelectedCols?.has(col)
+
           return (
-            <th 
+            <th
               key={col}
               onClick={(e) => handleColumnHeaderClick(col, e)}
               onMouseDown={(_e) => {
@@ -204,7 +208,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   onShowColumnContextMenu(e, col)
                 }
               }}
-              className={`column-header ${userResizedClass} ${selectedCols?.has(col) ? 'highlighted' : ''}`}
+              className={`column-header ${userResizedClass} ${isFullySelected ? 'selected' : (isSelected ? 'highlighted' : '')}`}
               data-col={col}
               style={widthStyle}
               title={`Column ${columnLetter}: ${header}`}
@@ -246,7 +250,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   ) : '↕'}
                 </div>
               </div>
-              <div 
+              <div
                 className="resize-handle"
                 onClick={(e) => e.stopPropagation()}
                 onDoubleClick={(e) => {

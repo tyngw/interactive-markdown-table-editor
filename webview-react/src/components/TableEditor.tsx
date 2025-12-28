@@ -889,7 +889,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
           <TableHeader
             headers={displayedTableData.headers}
             columnWidths={editorState.columnWidths}
-            sortState={editorState.sortState}
+            sortState={effectiveSortState}
             onHeaderUpdate={handleHeaderUpdate}
             onSort={handleSort}
             onColumnResize={setColumnWidth}
@@ -897,11 +897,18 @@ const TableEditor: React.FC<TableEditorProps> = ({
             onDeleteColumn={handleDeleteColumn}
             onSelectAll={selectAll}
             onColumnSelect={handleColumnSelect}
-            onShowColumnContextMenu={(e, i) => setContextMenuState({ type: 'column', index: i, position: { x: e.clientX, y: e.clientY } })}
+            onShowColumnContextMenu={(e, col) => {
+              setContextMenuState({
+                type: 'column',
+                index: col,
+                position: { x: e.clientX, y: e.clientY }
+              })
+            }}
             getDragProps={getDragProps}
             getDropProps={getDropProps}
             selectedCols={selectedCols}
-            headerConfig={editorState.headerConfig}
+            fullySelectedCols={editorState.fullySelectedCols}
+            headerConfig={effectiveHeaderConfig}
           />
           <TableBody
             headers={displayedTableData.headers}
@@ -912,16 +919,23 @@ const TableEditor: React.FC<TableEditorProps> = ({
             onCellSelect={selectCell}
             onCellEdit={setCurrentEditingCell}
             initialCellInput={initialCellInput}
-            onAddRow={addRow}
+            onAddRow={handleAddRow}
             onDeleteRow={handleDeleteRow}
             onRowSelect={handleRowSelect}
-            onShowRowContextMenu={(e, i) => setContextMenuState({ type: 'row', index: i, position: { x: e.clientX, y: e.clientY } })}
+            onShowRowContextMenu={(e, row) => {
+              setContextMenuState({
+                type: 'row',
+                index: row,
+                position: { x: e.clientX, y: e.clientY }
+              })
+            }}
             getDragProps={getDragProps}
             getDropProps={getDropProps}
             selectedRows={selectedRows}
+            fullySelectedRows={editorState.fullySelectedRows}
             fillRange={fillRange}
             onFillHandleMouseDown={handleFillHandleMouseDown}
-            headerConfig={editorState.headerConfig}
+            headerConfig={effectiveHeaderConfig}
             isSearchResult={isSearchResult}
             isCurrentSearchResult={isCurrentSearchResult}
           />

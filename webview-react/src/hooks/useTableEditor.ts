@@ -90,13 +90,13 @@ export function useTableEditor(
     indexedRows.sort((a, b) => {
       const aVal = a.row[column]?.toString().replace(/<br\s*\/?>/gi, ' ').toLowerCase().trim() || ''
       const bVal = b.row[column]?.toString().replace(/<br\s*\/?>/gi, ' ').toLowerCase().trim() || ''
-      
+
       const aNum = parseFloat(aVal)
       const bNum = parseFloat(bVal)
       if (!isNaN(aNum) && !isNaN(bNum)) {
         return direction === 'asc' ? aNum - bNum : bNum - aNum
       }
-      
+
       return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
     })
 
@@ -357,6 +357,8 @@ export function useTableEditor(
     return {
       currentEditingCell,
       selectedCells: selection.selectionState.selectedCells,
+      fullySelectedRows: selection.selectionState.fullySelectedRows,
+      fullySelectedCols: selection.selectionState.fullySelectedCols,
       selectionRange: selection.selectionState.selectionRange,
       isSelecting: selection.selectionState.isSelecting,
       sortState: safeSortState,
@@ -366,16 +368,16 @@ export function useTableEditor(
   }, [currentEditingCell, selection.selectionState, sortState, columnWidths, headerConfig])
 
   return {
-  // Display用のデータ（ソート適用後）
-  tableData: displayedData,
-  // モデル（実体）データ（ソート前／元データ）
-  modelTableData: tableData,
+    // Display用のデータ（ソート適用後）
+    tableData: displayedData,
+    // モデル（実体）データ（ソート前／元データ）
+    modelTableData: tableData,
     viewToModelMap,
     editorState,
     selectionAnchor: selection.selectionState.selectionAnchor,
     updateCell,
     updateCells,
-    updateHeader: (col: number, value: string) => setTableData(prev => ({...prev, headers: prev.headers.map((h, i) => i === col ? value : h)})),
+    updateHeader: (col: number, value: string) => setTableData(prev => ({ ...prev, headers: prev.headers.map((h, i) => i === col ? value : h) })),
     addRow,
     deleteRow,
     addColumn,

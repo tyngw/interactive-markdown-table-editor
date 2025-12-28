@@ -20,6 +20,7 @@ interface TableBodyProps {
   getDragProps?: (type: 'row' | 'column', index: number) => any
   getDropProps?: (type: 'row' | 'column', index: number) => any
   selectedRows?: Set<number>
+  fullySelectedRows?: Set<number>
   fillRange?: { start: CellPosition; end: CellPosition } | null
   onFillHandleMouseDown?: (event: React.MouseEvent) => void
   headerConfig?: HeaderConfig
@@ -41,6 +42,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   getDragProps,
   getDropProps,
   selectedRows,
+  fullySelectedRows,
   fillRange,
   onFillHandleMouseDown,
   headerConfig,
@@ -104,8 +106,8 @@ const TableBody: React.FC<TableBodyProps> = ({
   }, [editorState.selectionRange, isCellSelected])
 
   const isCellEditing = useCallback((row: number, col: number) => {
-    return editorState.currentEditingCell?.row === row && 
-           editorState.currentEditingCell?.col === col
+    return editorState.currentEditingCell?.row === row &&
+      editorState.currentEditingCell?.col === col
   }, [editorState.currentEditingCell])
 
   const cleanupCellVisualState = useCallback((row: number, col: number) => {
@@ -118,7 +120,7 @@ const TableBody: React.FC<TableBodyProps> = ({
   const startCellEdit = useCallback((row: number, col: number) => {
     console.debug('[TableBody] startCellEdit called', { row, col })
     // 編集開始前に行全体の高さ情報を測定
-  const measuredHeights = { original: 0, maxInRow: 0, rowCellHeights: [] as number[] }
+    const measuredHeights = { original: 0, maxInRow: 0, rowCellHeights: [] as number[] }
 
     try {
       const rowElement = document.querySelector(`tr[data-row="${row}"]`)
@@ -195,15 +197,15 @@ const TableBody: React.FC<TableBodyProps> = ({
       measuredHeights.original = 32
       measuredHeights.maxInRow = 32
     }
-    
+
     // 編集モードに移行
     onCellEdit({ row, col })
-    
+
     // DOM更新後にデータを保存
     requestAnimationFrame(() => {
       try {
-  const cellElement = queryCellElement({ row, col })
-  if (cellElement) {
+        const cellElement = queryCellElement({ row, col })
+        if (cellElement) {
           // 測定した高さ情報を保存
           cellElement.dataset.originalHeight = measuredHeights.original.toString()
           cellElement.dataset.rowMaxHeight = measuredHeights.maxInRow.toString()
@@ -357,7 +359,7 @@ const TableBody: React.FC<TableBodyProps> = ({
     requestAnimationFrame(() => {
       measureAndNotify()
     })
-  // rows / headers が変わると行高さも変わり得るため依存に含める
+    // rows / headers が変わると行高さも変わり得るため依存に含める
   }, [editorState.currentEditingCell, rows, headers])
 
   // 表示する行を統一形式で作成（列ヘッダーOFF時はheadersをrow=-1として先頭に追加）
@@ -383,11 +385,13 @@ const TableBody: React.FC<TableBodyProps> = ({
         const rowHeaderValue = headerConfig?.hasRowHeaders ? (cells[0] || '') : ''
         // 表示行番号を計算（row=-1の場合は0、それ以外は1始まり）
         const displayRowNumber = rowIndex === -1 ? 0 : rowIndex + 1
+        const isRowSelected = selectedRows?.has(rowIndex)
+        const isRowFullySelected = fullySelectedRows?.has(rowIndex)
 
         return (
           <tr key={rowIndex} data-row={rowIndex}>
             <td
-              className={`row-number ${selectedRows?.has(rowIndex) ? 'highlighted' : ''} ${headerConfig?.hasRowHeaders ? 'row-header-with-value' : ''}`}
+              className={`row-number ${isRowFullySelected ? 'selected' : (isRowSelected ? 'highlighted' : '')} ${headerConfig?.hasRowHeaders ? 'row-header-with-value' : ''}`}
               onClick={(e) => {
                 if (onRowSelect) {
                   onRowSelect(rowIndex, e)
