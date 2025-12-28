@@ -3,6 +3,8 @@ import { CellPosition, SelectionRange } from '../types'
 
 export interface SelectionState {
   selectedCells: Set<string>
+  fullySelectedRows: Set<number>
+  fullySelectedCols: Set<number>
   selectionRange: SelectionRange | null
   selectionAnchor: CellPosition | null
   isSelecting: boolean
@@ -15,6 +17,8 @@ interface UseSelectionOptions {
 
 export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptions) {
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set())
+  const [fullySelectedRows, setFullySelectedRows] = useState<Set<number>>(new Set())
+  const [fullySelectedCols, setFullySelectedCols] = useState<Set<number>>(new Set())
   const [selectionRange, setSelectionRange] = useState<SelectionRange | null>(null)
   const [selectionAnchor, setSelectionAnchor] = useState<CellPosition | null>(null)
   const [isSelecting, setIsSelecting] = useState(false)
@@ -35,6 +39,8 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
   // 選択をクリア
   const clearSelection = useCallback(() => {
     setSelectedCells(new Set())
+    setFullySelectedRows(new Set())
+    setFullySelectedCols(new Set())
     setSelectionRange(null)
     setSelectionAnchor(null)
     setIsSelecting(false)
@@ -46,6 +52,8 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     if (tableRowCount > 0 && tableColCount > 0) {
       const firstCell = { row: 0, col: 0 }
       setSelectedCells(new Set(['0-0']))
+      setFullySelectedRows(new Set())
+      setFullySelectedCols(new Set())
       setSelectionRange({ start: firstCell, end: firstCell })
       setSelectionAnchor(firstCell)
       selectionAnchorRef.current = firstCell
@@ -84,6 +92,12 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     const cellKey = `${row}-${col}`
     const currentAnchor = selectionAnchorRef.current
     console.log('[useSelection] selectCell called:', { row, col, extend, toggle, currentAnchor })
+
+    // toggleまたは単一セル選択時は全行/全列選択状態を解除
+    // Shift拡張（extend）の場合は、基点が全行/全列選択の一部だった場合の挙動が複雑だが、
+    // ここではシンプルに「セル単位の操作になったら全行/全列フラグはクリア」する
+    setFullySelectedRows(new Set())
+    setFullySelectedCols(new Set())
 
     if (toggle) {
       const newSelectedCells = new Set(selectedCells)
@@ -129,15 +143,22 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
   // 行全体を選択
   const selectRow = useCallback((rowIndex: number, extend = false) => {
     const newSelectedCells = new Set<string>()
+    let newFullySelectedRows = new Set<number>()
 
     if (extend && selectionRange) {
       // 範囲選択
+      // 既存の選択が完全行選択を含んでいた場合、それを引き継ぐべきか？
+      // 基本的には「直前の選択状態」に依存するが、ここではシンプルに
+      // 「今回の操作でカバーされる行」を全て完全選択とする
+      // ただし、selectionRange.start が前回の操作の基点になっているはず
+
       const startRow = selectionRange.start.row
       const endRow = rowIndex
       const minRow = Math.min(startRow, endRow)
       const maxRow = Math.max(startRow, endRow)
 
       for (let row = minRow; row <= maxRow; row++) {
+        newFullySelectedRows.add(row)
         for (let col = 0; col < tableColCount; col++) {
           newSelectedCells.add(`${row}-${col}`)
         }
@@ -149,6 +170,7 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       })
     } else {
       // 単一行選択
+      newFullySelectedRows.add(rowIndex)
       for (let col = 0; col < tableColCount; col++) {
         newSelectedCells.add(`${rowIndex}-${col}`)
       }
@@ -157,14 +179,21 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
         start: { row: rowIndex, col: 0 },
         end: { row: rowIndex, col: tableColCount - 1 }
       })
+      // 行選択開始時はアンカーも更新（A列）
+      setSelectionAnchor({ row: rowIndex, col: 0 })
+      selectionAnchorRef.current = { row: rowIndex, col: 0 }
     }
 
     setSelectedCells(newSelectedCells)
+    setFullySelectedRows(newFullySelectedRows)
+    // 行選択時は列選択状態をクリア
+    setFullySelectedCols(new Set())
   }, [tableColCount, selectionRange])
 
   // 列全体を選択
   const selectColumn = useCallback((colIndex: number, extend = false) => {
     const newSelectedCells = new Set<string>()
+    let newFullySelectedCols = new Set<number>()
 
     if (extend && selectionRange) {
       // 範囲選択
@@ -179,12 +208,17 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
         }
       }
 
+      for (let col = minCol; col <= maxCol; col++) {
+        newFullySelectedCols.add(col)
+      }
+
       setSelectionRange({
         start: selectionRange.start,
         end: { row: tableRowCount - 1, col: colIndex }
       })
     } else {
       // 単一列選択
+      newFullySelectedCols.add(colIndex)
       for (let row = 0; row < tableRowCount; row++) {
         newSelectedCells.add(`${row}-${colIndex}`)
       }
@@ -193,26 +227,44 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
         start: { row: 0, col: colIndex },
         end: { row: tableRowCount - 1, col: colIndex }
       })
+      // 列選択開始時はアンカーも更新（0行目）
+      setSelectionAnchor({ row: 0, col: colIndex })
+      selectionAnchorRef.current = { row: 0, col: colIndex }
     }
 
     setSelectedCells(newSelectedCells)
+    setFullySelectedCols(newFullySelectedCols)
+    // 列選択時は行選択状態をクリア
+    setFullySelectedRows(new Set())
   }, [tableRowCount, selectionRange])
 
   // 全選択
   const selectAll = useCallback(() => {
     const newSelectedCells = new Set<string>()
+    const newFullySelectedRows = new Set<number>()
+    const newFullySelectedCols = new Set<number>()
 
     for (let row = 0; row < tableRowCount; row++) {
+      newFullySelectedRows.add(row)
       for (let col = 0; col < tableColCount; col++) {
         newSelectedCells.add(`${row}-${col}`)
       }
     }
 
+    for (let col = 0; col < tableColCount; col++) {
+      newFullySelectedCols.add(col)
+    }
+
     setSelectedCells(newSelectedCells)
+    setFullySelectedRows(newFullySelectedRows)
+    setFullySelectedCols(newFullySelectedCols)
+
     setSelectionRange({
       start: { row: 0, col: 0 },
       end: { row: tableRowCount - 1, col: tableColCount - 1 }
     })
+    setSelectionAnchor({ row: 0, col: 0 })
+    selectionAnchorRef.current = { row: 0, col: 0 }
   }, [tableRowCount, tableColCount])
 
   // ドラッグ選択関連
@@ -230,6 +282,9 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     setSelectedCells(newSelectedCells)
     setSelectionRange(newSelectionRange)
     setIsSelecting(true)
+    // ドラッグ選択開始時は全行/全列選択状態を解除
+    setFullySelectedRows(new Set())
+    setFullySelectedCols(new Set())
   }, [])
 
   const updateDragSelection = useCallback((row: number, col: number) => {
@@ -269,10 +324,12 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
   // Selection state object
   const selectionState: SelectionState = useMemo(() => ({
     selectedCells,
+    fullySelectedRows,
+    fullySelectedCols,
     selectionRange,
     selectionAnchor,
     isSelecting
-  }), [selectedCells, selectionRange, selectionAnchor, isSelecting])
+  }), [selectedCells, fullySelectedRows, fullySelectedCols, selectionRange, selectionAnchor, isSelecting])
 
   return {
     selectionState,
