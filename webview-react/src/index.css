@@ -1226,8 +1226,8 @@ table.table-editor tbody tr td.drag-selecting {
 }
 
 table.table-editor tbody tr td.data-cell.fill-range {
-    background-color: var(--vscode-list-inactiveSelectionBackground);
-    border: 1px dashed var(--vscode-focusBorder);
+    background-color: transparent;
+    border: 1px dotted var(--vscode-focusBorder);
 }
 
 /* ====== 17. レスポンシブ対応 ====== */

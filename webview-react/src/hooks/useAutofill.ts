@@ -6,9 +6,10 @@ interface UseAutofillProps {
     selectionRange: SelectionRange | null
     onUpdateCells: (updates: Array<{ row: number; col: number; value: string }>) => void
     getCellValue: (row: number, col: number) => string
+    onFillComplete?: (fillRange: SelectionRange) => void
 }
 
-export function useAutofill({ selectionRange, onUpdateCells, getCellValue }: UseAutofillProps) {
+export function useAutofill({ selectionRange, onUpdateCells, getCellValue, onFillComplete }: UseAutofillProps) {
     const [isDragging, setIsDragging] = useState(false)
     const [fillRange, setFillRange] = useState<SelectionRange | null>(null)
     const dragStartRef = useRef<CellPosition | null>(null)
@@ -36,8 +37,35 @@ export function useAutofill({ selectionRange, onUpdateCells, getCellValue }: Use
         const cell = target.closest('[data-row][data-col]') as HTMLElement
         if (!cell) return
 
-        const row = parseInt(cell.dataset.row || '0', 10)
-        const col = parseInt(cell.dataset.col || '0', 10)
+        let row = parseInt(cell.dataset.row || '0', 10)
+        let col = parseInt(cell.dataset.col || '0', 10)
+
+        // 方向判定と制限
+        // 開始位置（ソース選択範囲の終了セル）からの移動量を計算
+        const startRow = dragStartRef.current.row
+        const startCol = dragStartRef.current.col
+
+        const rowDiff = Math.abs(row - startRow)
+        const colDiff = Math.abs(col - startCol)
+
+        // 移動量が大きい方向を優先し、他方は固定する
+        if (colDiff > rowDiff) {
+            // 横方向移動が主：行を選択範囲の行範囲に制限
+            // ただし、selectionRange全体の行範囲を考慮する必要がある
+            // ここではシンプルに「ドラッグ開始セル」の行に固定するのではなく、
+            // 「ドラッグ開始時の範囲」の行範囲に収めるべき。
+            // しかし、Spreadsheetの挙動としては、ソースが複数行の場合、横に引っ張ると
+            // その複数行セットで横に増える。
+            // 実装簡略化のため、fillRangeのendを操作することで制御する。
+
+            // 縦方向の動きをキャンセルして、元のselectionRangeの境界に合わせる
+            // fillRange.endが動くので、endのrowをstartのrowに戻せばよい？
+            // selectionRange.end.row を使う
+            row = startRow
+        } else {
+            // 縦方向移動が主：列を固定
+            col = startCol
+        }
 
         // 選択範囲の方向を判定して fillRange を更新
         const newFillRange: SelectionRange = {
@@ -59,10 +87,15 @@ export function useAutofill({ selectionRange, onUpdateCells, getCellValue }: Use
         // オートフィルを実行
         performAutofill(selectionRange, fillRange)
 
+        // 完了コールバック
+        if (onFillComplete) {
+            onFillComplete(fillRange)
+        }
+
         setIsDragging(false)
         setFillRange(null)
         dragStartRef.current = null
-    }, [isDragging, selectionRange, fillRange])
+    }, [isDragging, selectionRange, fillRange, onFillComplete])
 
     // オートフィル実行
     const performAutofill = useCallback((source: SelectionRange, target: SelectionRange) => {
