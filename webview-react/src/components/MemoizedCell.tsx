@@ -41,6 +41,7 @@ export interface MemoizedCellProps {
   onDoubleClick: (row: number, col: number) => void
   onCommitEdit: (row: number, col: number, value: string, move?: 'right' | 'left' | 'down' | 'up') => void
   onCancelEdit: (row: number, col: number) => void
+  onMouseEnter?: (row: number, col: number) => void
   onFillHandleMouseDown?: (event: React.MouseEvent) => void
 }
 
@@ -66,6 +67,7 @@ const MemoizedCell: React.FC<MemoizedCellProps> = ({
   onDoubleClick,
   onCommitEdit,
   onCancelEdit,
+  onMouseEnter,
   onFillHandleMouseDown
 }) => {
   const cellId = `cell-${rowIndex}-${colIndex}`
@@ -96,6 +98,12 @@ const MemoizedCell: React.FC<MemoizedCellProps> = ({
     onDoubleClick(rowIndex, colIndex)
   }, [onDoubleClick, rowIndex, colIndex])
 
+  const handleMouseEnter = useCallback(() => {
+    if (onMouseEnter) {
+      onMouseEnter(rowIndex, colIndex)
+    }
+  }, [onMouseEnter, rowIndex, colIndex])
+
   const handleCommit = useCallback((value: string, move?: 'right' | 'left' | 'down' | 'up') => {
     onCommitEdit(rowIndex, colIndex, value, move)
   }, [onCommitEdit, rowIndex, colIndex])
@@ -109,6 +117,7 @@ const MemoizedCell: React.FC<MemoizedCellProps> = ({
       id={cellId}
       className={className}
       onMouseDown={handleMouseDown}
+      onMouseEnter={handleMouseEnter}
       onDoubleClick={handleDoubleClick}
       data-row={rowIndex}
       data-col={colIndex}
@@ -116,10 +125,10 @@ const MemoizedCell: React.FC<MemoizedCellProps> = ({
         ...widthStyle,
         ...(isEditing
           ? {
-              minHeight: (savedHeight?.rowMax || 32) + 'px',
-              height: 'auto',
-              maxHeight: 'none'
-            }
+            minHeight: (savedHeight?.rowMax || 32) + 'px',
+            height: 'auto',
+            maxHeight: 'none'
+          }
           : {})
       }}
       title={`Cell ${getColumnLetter(colIndex)}${displayRowNumber}`}
@@ -174,7 +183,8 @@ function arePropsEqual(prevProps: MemoizedCellProps, nextProps: MemoizedCellProp
     prevProps.storedWidth !== nextProps.storedWidth ||
     prevProps.userResized !== nextProps.userResized ||
     prevProps.displayRowNumber !== nextProps.displayRowNumber ||
-    prevProps.initialCellInput !== nextProps.initialCellInput
+    prevProps.initialCellInput !== nextProps.initialCellInput ||
+    prevProps.onMouseEnter !== nextProps.onMouseEnter
   ) {
     return false
   }
