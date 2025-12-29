@@ -114,7 +114,10 @@ const TableEditor: React.FC<TableEditorProps> = ({
     resetSort,
     viewToModelMap,
     toggleColumnHeaders,
-    toggleRowHeaders
+    toggleRowHeaders,
+    onDragStart,
+    onDragEnter,
+    onDragEnd
   } = useTableEditor(
     tableData,
     `table-${currentTableIndex}`,
@@ -122,6 +125,18 @@ const TableEditor: React.FC<TableEditorProps> = ({
     { initializeSelectionOnDataChange: true },
     { headerConfig: effectiveHeaderConfig, setHeaderConfig: effectiveSetHeaderConfig }
   )
+
+  // グローバルなマウスアップイベントでドラッグ終了を検知
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      onDragEnd()
+    }
+
+    window.addEventListener('mouseup', handleGlobalMouseUp)
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp)
+    }
+  }, [onDragEnd])
 
   // initialCellInput を遅延クリアするためのタイムアウト参照
   const clearInitialInputTimeoutRef = useRef<number | null>(null)
@@ -935,6 +950,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
                 position: { x: e.clientX, y: e.clientY }
               })
             }}
+            onDragStart={onDragStart}
+            onDragEnter={onDragEnter}
             getDragProps={getDragProps}
             getDropProps={getDropProps}
             selectedRows={selectedRows}

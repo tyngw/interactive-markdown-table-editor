@@ -63,7 +63,6 @@ export interface EditorState {
   fullySelectedRows: Set<number>
   fullySelectedCols: Set<number>
   selectionRange: SelectionRange | null
-  isSelecting: boolean
   sortState: SortState
   columnWidths: ColumnWidths
   headerConfig: HeaderConfig

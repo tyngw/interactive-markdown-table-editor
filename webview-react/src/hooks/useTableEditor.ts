@@ -360,7 +360,6 @@ export function useTableEditor(
       fullySelectedRows: selection.selectionState.fullySelectedRows,
       fullySelectedCols: selection.selectionState.fullySelectedCols,
       selectionRange: selection.selectionState.selectionRange,
-      isSelecting: selection.selectionState.isSelecting,
       sortState: safeSortState,
       columnWidths,
       headerConfig
@@ -399,5 +398,8 @@ export function useTableEditor(
     resetSort: resetSortState,
     toggleColumnHeaders,
     toggleRowHeaders,
+    onDragStart: selection.onDragStart,
+    onDragEnter: selection.onDragEnter,
+    onDragEnd: selection.onDragEnd,
   }
 }

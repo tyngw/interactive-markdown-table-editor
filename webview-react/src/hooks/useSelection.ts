@@ -7,7 +7,6 @@ export interface SelectionState {
   fullySelectedCols: Set<number>
   selectionRange: SelectionRange | null
   selectionAnchor: CellPosition | null
-  isSelecting: boolean
 }
 
 interface UseSelectionOptions {
@@ -21,20 +20,6 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
   const [fullySelectedCols, setFullySelectedCols] = useState<Set<number>>(new Set())
   const [selectionRange, setSelectionRange] = useState<SelectionRange | null>(null)
   const [selectionAnchor, setSelectionAnchor] = useState<CellPosition | null>(null)
-  const [isSelecting, setIsSelecting] = useState(false)
-
-  // ドラッグ中の高速応答性のためのRef管理
-  const dragSelectionRef = useRef<{
-    isSelecting: boolean
-    startCell: CellPosition | null
-    currentSelectedCells: Set<string>
-    currentSelectionRange: SelectionRange | null
-  }>({
-    isSelecting: false,
-    startCell: null,
-    currentSelectedCells: new Set(),
-    currentSelectionRange: null
-  })
 
   // 選択をクリア
   const clearSelection = useCallback(() => {
@@ -43,7 +28,6 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     setFullySelectedCols(new Set())
     setSelectionRange(null)
     setSelectionAnchor(null)
-    setIsSelecting(false)
   }, [])
 
   // 初期選択状態を設定（A1セル）
@@ -268,57 +252,25 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
   }, [tableRowCount, tableColCount])
 
   // ドラッグ選択関連
-  const startDragSelection = useCallback((row: number, col: number) => {
-    dragSelectionRef.current.isSelecting = true
-    dragSelectionRef.current.startCell = { row, col }
-    const cellKey = `${row}-${col}`
-    const newSelectedCells = new Set([cellKey])
-    const newSelectionRange = { start: { row, col }, end: { row, col } }
+  // isMouseDraggingRef: マウスが押されているかどうか（ドラッグ中か）
+  const isMouseDraggingRef = useRef(false)
 
-    dragSelectionRef.current.currentSelectedCells = newSelectedCells
-    dragSelectionRef.current.currentSelectionRange = newSelectionRange
+  const onDragStart = useCallback((row: number, col: number) => {
+    isMouseDraggingRef.current = true
+    // ドラッグ開始時は単一選択として扱う
+    // これにより、アンカーが正しく設定される
+    selectCell(row, col, false, false)
+  }, [selectCell])
 
-    // 即座に表示を更新
-    setSelectedCells(newSelectedCells)
-    setSelectionRange(newSelectionRange)
-    setIsSelecting(true)
-    // ドラッグ選択開始時は全行/全列選択状態を解除
-    setFullySelectedRows(new Set())
-    setFullySelectedCols(new Set())
-  }, [])
-
-  const updateDragSelection = useCallback((row: number, col: number) => {
-    if (!dragSelectionRef.current.isSelecting || !dragSelectionRef.current.startCell) {
-      return
+  const onDragEnter = useCallback((row: number, col: number) => {
+    if (isMouseDraggingRef.current) {
+      // ドラッグ中は現在のアンカーを起点に拡張選択を行う（Shift+Click相当）
+      selectCell(row, col, true, false)
     }
+  }, [selectCell])
 
-    const startCell = dragSelectionRef.current.startCell
-    const newRange = { start: startCell, end: { row, col } }
-    const newSelectedCells = generateCellKeysInRange(startCell, { row, col })
-
-    dragSelectionRef.current.currentSelectedCells = newSelectedCells
-    dragSelectionRef.current.currentSelectionRange = newRange
-
-    // RequestAnimationFrameを使って適度にUIを更新
-    requestAnimationFrame(() => {
-      if (dragSelectionRef.current.isSelecting) {
-        setSelectedCells(new Set(dragSelectionRef.current.currentSelectedCells))
-        setSelectionRange(dragSelectionRef.current.currentSelectionRange)
-      }
-    })
-  }, [generateCellKeysInRange])
-
-  const endDragSelection = useCallback(() => {
-    if (dragSelectionRef.current.isSelecting) {
-      // 最終状態をStateに反映
-      setSelectedCells(new Set(dragSelectionRef.current.currentSelectedCells))
-      setSelectionRange(dragSelectionRef.current.currentSelectionRange)
-      setIsSelecting(false)
-
-      // Refをリセット
-      dragSelectionRef.current.isSelecting = false
-      dragSelectionRef.current.startCell = null
-    }
+  const onDragEnd = useCallback(() => {
+    isMouseDraggingRef.current = false
   }, [])
 
   // Selection state object
@@ -327,9 +279,8 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     fullySelectedRows,
     fullySelectedCols,
     selectionRange,
-    selectionAnchor,
-    isSelecting
-  }), [selectedCells, fullySelectedRows, fullySelectedCols, selectionRange, selectionAnchor, isSelecting])
+    selectionAnchor
+  }), [selectedCells, fullySelectedRows, fullySelectedCols, selectionRange, selectionAnchor])
 
   return {
     selectionState,
@@ -340,10 +291,9 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     clearSelection,
     initializeSelection,
     setSelectionAnchor,
-    setIsSelecting,
     // ドラッグ選択関数
-    startDragSelection,
-    updateDragSelection,
-    endDragSelection
+    onDragStart,
+    onDragEnter,
+    onDragEnd
   }
 }

@@ -17,6 +17,8 @@ interface TableBodyProps {
   onDeleteRow: (index: number) => void
   onRowSelect?: (row: number, event: React.MouseEvent) => void
   onShowRowContextMenu?: (event: React.MouseEvent, row: number) => void
+  onDragStart?: (row: number, col: number) => void
+  onDragEnter?: (row: number, col: number) => void
   getDragProps?: (type: 'row' | 'column', index: number) => any
   getDropProps?: (type: 'row' | 'column', index: number) => any
   selectedRows?: Set<number>
@@ -39,6 +41,8 @@ const TableBody: React.FC<TableBodyProps> = ({
   initialCellInput,
   onRowSelect,
   onShowRowContextMenu,
+  onDragStart,
+  onDragEnter,
   getDragProps,
   getDropProps,
   selectedRows,
@@ -58,8 +62,23 @@ const TableBody: React.FC<TableBodyProps> = ({
     }
     const extend = event.shiftKey
     const toggle = event.ctrlKey || event.metaKey
-    onCellSelect(row, col, extend, toggle)
-  }, [onCellSelect])
+
+    if (extend || toggle) {
+      onCellSelect(row, col, extend, toggle)
+    } else {
+      if (onDragStart) {
+        onDragStart(row, col)
+      } else {
+        onCellSelect(row, col, false, false)
+      }
+    }
+  }, [onCellSelect, onDragStart])
+
+  const handleCellMouseEnter = useCallback((row: number, col: number) => {
+    if (onDragEnter) {
+      onDragEnter(row, col)
+    }
+  }, [onDragEnter])
 
   const handleRowContextMenu = useCallback((e: React.MouseEvent, rowIndex: number) => {
     e.preventDefault()
@@ -457,6 +476,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                   initialCellInput={isEditing ? initialCellInput : null}
                   savedHeight={savedHeight}
                   onMouseDown={handleCellMouseDown}
+                  onMouseEnter={handleCellMouseEnter}
                   onDoubleClick={startCellEdit}
                   onCommitEdit={commitCellEdit}
                   onCancelEdit={cancelCellEdit}
