@@ -236,6 +236,12 @@ const TableEditor: React.FC<TableEditorProps> = ({
     },
     getCellValue: (row: number, col: number) => {
       return displayedTableData.rows[row]?.[col] || ''
+    },
+    onFillComplete: (fillRange) => {
+      // オートフィル完了後、選択範囲を拡張
+      // フィル範囲の終了位置（startは元の選択開始位置と同じはず）を新たな選択終端とする
+      const { end } = fillRange
+      selectCell(end.row, end.col, true)
     }
   })
 
