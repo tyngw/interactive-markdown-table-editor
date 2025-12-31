@@ -455,17 +455,15 @@ const TableBody: React.FC<TableBodyProps> = ({
                   {...(getDragProps ? getDragProps('row', rowIndex) : {})}
                   {...(getDropProps ? getDropProps('row', rowIndex) : {})}
                 >
+                  {headerConfig?.hasRowHeaders ? (
+                    <div className="row-header-content">
+                      <div className="row-number-label">{displayRowNumber}</div>
+                      <div className="row-header-title">{rowHeaderValue}</div>
+                    </div>
+                  ) : (
+                    displayRowNumber
+                  )}
                   {gitDiffIcon}
-                  <div className='row-number-container'>
-                    {headerConfig?.hasRowHeaders ? (
-                      <div className="row-header-content">
-                        <div className="row-number-label">{displayRowNumber}</div>
-                        <div className="row-header-title">{rowHeaderValue}</div>
-                      </div>
-                    ) : (
-                      displayRowNumber
-                    )}
-                  </div>
                 </td>
     
                 {cells.map((cell, colIndex) => {
