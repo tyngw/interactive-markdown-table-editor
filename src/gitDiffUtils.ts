@@ -321,9 +321,18 @@ function parseGitDiff(
         if (hunkMatch) {
             inHunk = true;
             currentOldStart = parseInt(hunkMatch[1], 10);
+            const oldCount = parseInt(hunkMatch[2] || '1', 10);
             currentNewStart = parseInt(hunkMatch[3], 10);
+            const newCount = parseInt(hunkMatch[4] || '1', 10);
+
+            // Special case for files that only have deletions and no additions
+            if (newCount === 0) {
+                newLineNumber = currentNewStart;
+            } else {
+                 newLineNumber = currentNewStart;
+            }
             oldLineNumber = currentOldStart;
-            newLineNumber = currentNewStart;
+            
             continue;
         }
 
@@ -331,64 +340,41 @@ function parseGitDiff(
             continue;
         }
 
-        // 空行や特殊な行をスキップ
-        if (line.startsWith('\\') || line.startsWith('---') || line.startsWith('+++')) {
+        if (line.startsWith('\\') || line.trim() === '') {
             continue;
         }
 
-        // テーブル範囲外の場合はスキップ（ただし行番号は進める）
-        if (newLineNumber < tableStartLine + 1 || newLineNumber > tableEndLine + 1) {
-            if (line.startsWith('-') && !line.startsWith('---')) {
-                // 削除された行（新しいファイルには存在しない）
-                oldLineNumber++;
-            } else if (line.startsWith('+') && !line.startsWith('+++')) {
-                // 追加された行
-                newLineNumber++;
-            } else {
-                // コンテキスト行（変更なし）
-                oldLineNumber++;
-                newLineNumber++;
-            }
-            continue;
-        }
-
-        // 行の種類を判定
         if (line.startsWith('-') && !line.startsWith('---')) {
-            // 削除された行
-            // 次の行が追加かどうかを確認して、変更か削除かを判定
             const nextLine = i + 1 < lines.length ? lines[i + 1] : null;
             if (nextLine && nextLine.startsWith('+') && !nextLine.startsWith('+++')) {
-                // 削除の直後に追加がある場合、これは変更
+                // This is a modification
                 lineDiffs.push({
-                    lineNumber: newLineNumber,  // 新しいファイルでの行番号（追加された行の位置）
+                    lineNumber: newLineNumber,
                     status: GitDiffStatus.MODIFIED,
                     oldLineNumber: oldLineNumber
                 });
-                // 次の行（追加）をスキップ
-                i++;
+                i++; // Skip the next line, as it's part of the modification
+                oldLineNumber++;
                 newLineNumber++;
             } else {
-                // 削除のみ（新しいファイルには存在しない）
+                // This is a deletion
+                // Associate with the previous line in the new file
                 lineDiffs.push({
-                    lineNumber: oldLineNumber,  // 削除された行の元の位置
+                    lineNumber: newLineNumber - 1, // The line number before the deletion
                     status: GitDiffStatus.DELETED,
                     oldLineNumber: oldLineNumber
                 });
+                oldLineNumber++;
             }
-            oldLineNumber++;
         } else if (line.startsWith('+') && !line.startsWith('+++')) {
-            // 追加された行（前の行が削除でない場合のみ）
-            const prevDiff = lineDiffs[lineDiffs.length - 1];
-            if (!prevDiff || prevDiff.status !== GitDiffStatus.MODIFIED) {
-                // 前の行が変更でない場合のみ追加として記録
-                lineDiffs.push({
-                    lineNumber: newLineNumber,
-                    status: GitDiffStatus.ADDED
-                });
-            }
+            // This is an addition
+            lineDiffs.push({
+                lineNumber: newLineNumber,
+                status: GitDiffStatus.ADDED
+            });
             newLineNumber++;
         } else {
-            // コンテキスト行（変更なし）- 記録しない
+            // Unchanged line
             oldLineNumber++;
             newLineNumber++;
         }
@@ -414,19 +400,21 @@ function mapTableRowsToGitDiff(
 ): RowGitDiff[] {
     const rowDiffs: RowGitDiff[] = [];
     
-    // テーブルの各行について、対応するGit diffを検索
-    for (let tableRow = 0; tableRow < rowCount; tableRow++) {
-        // Markdownテーブルの構造を考慮:
-        // - tableStartLine (0ベース) = ヘッダー行
-        // - tableStartLine + 1 = 区切り行
-        // - tableStartLine + 2 + tableRow = データ行（tableRowは0ベース）
-        // Git diffの行番号は1ベースなので、+1する必要がある
-        const markdownLineNumber = tableStartLine + 2 + tableRow + 1;  // 1ベースの行番号
+    for (const diff of lineDiffs) {
+        // diff.lineNumber は 1-based の markdown ファイル上の行番号
+        // tableRow は 0-based のテーブルデータ行インデックス
         
-        // この行に対応するGit diffを検索（完全一致のみ）
-        const diff = lineDiffs.find(d => d.lineNumber === markdownLineNumber);
+        // ヘッダー行が tableStartLine, 区切り線が tableStartLine + 1
+        // データ行0 は tableStartLine + 2
+        // データ行 tableRow は markdown ファイルの tableStartLine + 2 + tableRow 行目
         
-        if (diff) {
+        // markdown ファイルの行番号からテーブルのデータ行インデックスを逆算
+        // tableRow = markdownLineNumber(1-based) - 1 - (tableStartLine + 2)
+        const tableRow = diff.lineNumber - 1 - (tableStartLine + 2);
+
+        // テーブルのデータ行の範囲 (-1 から rowCount-1) に収まっているかチェック
+        // tableRow === -1 は、テーブルのヘッダーの直後（つまりデータ行0の上）を示します
+        if (tableRow >= -1 && tableRow < rowCount) {
             rowDiffs.push({
                 row: tableRow,
                 status: diff.status
@@ -434,7 +422,16 @@ function mapTableRowsToGitDiff(
         }
     }
     
-    return rowDiffs;
+    // 重複をフィルタリング
+    const uniqueDiffs = rowDiffs.reduce((acc, current) => {
+        const existing = acc.find(item => item.row === current.row && item.status === current.status);
+        if (!existing) {
+            acc.push(current);
+        }
+        return acc;
+    }, [] as RowGitDiff[]);
+
+    return uniqueDiffs;
 }
 
 /**

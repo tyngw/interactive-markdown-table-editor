@@ -488,31 +488,64 @@ table.table-editor tbody tr td.editable-cell.user-resized {
 }
 
 /* ====== Git差分の視覚化 ====== */
-/* Git差分の背景色は、MemoizedCellコンポーネントで動的に適用される */
-/* ここでは、VS Codeのテーマ色を使用したフォールバックを定義 */
-.data-cell.git-diff {
-    transition: background-color 0.2s ease;
+/* アイコン表示のために行番号セルのflexbox化 */
+table.table-editor tbody tr td.row-number {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 0 4px; /* アイコン用のスペースを確保 */
 }
 
-.data-cell.git-diff.git-diff-added {
-    /* 追加された行の背景色 */
-    background-color: var(--vscode-gitDecoration-addedResourceForeground, rgba(129, 184, 139, 0.2)) !important;
+/* アイコンと行番号を分けるコンテナ */
+.row-number-container {
+    flex: 1;
+    text-align: right;
+    padding-right: 4px;
 }
 
-.data-cell.git-diff.git-diff-modified {
-    /* 変更された行の背景色 */
-    background-color: var(--vscode-gitDecoration-modifiedResourceForeground, rgba(226, 192, 141, 0.2)) !important;
+.git-diff-icon {
+    font-weight: 900;
+    font-size: 14px;
+    width: 12px;
+    text-align: center;
+    flex-shrink: 0;
 }
 
-.data-cell.git-diff.git-diff-deleted {
-    /* 削除された行の背景色 */
-    background-color: var(--vscode-gitDecoration-deletedResourceForeground, rgba(199, 78, 57, 0.2)) !important;
+.git-diff-added {
+    color: var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
 }
 
-/* 選択状態とGit差分が同時にある場合の優先順位調整 */
-.data-cell.git-diff.selected {
-    /* 選択状態の背景色を優先しつつ、Git差分の色も表示 */
-    opacity: 0.9;
+.git-diff-modified {
+    color: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+}
+
+.git-diff-deleted {
+    color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39);
+}
+
+/* 削除行のインジケータ */
+.git-diff-deleted-row {
+    height: 20px;
+    background-color: transparent;
+}
+
+.git-diff-deleted-cell {
+    padding: 0 !important;
+    text-align: center;
+    border: none !important;
+    border-top: 1px dashed var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) !important;
+    border-bottom: 1px dashed var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) !important;
+    position: relative;
+}
+
+.git-diff-deleted-cell .git-diff-icon {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    background-color: var(--vscode-editor-background);
+    padding: 0 4px;
 }
 
 table.table-editor tbody tr td .cell-content {
