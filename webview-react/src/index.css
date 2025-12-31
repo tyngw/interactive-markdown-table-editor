@@ -488,28 +488,22 @@ table.table-editor tbody tr td.editable-cell.user-resized {
 }
 
 /* ====== Git差分の視覚化 ====== */
-/* アイコン表示のために行番号セルのflexbox化 */
+/* 行番号セルを相対的な位置指定の基準にする */
 table.table-editor tbody tr td.row-number {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 4px;
-    padding: 0 4px; /* アイコン用のスペースを確保 */
-}
-
-/* アイコンと行番号を分けるコンテナ */
-.row-number-container {
-    flex: 1;
-    text-align: right;
-    padding-right: 4px;
+    position: relative;
+    padding: 4px 8px; /* 元のパディングに戻す */
+    vertical-align: top;
+    text-align: left;
 }
 
 .git-diff-icon {
+    position: absolute;
+    top: 2px;
+    right: 4px;
     font-weight: 900;
     font-size: 14px;
     width: 12px;
     text-align: center;
-    flex-shrink: 0;
 }
 
 .git-diff-added {
