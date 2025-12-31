@@ -45,10 +45,16 @@ function AppContent() {
   }, [theme, isLoaded])
 
   // currentTableDataを取得し、gitDiffマップから対応するデータを合成
+  // updateTableDataに既にgitDiffが含まれている場合はそれを使用、
+  // 含まれていない場合はgitDiffMapから取得
   const currentTableData = useMemo(() => {
     const baseTable = allTables[currentTableIndex] || null
     if (!baseTable) {
       return null
+    }
+    // baseTableに既にgitDiffが含まれている場合はそのまま返す
+    if (baseTable.gitDiff) {
+      return baseTable
     }
     // gitDiffマップがある場合は合成
     const gitDiff = gitDiffMap.get(currentTableIndex)
@@ -88,6 +94,8 @@ function AppContent() {
       setCurrentTableIndex(0)
       currentIndexRef.current = 0
     }
+    // テーブルデータ更新時にgitDiffMapをリセット（古いデータの遺残を防ぐ）
+    setGitDiffMap(new Map())
     setLoading(false)
   }, [])
 
