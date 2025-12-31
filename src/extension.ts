@@ -493,7 +493,7 @@ export function activate(context: vscode.ExtensionContext) {
                 // Send table data without diffs first for a fast initial load
                 webviewManager.updateTableData(panel, allTableData, fileUri);
 
-                // Asynchronously load and send Git diffs
+                // Asynchronously load and send Git diffs for all tables
                 (async () => {
                     console.log('[GitDiffDebug] Starting async Git diff loading.');
                     const tablesWithGitDiff = await Promise.all(
@@ -509,18 +509,13 @@ export function activate(context: vscode.ExtensionContext) {
                                 tableMarkdown
                             );
                             console.log(`[GitDiffDebug] Got diff for table ${index}:`, gitDiff.length > 0 ? gitDiff : 'No diff');
-                            return { tableIndex: index, gitDiff };
+                            return { ...tableData, gitDiff };
                         })
                     );
 
-                    // Filter out tables with no diffs
-                    const diffsOnly = tablesWithGitDiff.filter(d => d.gitDiff.length > 0);
-                    if (diffsOnly.length > 0) {
-                        console.log('[GitDiffDebug] Sending git diff update to webview.');
-                        webviewManager.updateGitDiff(panel, diffsOnly);
-                    } else {
-                        console.log('[GitDiffDebug] No git diffs to send.');
-                    }
+                    // すべてのテーブルの差分を含めて再送信
+                    console.log('[GitDiffDebug] Sending complete table data with Git diffs to webview.');
+                    webviewManager.updateTableData(panel, tablesWithGitDiff, fileUri);
                 })();
 
 
