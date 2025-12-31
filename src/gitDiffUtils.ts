@@ -8,11 +8,11 @@ import * as vscode from 'vscode';
 
 /**
  * セルのGit差分状態
+ * MODIFIED は廃止。変更は DELETED + ADDED で表現し、oldContent で変更前の内容を保持
  */
 export enum GitDiffStatus {
     UNCHANGED = 'unchanged',
     ADDED = 'added',
-    MODIFIED = 'modified',
     DELETED = 'deleted'
 }
 
@@ -35,6 +35,9 @@ const CACHE_TTL = 5000; // 5秒間キャッシュを保持
 export interface RowGitDiff {
     row: number;
     status: GitDiffStatus;
+    oldContent?: string;  // 削除された行の内容（変更前の行を表示するため）
+    deletedIndex?: number;  // 複数の削除行を区別するためのインデックス
+    isDeletedRow?: boolean;  // 削除行の表示用フラグ（実データ行ではない）
 }
 
 /**
@@ -243,6 +246,8 @@ interface LineDiff {
     lineNumber: number;  // 現在のファイルでの行番号（1ベース）
     status: GitDiffStatus;
     oldLineNumber?: number;  // 変更前のファイルでの行番号（削除された行の場合）
+    oldContent?: string;  // 削除された行の元々の内容
+    deletedIndex?: number;  // 複数の削除行を区別するためのインデックス
 }
 
 /**
@@ -345,7 +350,8 @@ export function clearDiffCache(uri?: vscode.Uri): void {
 
 /**
  * Git diffの出力を解析して行ごとの差分情報を抽出
- * より正確に行番号を計算し、コンテキスト行を正しく処理
+ * ADDED / DELETED のみを使用。削除行の内容を oldContent で保持する
+ * 複数の連続した削除行は deletedIndex で区別される
  */
 function parseGitDiff(
     diffOutput: string,
@@ -360,6 +366,7 @@ function parseGitDiff(
     let inHunk = false;
     let oldLineNumber = 0;
     let newLineNumber = 0;
+    let deletedIndexCounter = 0;  // 削除行のインデックスカウンター
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -373,13 +380,9 @@ function parseGitDiff(
             currentNewStart = parseInt(hunkMatch[3], 10);
             const newCount = parseInt(hunkMatch[4] || '1', 10);
 
-            // Special case for files that only have deletions and no additions
-            if (newCount === 0) {
-                newLineNumber = currentNewStart;
-            } else {
-                 newLineNumber = currentNewStart;
-            }
             oldLineNumber = currentOldStart;
+            newLineNumber = currentNewStart;
+            deletedIndexCounter = 0;  // hunk開始時にリセット
             
             continue;
         }
@@ -393,29 +396,21 @@ function parseGitDiff(
         }
 
         if (line.startsWith('-') && !line.startsWith('---')) {
-            const nextLine = i + 1 < lines.length ? lines[i + 1] : null;
-            if (nextLine && nextLine.startsWith('+') && !nextLine.startsWith('+++')) {
-                // This is a modification
-                lineDiffs.push({
-                    lineNumber: newLineNumber,
-                    status: GitDiffStatus.MODIFIED,
-                    oldLineNumber: oldLineNumber
-                });
-                i++; // Skip the next line, as it's part of the modification
-                oldLineNumber++;
-                newLineNumber++;
-            } else {
-                // This is a deletion
-                // Associate with the previous line in the new file
-                lineDiffs.push({
-                    lineNumber: newLineNumber - 1, // The line number before the deletion
-                    status: GitDiffStatus.DELETED,
-                    oldLineNumber: oldLineNumber
-                });
-                oldLineNumber++;
-            }
+            // 削除行を DELETED として記録。内容も保存
+            const deletedContent = line.substring(1); // '-' を除いた内容
+            console.log('[parseGitDiff] DELETED line:', { oldLineNumber, newLineNumber, deletedContent });
+            lineDiffs.push({
+                lineNumber: newLineNumber,  // 対応する ADDED 行と同じ新しい行番号（修正）
+                status: GitDiffStatus.DELETED,
+                oldLineNumber: oldLineNumber,
+                oldContent: deletedContent,
+                deletedIndex: deletedIndexCounter  // 削除行の順序をマーク
+            });
+            deletedIndexCounter++;  // 次の削除行のためにインクリメント
+            oldLineNumber++;
         } else if (line.startsWith('+') && !line.startsWith('+++')) {
-            // This is an addition
+            // 追加行を ADDED として記録
+            console.log('[parseGitDiff] ADDED line:', { newLineNumber, content: line.substring(1) });
             lineDiffs.push({
                 lineNumber: newLineNumber,
                 status: GitDiffStatus.ADDED
@@ -448,31 +443,70 @@ function mapTableRowsToGitDiff(
 ): RowGitDiff[] {
     const rowDiffs: RowGitDiff[] = [];
     
+    // lineDiffs の元の順序を保ち、そのまま処理する
+    // これにより git diff の順序がそのまま表示される
     for (const diff of lineDiffs) {
-        // diff.lineNumber は 1-based の markdown ファイル上の行番号
-        // tableRow は 0-based のテーブルデータ行インデックス
+        let tableRow: number;
         
-        // ヘッダー行が tableStartLine, 区切り線が tableStartLine + 1
-        // データ行0 は tableStartLine + 2
-        // データ行 tableRow は markdown ファイルの tableStartLine + 2 + tableRow 行目
+        if (diff.status === GitDiffStatus.DELETED) {
+            // 削除行：oldLineNumber から関連先行を計算
+            // ファイル上での削除前の行番号を参照
+            if (diff.oldLineNumber !== undefined) {
+                tableRow = diff.oldLineNumber - 1 - (tableStartLine + 2);
+            } else {
+                tableRow = diff.lineNumber - 1 - (tableStartLine + 2);
+            }
+        } else {
+            // 追加行/変更なし行：通常の行番号計算
+            tableRow = diff.lineNumber - 1 - (tableStartLine + 2);
+        }
         
-        // markdown ファイルの行番号からテーブルのデータ行インデックスを逆算
-        // tableRow = markdownLineNumber(1-based) - 1 - (tableStartLine + 2)
-        const tableRow = diff.lineNumber - 1 - (tableStartLine + 2);
-
-        // テーブルのデータ行の範囲 (-1 から rowCount-1) に収まっているかチェック
-        // tableRow === -1 は、テーブルのヘッダーの直後（つまりデータ行0の上）を示します
+        console.log('[mapTableRowsToGitDiff] BEFORE_CHECK:', {
+            status: diff.status,
+            lineNumber: diff.lineNumber,
+            oldLineNumber: diff.oldLineNumber,
+            tableStartLine,
+            calculated_tableRow: tableRow,
+            rowCount
+        });
+        
         if (tableRow >= -1 && tableRow < rowCount) {
-            rowDiffs.push({
+            console.log('[mapTableRowsToGitDiff] ACCEPTED:', {
                 row: tableRow,
                 status: diff.status
             });
+            
+            if (diff.status === GitDiffStatus.DELETED) {
+                rowDiffs.push({
+                    row: tableRow,
+                    status: GitDiffStatus.DELETED,
+                    oldContent: diff.oldContent,
+                    deletedIndex: diff.deletedIndex,
+                    isDeletedRow: true
+                });
+            } else {
+                rowDiffs.push({
+                    row: tableRow,
+                    status: diff.status,
+                    oldContent: diff.oldContent,
+                    deletedIndex: diff.deletedIndex
+                });
+            }
         }
     }
     
     // 重複をフィルタリング
     const uniqueDiffs = rowDiffs.reduce((acc, current) => {
-        const existing = acc.find(item => item.row === current.row && item.status === current.status);
+        const existing = acc.find(item => {
+            if (item.row !== current.row || item.status !== current.status) {
+                return false;
+            }
+            // DELETED行の場合、deletedIndexで区別
+            if (current.status === GitDiffStatus.DELETED) {
+                return item.deletedIndex === current.deletedIndex;
+            }
+            return true;
+        });
         if (!existing) {
             acc.push(current);
         }
