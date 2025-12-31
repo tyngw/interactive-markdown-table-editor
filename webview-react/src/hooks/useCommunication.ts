@@ -10,6 +10,7 @@ import { TableData } from '../types';
 
 interface CommunicationCallbacks {
   onTableData?: (data: TableData | TableData[]) => void;
+  onGitDiffData?: (data: any) => void;
   onError?: (error: string) => void;
   onSuccess?: (message: string) => void;
   onThemeVariables?: (data: any) => void;
@@ -18,7 +19,7 @@ interface CommunicationCallbacks {
 }
 
 export function useCommunication(callbacks: CommunicationCallbacks) {
-  const { onTableData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable } = callbacks;
+  const { onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable } = callbacks;
   const commManagerRef = useRef<WebviewCommunicationManager | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -42,6 +43,13 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
         } else {
           onTableData(data);
         }
+      }
+    });
+
+    manager.registerNotificationHandler(ExtensionCommand.UPDATE_GIT_DIFF, (data) => {
+      console.log('[useCommunication] Received git diff update:', data);
+      if (onGitDiffData) {
+        onGitDiffData(data);
       }
     });
 

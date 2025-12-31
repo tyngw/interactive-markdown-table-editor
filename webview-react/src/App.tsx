@@ -107,6 +107,21 @@ function AppContent() {
         tableCount: Array.isArray(data) ? data.length : 1
       })
     },
+    onGitDiffData: (diffData: Array<{tableIndex: number, gitDiff: any[]}>) => {
+      console.log('[MTE][React] onGitDiffData received', diffData);
+      setAllTables(prevTables => {
+        const newTables = [...prevTables];
+        diffData.forEach(diff => {
+          if (newTables[diff.tableIndex]) {
+            newTables[diff.tableIndex] = {
+              ...newTables[diff.tableIndex],
+              gitDiff: diff.gitDiff,
+            };
+          }
+        });
+        return newTables;
+      });
+    },
     onError: (errorMessage: string) => {
       console.error('[MTE][React] onError', errorMessage)
       setError(errorMessage)
