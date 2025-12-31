@@ -46,6 +46,61 @@ export interface TableGitDiff {
 }
 
 /**
+ * Git APIが初期化されるまで待機する
+ * @param timeoutMs タイムアウト（ミリ秒）
+ * @returns 初期化されたGit API。タイムアウトした場合はnull
+ */
+async function waitForGitApi(timeoutMs: number = 5000): Promise<any | null> {
+    console.log('[GitDiffDebug] Starting waitForGitApi');
+    try {
+        const gitExtension = vscode.extensions.getExtension('vscode.git');
+        if (!gitExtension) {
+            console.log('[GitDiffDebug] Git extension not found.');
+            return null;
+        }
+        console.log(`[GitDiffDebug] Git extension found. isActive: ${gitExtension.isActive}`);
+
+        // 拡張機能が有効でない場合は有効化
+        if (!gitExtension.isActive) {
+            console.log('[GitDiffDebug] Activating Git extension...');
+            await gitExtension.activate();
+            console.log('[GitDiffDebug] Git extension activated.');
+        }
+
+        const git = gitExtension.exports.getAPI(1);
+        if (!git) {
+            console.log('[GitDiffDebug] Git API not available');
+            return null;
+        }
+        console.log(`[GitDiffDebug] Git API obtained. Initial state: ${git.state}`);
+
+        // 既に初期化済み
+        if (git.state === 'initialized') {
+            console.log('[GitDiffDebug] Git API is already initialized.');
+            return git;
+        }
+
+        // 初期化を待機（ポーリング）
+        console.log('[GitDiffDebug] Waiting for Git API to initialize...');
+        const startTime = Date.now();
+        while (Date.now() - startTime < timeoutMs) {
+            if (git.state === 'initialized') {
+                console.log('[GitDiffDebug] Git API has been initialized.');
+                return git;
+            }
+            console.log(`[GitDiffDebug] Polling: git.state is ${git.state}`);
+            await new Promise(resolve => setTimeout(resolve, 200)); // 200ms待機
+        }
+
+        console.warn(`[GitDiffDebug] Git API did not initialize within ${timeoutMs}ms.`);
+        return null;
+    } catch (error) {
+        console.error('[GitDiffDebug] Error while waiting for Git API:', error);
+        return null;
+    }
+}
+
+/**
  * Git差分情報を取得
  * @param uri ファイルのURI
  * @param tableStartLine テーブルの開始行（0ベース）
@@ -62,18 +117,11 @@ export async function getGitDiffForTable(
     tableContent?: string
 ): Promise<RowGitDiff[]> {
     try {
-        // Git拡張機能が利用可能かチェック
-        const gitExtension = vscode.extensions.getExtension('vscode.git');
-        if (!gitExtension || !gitExtension.isActive) {
-            console.log('[GitDiff] Git extension not available');
-            return [];
-        }
-
-        // リポジトリ情報を取得
-        const git = gitExtension.exports.getAPI(1);
+        // Git APIが利用可能になるまで待機
+        const git = await waitForGitApi();
         if (!git) {
-            console.log('[GitDiff] Git API not available');
-            return [];
+            console.log('[GitDiffDebug] Exiting getGitDiffForTable because Git API is not available.');
+            return []; // Git APIが利用できない場合は空の配列を返す
         }
 
         // ワークスペースフォルダを取得

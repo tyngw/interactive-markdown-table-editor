@@ -490,26 +490,39 @@ export function activate(context: vscode.ExtensionContext) {
                     activeTableManagers.set(actualPanelId, primaryManager);
                 }
 
-                // Get Git diff information for all tables
-                // テーブルの内容を取得して、より正確な行番号マッピングを行う
-                const tablesWithGitDiff = await Promise.all(
-                    allTableData.map(async (tableData, index) => {
-                        // テーブルのMarkdown表現を取得（行番号マッピングの精度向上のため）
-                        const manager = tableManagersMap.get(index);
-                        const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined;
-                        const gitDiff = await getGitDiffForTable(
-                            fileUri,
-                            tableData.metadata.startLine,
-                            tableData.metadata.endLine,
-                            tableData.rows.length,
-                            tableMarkdown
-                        );
-                        return { ...tableData, gitDiff };
-                    })
-                );
+                // Send table data without diffs first for a fast initial load
+                webviewManager.updateTableData(panel, allTableData, fileUri);
 
-                // Send all table data with Git diff to webview
-                webviewManager.updateTableData(panel, tablesWithGitDiff, fileUri);
+                // Asynchronously load and send Git diffs
+                (async () => {
+                    console.log('[GitDiffDebug] Starting async Git diff loading.');
+                    const tablesWithGitDiff = await Promise.all(
+                        allTableData.map(async (tableData, index) => {
+                            console.log(`[GitDiffDebug] Getting diff for table ${index}`);
+                            const manager = tableManagersMap.get(index);
+                            const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined;
+                            const gitDiff = await getGitDiffForTable(
+                                fileUri,
+                                tableData.metadata.startLine,
+                                tableData.metadata.endLine,
+                                tableData.rows.length,
+                                tableMarkdown
+                            );
+                            console.log(`[GitDiffDebug] Got diff for table ${index}:`, gitDiff.length > 0 ? gitDiff : 'No diff');
+                            return { tableIndex: index, gitDiff };
+                        })
+                    );
+
+                    // Filter out tables with no diffs
+                    const diffsOnly = tablesWithGitDiff.filter(d => d.gitDiff.length > 0);
+                    if (diffsOnly.length > 0) {
+                        console.log('[GitDiffDebug] Sending git diff update to webview.');
+                        webviewManager.updateGitDiff(panel, diffsOnly);
+                    } else {
+                        console.log('[GitDiffDebug] No git diffs to send.');
+                    }
+                })();
+
 
                 // Don't send success message for refreshes to avoid spam
                 if (!forceRefresh) {

@@ -72,6 +72,7 @@ export type ProtocolMessage =
 // コマンド定義（Extension -> Webview）
 export enum ExtensionCommand {
   UPDATE_TABLE_DATA = 'updateTableData',
+  UPDATE_GIT_DIFF = 'updateGitDiff',
   SET_ACTIVE_TABLE = 'setActiveTable',
   APPLY_THEME_VARIABLES = 'applyThemeVariables',
   APPLY_FONT_SETTINGS = 'applyFontSettings',

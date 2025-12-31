@@ -557,22 +557,6 @@ export class WebviewManager {
         this.communicationManagers.set(panelId, commManager);
         this.setupCommunicationHandlers(commManager, panel, uri);
 
-        // Send initial data after webview is fully ready
-        setTimeout(() => {
-            this.updateTableData(panel, tableData, uri);
-            // Apply theme shortly after data is sent to avoid race with script init
-            this.applyThemeToPanel(panel);
-            this.applyFontSettingsToPanel(panel);
-
-            // Send a second update after another delay to ensure it's received
-            setTimeout(() => {
-                this.updateTableData(panel, tableData, uri);
-                // Re-apply theme again to cover late-initialized listeners
-                this.applyThemeToPanel(panel);
-                this.applyFontSettingsToPanel(panel);
-            }, 1000);
-        }, 500);
-
         return panel;
     }
 
@@ -622,6 +606,19 @@ export class WebviewManager {
             }
         } else {
             console.warn('[MTE][Ext] Communication manager not found for panel:', panelId);
+        }
+    }
+
+    /**
+     * Update Git diff data in the webview
+     */
+    public updateGitDiff(panel: vscode.WebviewPanel, diffData: any): void {
+        const panelId = this.findPanelId(panel);
+        const commManager = this.communicationManagers.get(panelId);
+        if (commManager) {
+            commManager.updateGitDiff(diffData);
+        } else {
+            console.warn('[MTE][Ext] Communication manager not found for updateGitDiff');
         }
     }
 
