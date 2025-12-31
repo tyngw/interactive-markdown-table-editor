@@ -4,6 +4,20 @@ export interface HeaderConfig {
   hasRowHeaders: boolean     // 一番左の列を行ヘッダーとして扱う
 }
 
+// Git差分状態
+export enum GitDiffStatus {
+  UNCHANGED = 'unchanged',
+  ADDED = 'added',
+  MODIFIED = 'modified',
+  DELETED = 'deleted'
+}
+
+// 行のGit差分情報
+export interface RowGitDiff {
+  row: number
+  status: GitDiffStatus
+}
+
 // テーブルデータの型定義
 export interface TableData {
   headers: string[]
@@ -13,6 +27,7 @@ export interface TableData {
     filePath: string
   }
   headerConfig?: HeaderConfig
+  gitDiff?: RowGitDiff[]  // Git差分情報
 }
 
 // 複数テーブル対応
