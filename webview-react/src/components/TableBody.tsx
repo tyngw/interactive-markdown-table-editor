@@ -380,177 +380,168 @@ const TableBody: React.FC<TableBodyProps> = ({
     requestAnimationFrame(() => {
       measureAndNotify()
     })
-    // rows / headers が変わると行高さも変わり得るため依存に含める
-  }, [editorState.currentEditingCell, rows, headers])
-
-  // Git差分状態に基づく背景色を取得するヘルパー関数
-  const getGitDiffBackgroundColor = useCallback((status: GitDiffStatus | undefined): string | undefined => {
-    if (!status || status === GitDiffStatus.UNCHANGED) {
-      return undefined
-    }
-
-    try {
-      // VS Codeのテーマ色から取得
-      const root = document.documentElement
-      if (!root) {
-        return undefined
-      }
-      
-      const computedStyle = getComputedStyle(root)
-      
-      switch (status) {
-        case GitDiffStatus.ADDED:
-          return computedStyle.getPropertyValue('--vscode-gitDecoration-addedResourceForeground').trim() || 
-                 computedStyle.getPropertyValue('--vscode-diffEditor-insertedTextBackground').trim() ||
-                 'rgba(129, 184, 139, 0.2)'
-        case GitDiffStatus.MODIFIED:
-          return computedStyle.getPropertyValue('--vscode-gitDecoration-modifiedResourceForeground').trim() || 
-                 computedStyle.getPropertyValue('--vscode-diffEditor-modifiedTextBackground').trim() ||
-                 'rgba(226, 192, 141, 0.2)'
-        case GitDiffStatus.DELETED:
-          return computedStyle.getPropertyValue('--vscode-gitDecoration-deletedResourceForeground').trim() || 
-                 computedStyle.getPropertyValue('--vscode-diffEditor-removedTextBackground').trim() ||
-                 'rgba(199, 78, 57, 0.2)'
-        default:
-          return undefined
-      }
-    } catch (error) {
-      console.warn('[TableBody] Error getting Git diff background color:', error)
-      return undefined
-    }
-  }, [])
-
-  // 表示する行を統一形式で作成（列ヘッダーOFF時はheadersをrow=-1として先頭に追加）
-  const allRows = useMemo(() => {
-    const result: Array<{ rowIndex: number; cells: string[] }> = []
-
-    // 列ヘッダーがOFFの場合、headersを先頭行（row=-1）として追加
-    if (headerConfig?.hasColumnHeaders === false) {
-      result.push({ rowIndex: -1, cells: headers })
-    }
-
-    // データ行を追加
-    rows.forEach((row, index) => {
-      result.push({ rowIndex: index, cells: row })
-    })
-
-    return result
-  }, [headerConfig?.hasColumnHeaders, headers, rows])
-
-  return (
-    <tbody>
-      {allRows.map(({ rowIndex, cells }) => {
-        const rowHeaderValue = headerConfig?.hasRowHeaders ? (cells[0] || '') : ''
-        // 表示行番号を計算（row=-1の場合は0、それ以外は1始まり）
-        const displayRowNumber = rowIndex === -1 ? 0 : rowIndex + 1
-        const isRowSelected = selectedRows?.has(rowIndex)
-        const isRowFullySelected = fullySelectedRows?.has(rowIndex)
-
-        // Git差分情報を取得（行番号ヘッダに適用するため）
-        // rowIndex === -1 の場合はヘッダー行なので、Git差分情報は取得しない
-        let gitDiffClass = ''
-        let gitDiffBackgroundColor: string | undefined = undefined
-        
-        if (rowIndex >= 0 && gitDiff && Array.isArray(gitDiff)) {
-          const rowGitDiff = gitDiff.find(d => d && typeof d === 'object' && d.row === rowIndex)
-          const gitDiffStatus = rowGitDiff?.status
-          if (gitDiffStatus && gitDiffStatus !== GitDiffStatus.UNCHANGED) {
-            gitDiffClass = `git-diff git-diff-${gitDiffStatus}`
-            gitDiffBackgroundColor = getGitDiffBackgroundColor(gitDiffStatus)
-          }
+      // rows / headers が変わると行高さも変わり得るため依存に含める
+      }, [editorState.currentEditingCell, rows, headers])
+    
+      // 表示する行を統一形式で作成（列ヘッダーOFF時はheadersをrow=-1として先頭に追加）
+      const allRows = useMemo(() => {
+        const result: Array<{ rowIndex: number; cells: string[] }> = []
+    
+        // 列ヘッダーがOFFの場合、headersを先頭行（row=-1）として追加
+        if (headerConfig?.hasColumnHeaders === false) {
+          result.push({ rowIndex: -1, cells: headers })
         }
-
-        // classNameを構築
-        const rowNumberClassName = [
-          'row-number',
-          isRowFullySelected ? 'selected' : (isRowSelected ? 'highlighted' : ''),
-          headerConfig?.hasRowHeaders ? 'row-header-with-value' : '',
-          gitDiffClass
-        ].filter(Boolean).join(' ')
-
-        return (
-          <tr key={rowIndex} data-row={rowIndex}>
-            <td
-              className={rowNumberClassName}
-              style={gitDiffBackgroundColor ? { backgroundColor: gitDiffBackgroundColor } : undefined}
-              onClick={(e) => {
-                if (onRowSelect) {
-                  onRowSelect(rowIndex, e)
+    
+        // データ行を追加
+        rows.forEach((row, index) => {
+          result.push({ rowIndex: index, cells: row })
+        })
+    
+        return result
+      }, [headerConfig?.hasColumnHeaders, headers, rows])
+    
+      return (
+        <tbody>
+          {allRows.flatMap(({ rowIndex, cells }) => {
+            const renderedRows = []
+            
+            const rowHeaderValue = headerConfig?.hasRowHeaders ? (cells[0] || '') : ''
+            // 表示行番号を計算（row=-1の場合は0、それ以外は1始まり）
+            const displayRowNumber = rowIndex === -1 ? 0 : rowIndex + 1
+            const isRowSelected = selectedRows?.has(rowIndex)
+            const isRowFullySelected = fullySelectedRows?.has(rowIndex)
+    
+            let gitDiffIcon: React.ReactNode = null
+            let gitDiffStatus: GitDiffStatus | undefined = undefined
+    
+            if (rowIndex >= 0 && gitDiff && Array.isArray(gitDiff)) {
+              const rowGitDiff = gitDiff.find(d => d && typeof d === 'object' && d.row === rowIndex)
+              gitDiffStatus = rowGitDiff?.status
+              if (gitDiffStatus && gitDiffStatus !== GitDiffStatus.UNCHANGED) {
+                switch (gitDiffStatus) {
+                  case GitDiffStatus.ADDED:
+                    gitDiffIcon = <span className="git-diff-icon git-diff-added">+</span>
+                    break
+                  case GitDiffStatus.MODIFIED:
+                    gitDiffIcon = <span className="git-diff-icon git-diff-modified">~</span>
+                    break
                 }
-              }}
-              onMouseDown={(_e) => {
-                if (getDragProps) {
-                  // Handle drag start
-                }
-              }}
-              onContextMenu={(e) => handleRowContextMenu(e, rowIndex)}
-              title={headerConfig?.hasRowHeaders ? `Row ${displayRowNumber}: ${rowHeaderValue}` : `Row ${displayRowNumber}`}
-              {...(getDragProps ? getDragProps('row', rowIndex) : {})}
-              {...(getDropProps ? getDropProps('row', rowIndex) : {})}
-            >
-              {headerConfig?.hasRowHeaders ? (
-                <div className="row-header-content">
-                  <div className="row-number-label">{displayRowNumber}</div>
-                  <div className="row-header-title">{rowHeaderValue}</div>
-                </div>
-              ) : (
-                displayRowNumber
-              )}
-            </td>
-
-            {cells.map((cell, colIndex) => {
-              // 行ヘッダーONの場合、先頭列をスキップ
-              if (headerConfig?.hasRowHeaders && colIndex === 0) {
-                return null
               }
-              const storedWidth = editorState.columnWidths[colIndex] || 150
-              const isEditing = isCellEditing(rowIndex, colIndex)
-              const isSelected = isCellSelected(rowIndex, colIndex)
-              const isAnchor = isAnchorCell(rowIndex, colIndex)
-              const borders = getSelectionBorders(rowIndex, colIndex)
-              const isInFillRange = isCellInFillRange(rowIndex, colIndex)
-              const showFillHandle = isBottomRightCell(rowIndex, colIndex) && !isEditing
-              const isSResult = isSearchResult ? isSearchResult(rowIndex, colIndex) : false
-              const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, colIndex) : false
-              const userResized = !!(editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150)
-              const isSingleSelection = isSingleCellSelection()
-              const savedHeight = savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)
-
-              return (
-                <MemoizedCell
-                  key={colIndex}
-                  rowIndex={rowIndex}
-                  colIndex={colIndex}
-                  cell={cell}
-                  isSelected={isSelected}
-                  isAnchor={isAnchor}
-                  isSingleSelection={isSingleSelection}
-                  borders={borders}
-                  isEditing={isEditing}
-                  isInFillRange={isInFillRange}
-                  isSearchResult={isSResult}
-                  isCurrentSearchResult={isCSResult}
-                  showFillHandle={showFillHandle}
-                  storedWidth={storedWidth}
-                  userResized={userResized}
-                  displayRowNumber={displayRowNumber}
-                  headerConfig={headerConfig}
-                  initialCellInput={isEditing ? initialCellInput : null}
-                  savedHeight={savedHeight}
-                  onMouseDown={handleCellMouseDown}
-                  onMouseEnter={handleCellMouseEnter}
-                  onDoubleClick={startCellEdit}
-                  onCommitEdit={commitCellEdit}
-                  onCancelEdit={cancelCellEdit}
-                  onFillHandleMouseDown={onFillHandleMouseDown}
-                />
-              )
-            })}
-          </tr>
-        )
-      })}
-    </tbody>
-  )
-}
-
-export default TableBody
+            }
+    
+            const rowNumberClassName = [
+              'row-number',
+              isRowFullySelected ? 'selected' : (isRowSelected ? 'highlighted' : ''),
+              headerConfig?.hasRowHeaders ? 'row-header-with-value' : '',
+              gitDiffStatus ? `git-diff-${gitDiffStatus}` : ''
+            ].filter(Boolean).join(' ')
+            
+            const currentRow = (
+              <tr key={rowIndex} data-row={rowIndex}>
+                <td
+                  className={rowNumberClassName}
+                  onClick={(e) => {
+                    if (onRowSelect) {
+                      onRowSelect(rowIndex, e)
+                    }
+                  }}
+                  onMouseDown={(_e) => {
+                    if (getDragProps) {
+                      // Handle drag start
+                    }
+                  }}
+                  onContextMenu={(e) => handleRowContextMenu(e, rowIndex)}
+                  title={headerConfig?.hasRowHeaders ? `Row ${displayRowNumber}: ${rowHeaderValue}` : `Row ${displayRowNumber}`}
+                  {...(getDragProps ? getDragProps('row', rowIndex) : {})}
+                  {...(getDropProps ? getDropProps('row', rowIndex) : {})}
+                >
+                  {gitDiffIcon}
+                  <div className='row-number-container'>
+                    {headerConfig?.hasRowHeaders ? (
+                      <div className="row-header-content">
+                        <div className="row-number-label">{displayRowNumber}</div>
+                        <div className="row-header-title">{rowHeaderValue}</div>
+                      </div>
+                    ) : (
+                      displayRowNumber
+                    )}
+                  </div>
+                </td>
+    
+                {cells.map((cell, colIndex) => {
+                  // 行ヘッダーONの場合、先頭列をスキップ
+                  if (headerConfig?.hasRowHeaders && colIndex === 0) {
+                    return null
+                  }
+                  const storedWidth = editorState.columnWidths[colIndex] || 150
+                  const isEditing = isCellEditing(rowIndex, colIndex)
+                  const isSelected = isCellSelected(rowIndex, colIndex)
+                  const isAnchor = isAnchorCell(rowIndex, colIndex)
+                  const borders = getSelectionBorders(rowIndex, colIndex)
+                  const isInFillRange = isCellInFillRange(rowIndex, colIndex)
+                  const showFillHandle = isBottomRightCell(rowIndex, colIndex) && !isEditing
+                  const isSResult = isSearchResult ? isSearchResult(rowIndex, colIndex) : false
+                  const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, colIndex) : false
+                  const userResized = !!(editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150)
+                  const isSingleSelection = isSingleCellSelection()
+                  const savedHeight = savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)
+    
+                  return (
+                    <MemoizedCell
+                      key={colIndex}
+                      rowIndex={rowIndex}
+                      colIndex={colIndex}
+                      cell={cell}
+                      isSelected={isSelected}
+                      isAnchor={isAnchor}
+                      isSingleSelection={isSingleSelection}
+                      borders={borders}
+                      isEditing={isEditing}
+                      isInFillRange={isInFillRange}
+                      isSearchResult={isSResult}
+                      isCurrentSearchResult={isCSResult}
+                      showFillHandle={showFillHandle}
+                      storedWidth={storedWidth}
+                      userResized={userResized}
+                      displayRowNumber={displayRowNumber}
+                      headerConfig={headerConfig}
+                      initialCellInput={isEditing ? initialCellInput : null}
+                      savedHeight={savedHeight}
+                      onMouseDown={handleCellMouseDown}
+                      onMouseEnter={handleCellMouseEnter}
+                      onDoubleClick={startCellEdit}
+                      onCommitEdit={commitCellEdit}
+                      onCancelEdit={cancelCellEdit}
+                      onFillHandleMouseDown={onFillHandleMouseDown}
+                    />
+                  )
+                })}
+              </tr>
+            )
+            renderedRows.push(currentRow)
+    
+            // DELETED 行の処理
+            // 削除された行は、その行があった場所の "前" の行の gitDiff情報として渡される
+            if (rowIndex >= 0 && gitDiff && Array.isArray(gitDiff)) {
+              const deletedRows = gitDiff.filter(d => d && d.status === GitDiffStatus.DELETED && d.row === rowIndex)
+              if (deletedRows.length > 0) {
+                const colspan = (headerConfig?.hasRowHeaders ? headers.length -1 : headers.length) + 1
+                const deletedRowIndicator = (
+                  <tr key={`deleted-after-${rowIndex}`} className="git-diff-deleted-row">
+                    <td colSpan={colspan} className="git-diff-deleted-cell">
+                      <span className="git-diff-icon git-diff-deleted">-</span>
+                    </td>
+                  </tr>
+                )
+                renderedRows.push(deletedRowIndicator)
+              }
+            }
+            
+            return renderedRows
+          })}
+        </tbody>
+      )
+    }
+    
+    export default TableBody
+    
