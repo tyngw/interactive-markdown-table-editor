@@ -30,6 +30,7 @@ interface TableEditorProps {
   setSortState?: (updater: SortState | ((prev: SortState) => SortState)) => void
   headerConfig?: HeaderConfig
   setHeaderConfig?: (updater: HeaderConfig | ((prev: HeaderConfig) => HeaderConfig)) => void
+  showGitDiff?: boolean
 }
 
 const TableEditor: React.FC<TableEditorProps> = ({
@@ -42,7 +43,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
   sortState,
   setSortState,
   headerConfig,
-  setHeaderConfig
+  setHeaderConfig,
+  showGitDiff = true
 }) => {
   // 外部未指定時は内部の状態を使用
   const [internalSortState, setInternalSortState] = useState<SortState>({ column: -1, direction: 'none' })
@@ -961,7 +963,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
             headerConfig={effectiveHeaderConfig}
             isSearchResult={isSearchResult}
             isCurrentSearchResult={isCurrentSearchResult}
-            gitDiff={tableData.gitDiff}
+            gitDiff={showGitDiff ? tableData.gitDiff : undefined}
           />
         </table>
       </div>

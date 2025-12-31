@@ -2,7 +2,12 @@ import { useTranslation } from 'react-i18next'
 import { useStatus } from '../contexts/StatusContext'
 import { useTheme } from '../contexts/ThemeContext'
 
-const StatusBar: React.FC = () => {
+interface StatusBarProps {
+  showGitDiff?: boolean
+  onGitDiffToggle?: (show: boolean) => void
+}
+
+const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, onGitDiffToggle }) => {
   const { t } = useTranslation()
   const { status, tableInfo, saveStatus, sortState } = useStatus()
   const { getStyle } = useTheme()
@@ -16,6 +21,14 @@ const StatusBar: React.FC = () => {
             {saveStatus === 'error' && `❌ ${t('statusBar.error')}`}
             {(!saveStatus || saveStatus === 'saved') && `✓ ${t('statusBar.saved')}`}
           </span>
+          <button
+            className={`git-diff-indicator ${showGitDiff ? 'active' : 'inactive'}`}
+            onClick={() => onGitDiffToggle?.(!showGitDiff)}
+            title={t('statusBar.toggleGitDiff') || 'Toggle Git Diff'}
+            aria-label="Git Diff"
+          >
+            {showGitDiff ? '✓ Diff' : '- Diff'}
+          </button>
           {status.selection && (
             <span className="status-selection">
               {status.selection}

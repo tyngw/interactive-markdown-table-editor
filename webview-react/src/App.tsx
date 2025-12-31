@@ -29,6 +29,8 @@ function AppContent() {
   const [gitDiffMap, setGitDiffMap] = useState<Map<number, any[]>>(new Map())
   // initialData 変更時に handleTableUpdate の呼び出しを無視するフラグ
   const isInitializing = useRef(false)
+  // Git差分表示フラグ
+  const [showGitDiff, setShowGitDiff] = useState(false)
 
   // refを最新の値で同期
   useEffect(() => {
@@ -47,11 +49,13 @@ function AppContent() {
   // currentTableDataを取得し、gitDiffマップから対応するデータを合成
   // updateTableDataに既にgitDiffが含まれている場合はそれを使用、
   // 含まれていない場合はgitDiffMapから取得
+  // showGitDiffフラグはUI側で処理するため、ここでは常にgitDiffを含める
   const currentTableData = useMemo(() => {
     const baseTable = allTables[currentTableIndex] || null
     if (!baseTable) {
       return null
     }
+    
     // baseTableに既にgitDiffが含まれている場合はそのまま返す
     if (baseTable.gitDiff) {
       return baseTable
@@ -281,6 +285,7 @@ function AppContent() {
               return next
             })
           }}
+          showGitDiff={showGitDiff}
         />
         <div className="bottom-chrome">
           <TableTabs
@@ -288,7 +293,7 @@ function AppContent() {
             currentTableIndex={currentTableIndex}
             onTabChange={handleTabChange}
           />
-          <StatusBar />
+          <StatusBar showGitDiff={showGitDiff} onGitDiffToggle={setShowGitDiff} />
         </div>
         </div>
       </div>
