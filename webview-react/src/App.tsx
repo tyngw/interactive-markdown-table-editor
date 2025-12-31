@@ -32,10 +32,6 @@ function AppContent() {
 
   // refを最新の値で同期
   useEffect(() => {
-    console.log('[MTE][React] allTables changed:', {
-      count: allTables.length,
-      headers: allTables.map((t, i) => ({ index: i, headers: t.headers?.slice(0, 2) }))
-    })
     allTablesRef.current = allTables
   }, [allTables])
 
@@ -52,17 +48,10 @@ function AppContent() {
   const currentTableData = useMemo(() => {
     const baseTable = allTables[currentTableIndex] || null
     if (!baseTable) {
-      console.log('[MTE][React] currentTableData - no baseTable at index', currentTableIndex)
       return null
     }
     // gitDiffマップがある場合は合成
     const gitDiff = gitDiffMap.get(currentTableIndex)
-    console.log('[MTE][React] currentTableData computed:', {
-      tableIndex: currentTableIndex,
-      baseTableHeaders: baseTable.headers?.slice(0, 2),
-      hasGitDiff: !!gitDiff,
-      gitDiffLength: gitDiff?.length
-    })
     if (gitDiff) {
       return { ...baseTable, gitDiff }
     }
@@ -72,17 +61,10 @@ function AppContent() {
 
   // onTableData コールバックは定義せず、通信マネージャーのハンドラーで直接状態更新
   const handleTableDataMessage = useCallback((data: TableData | TableData[]) => {
-    console.log('[MTE][React] handleTableDataMessage called with', {
-      isArray: Array.isArray(data),
-      length: Array.isArray(data) ? data.length : 1
-    })
-    
     // initialData 変更により handleTableUpdate が呼ばれることを防ぐ
     isInitializing.current = true
     
     if (Array.isArray(data)) {
-      console.log('[MTE][React] handleTableDataMessage: calling setAllTables with', data.length, 'tables')
-      console.trace('[MTE][React] Stack trace for setAllTables')
       setAllTables(data)
       // 同期的に ref を更新（batch update 内で ref を更新）
       allTablesRef.current = data
@@ -99,8 +81,6 @@ function AppContent() {
         currentIndexRef.current = 0
       }
     } else {
-      console.log('[MTE][React] handleTableDataMessage: calling setAllTables with single table')
-      console.trace('[MTE][React] Stack trace for single table setAllTables')
       setAllTables([data])
       // 同期的に ref を更新（batch update 内で ref を更新）
       allTablesRef.current = [data]
@@ -114,18 +94,12 @@ function AppContent() {
   const communication = useCommunication({
     onTableData: handleTableDataMessage,
     onGitDiffData: useCallback((diffData: Array<{tableIndex: number, gitDiff: any[]}>) => {
-      console.log('[MTE][React] onGitDiffData received', {
-        diffCount: diffData.length,
-        diffData: diffData.map(d => ({ tableIndex: d.tableIndex, gitDiffLength: d.gitDiff?.length }))
-      });
       // gitDiffを別状態で管理して、allTablesの参照を変えない
       setGitDiffMap(prevMap => {
         const newMap = new Map(prevMap);
         diffData.forEach(diff => {
-          console.log(`[MTE][React] Setting gitDiff for table ${diff.tableIndex}`)
           newMap.set(diff.tableIndex, diff.gitDiff);
         });
-        console.log('[MTE][React] gitDiffMap updated, size:', newMap.size)
         return newMap;
       });
     }, []),
@@ -135,14 +109,9 @@ function AppContent() {
       setLoading(false)
     }, []),
     onThemeVariables: useCallback((data: any) => {
-      console.log('[MTE][React] onThemeVariables received', {
-        keys: data && typeof data === 'object' ? Object.keys(data) : null
-      })
-      // Theme variables logging disabled for production
       applyThemeVariables(data)
     }, [applyThemeVariables]),
     onFontSettings: useCallback((data: any) => {
-      console.log('[MTE][React] onFontSettings received', data)
       if (data && (data.fontFamily || data.fontSize)) {
         setFontSettings({
           fontFamily: data.fontFamily,
@@ -173,18 +142,15 @@ function AppContent() {
   useEffect(() => {
     // Debug: Check window properties when React app starts
     // 初期データをリクエスト
-    console.log('[MTE][React] requesting initial table data');
     communication.requestTableData()
 
     // テーマ変数をリクエスト（一度だけ）
     if (!themeRequested) {
-      console.log('[MTE][React] requesting theme variables (initial)');
       communication.requestThemeVariables()
       setThemeRequested(true)
 
       // VSCodeの初期化遅延に対応するため、少し遅延してもう一度リクエスト
       setTimeout(() => {
-        console.log('[MTE][React] requesting theme variables (delayed retry)');
         communication.requestThemeVariables()
       }, 500)
     }
@@ -242,7 +208,6 @@ function AppContent() {
   const handleTableUpdate = useCallback((updatedData: TableData) => {
     // 初期化フェーズ中は呼び出しを無視
     if (isInitializing.current) {
-      console.log('[MTE][React] handleTableUpdate: ignoring during initialization phase')
       isInitializing.current = false
       return
     }

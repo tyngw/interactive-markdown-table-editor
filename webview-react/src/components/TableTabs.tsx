@@ -14,14 +14,7 @@ const TableTabs: React.FC<TableTabsProps> = ({
 }) => {
   const { t } = useTranslation()
 
-  console.log('[MTE][TableTabs] Render with tables:', {
-    tablesLength: tables.length,
-    currentTableIndex,
-    tableHeaders: tables.map((t, i) => ({ index: i, headers: t.headers?.slice(0, 2) }))
-  })
-
   if (tables.length <= 1) {
-    console.log('[MTE][TableTabs] Skipping render - tables.length <= 1')
     return null
   }
 
