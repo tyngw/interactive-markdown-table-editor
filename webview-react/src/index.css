@@ -487,6 +487,34 @@ table.table-editor tbody tr td.editable-cell.user-resized {
     box-sizing: border-box;
 }
 
+/* ====== Git差分の視覚化 ====== */
+/* Git差分の背景色は、MemoizedCellコンポーネントで動的に適用される */
+/* ここでは、VS Codeのテーマ色を使用したフォールバックを定義 */
+.data-cell.git-diff {
+    transition: background-color 0.2s ease;
+}
+
+.data-cell.git-diff.git-diff-added {
+    /* 追加された行の背景色 */
+    background-color: var(--vscode-gitDecoration-addedResourceForeground, rgba(129, 184, 139, 0.2)) !important;
+}
+
+.data-cell.git-diff.git-diff-modified {
+    /* 変更された行の背景色 */
+    background-color: var(--vscode-gitDecoration-modifiedResourceForeground, rgba(226, 192, 141, 0.2)) !important;
+}
+
+.data-cell.git-diff.git-diff-deleted {
+    /* 削除された行の背景色 */
+    background-color: var(--vscode-gitDecoration-deletedResourceForeground, rgba(199, 78, 57, 0.2)) !important;
+}
+
+/* 選択状態とGit差分が同時にある場合の優先順位調整 */
+.data-cell.git-diff.selected {
+    /* 選択状態の背景色を優先しつつ、Git差分の色も表示 */
+    opacity: 0.9;
+}
+
 table.table-editor tbody tr td .cell-content {
     word-wrap: break-word;
     word-break: break-all;

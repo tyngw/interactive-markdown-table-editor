@@ -596,6 +596,15 @@ export class WebviewManager {
             };
         }
 
+        // Include Git theme colors for diff visualization
+        try {
+            const { getGitThemeColors } = require('./gitDiffUtils');
+            const gitColors = getGitThemeColors();
+            message.gitThemeColors = gitColors;
+        } catch (error) {
+            console.warn('[WebviewManager] Failed to get Git theme colors:', error);
+        }
+
         try {
             const tables = Array.isArray(tableData) ? tableData.length : 1;
             console.log('[MTE][Ext] Sending updateTableData', { tables, hasUri: !!uri, panelActive: panel.active, panelVisible: panel.visible });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useMemo } from 'react'
-import { EditorState, CellPosition, HeaderConfig } from '../types'
+import { EditorState, CellPosition, HeaderConfig, RowGitDiff, GitDiffStatus } from '../types'
 import { processCellContentForStorage } from '../utils/contentConverter'
 import { cleanupCellVisualArtifacts, queryCellElement } from '../utils/cellDomUtils'
 import MemoizedCell from './MemoizedCell'
@@ -28,6 +28,7 @@ interface TableBodyProps {
   headerConfig?: HeaderConfig
   isSearchResult?: (row: number, col: number) => boolean
   isCurrentSearchResult?: (row: number, col: number) => boolean
+  gitDiff?: RowGitDiff[]  // Git差分情報
 }
 
 const TableBody: React.FC<TableBodyProps> = ({
@@ -51,7 +52,8 @@ const TableBody: React.FC<TableBodyProps> = ({
   onFillHandleMouseDown,
   headerConfig,
   isSearchResult,
-  isCurrentSearchResult
+  isCurrentSearchResult,
+  gitDiff
 }) => {
   const savedHeightsRef = useRef<Map<string, { original: number; rowMax: number }>>(new Map())
   void onHeaderUpdate
@@ -381,6 +383,43 @@ const TableBody: React.FC<TableBodyProps> = ({
     // rows / headers が変わると行高さも変わり得るため依存に含める
   }, [editorState.currentEditingCell, rows, headers])
 
+  // Git差分状態に基づく背景色を取得するヘルパー関数
+  const getGitDiffBackgroundColor = useCallback((status: GitDiffStatus | undefined): string | undefined => {
+    if (!status || status === GitDiffStatus.UNCHANGED) {
+      return undefined
+    }
+
+    try {
+      // VS Codeのテーマ色から取得
+      const root = document.documentElement
+      if (!root) {
+        return undefined
+      }
+      
+      const computedStyle = getComputedStyle(root)
+      
+      switch (status) {
+        case GitDiffStatus.ADDED:
+          return computedStyle.getPropertyValue('--vscode-gitDecoration-addedResourceForeground').trim() || 
+                 computedStyle.getPropertyValue('--vscode-diffEditor-insertedTextBackground').trim() ||
+                 'rgba(129, 184, 139, 0.2)'
+        case GitDiffStatus.MODIFIED:
+          return computedStyle.getPropertyValue('--vscode-gitDecoration-modifiedResourceForeground').trim() || 
+                 computedStyle.getPropertyValue('--vscode-diffEditor-modifiedTextBackground').trim() ||
+                 'rgba(226, 192, 141, 0.2)'
+        case GitDiffStatus.DELETED:
+          return computedStyle.getPropertyValue('--vscode-gitDecoration-deletedResourceForeground').trim() || 
+                 computedStyle.getPropertyValue('--vscode-diffEditor-removedTextBackground').trim() ||
+                 'rgba(199, 78, 57, 0.2)'
+        default:
+          return undefined
+      }
+    } catch (error) {
+      console.warn('[TableBody] Error getting Git diff background color:', error)
+      return undefined
+    }
+  }, [])
+
   // 表示する行を統一形式で作成（列ヘッダーOFF時はheadersをrow=-1として先頭に追加）
   const allRows = useMemo(() => {
     const result: Array<{ rowIndex: number; cells: string[] }> = []
@@ -407,10 +446,33 @@ const TableBody: React.FC<TableBodyProps> = ({
         const isRowSelected = selectedRows?.has(rowIndex)
         const isRowFullySelected = fullySelectedRows?.has(rowIndex)
 
+        // Git差分情報を取得（行番号ヘッダに適用するため）
+        // rowIndex === -1 の場合はヘッダー行なので、Git差分情報は取得しない
+        let gitDiffClass = ''
+        let gitDiffBackgroundColor: string | undefined = undefined
+        
+        if (rowIndex >= 0 && gitDiff && Array.isArray(gitDiff)) {
+          const rowGitDiff = gitDiff.find(d => d && typeof d === 'object' && d.row === rowIndex)
+          const gitDiffStatus = rowGitDiff?.status
+          if (gitDiffStatus && gitDiffStatus !== GitDiffStatus.UNCHANGED) {
+            gitDiffClass = `git-diff git-diff-${gitDiffStatus}`
+            gitDiffBackgroundColor = getGitDiffBackgroundColor(gitDiffStatus)
+          }
+        }
+
+        // classNameを構築
+        const rowNumberClassName = [
+          'row-number',
+          isRowFullySelected ? 'selected' : (isRowSelected ? 'highlighted' : ''),
+          headerConfig?.hasRowHeaders ? 'row-header-with-value' : '',
+          gitDiffClass
+        ].filter(Boolean).join(' ')
+
         return (
           <tr key={rowIndex} data-row={rowIndex}>
             <td
-              className={`row-number ${isRowFullySelected ? 'selected' : (isRowSelected ? 'highlighted' : '')} ${headerConfig?.hasRowHeaders ? 'row-header-with-value' : ''}`}
+              className={rowNumberClassName}
+              style={gitDiffBackgroundColor ? { backgroundColor: gitDiffBackgroundColor } : undefined}
               onClick={(e) => {
                 if (onRowSelect) {
                   onRowSelect(rowIndex, e)

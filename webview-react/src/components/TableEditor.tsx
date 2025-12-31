@@ -961,6 +961,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
             headerConfig={effectiveHeaderConfig}
             isSearchResult={isSearchResult}
             isCurrentSearchResult={isCurrentSearchResult}
+            gitDiff={tableData.gitDiff}
           />
         </table>
       </div>
