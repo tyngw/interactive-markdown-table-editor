@@ -380,6 +380,13 @@ export class ExtensionCommunicationManager {
   }
 
   /**
+   * Git差分更新の送信
+   */
+  public updateGitDiff(data: any): void {
+    this.sendNotification(ExtensionCommand.UPDATE_GIT_DIFF, data);
+  }
+
+  /**
    * アクティブテーブル設定の送信
    */
   public setActiveTable(index: number): void {
