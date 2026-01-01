@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import { useStatus } from '../contexts/StatusContext'
-import { useTheme } from '../contexts/ThemeContext'
 
 interface StatusBarProps {
   showGitDiff?: boolean
@@ -10,7 +9,6 @@ interface StatusBarProps {
 const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, onGitDiffToggle }) => {
   const { t } = useTranslation()
   const { status, tableInfo, saveStatus, sortState } = useStatus()
-  const { getStyle } = useTheme()
 
   return (
     <div className="status-bar">
