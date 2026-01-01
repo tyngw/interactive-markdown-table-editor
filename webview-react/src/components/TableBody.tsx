@@ -444,6 +444,8 @@ const TableBody: React.FC<TableBodyProps> = ({
             const displayRowNumber = rowIndex === -1 ? 0 : rowIndex + 1
             const isRowSelected = selectedRows?.has(rowIndex)
             const isRowFullySelected = fullySelectedRows?.has(rowIndex)
+            // 交互網掛け用のフラグ。Git差分の削除行はカウントに含めない。
+            const isStripedRow = rowIndex >= 0 && (rowIndex % 2 === 1)
 
             // この行に対応する削除行を直前に表示
             const deletedRowsForThisRow = deletedRowsMap.get(rowIndex)
@@ -500,6 +502,9 @@ const TableBody: React.FC<TableBodyProps> = ({
               // この行に関連する追加行の差分情報を取得
               const rowGitDiff = gitDiff.find(d => d && typeof d === 'object' && d.row === rowIndex && !d.isDeletedRow)
               gitDiffStatus = rowGitDiff?.status
+              if (rowIndex === 0) {
+                console.log('[TableBody] rowIndex:', rowIndex, 'rowGitDiff:', rowGitDiff, 'gitDiffStatus:', gitDiffStatus, 'columnDiff:', columnDiff)
+              }
               if (gitDiffStatus && gitDiffStatus !== GitDiffStatus.UNCHANGED) {
                 switch (gitDiffStatus) {
                   case GitDiffStatus.ADDED:
@@ -520,7 +525,7 @@ const TableBody: React.FC<TableBodyProps> = ({
             ].filter(Boolean).join(' ')
             
             const currentRow = (
-              <tr key={rowIndex} data-row={rowIndex}>
+              <tr key={rowIndex} data-row={rowIndex} className={isStripedRow ? 'striped-row' : undefined}>
                 <td
                   className={rowNumberClassName}
                   onClick={(e) => {
@@ -571,8 +576,30 @@ const TableBody: React.FC<TableBodyProps> = ({
                   // 列が削除された場合、追加行の該当列に網掛けを表示
                   const isDeletedColumnInAddedRow = gitDiffStatus === GitDiffStatus.ADDED && 
                     columnDiff && 
+                    columnDiff.deletedColumns && 
                     columnDiff.deletedColumns.length > 0 &&
-                    colIndex >= (columnDiff.newColumnCount)
+                    columnDiff.deletedColumns.includes(colIndex)
+                  
+                  // デバッグログ：追加行の最初のセル（colIndex=0）で判定結果を出力
+                  if (rowIndex === 0 && colIndex === 0) {
+                    console.log('[TableBody] Row 0 deletion column check:', {
+                      gitDiffStatus,
+                      isAddedRow: gitDiffStatus === GitDiffStatus.ADDED,
+                      columnDiff: columnDiff ? {
+                        oldColumnCount: columnDiff.oldColumnCount,
+                        newColumnCount: columnDiff.newColumnCount,
+                        deletedColumns: columnDiff.deletedColumns,
+                        oldHeaders: columnDiff.oldHeaders
+                      } : null,
+                      hasDeletedColumns: columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0,
+                      checkResult: isDeletedColumnInAddedRow
+                    })
+                  }
+                  
+                  // 各セルについて削除列判定をログ
+                  if (rowIndex === 0 && columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) {
+                    console.log(`[TableBody] Row 0, Col ${colIndex}: isDeletedColumnInAddedRow=${isDeletedColumnInAddedRow}, includes check=${columnDiff.deletedColumns.includes(colIndex)}`);
+                  }
     
                   return (
                     <MemoizedCell

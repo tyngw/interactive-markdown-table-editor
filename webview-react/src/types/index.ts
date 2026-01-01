@@ -26,6 +26,7 @@ export interface ColumnDiffInfo {
   newColumnCount: number      // 変更後の列数
   addedColumns: number[]      // 追加された列のインデックス（変更後の列番号）
   deletedColumns: number[]    // 削除された列のインデックス（変更前の列番号）
+  oldHeaders?: string[]       // 変更前のヘッダ（削除列表示用）
 }
 
 // テーブルデータの型定義

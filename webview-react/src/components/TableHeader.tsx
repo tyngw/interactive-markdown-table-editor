@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { SortState, ColumnWidths, HeaderConfig } from '../types'
+import { SortState, ColumnWidths, HeaderConfig, ColumnDiffInfo } from '../types'
 import { getColumnLetter } from '../utils/tableUtils'
 
 interface TableHeaderProps {
@@ -20,6 +20,7 @@ interface TableHeaderProps {
   selectedCols?: Set<number>
   fullySelectedCols?: Set<number>
   headerConfig?: HeaderConfig
+  columnDiff?: ColumnDiffInfo  // 列の差分情報
 }
 
 const TableHeader: React.FC<TableHeaderProps> = ({
@@ -36,7 +37,8 @@ const TableHeader: React.FC<TableHeaderProps> = ({
   getDropProps,
   selectedCols,
   fullySelectedCols,
-  headerConfig
+  headerConfig,
+  columnDiff
 }) => {
   // theme context はここでは未使用
   const [editingHeader, setEditingHeader] = useState<number | null>(null)
@@ -265,9 +267,39 @@ const TableHeader: React.FC<TableHeaderProps> = ({
             </th>
           )
         })}
+        {/* 列が削除された場合、削除列のヘッダセルを網掛け表示 */}
+        {columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0 &&
+          columnDiff.deletedColumns.map((deletedColIndex) => {
+            const columnLetter = getColumnLetter(deletedColIndex)
+            const storedWidth = columnWidths[deletedColIndex] || 150
+            const widthStyle = {
+              width: `${storedWidth}px`,
+              minWidth: `${storedWidth}px`,
+              maxWidth: `${storedWidth}px`
+            }
+            // 削除前のヘッダ名を取得（oldHeaders が存在する場合）
+            const deletedHeaderName = columnDiff.oldHeaders && columnDiff.oldHeaders[deletedColIndex]
+              ? columnDiff.oldHeaders[deletedColIndex]
+              : `(Deleted)`
+            
+            return (
+              <th
+                key={`deleted-header-${deletedColIndex}`}
+                className="column-header git-diff-column-not-exist"
+                data-col={deletedColIndex}
+                style={widthStyle}
+                title={`Column ${columnLetter}: ${deletedHeaderName}`}
+              >
+                <div className="header-content">
+                  <div className="column-letter">{columnLetter}</div>
+                  <div className="column-title">{deletedHeaderName}</div>
+                </div>
+              </th>
+            )
+          })
+        }
       </tr>
     </thead>
   )
 }
-
 export default TableHeader

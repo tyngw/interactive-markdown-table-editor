@@ -102,6 +102,11 @@ const MemoizedCell: React.FC<MemoizedCellProps> = ({
     isCurrentSearchResult ? 'current-search-result' : '',
     isColumnNotExist ? 'git-diff-column-not-exist' : ''
   ].filter(Boolean).join(' ')
+  
+  // デバッグログ：削除列判定
+  if (rowIndex === 0 && isColumnNotExist) {
+    console.log(`[MemoizedCell] Row ${rowIndex}, Col ${colIndex}: git-diff-column-not-exist class applied, className=${className}`);
+  }
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     onMouseDown(rowIndex, colIndex, e)
