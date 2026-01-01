@@ -554,8 +554,14 @@ const TableBody: React.FC<TableBodyProps> = ({
                   {gitDiffIcon}
                 </td>
     
-                {(gitDiffStatus === GitDiffStatus.ADDED && columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) ? (
-                  // 削除前の列数分のセルを生成（追加行の場合）
+                {(() => {
+                  const shouldUseDeletedBeforeColumns = (gitDiffStatus === GitDiffStatus.ADDED || rowIndex === -1) && columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0
+                  if (rowIndex === -1) {
+                    console.log('[TableBody] ヘッダ行チェック:', { rowIndex, gitDiffStatus, columnDiff: columnDiff ? { deletedColumns: columnDiff.deletedColumns, oldColumnCount: columnDiff.oldColumnCount } : null, shouldUseDeletedBeforeColumns })
+                  }
+                  return shouldUseDeletedBeforeColumns
+                })() ? (
+                  // 削除前の列数分のセルを生成（追加行またはヘッダ行の場合）
                   Array.from({ length: columnDiff.oldColumnCount }).map((_, oldColIdx) => {
                     // 行ヘッダーONの場合、先頭列をスキップ
                     if (headerConfig?.hasRowHeaders && oldColIdx === 0) {
@@ -564,9 +570,9 @@ const TableBody: React.FC<TableBodyProps> = ({
                     
                     const isDeletedColumn = columnDiff.deletedColumns.includes(oldColIdx)
                     
-                    // デバッグ：追加行で各列の処理をログ出力
-                    if (rowIndex === 0) {
-                      console.log(`[TableBody] Row 0 (added), oldColIdx=${oldColIdx}: isDeleted=${isDeletedColumn}`)
+                    // デバッグ：追加行またはヘッダ行で各列の処理をログ出力
+                    if (rowIndex === -1 || rowIndex === 0) {
+                      console.log(`[TableBody] Row ${rowIndex}, oldColIdx=${oldColIdx}: isDeleted=${isDeletedColumn}`)
                     }
                     
                     if (isDeletedColumn) {
@@ -589,8 +595,16 @@ const TableBody: React.FC<TableBodyProps> = ({
                     const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
                     const newColIdx = oldColIdx - deletedBeforeThisCol
                     
-                    const cell = cells[newColIdx] || ''
                     const colIndex = oldColIdx
+                    
+                    // ヘッダ行（rowIndex=-1）の場合は、columnDiff.oldHeaders から削除前のヘッダ名を取得
+                    // 通常行の場合は、cells から削除前の列インデックスに対応するセル内容を取得
+                    let cellContent = ''
+                    if (rowIndex === -1 && columnDiff.oldHeaders && columnDiff.oldHeaders[oldColIdx]) {
+                      cellContent = columnDiff.oldHeaders[oldColIdx]
+                    } else {
+                      cellContent = cells[newColIdx] || ''
+                    }
                     
                     const storedWidth = editorState.columnWidths[colIndex] || 150
                     const isEditing = isCellEditing(rowIndex, colIndex)
@@ -605,12 +619,30 @@ const TableBody: React.FC<TableBodyProps> = ({
                     const isSingleSelection = isSingleCellSelection()
                     const savedHeight = savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)
                     
+                    // ヘッダ行の場合は、MemoizedCellを使わず直接テーブルセルを返す
+                    if (rowIndex === -1) {
+                      return (
+                        <td
+                          key={colIndex}
+                          data-col={colIndex}
+                          className="column-header"
+                          style={{
+                            width: `${storedWidth}px`,
+                            minWidth: `${storedWidth}px`,
+                            maxWidth: `${storedWidth}px`
+                          }}
+                        >
+                          <div className="column-header-content">{cellContent}</div>
+                        </td>
+                      )
+                    }
+                    
                     return (
                       <MemoizedCell
                         key={colIndex}
                         rowIndex={rowIndex}
                         colIndex={colIndex}
-                        cell={cell}
+                        cell={cellContent}
                         isSelected={isSelected}
                         isAnchor={isAnchor}
                         isSingleSelection={isSingleSelection}
