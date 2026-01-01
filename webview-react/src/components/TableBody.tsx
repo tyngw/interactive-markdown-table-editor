@@ -470,8 +470,17 @@ const TableBody: React.FC<TableBodyProps> = ({
                       if (headerConfig?.hasRowHeaders && cellIndex === 0) {
                         return null
                       }
+                      // 列削除を考慮したセルインデックスのマッピング
+                      // 削除されたセルのインデックスを数えて、追加行でのインデックスを計算
+                      let addedCellIndex = cellIndex
+                      if (columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) {
+                        // cellIndexより前に削除された列の数を数える
+                        const deletedCountBefore = columnDiff.deletedColumns.filter(col => col < cellIndex).length
+                        addedCellIndex = cellIndex - deletedCountBefore
+                      }
+                      
                       // 対応する追加行のセルと内容を比較
-                      const addedCellContent = addedCells[cellIndex] || ''
+                      const addedCellContent = addedCells[addedCellIndex] || ''
                       const isSameContent = cellContent.trim() === addedCellContent.trim()
                       const cellClassName = ['git-diff-deleted-cell', isSameContent ? 'git-diff-same-content' : ''].filter(Boolean).join(' ')
                       
