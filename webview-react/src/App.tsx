@@ -21,7 +21,6 @@ function AppContent() {
   // テーブルごとのソート状態を上位で管理
   const [sortStates, setSortStates] = useState<SortState[]>([])
   const { theme, isLoaded, applyThemeVariables } = useTheme()
-  const lastUpdateRef = useRef<{hash: string, time: number} | null>(null)
   const currentIndexRef = useRef(0)
   const pendingTabSwitchRef = useRef<{index: number, time: number} | null>(null)
   const allTablesRef = useRef<TableData[]>([])
