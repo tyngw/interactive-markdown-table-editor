@@ -595,7 +595,8 @@ const TableBody: React.FC<TableBodyProps> = ({
                     const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
                     const newColIdx = oldColIdx - deletedBeforeThisCol
                     
-                    const colIndex = oldColIdx
+                    // セル編集時は新しいテーブルの列番号を使用する必要がある
+                    const colIndex = newColIdx
                     
                     // ヘッダ行（rowIndex=-1）の場合は、columnDiff.oldHeaders から削除前のヘッダ名を取得
                     // 通常行の場合は、cells から削除前の列インデックスに対応するセル内容を取得
@@ -606,25 +607,25 @@ const TableBody: React.FC<TableBodyProps> = ({
                       cellContent = cells[newColIdx] || ''
                     }
                     
-                    const storedWidth = editorState.columnWidths[colIndex] || 150
-                    const isEditing = isCellEditing(rowIndex, colIndex)
-                    const isSelected = isCellSelected(rowIndex, colIndex)
-                    const isAnchor = isAnchorCell(rowIndex, colIndex)
-                    const borders = getSelectionBorders(rowIndex, colIndex)
-                    const isInFillRange = isCellInFillRange(rowIndex, colIndex)
-                    const showFillHandle = isBottomRightCell(rowIndex, colIndex) && !isEditing
-                    const isSResult = isSearchResult ? isSearchResult(rowIndex, colIndex) : false
-                    const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, colIndex) : false
-                    const userResized = !!(editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150)
+                    const storedWidth = editorState.columnWidths[newColIdx] || 150
+                    const isEditing = isCellEditing(rowIndex, newColIdx)
+                    const isSelected = isCellSelected(rowIndex, newColIdx)
+                    const isAnchor = isAnchorCell(rowIndex, newColIdx)
+                    const borders = getSelectionBorders(rowIndex, newColIdx)
+                    const isInFillRange = isCellInFillRange(rowIndex, newColIdx)
+                    const showFillHandle = isBottomRightCell(rowIndex, newColIdx) && !isEditing
+                    const isSResult = isSearchResult ? isSearchResult(rowIndex, newColIdx) : false
+                    const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, newColIdx) : false
+                    const userResized = !!(editorState.columnWidths[newColIdx] && editorState.columnWidths[newColIdx] !== 150)
                     const isSingleSelection = isSingleCellSelection()
-                    const savedHeight = savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)
+                    const savedHeight = savedHeightsRef.current.get(`${rowIndex}-${newColIdx}`)
                     
                     // ヘッダ行の場合は、MemoizedCellを使わず直接テーブルセルを返す
                     if (rowIndex === -1) {
                       return (
                         <td
-                          key={colIndex}
-                          data-col={colIndex}
+                          key={newColIdx}
+                          data-col={newColIdx}
                           className="column-header"
                           style={{
                             width: `${storedWidth}px`,
@@ -639,9 +640,9 @@ const TableBody: React.FC<TableBodyProps> = ({
                     
                     return (
                       <MemoizedCell
-                        key={colIndex}
+                        key={newColIdx}
                         rowIndex={rowIndex}
-                        colIndex={colIndex}
+                        colIndex={newColIdx}
                         cell={cellContent}
                         isSelected={isSelected}
                         isAnchor={isAnchor}

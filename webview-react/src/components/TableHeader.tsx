@@ -220,18 +220,18 @@ const TableHeader: React.FC<TableHeaderProps> = ({
               const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
               const newColIdx = oldColIdx - deletedBeforeThisCol
               const header = headers[newColIdx] || ''
-              const col = oldColIdx
+              const col = newColIdx
               
-              const columnLetter = getColumnLetter(col)
-              const storedWidth = columnWidths[col] || 150
+              const columnLetter = getColumnLetter(oldColIdx)
+              const storedWidth = columnWidths[newColIdx] || 150
               const widthStyle = {
                 width: `${storedWidth}px`,
                 minWidth: `${storedWidth}px`,
                 maxWidth: `${storedWidth}px`
               }
-              const userResizedClass = columnWidths[col] && columnWidths[col] !== 150 ? 'user-resized' : ''
-              const isSelected = selectedCols?.has(col)
-              const isFullySelected = fullySelectedCols?.has(col)
+              const userResizedClass = columnWidths[newColIdx] && columnWidths[newColIdx] !== 150 ? 'user-resized' : ''
+              const isSelected = selectedCols?.has(newColIdx)
+              const isFullySelected = fullySelectedCols?.has(newColIdx)
 
               return (
                 <th
