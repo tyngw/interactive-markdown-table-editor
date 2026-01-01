@@ -560,7 +560,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                     console.log('[TableBody] ヘッダ行チェック:', { rowIndex, gitDiffStatus, columnDiff: columnDiff ? { deletedColumns: columnDiff.deletedColumns, oldColumnCount: columnDiff.oldColumnCount } : null, shouldUseDeletedBeforeColumns })
                   }
                   return shouldUseDeletedBeforeColumns
-                })() ? (
+                })() && columnDiff ? (
                   // 削除前の列数分のセルを生成（追加行またはヘッダ行の場合）
                   Array.from({ length: columnDiff.oldColumnCount }).map((_, oldColIdx) => {
                     // 行ヘッダーONの場合、先頭列をスキップ
