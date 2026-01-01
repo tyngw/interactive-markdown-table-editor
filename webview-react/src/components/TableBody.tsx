@@ -461,7 +461,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                 const addedCells = rowIndex >= 0 ? cells : []
                 
                 const deletedRowIndicator = (
-                  <tr key={`deleted-${diff.row}-${index}`} className="git-diff-deleted-row">
+                  <tr key={`deleted-${diff.row}-${index}`} className={isStripedRow ? 'git-diff-deleted-row striped-row' : 'git-diff-deleted-row'}>
                     <td className="row-number git-diff-deleted">
                       <span className="git-diff-icon git-diff-deleted">-</span>
                     </td>
