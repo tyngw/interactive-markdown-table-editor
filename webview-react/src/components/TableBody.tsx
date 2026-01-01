@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useMemo } from 'react'
-import { EditorState, CellPosition, HeaderConfig, RowGitDiff, GitDiffStatus } from '../types'
+import { EditorState, CellPosition, HeaderConfig, RowGitDiff, GitDiffStatus, ColumnDiffInfo } from '../types'
 import { processCellContentForStorage } from '../utils/contentConverter'
 import { cleanupCellVisualArtifacts, queryCellElement } from '../utils/cellDomUtils'
 import MemoizedCell from './MemoizedCell'
@@ -43,6 +43,7 @@ interface TableBodyProps {
   isSearchResult?: (row: number, col: number) => boolean
   isCurrentSearchResult?: (row: number, col: number) => boolean
   gitDiff?: RowGitDiff[]  // Git差分情報
+  columnDiff?: ColumnDiffInfo  // 列の差分情報
 }
 
 const TableBody: React.FC<TableBodyProps> = ({
@@ -67,7 +68,8 @@ const TableBody: React.FC<TableBodyProps> = ({
   headerConfig,
   isSearchResult,
   isCurrentSearchResult,
-  gitDiff
+  gitDiff,
+  columnDiff
 }) => {
   const savedHeightsRef = useRef<Map<string, { original: number; rowMax: number }>>(new Map())
   void onHeaderUpdate
@@ -448,12 +450,17 @@ const TableBody: React.FC<TableBodyProps> = ({
             if (deletedRowsForThisRow && deletedRowsForThisRow.length > 0) {
               deletedRowsForThisRow.forEach(({ diff, index }) => {
                 const deletedCells = diff.oldContent ? parseTableRowCells(diff.oldContent) : []
+                // 現在の列数（追加された列を含む）
+                const currentColumnCount = headers.length
+                // 削除行の列数
+                const deletedColumnCount = deletedCells.length
                 
                 const deletedRowIndicator = (
                   <tr key={`deleted-${diff.row}-${index}`} className="git-diff-deleted-row">
                     <td className="row-number git-diff-deleted">
                       <span className="git-diff-icon git-diff-deleted">-</span>
                     </td>
+                    {/* 削除行のセルを表示 */}
                     {deletedCells.map((cellContent, cellIndex) => {
                       if (headerConfig?.hasRowHeaders && cellIndex === 0) {
                         return null
@@ -464,6 +471,22 @@ const TableBody: React.FC<TableBodyProps> = ({
                         </td>
                       )
                     })}
+                    {/* 列が追加された場合、削除行には存在しない列に網掛けセルを追加 */}
+                    {currentColumnCount > deletedColumnCount && 
+                      Array.from({ length: currentColumnCount - deletedColumnCount }).map((_, i) => {
+                        const addedColIndex = deletedColumnCount + i
+                        const addedColWidth = editorState.columnWidths[addedColIndex] || 150
+                        return (
+                          <td 
+                            key={`deleted-hatched-${diff.row}-${index}-${addedColIndex}`} 
+                            className="git-diff-deleted-cell git-diff-column-not-exist"
+                            style={{ width: `${addedColWidth}px`, minWidth: `${addedColWidth}px`, maxWidth: `${addedColWidth}px` }}
+                          >
+                            <span className="git-diff-deleted-content"></span>
+                          </td>
+                        )
+                      })
+                    }
                   </tr>
                 )
                 renderedRows.push(deletedRowIndicator)
@@ -543,6 +566,13 @@ const TableBody: React.FC<TableBodyProps> = ({
                   const userResized = !!(editorState.columnWidths[colIndex] && editorState.columnWidths[colIndex] !== 150)
                   const isSingleSelection = isSingleCellSelection()
                   const savedHeight = savedHeightsRef.current.get(`${rowIndex}-${colIndex}`)
+                  
+                  // 追加行で削除された列のセルかどうかを判定
+                  // 列が削除された場合、追加行の該当列に網掛けを表示
+                  const isDeletedColumnInAddedRow = gitDiffStatus === GitDiffStatus.ADDED && 
+                    columnDiff && 
+                    columnDiff.deletedColumns.length > 0 &&
+                    colIndex >= (columnDiff.newColumnCount)
     
                   return (
                     <MemoizedCell
@@ -571,9 +601,24 @@ const TableBody: React.FC<TableBodyProps> = ({
                       onCommitEdit={commitCellEdit}
                       onCancelEdit={cancelCellEdit}
                       onFillHandleMouseDown={onFillHandleMouseDown}
+                      isColumnNotExist={isDeletedColumnInAddedRow}
                     />
                   )
                 })}
+                {/* 列が削除された場合、追加行に網掛けセルを追加 */}
+                {gitDiffStatus === GitDiffStatus.ADDED && columnDiff && columnDiff.deletedColumns.length > 0 &&
+                  columnDiff.deletedColumns.map((deletedColIndex) => (
+                    <td 
+                      key={`added-hatched-${rowIndex}-${deletedColIndex}`}
+                      className="git-diff-column-not-exist"
+                      style={{ 
+                        width: `${editorState.columnWidths[deletedColIndex] || 150}px`,
+                        minWidth: `${editorState.columnWidths[deletedColIndex] || 150}px`,
+                        maxWidth: `${editorState.columnWidths[deletedColIndex] || 150}px`
+                      }}
+                    />
+                  ))
+                }
               </tr>
             )
             renderedRows.push(currentRow)
