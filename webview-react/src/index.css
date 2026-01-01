@@ -239,8 +239,8 @@ table.table-editor thead {
 /* Row/column header highlighting for selection */
 
 /* Grid lines enhancement */
-.table-editor tr:nth-child(even) td.data-cell,
-.table-editor tr:nth-child(even) td.editable-cell {
+.table-editor tr.striped-row td.data-cell,
+.table-editor tr.striped-row td.editable-cell {
     background-color: var(--vscode-editor-hoverHighlightBackground, var(--vscode-editor-selectionHighlightBackground, var(--vscode-editor-lineHighlightBackground)));
 }
 
@@ -583,6 +583,12 @@ table.table-editor tbody tr td.editable-cell.user-resized {
 }
 
 /* 追加行内の存在しない列セル - より濃い緑系の斜線 */
+tr:not(.git-diff-deleted-row) td.git-diff-column-not-exist {
+    /* 目視しやすい下地色と枠線を付与 */
+    background-color: rgba(129, 184, 139, 0.12);
+    border: 1px dashed var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
+}
+
 tr:not(.git-diff-deleted-row) td.git-diff-column-not-exist::before {
     background: repeating-linear-gradient(
         -45deg,
