@@ -413,6 +413,24 @@ const TableBody: React.FC<TableBodyProps> = ({
     
         return result
       }, [headerConfig?.hasColumnHeaders, headers, rows])
+
+      // 削除行のマップを作成（row番号 -> 削除行の配列）
+      const deletedRowsMap = useMemo(() => {
+        const map = new Map<number, Array<{ diff: RowGitDiff; index: number }>>()
+        if (!gitDiff || !Array.isArray(gitDiff)) {
+          return map
+        }
+        
+        gitDiff.forEach((d, index) => {
+          if (d && d.status === GitDiffStatus.DELETED && d.isDeletedRow) {
+            const existing = map.get(d.row) || []
+            existing.push({ diff: d, index })
+            map.set(d.row, existing)
+          }
+        })
+        
+        return map
+      }, [gitDiff])
     
       return (
         <tbody>
@@ -424,46 +442,39 @@ const TableBody: React.FC<TableBodyProps> = ({
             const displayRowNumber = rowIndex === -1 ? 0 : rowIndex + 1
             const isRowSelected = selectedRows?.has(rowIndex)
             const isRowFullySelected = fullySelectedRows?.has(rowIndex)
-    
-            // DELETED 行を先に処理（git diff の順序に合わせる）
-            // isDeletedRow フラグで、他の DELETED 行と区別
-            if (rowIndex >= 0 && gitDiff && Array.isArray(gitDiff)) {
-              const deletedRows = gitDiff.filter(d => 
-                d && d.status === GitDiffStatus.DELETED && d.row === rowIndex && d.isDeletedRow
-              )
-              if (deletedRows.length > 0) {
-                deletedRows.forEach((deletedRow) => {
-                  const keyPart = deletedRow.deletedIndex !== undefined ? deletedRow.deletedIndex : 0
-                  const deletedCells = deletedRow.oldContent ? parseTableRowCells(deletedRow.oldContent) : []
-                  
-                  const deletedRowIndicator = (
-                    <tr key={`deleted-before-${rowIndex}-${keyPart}`} className="git-diff-deleted-row">
-                      <td className="row-number git-diff-deleted">
-                        <span className="git-diff-icon git-diff-deleted">-</span>
-                      </td>
-                      {deletedCells.map((cellContent, cellIndex) => {
-                        // 行ヘッダーの場合はスキップ
-                        if (headerConfig?.hasRowHeaders && cellIndex === 0) {
-                          return null
-                        }
-                        return (
-                          <td key={`deleted-cell-${rowIndex}-${keyPart}-${cellIndex}`} className="git-diff-deleted-cell">
-                            <span className="git-diff-deleted-content">{cellContent}</span>
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  )
-                  renderedRows.push(deletedRowIndicator)
-                })
-              }
+
+            // この行に対応する削除行を直前に表示
+            const deletedRowsForThisRow = deletedRowsMap.get(rowIndex)
+            if (deletedRowsForThisRow && deletedRowsForThisRow.length > 0) {
+              deletedRowsForThisRow.forEach(({ diff, index }) => {
+                const deletedCells = diff.oldContent ? parseTableRowCells(diff.oldContent) : []
+                
+                const deletedRowIndicator = (
+                  <tr key={`deleted-${diff.row}-${index}`} className="git-diff-deleted-row">
+                    <td className="row-number git-diff-deleted">
+                      <span className="git-diff-icon git-diff-deleted">-</span>
+                    </td>
+                    {deletedCells.map((cellContent, cellIndex) => {
+                      if (headerConfig?.hasRowHeaders && cellIndex === 0) {
+                        return null
+                      }
+                      return (
+                        <td key={`deleted-cell-${diff.row}-${index}-${cellIndex}`} className="git-diff-deleted-cell">
+                          <span className="git-diff-deleted-content">{cellContent}</span>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+                renderedRows.push(deletedRowIndicator)
+              })
             }
     
             let gitDiffIcon: React.ReactNode = null
             let gitDiffStatus: GitDiffStatus | undefined = undefined
     
             if (rowIndex >= 0 && gitDiff && Array.isArray(gitDiff)) {
-              // ADDED 行のみを対象にしたgitDiffStatus取得（isDeletedRow フラグでないもの）
+              // この行に関連する追加行の差分情報を取得
               const rowGitDiff = gitDiff.find(d => d && typeof d === 'object' && d.row === rowIndex && !d.isDeletedRow)
               gitDiffStatus = rowGitDiff?.status
               if (gitDiffStatus && gitDiffStatus !== GitDiffStatus.UNCHANGED) {
