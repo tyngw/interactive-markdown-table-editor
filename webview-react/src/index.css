@@ -219,11 +219,10 @@ body {
     border-collapse: separate;
     border-spacing: 0;
     width: auto;
-    min-width: 600px;
     font-family: var(--mte-font-family, var(--vscode-editor-font-family, var(--vscode-font-family, 'Consolas', 'Monaco', 'Courier New', monospace)));
     font-size: var(--mte-font-size, var(--vscode-editor-font-size, var(--vscode-font-size, 14px)));
     color: var(--vscode-editor-foreground, var(--vscode-foreground, #333333));
-    table-layout: fixed;
+    table-layout: auto;
     display: table;
     /* Create proper stacking context for the table */
     position: relative;
