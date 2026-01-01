@@ -36,6 +36,7 @@ export interface RowGitDiff {
     row: number;
     status: GitDiffStatus;
     oldContent?: string;  // 削除された行の内容（変更前の行を表示するため）
+    newContent?: string;  // 追加された行の内容（列差分検出用）
     isDeletedRow?: boolean;  // 削除行の表示用フラグ（実データ行ではない）
 }
 
@@ -258,6 +259,7 @@ interface LineDiff {
     status: GitDiffStatus;
     oldLineNumber?: number;  // 変更前のファイルでの行番号（削除された行の場合）
     oldContent?: string;  // 削除された行の元々の内容
+    newContent?: string;  // 追加された行の内容
     hunkId?: number;  // hunk の識別子（同じ hunk 内の削除行と追加行をペアリングするため）
 }
 
@@ -414,10 +416,12 @@ function parseGitDiff(
             oldLineNumber++;
         } else if (line.startsWith('+') && !line.startsWith('+++')) {
             // 追加行を ADDED として記録
-            console.log('[parseGitDiff] ADDED line:', { newLineNumber, content: line.substring(1) });
+            const addedContent = line.substring(1);
+            console.log('[parseGitDiff] ADDED line:', { newLineNumber, content: addedContent });
             lineDiffs.push({
                 lineNumber: newLineNumber,
                 status: GitDiffStatus.ADDED,
+                newContent: addedContent,
                 hunkId: hunkId
             });
             newLineNumber++;
@@ -518,7 +522,8 @@ function mapTableRowsToGitDiff(
             if (tableRow >= -2 && tableRow < rowCount) {
                 result.push({
                     row: tableRow,
-                    status: GitDiffStatus.ADDED
+                    status: GitDiffStatus.ADDED,
+                    newContent: addedDiff.newContent
                 });
             }
         }
@@ -530,7 +535,8 @@ function mapTableRowsToGitDiff(
             if (tableRow >= -2 && tableRow < rowCount) {
                 result.push({
                     row: tableRow,
-                    status: GitDiffStatus.ADDED
+                    status: GitDiffStatus.ADDED,
+                    newContent: addedDiff.newContent
                 });
             }
         }
@@ -717,10 +723,47 @@ export function detectColumnDiff(
         }
     } else if (columnDiff < 0) {
         // 列が削除された場合
-        // 削除された列は末尾から削除されたと仮定
-        for (let i = newColumnCount; i < oldColumnCount; i++) {
-            result.deletedColumns.push(i);
+        // 削除前後のヘッダ名を比較して、実際に削除された列インデックスを特定
+        if (result.oldHeaders && result.oldHeaders.length > 0) {
+            // 追加行から変更後のヘッダを取得
+            const newHeaderAddedRow = addedRows.find(d => d.row === -2);
+            if (newHeaderAddedRow && newHeaderAddedRow.newContent) {
+                const newHeaders = parseTableRowCells(newHeaderAddedRow.newContent);
+                
+                // 両方のヘッダが存在する場合、削除された列を特定
+                console.log('[detectColumnDiff] Comparing headers - old:', result.oldHeaders, 'new:', newHeaders);
+                
+                // 削除前のヘッダで、削除後に存在しない列を見つける
+                for (let oldIdx = 0; oldIdx < result.oldHeaders.length; oldIdx++) {
+                    const oldHeaderName = result.oldHeaders[oldIdx];
+                    
+                    // このヘッダが新しいヘッダ列に存在するか確認
+                    const foundInNew = newHeaders.some(newHeader => newHeader === oldHeaderName);
+                    
+                    if (!foundInNew) {
+                        result.deletedColumns.push(oldIdx);
+                        console.log(`[detectColumnDiff] Column ${oldIdx} (${oldHeaderName}) detected as deleted`);
+                    }
+                }
+            }
         }
+        
+        // フォールバック：ヘッダが利用できない場合は末尾から削除されたと仮定
+        if (result.deletedColumns.length === 0) {
+            for (let i = newColumnCount; i < oldColumnCount; i++) {
+                result.deletedColumns.push(i);
+            }
+            console.log('[detectColumnDiff] Using fallback: assumed columns deleted from end');
+        }
+        
+        // デバッグログ：削除された列を詳細に出力
+        console.log('[detectColumnDiff] Column deletion detected:', {
+            oldColumnCount,
+            newColumnCount,
+            deletedCount: oldColumnCount - newColumnCount,
+            deletedColumns: result.deletedColumns,
+            oldHeaders: result.oldHeaders
+        });
     }
 
     console.log('[detectColumnDiff] Final result:', result);
