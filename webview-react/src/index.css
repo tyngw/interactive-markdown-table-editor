@@ -430,21 +430,24 @@ table.table-editor tbody tr td.row-number {
     font-weight: 700;
     text-align: left;
     vertical-align: top;
-    padding: 0 8px;
+    padding: 4px 8px;
     width: 60px;
     min-width: 60px;
     max-width: 60px;
     user-select: none;
     color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
     cursor: pointer;
-    /* Sticky position with relative context for resize handle */
+    /* Sticky position - fixed during horizontal scrolling */
     position: sticky;
     left: 0;
-    /* Lower than both header corner (1000) and regular headers (50) */
-    z-index: 25;
+    /* Higher than data cells but lower than header-corner */
+    z-index: 100;
     box-sizing: border-box;
     opacity: 1;
     background-clip: padding-box;
+    /* Force hardware acceleration for sticky positioning */
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 table.table-editor tbody tr td.row-number.selected,
@@ -488,14 +491,6 @@ table.table-editor tbody tr td.editable-cell.user-resized {
 }
 
 /* ====== Git差分の視覚化 ====== */
-/* 行番号セルを相対的な位置指定の基準にする */
-table.table-editor tbody tr td.row-number {
-    position: relative;
-    padding: 4px 8px; /* 元のパディングに戻す */
-    vertical-align: top;
-    text-align: left;
-}
-
 .git-diff-icon {
     position: absolute;
     top: 2px;
