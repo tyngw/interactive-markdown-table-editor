@@ -583,18 +583,20 @@ table.table-editor tbody tr td.editable-cell.user-resized {
 }
 
 /* 追加行内の存在しない列セル - より濃い緑系の斜線 */
-tr:not(.git-diff-deleted-row) td.git-diff-column-not-exist {
+tr:not(.git-diff-deleted-row) td.git-diff-column-not-exist,
+th.git-diff-column-not-exist {
     /* 目視しやすい下地色と枠線を付与 */
     background-color: rgba(129, 184, 139, 0.12);
     border: 1px dashed var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
 }
 
-tr:not(.git-diff-deleted-row) td.git-diff-column-not-exist::before {
+tr:not(.git-diff-deleted-row) td.git-diff-column-not-exist::before,
+th.git-diff-column-not-exist::before {
     background: repeating-linear-gradient(
         -45deg,
         transparent,
         transparent 2px,
-        rgba(129, 184, 139, 0.6) 2px,
+        rgba(129, 184, 139, 0.6) 1px,
         rgba(129, 184, 139, 0.6) 4px
     );
 }
