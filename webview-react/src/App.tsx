@@ -292,7 +292,21 @@ function AppContent() {
             currentTableIndex={currentTableIndex}
             onTabChange={handleTabChange}
           />
-          <StatusBar showGitDiff={showGitDiff} onGitDiffToggle={setShowGitDiff} />
+          <StatusBar 
+            showGitDiff={showGitDiff} 
+            sortState={sortStates[currentTableIndex]}
+            onGitDiffToggle={(show) => {
+              // ソート済み状態でgit差分表示をONにする場合、ソートを解除
+              if (show && sortStates[currentTableIndex]?.direction !== 'none') {
+                setSortStates((prev) => {
+                  const next = [...prev]
+                  next[currentTableIndex] = { column: -1, direction: 'none' }
+                  return next
+                })
+              }
+              setShowGitDiff(show)
+            }}
+          />
         </div>
         </div>
       </div>

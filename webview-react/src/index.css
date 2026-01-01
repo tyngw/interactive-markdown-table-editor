@@ -239,8 +239,8 @@ table.table-editor thead {
 /* Row/column header highlighting for selection */
 
 /* Grid lines enhancement */
-.table-editor tr:nth-child(even) td.data-cell,
-.table-editor tr:nth-child(even) td.editable-cell {
+.table-editor tr.striped-row td.data-cell,
+.table-editor tr.striped-row td.editable-cell {
     background-color: var(--vscode-editor-hoverHighlightBackground, var(--vscode-editor-selectionHighlightBackground, var(--vscode-editor-lineHighlightBackground)));
 }
 
@@ -521,12 +521,16 @@ table.table-editor tbody tr td.editable-cell.user-resized {
 .git-diff-deleted-cell {
     padding: 4px 6px !important;
     text-align: left;
-    border: none !important;
-    border-top: 1px dashed var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) !important;
-    border-bottom: 1px dashed var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) !important;
+    vertical-align: top;
+    border: 1px solid var(--vscode-editorGroup-border, #3e3e42);
     position: relative;
     background-color: rgba(199, 78, 57, 0.05);
     color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39);
+}
+
+/* 削除行に網掛けスタイルを適用 */
+.git-diff-deleted-row.striped-row .git-diff-deleted-cell {
+    background-color: var(--vscode-editor-hoverHighlightBackground, var(--vscode-editor-selectionHighlightBackground, var(--vscode-editor-lineHighlightBackground)));
 }
 
 .git-diff-deleted-cell .git-diff-icon {
@@ -537,6 +541,86 @@ table.table-editor tbody tr td.editable-cell.user-resized {
 
 .git-diff-deleted-cell .git-diff-deleted-content {
     opacity: 0.7;
+}
+
+/* 削除行のセル内容が追加行と同一の場合は通常色で表示 */
+.git-diff-deleted-cell.git-diff-same-content {
+    color: var(--vscode-editor-foreground, #d4d4d4);
+    background-color: rgba(212, 212, 212, 0.03);
+}
+
+.git-diff-deleted-cell.git-diff-same-content .git-diff-deleted-content {
+    opacity: 1;
+}
+
+/* 列が存在しないセルの網掛け（斜線）スタイル */
+/* 列を追加した場合: 削除行の追加列セルに網掛け */
+/* 列を削除した場合: 追加行の削除列セルに網掛け */
+.git-diff-column-not-exist {
+    position: relative;
+    background-color: transparent !important;
+}
+
+.git-diff-column-not-exist::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* 濃い斜線パターン - 交互の背景色と区別しやすいように、より細かく濃くする */
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 2px,
+        rgba(128, 128, 128, 0.5) 2px,
+        rgba(128, 128, 128, 0.5) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* 削除行内の存在しない列セル - より濃い赤系の斜線 */
+.git-diff-deleted-row .git-diff-column-not-exist {
+    border: 1px solid var(--vscode-editorGroup-border, #3e3e42) !important;
+}
+
+.git-diff-deleted-row .git-diff-column-not-exist::before {
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 2px,
+        rgba(199, 78, 57, 0.6) 2px,
+        rgba(199, 78, 57, 0.6) 4px
+    );
+}
+
+/* 追加行内の存在しない列セル - より濃い緑系の斜線 */
+tr:not(.git-diff-deleted-row) td.git-diff-column-not-exist {
+    /* 目視しやすい下地色と枠線を付与 */
+    background-color: rgba(129, 184, 139, 0.12);
+    border: 1px dashed var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
+}
+
+tr:not(.git-diff-deleted-row) td.git-diff-column-not-exist::before {
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 2px,
+        rgba(129, 184, 139, 0.6) 1px,
+        rgba(129, 184, 139, 0.6) 4px
+    );
+}
+
+/* ヘッダセルのカラム削除時 - 透過を避けて背景色を固定 */
+th.git-diff-column-not-exist {
+    background-color: var(--vscode-editorGroupHeader-tabsBackground, #1e1e1e) !important;
+    border: 1px dashed var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
+    position: relative;
+}
+
+th.git-diff-column-not-exist::before {
+    content: none;
 }
 
 table.table-editor tbody tr td .cell-content {
