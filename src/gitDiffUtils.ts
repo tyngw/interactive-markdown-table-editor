@@ -36,7 +36,6 @@ export interface RowGitDiff {
     row: number;
     status: GitDiffStatus;
     oldContent?: string;  // 削除された行の内容（変更前の行を表示するため）
-    deletedIndex?: number;  // 複数の削除行を区別するためのインデックス
     isDeletedRow?: boolean;  // 削除行の表示用フラグ（実データ行ではない）
 }
 
@@ -247,7 +246,7 @@ interface LineDiff {
     status: GitDiffStatus;
     oldLineNumber?: number;  // 変更前のファイルでの行番号（削除された行の場合）
     oldContent?: string;  // 削除された行の元々の内容
-    deletedIndex?: number;  // 複数の削除行を区別するためのインデックス
+    hunkId?: number;  // hunk の識別子（同じ hunk 内の削除行と追加行をペアリングするため）
 }
 
 /**
@@ -351,7 +350,7 @@ export function clearDiffCache(uri?: vscode.Uri): void {
 /**
  * Git diffの出力を解析して行ごとの差分情報を抽出
  * ADDED / DELETED のみを使用。削除行の内容を oldContent で保持する
- * 複数の連続した削除行は deletedIndex で区別される
+ * 削除行は対応する追加行の直前に表示されるよう、newLineNumber を正しく割り当てる
  */
 function parseGitDiff(
     diffOutput: string,
@@ -361,12 +360,10 @@ function parseGitDiff(
     const lineDiffs: LineDiff[] = [];
     const lines = diffOutput.split('\n');
     
-    let currentOldStart = 0;
-    let currentNewStart = 0;
     let inHunk = false;
     let oldLineNumber = 0;
     let newLineNumber = 0;
-    let deletedIndexCounter = 0;  // 削除行のインデックスカウンター
+    let hunkId = 0;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -375,14 +372,9 @@ function parseGitDiff(
         const hunkMatch = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
         if (hunkMatch) {
             inHunk = true;
-            currentOldStart = parseInt(hunkMatch[1], 10);
-            const oldCount = parseInt(hunkMatch[2] || '1', 10);
-            currentNewStart = parseInt(hunkMatch[3], 10);
-            const newCount = parseInt(hunkMatch[4] || '1', 10);
-
-            oldLineNumber = currentOldStart;
-            newLineNumber = currentNewStart;
-            deletedIndexCounter = 0;  // hunk開始時にリセット
+            oldLineNumber = parseInt(hunkMatch[1], 10);
+            newLineNumber = parseInt(hunkMatch[3], 10);
+            hunkId++;  // 新しい hunk が始まるたびにインクリメント
             
             continue;
         }
@@ -396,24 +388,25 @@ function parseGitDiff(
         }
 
         if (line.startsWith('-') && !line.startsWith('---')) {
-            // 削除行を DELETED として記録。内容も保存
-            const deletedContent = line.substring(1); // '-' を除いた内容
+            // 削除行を DELETED として記録
+            // 削除行は oldLineNumber を使用して位置を特定
+            const deletedContent = line.substring(1);
             console.log('[parseGitDiff] DELETED line:', { oldLineNumber, newLineNumber, deletedContent });
             lineDiffs.push({
-                lineNumber: newLineNumber,  // 対応する ADDED 行と同じ新しい行番号（修正）
+                lineNumber: oldLineNumber,  // 削除行は元の行番号を使用
                 status: GitDiffStatus.DELETED,
                 oldLineNumber: oldLineNumber,
                 oldContent: deletedContent,
-                deletedIndex: deletedIndexCounter  // 削除行の順序をマーク
+                hunkId: hunkId
             });
-            deletedIndexCounter++;  // 次の削除行のためにインクリメント
             oldLineNumber++;
         } else if (line.startsWith('+') && !line.startsWith('+++')) {
             // 追加行を ADDED として記録
             console.log('[parseGitDiff] ADDED line:', { newLineNumber, content: line.substring(1) });
             lineDiffs.push({
                 lineNumber: newLineNumber,
-                status: GitDiffStatus.ADDED
+                status: GitDiffStatus.ADDED,
+                hunkId: hunkId
             });
             newLineNumber++;
         } else {
@@ -433,7 +426,8 @@ function parseGitDiff(
  * - 行1: 区切り行（例: | --- | --- |）
  * - 行2以降: データ行（例: | Data1 | Data2 |）
  * 
- * 正確な行番号マッピングを行うため、完全一致のみを使用
+ * 削除行は対応する追加行の直前に表示される
+ * 同じ hunk 内の削除行と追加行をペアリング
  */
 function mapTableRowsToGitDiff(
     lineDiffs: LineDiff[],
@@ -441,69 +435,117 @@ function mapTableRowsToGitDiff(
     rowCount: number,
     tableContent?: string
 ): RowGitDiff[] {
-    const rowDiffs: RowGitDiff[] = [];
+    const result: RowGitDiff[] = [];
     
-    // lineDiffs の元の順序を保ち、そのまま処理する
-    // これにより git diff の順序がそのまま表示される
+    console.log('[mapTableRowsToGitDiff] Input:', {
+        tableStartLine,
+        rowCount,
+        lineDiffsLength: lineDiffs.length
+    });
+    
+    // hunk ごとに削除行と追加行をグループ化
+    const hunkMap = new Map<number, { deleted: LineDiff[], added: LineDiff[] }>();
+    
     for (const diff of lineDiffs) {
-        let tableRow: number;
+        const hunkId = diff.hunkId ?? 0;
+        if (!hunkMap.has(hunkId)) {
+            hunkMap.set(hunkId, { deleted: [], added: [] });
+        }
+        const hunk = hunkMap.get(hunkId)!;
         
         if (diff.status === GitDiffStatus.DELETED) {
-            // 削除行：oldLineNumber から関連先行を計算
-            // ファイル上での削除前の行番号を参照
-            if (diff.oldLineNumber !== undefined) {
-                tableRow = diff.oldLineNumber - 1 - (tableStartLine + 2);
-            } else {
-                tableRow = diff.lineNumber - 1 - (tableStartLine + 2);
-            }
+            hunk.deleted.push(diff);
         } else {
-            // 追加行/変更なし行：通常の行番号計算
-            tableRow = diff.lineNumber - 1 - (tableStartLine + 2);
+            hunk.added.push(diff);
         }
         
-        console.log('[mapTableRowsToGitDiff] BEFORE_CHECK:', {
+        const tableRow = diff.status === GitDiffStatus.DELETED
+            ? (diff.oldLineNumber ?? diff.lineNumber) - tableStartLine - 1 - 2
+            : diff.lineNumber - tableStartLine - 1 - 2;
+        
+        console.log('[mapTableRowsToGitDiff] Processing:', {
             status: diff.status,
-            lineNumber: diff.lineNumber,
             oldLineNumber: diff.oldLineNumber,
-            tableStartLine,
+            lineNumber: diff.lineNumber,
             calculated_tableRow: tableRow,
+            hunkId: hunkId,
             rowCount
         });
+    }
+    
+    // 各 hunk を処理
+    for (const [hunkId, hunk] of hunkMap.entries()) {
+        const { deleted, added } = hunk;
         
-        if (tableRow >= -1 && tableRow < rowCount) {
-            console.log('[mapTableRowsToGitDiff] ACCEPTED:', {
-                row: tableRow,
-                status: diff.status
-            });
+        // 削除行と追加行をペアリング
+        // 削除行数と追加行数の小さい方がペア数
+        const pairCount = Math.min(deleted.length, added.length);
+        
+        // 追加行のうち、最初の pairCount 個が変更後の行（削除行と対応）
+        // 最後の (added.length - pairCount) 個が純粋な新規追加行
+        const pureAddedCount = added.length - pairCount;
+        
+        // 1. 削除行と対応する追加行をペアで出力（削除行が先）
+        for (let i = 0; i < pairCount; i++) {
+            const deletedDiff = deleted[i];
+            const addedDiff = added[i];  // 最初の pairCount 個が対応する追加行
+            const tableRow = addedDiff.lineNumber - tableStartLine - 1 - 2;
             
-            if (diff.status === GitDiffStatus.DELETED) {
-                rowDiffs.push({
+            // 削除行を先に出力
+            if (tableRow >= -1 && tableRow < rowCount) {
+                result.push({
                     row: tableRow,
                     status: GitDiffStatus.DELETED,
-                    oldContent: diff.oldContent,
-                    deletedIndex: diff.deletedIndex,
+                    oldContent: deletedDiff.oldContent,
                     isDeletedRow: true
                 });
-            } else {
-                rowDiffs.push({
+            }
+            
+            // 追加行を出力
+            if (tableRow >= -1 && tableRow < rowCount) {
+                result.push({
                     row: tableRow,
-                    status: diff.status,
-                    oldContent: diff.oldContent,
-                    deletedIndex: diff.deletedIndex
+                    status: GitDiffStatus.ADDED
+                });
+            }
+        }
+        
+        // 2. 純粋な新規追加行を出力（最後の pureAddedCount 個）
+        for (let i = pairCount; i < added.length; i++) {
+            const addedDiff = added[i];
+            const tableRow = addedDiff.lineNumber - tableStartLine - 1 - 2;
+            if (tableRow >= -1 && tableRow < rowCount) {
+                result.push({
+                    row: tableRow,
+                    status: GitDiffStatus.ADDED
+                });
+            }
+        }
+        
+        // 3. 残りの削除行（対応する追加行がないもの）を出力
+        for (let i = pairCount; i < deleted.length; i++) {
+            const deletedDiff = deleted[i];
+            const tableRow = (deletedDiff.oldLineNumber ?? deletedDiff.lineNumber) - tableStartLine - 1 - 2;
+            if (tableRow >= -1 && tableRow < rowCount) {
+                result.push({
+                    row: tableRow,
+                    status: GitDiffStatus.DELETED,
+                    oldContent: deletedDiff.oldContent,
+                    isDeletedRow: true
                 });
             }
         }
     }
     
     // 重複をフィルタリング
-    const uniqueDiffs = rowDiffs.reduce((acc, current) => {
+    const uniqueDiffs = result.reduce((acc, current) => {
         const existing = acc.find(item => {
             if (item.row !== current.row || item.status !== current.status) {
                 return false;
             }
-            // DELETED行の場合、deletedIndexで区別
+            // DELETED行の場合、oldContentで区別
             if (current.status === GitDiffStatus.DELETED) {
-                return item.deletedIndex === current.deletedIndex;
+                return item.oldContent === current.oldContent;
             }
             return true;
         });

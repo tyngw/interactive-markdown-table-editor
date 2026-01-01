@@ -16,6 +16,8 @@ export enum GitDiffStatus {
 export interface RowGitDiff {
   row: number
   status: GitDiffStatus
+  oldContent?: string  // 削除された行の内容（変更前の行を表示するため）
+  isDeletedRow?: boolean  // 削除行の表示用フラグ（実データ行ではない）
 }
 
 // テーブルデータの型定義
