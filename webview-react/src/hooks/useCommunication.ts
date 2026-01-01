@@ -10,6 +10,7 @@ import { TableData } from '../types';
 
 interface CommunicationCallbacks {
   onTableData?: (data: TableData | TableData[]) => void;
+  onGitDiffData?: (data: any) => void;
   onError?: (error: string) => void;
   onSuccess?: (message: string) => void;
   onThemeVariables?: (data: any) => void;
@@ -18,9 +19,25 @@ interface CommunicationCallbacks {
 }
 
 export function useCommunication(callbacks: CommunicationCallbacks) {
-  const { onTableData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable } = callbacks;
+  const { onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable } = callbacks;
   const commManagerRef = useRef<WebviewCommunicationManager | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  
+  // コールバックをrefで保持し、常に最新の値を参照
+  const callbacksRef = useRef<CommunicationCallbacks>({});
+  
+  // callbacksRef を常に最新のコールバックで更新
+  useEffect(() => {
+    callbacksRef.current = {
+      onTableData,
+      onGitDiffData,
+      onError,
+      onSuccess,
+      onThemeVariables,
+      onFontSettings,
+      onSetActiveTable
+    };
+  }, [onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable]);
 
   // 通信マネージャーの初期化
   useEffect(() => {
@@ -36,61 +53,77 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     // ハンドラーの登録
     manager.registerNotificationHandler(ExtensionCommand.UPDATE_TABLE_DATA, (data) => {
       console.log('[useCommunication] Received table data update:', data);
-      if (onTableData) {
+      const cb = callbacksRef.current;
+      if (cb.onTableData) {
         if (data.data) {
-          onTableData(data.data);
+          cb.onTableData(data.data);
         } else {
-          onTableData(data);
+          cb.onTableData(data);
         }
+      }
+    });
+
+    manager.registerNotificationHandler(ExtensionCommand.UPDATE_GIT_DIFF, (data) => {
+      console.log('[useCommunication] Received git diff update:', data);
+      const cb = callbacksRef.current;
+      if (cb.onGitDiffData) {
+        cb.onGitDiffData(data);
       }
     });
 
     manager.registerNotificationHandler(ExtensionCommand.SET_ACTIVE_TABLE, (data) => {
       console.log('[useCommunication] Received set active table:', data);
-      if (onSetActiveTable && data && typeof data.index === 'number') {
-        onSetActiveTable(data.index);
+      const cb = callbacksRef.current;
+      if (cb.onSetActiveTable && data && typeof data.index === 'number') {
+        cb.onSetActiveTable(data.index);
       }
     });
 
     manager.registerNotificationHandler(ExtensionCommand.APPLY_THEME_VARIABLES, (data) => {
       console.log('[useCommunication] Received theme variables:', data);
-      if (onThemeVariables) {
-        onThemeVariables(data);
+      const cb = callbacksRef.current;
+      if (cb.onThemeVariables) {
+        cb.onThemeVariables(data);
       }
     });
 
     manager.registerNotificationHandler(ExtensionCommand.APPLY_FONT_SETTINGS, (data) => {
       console.log('[useCommunication] Received font settings:', data);
-      if (onFontSettings) {
-        onFontSettings(data);
+      const cb = callbacksRef.current;
+      if (cb.onFontSettings) {
+        cb.onFontSettings(data);
       }
     });
 
     manager.registerNotificationHandler(ExtensionCommand.OPERATION_SUCCESS, (data) => {
       console.log('[useCommunication] Received operation success:', data);
-      if (onSuccess) {
-        onSuccess(data.message || 'Operation successful');
+      const cb = callbacksRef.current;
+      if (cb.onSuccess) {
+        cb.onSuccess(data.message || 'Operation successful');
       }
     });
 
     manager.registerNotificationHandler(ExtensionCommand.OPERATION_ERROR, (data) => {
       console.error('[useCommunication] Received operation error:', data);
-      if (onError) {
-        onError(data.error || 'Operation failed');
+      const cb = callbacksRef.current;
+      if (cb.onError) {
+        cb.onError(data.error || 'Operation failed');
       }
     });
 
     manager.registerNotificationHandler(ExtensionCommand.CELL_UPDATE_ERROR, (data) => {
       console.error('[useCommunication] Received cell update error:', data);
-      if (onError) {
-        onError(`Cell update failed at (${data.row}, ${data.col}): ${data.error}`);
+      const cb = callbacksRef.current;
+      if (cb.onError) {
+        cb.onError(`Cell update failed at (${data.row}, ${data.col}): ${data.error}`);
       }
     });
 
     manager.registerNotificationHandler(ExtensionCommand.HEADER_UPDATE_ERROR, (data) => {
       console.error('[useCommunication] Received header update error:', data);
-      if (onError) {
-        onError(`Header update failed at column ${data.col}: ${data.error}`);
+      const cb = callbacksRef.current;
+      if (cb.onError) {
+        cb.onError(`Header update failed at column ${data.col}: ${data.error}`);
       }
     });
 
@@ -102,11 +135,12 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
 
     manager.registerNotificationHandler(ExtensionCommand.SYNC_STATE, (data) => {
       console.log('[useCommunication] Received sync state:', data);
-      if (onTableData && data.tableData) {
-        onTableData(data.tableData);
+      const cb = callbacksRef.current;
+      if (cb.onTableData && data.tableData) {
+        cb.onTableData(data.tableData);
       }
-      if (onSetActiveTable && typeof data.activeTableIndex === 'number') {
-        onSetActiveTable(data.activeTableIndex);
+      if (cb.onSetActiveTable && typeof data.activeTableIndex === 'number') {
+        cb.onSetActiveTable(data.activeTableIndex);
       }
     });
 
@@ -123,7 +157,7 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
       manager.dispose();
       commManagerRef.current = null;
     };
-  }, [onTableData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable]);
+  }, []);
 
   // メッセージ送信用のメソッド（旧形式との互換性を保つ）
   const sendMessage = useCallback((commandOrMessage: string | { command: string; data?: any }, data?: any) => {

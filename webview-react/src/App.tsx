@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import './i18n'
 import TableEditor from './components/TableEditor'
@@ -21,10 +21,15 @@ function AppContent() {
   // テーブルごとのソート状態を上位で管理
   const [sortStates, setSortStates] = useState<SortState[]>([])
   const { theme, isLoaded, applyThemeVariables } = useTheme()
-  const lastUpdateRef = useRef<{hash: string, time: number} | null>(null)
   const currentIndexRef = useRef(0)
   const pendingTabSwitchRef = useRef<{index: number, time: number} | null>(null)
   const allTablesRef = useRef<TableData[]>([])
+  // gitDiffデータを別管理して不正な再レンダリング防止
+  const [gitDiffMap, setGitDiffMap] = useState<Map<number, any[]>>(new Map())
+  // initialData 変更時に handleTableUpdate の呼び出しを無視するフラグ
+  const isInitializing = useRef(false)
+  // Git差分表示フラグ
+  const [showGitDiff, setShowGitDiff] = useState(false)
 
   // refを最新の値で同期
   useEffect(() => {
@@ -40,95 +45,92 @@ function AppContent() {
     // Theme state tracking disabled for production
   }, [theme, isLoaded])
 
-  const currentTableData = allTables[currentTableIndex] || null
+  // currentTableDataを取得し、gitDiffマップから対応するデータを合成
+  // updateTableDataに既にgitDiffが含まれている場合はそれを使用、
+  // 含まれていない場合はgitDiffMapから取得
+  // showGitDiffフラグはUI側で処理するため、ここでは常にgitDiffを含める
+  const currentTableData = useMemo(() => {
+    const baseTable = allTables[currentTableIndex] || null
+    if (!baseTable) {
+      return null
+    }
+    
+    // baseTableに既にgitDiffが含まれている場合はそのまま返す
+    if (baseTable.gitDiff) {
+      return baseTable
+    }
+    // gitDiffマップがある場合は合成
+    const gitDiff = gitDiffMap.get(currentTableIndex)
+    if (gitDiff) {
+      return { ...baseTable, gitDiff }
+    }
+    return baseTable
+  }, [allTables, currentTableIndex, gitDiffMap])
 
 
-  const communication = useCommunication({
-    onTableData: (data: TableData | TableData[]) => {
-      console.log('[MTE][React] onTableData received', {
-        isArray: Array.isArray(data),
-        length: Array.isArray(data) ? data.length : 1,
-        timestamp: Date.now()
+  // onTableData コールバックは定義せず、通信マネージャーのハンドラーで直接状態更新
+  const handleTableDataMessage = useCallback((data: TableData | TableData[]) => {
+    // initialData 変更により handleTableUpdate が呼ばれることを防ぐ
+    isInitializing.current = true
+    
+    if (Array.isArray(data)) {
+      setAllTables(data)
+      // 同期的に ref を更新（batch update 内で ref を更新）
+      allTablesRef.current = data
+      setSortStates((prev) => {
+        const next = [...prev]
+        for (let i = next.length; i < data.length; i++) {
+          next[i] = { column: -1, direction: 'none' }
+        }
+        return next.slice(0, data.length)
       })
-      // Logging disabled for production
-      // If too many updates arrive while a pending tab switch is stale, ignore
-      const pend = pendingTabSwitchRef.current
-      if (pend && Date.now() - pend.time > 2000) {
-        pendingTabSwitchRef.current = null
-      }
-      // Debounce/ignore duplicate updates to avoid flicker
-      try {
-        const payload = Array.isArray(data) ? data : [data]
-        const hash = JSON.stringify(payload)
-        const now = Date.now()
-        const last = lastUpdateRef.current
-        if (last && last.hash === hash) {
-          setLoading(false)
-          return
-        }
-        lastUpdateRef.current = { hash, time: now }
-      } catch (e) {
-        console.warn('[MTE][React] Failed to compute payload hash', e)
-      }
-      if (Array.isArray(data)) {
-        setAllTables(data)
-        // テーブル数に応じて sortStates を整列
-        setSortStates((prev) => {
-          const next = [...prev]
-          for (let i = next.length; i < data.length; i++) {
-            next[i] = { column: -1, direction: 'none' }
-          }
-          return next.slice(0, data.length)
-        })
-        const len = data.length
-        const now = Date.now()
-        const pending = pendingTabSwitchRef.current
-        if (pending && (now - pending.time) < 600 && pending.index >= 0 && pending.index < len) {
-          setCurrentTableIndex(pending.index)
-          currentIndexRef.current = pending.index
-        } else {
-          if (currentIndexRef.current >= len) {
-            setCurrentTableIndex(0)
-            currentIndexRef.current = 0
-          } else {
-            // Keep current index stable to avoid oscillation
-            setCurrentTableIndex(currentIndexRef.current)
-          }
-        }
-      } else {
-        setAllTables([data])
-  setSortStates([{ column: -1, direction: 'none' }])
+      const len = data.length
+      if (currentIndexRef.current >= len) {
         setCurrentTableIndex(0)
         currentIndexRef.current = 0
       }
-      setLoading(false)
-      console.log('[MTE][React] onTableData handled', {
-        loading: false,
-        tableCount: Array.isArray(data) ? data.length : 1
-      })
-    },
-    onError: (errorMessage: string) => {
+    } else {
+      setAllTables([data])
+      // 同期的に ref を更新（batch update 内で ref を更新）
+      allTablesRef.current = [data]
+      setSortStates([{ column: -1, direction: 'none' }])
+      setCurrentTableIndex(0)
+      currentIndexRef.current = 0
+    }
+    // テーブルデータ更新時にgitDiffMapをリセット（古いデータの遺残を防ぐ）
+    setGitDiffMap(new Map())
+    setLoading(false)
+  }, [])
+
+  const communication = useCommunication({
+    onTableData: handleTableDataMessage,
+    onGitDiffData: useCallback((diffData: Array<{tableIndex: number, gitDiff: any[]}>) => {
+      // gitDiffを別状態で管理して、allTablesの参照を変えない
+      setGitDiffMap(prevMap => {
+        const newMap = new Map(prevMap);
+        diffData.forEach(diff => {
+          newMap.set(diff.tableIndex, diff.gitDiff);
+        });
+        return newMap;
+      });
+    }, []),
+    onError: useCallback((errorMessage: string) => {
       console.error('[MTE][React] onError', errorMessage)
       setError(errorMessage)
       setLoading(false)
-    },
-    onThemeVariables: (data: any) => {
-      console.log('[MTE][React] onThemeVariables received', {
-        keys: data && typeof data === 'object' ? Object.keys(data) : null
-      })
-      // Theme variables logging disabled for production
+    }, []),
+    onThemeVariables: useCallback((data: any) => {
       applyThemeVariables(data)
-    },
-    onFontSettings: (data: any) => {
-      console.log('[MTE][React] onFontSettings received', data)
+    }, [applyThemeVariables]),
+    onFontSettings: useCallback((data: any) => {
       if (data && (data.fontFamily || data.fontSize)) {
         setFontSettings({
           fontFamily: data.fontFamily,
           fontSize: data.fontSize
         })
       }
-    },
-    onSetActiveTable: (index: number) => {
+    }, []),
+    onSetActiveTable: useCallback((index: number) => {
       // Immediately update the index to avoid flicker
       if (index !== currentIndexRef.current) {
         setCurrentTableIndex(index)
@@ -136,7 +138,7 @@ function AppContent() {
         // Clear any pending tab switch since this is authoritative
         pendingTabSwitchRef.current = null
       }
-    }
+    }, [])
   })
 
   // タブ変更時の処理
@@ -151,18 +153,15 @@ function AppContent() {
   useEffect(() => {
     // Debug: Check window properties when React app starts
     // 初期データをリクエスト
-    console.log('[MTE][React] requesting initial table data');
     communication.requestTableData()
 
     // テーマ変数をリクエスト（一度だけ）
     if (!themeRequested) {
-      console.log('[MTE][React] requesting theme variables (initial)');
       communication.requestThemeVariables()
       setThemeRequested(true)
 
       // VSCodeの初期化遅延に対応するため、少し遅延してもう一度リクエスト
       setTimeout(() => {
-        console.log('[MTE][React] requesting theme variables (delayed retry)');
         communication.requestThemeVariables()
       }, 500)
     }
@@ -218,6 +217,12 @@ function AppContent() {
 
   // onTableUpdateコールバックを安定化して無限ループを防ぐ
   const handleTableUpdate = useCallback((updatedData: TableData) => {
+    // 初期化フェーズ中は呼び出しを無視
+    if (isInitializing.current) {
+      isInitializing.current = false
+      return
+    }
+
     // refから最新の値を取得（依存配列から除外してコールバックを安定化）
     const currentTables = allTablesRef.current
     const currentIdx = currentIndexRef.current
@@ -231,6 +236,8 @@ function AppContent() {
     const newTables = [...currentTables]
     newTables[currentIdx] = updatedData
     setAllTables(newTables)
+    // 同期的に ref も更新
+    allTablesRef.current = newTables
   }, []) // 依存配列を空にしてコールバックを完全に安定化
 
   if (loading) {
@@ -277,6 +284,7 @@ function AppContent() {
               return next
             })
           }}
+          showGitDiff={showGitDiff}
         />
         <div className="bottom-chrome">
           <TableTabs
@@ -284,7 +292,7 @@ function AppContent() {
             currentTableIndex={currentTableIndex}
             onTabChange={handleTabChange}
           />
-          <StatusBar />
+          <StatusBar showGitDiff={showGitDiff} onGitDiffToggle={setShowGitDiff} />
         </div>
         </div>
       </div>

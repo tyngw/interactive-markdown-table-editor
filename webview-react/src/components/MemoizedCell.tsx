@@ -88,7 +88,17 @@ const MemoizedCell: React.FC<MemoizedCellProps> = ({
       : `selected ${isSingleSelection ? 'single-selection' : ''} ${borders.top ? 'border-top' : ''} ${borders.bottom ? 'border-bottom' : ''} ${borders.left ? 'border-left' : ''} ${borders.right ? 'border-right' : ''}`.trim()
     : ''
 
-  const className = `data-cell ${cellClass} ${userResizedClass} ${selectionClass} ${isEditing ? 'editing' : ''} ${isInFillRange ? 'fill-range' : ''} ${isSearchResult ? 'search-result' : ''} ${isCurrentSearchResult ? 'current-search-result' : ''}`.trim()
+  // classNameを構築
+  const className = [
+    'data-cell',
+    cellClass,
+    userResizedClass,
+    selectionClass,
+    isEditing ? 'editing' : '',
+    isInFillRange ? 'fill-range' : '',
+    isSearchResult ? 'search-result' : '',
+    isCurrentSearchResult ? 'current-search-result' : ''
+  ].filter(Boolean).join(' ')
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     onMouseDown(rowIndex, colIndex, e)

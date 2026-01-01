@@ -219,11 +219,10 @@ body {
     border-collapse: separate;
     border-spacing: 0;
     width: auto;
-    min-width: 600px;
     font-family: var(--mte-font-family, var(--vscode-editor-font-family, var(--vscode-font-family, 'Consolas', 'Monaco', 'Courier New', monospace)));
     font-size: var(--mte-font-size, var(--vscode-editor-font-size, var(--vscode-font-size, 14px)));
     color: var(--vscode-editor-foreground, var(--vscode-foreground, #333333));
-    table-layout: fixed;
+    table-layout: auto;
     display: table;
     /* Create proper stacking context for the table */
     position: relative;
@@ -430,21 +429,24 @@ table.table-editor tbody tr td.row-number {
     font-weight: 700;
     text-align: left;
     vertical-align: top;
-    padding: 0 8px;
+    padding: 4px 8px;
     width: 60px;
     min-width: 60px;
     max-width: 60px;
     user-select: none;
     color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
     cursor: pointer;
-    /* Sticky position with relative context for resize handle */
+    /* Sticky position - fixed during horizontal scrolling */
     position: sticky;
     left: 0;
-    /* Lower than both header corner (1000) and regular headers (50) */
-    z-index: 25;
+    /* Higher than data cells but lower than header-corner */
+    z-index: 100;
     box-sizing: border-box;
     opacity: 1;
     background-clip: padding-box;
+    /* Force hardware acceleration for sticky positioning */
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 table.table-editor tbody tr td.row-number.selected,
@@ -485,6 +487,56 @@ table.table-editor tbody tr td.editable-cell.user-resized {
 .data-cell {
     position: relative;
     box-sizing: border-box;
+}
+
+/* ====== Git差分の視覚化 ====== */
+.git-diff-icon {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-weight: 900;
+    font-size: 14px;
+    width: 12px;
+    text-align: center;
+}
+
+.git-diff-added {
+    color: var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
+}
+
+.git-diff-modified {
+    color: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+}
+
+.git-diff-deleted {
+    color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39);
+}
+
+/* 削除行のインジケータ */
+.git-diff-deleted-row {
+    height: auto;
+    background-color: transparent;
+}
+
+.git-diff-deleted-cell {
+    padding: 4px 6px !important;
+    text-align: left;
+    border: none !important;
+    border-top: 1px dashed var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) !important;
+    border-bottom: 1px dashed var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) !important;
+    position: relative;
+    background-color: rgba(199, 78, 57, 0.05);
+    color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39);
+}
+
+.git-diff-deleted-cell .git-diff-icon {
+    position: static;
+    margin-right: 8px;
+    font-weight: 900;
+}
+
+.git-diff-deleted-cell .git-diff-deleted-content {
+    opacity: 0.7;
 }
 
 table.table-editor tbody tr td .cell-content {
@@ -1108,11 +1160,13 @@ table.table-editor tbody tr td.drag-selecting {
     align-items: center;
     gap: 12px;
     min-width: 0; /* Allow flex items to shrink */
+    overflow: visible;
 }
 
 .status-left {
     flex: 1;
     min-width: 0;
+    overflow: visible;
 }
 
 .status-center {
@@ -1129,10 +1183,44 @@ table.table-editor tbody tr td.drag-selecting {
 
 .status-item {
     color: var(--vscode-statusBar-foreground);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow: visible;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+}
+
+.git-diff-indicator {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    background-color: var(--vscode-editor-lineHighlightBackground);
+    color: var(--vscode-charts-green);
+    box-shadow: inset 0 0 0 1px var(--vscode-charts-green);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.git-diff-indicator:hover {
+    opacity: 0.8;
+}
+
+.git-diff-indicator.active {
+    color: var(--vscode-charts-green);
+    box-shadow: inset 0 0 0 1px var(--vscode-charts-green);
+}
+
+.git-diff-indicator.inactive {
+    color: var(--vscode-charts-green);
+    box-shadow: inset 0 0 0 1px var(--vscode-charts-green);
 }
 
 .status-info {

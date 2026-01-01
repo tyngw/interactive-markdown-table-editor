@@ -8,6 +8,7 @@ import { UndoRedoManager } from './undoRedoManager';
 import { decodeBuffer, detectTextEncoding, parseCsv, toRectangular } from './csvUtils';
 import { normalizeForImport } from './encodingNormalizer';
 import { normalizeForShiftJisExport } from './encodingNormalizer';
+import { getGitDiffForTable, RowGitDiff, clearDiffCache } from './gitDiffUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     // VS Code automatically loads l10n files based on vscode.env.language
@@ -388,12 +389,32 @@ export function activate(context: vscode.ExtensionContext) {
                 updatedMarkdown
             );
 
+            // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
+            clearDiffCache(uri);
+
+            // Get Git diff information for all tables
             const allTableData: TableData[] = [];
             tableManagersMap.forEach((manager, idx) => {
                 allTableData[idx] = manager.getTableData();
             });
 
-            webviewManager.updateTableData(panel, allTableData, uri);
+            // Get Git diff information for all tables
+            const tablesWithGitDiff = await Promise.all(
+                allTableData.map(async (tableData, index) => {
+                    const manager = tableManagersMap.get(index);
+                    const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined;
+                    const gitDiff = await getGitDiffForTable(
+                        uri,
+                        tableData.metadata.startLine,
+                        tableData.metadata.endLine,
+                        tableData.rows.length,
+                        tableMarkdown
+                    );
+                    return { ...tableData, gitDiff };
+                })
+            );
+
+            webviewManager.updateTableData(panel, tablesWithGitDiff, uri);
 
             const successMessage = options.getSuccessMessage
                 ? options.getSuccessMessage(result, commandData)
@@ -469,8 +490,34 @@ export function activate(context: vscode.ExtensionContext) {
                     activeTableManagers.set(actualPanelId, primaryManager);
                 }
 
-                // Send all table data to webview
+                // Send table data without diffs first for a fast initial load
                 webviewManager.updateTableData(panel, allTableData, fileUri);
+
+                // Asynchronously load and send Git diffs for all tables
+                (async () => {
+                    console.log('[GitDiffDebug] Starting async Git diff loading.');
+                    const tablesWithGitDiff = await Promise.all(
+                        allTableData.map(async (tableData, index) => {
+                            console.log(`[GitDiffDebug] Getting diff for table ${index}`);
+                            const manager = tableManagersMap.get(index);
+                            const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined;
+                            const gitDiff = await getGitDiffForTable(
+                                fileUri,
+                                tableData.metadata.startLine,
+                                tableData.metadata.endLine,
+                                tableData.rows.length,
+                                tableMarkdown
+                            );
+                            console.log(`[GitDiffDebug] Got diff for table ${index}:`, gitDiff.length > 0 ? gitDiff : 'No diff');
+                            return { ...tableData, gitDiff };
+                        })
+                    );
+
+                    // すべてのテーブルの差分を含めて再送信
+                    console.log('[GitDiffDebug] Sending complete table data with Git diffs to webview.');
+                    webviewManager.updateTableData(panel, tablesWithGitDiff, fileUri);
+                })();
+
 
                 // Don't send success message for refreshes to avoid spam
                 if (!forceRefresh) {
@@ -499,6 +546,9 @@ export function activate(context: vscode.ExtensionContext) {
         if (event.document.languageId !== 'markdown') {
             return;
         }
+
+        // ファイルが変更された場合、Git diffキャッシュをクリア
+        clearDiffCache(changedUri);
 
         // 変更されたファイルに対応するパネルを全て取得
         const filePanels = webviewManager.getPanelsForFile(changedUri.toString());
@@ -534,8 +584,25 @@ export function activate(context: vscode.ExtensionContext) {
                             activeTableManagers.set(panelId, primaryManager);
                         }
 
-                        // Send updated table data to webview
-                        webviewManager.updateTableData(panel, allTableData, changedUri);
+                        // Get Git diff information for all tables
+                        const tablesWithGitDiff = await Promise.all(
+                            allTableData.map(async (tableData, index) => {
+                                // テーブルのMarkdown表現を取得（行番号マッピングの精度向上のため）
+                                const manager = tableManagersMap.get(index);
+                                const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined;
+                                const gitDiff = await getGitDiffForTable(
+                                    changedUri,
+                                    tableData.metadata.startLine,
+                                    tableData.metadata.endLine,
+                                    tableData.rows.length,
+                                    tableMarkdown
+                                );
+                                return { ...tableData, gitDiff };
+                            })
+                        );
+
+                        // Send updated table data with Git diff to webview
+                        webviewManager.updateTableData(panel, tablesWithGitDiff, changedUri);
 
                                             }
                 }
@@ -1008,12 +1075,32 @@ export function activate(context: vscode.ExtensionContext) {
                 updatedMarkdown
             );
 
+            // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
+            clearDiffCache(uri);
+
+            // Get Git diff information for all tables
             const allTableData: TableData[] = [];
             tableManagersMap.forEach((manager, idx) => {
                 allTableData[idx] = manager.getTableData();
             });
 
-            webviewManager.updateTableData(panel, allTableData, uri);
+            // Get Git diff information for all tables
+            const tablesWithGitDiff = await Promise.all(
+                allTableData.map(async (tableData, index) => {
+                    const manager = tableManagersMap.get(index);
+                    const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined;
+                    const gitDiff = await getGitDiffForTable(
+                        uri,
+                        tableData.metadata.startLine,
+                        tableData.metadata.endLine,
+                        tableData.rows.length,
+                        tableMarkdown
+                    );
+                    return { ...tableData, gitDiff };
+                })
+            );
+
+            webviewManager.updateTableData(panel, tablesWithGitDiff, uri);
             webviewManager.sendSuccess(panel, `Table sorted by column ${column} (${direction})`);
         } catch (error) {
             console.error('Error in sort:', error);
@@ -1061,12 +1148,32 @@ export function activate(context: vscode.ExtensionContext) {
                 updatedMarkdown
             );
 
+            // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
+            clearDiffCache(uri);
+
+            // Get Git diff information for all tables
             const allTableData: TableData[] = [];
             tableManagersMap.forEach((manager, idx) => {
                 allTableData[idx] = manager.getTableData();
             });
 
-            webviewManager.updateTableData(panel, allTableData, uri);
+            // Get Git diff information for all tables
+            const tablesWithGitDiff = await Promise.all(
+                allTableData.map(async (tableData, index) => {
+                    const manager = tableManagersMap.get(index);
+                    const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined;
+                    const gitDiff = await getGitDiffForTable(
+                        uri,
+                        tableData.metadata.startLine,
+                        tableData.metadata.endLine,
+                        tableData.rows.length,
+                        tableMarkdown
+                    );
+                    return { ...tableData, gitDiff };
+                })
+            );
+
+            webviewManager.updateTableData(panel, tablesWithGitDiff, uri);
             webviewManager.sendSuccess(panel, `Row moved from ${fromIndex} to ${toIndex}`);
         } catch (error) {
             console.error('Error in moveRow:', error);
@@ -1114,12 +1221,32 @@ export function activate(context: vscode.ExtensionContext) {
                 updatedMarkdown
             );
 
+            // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
+            clearDiffCache(uri);
+
+            // Get Git diff information for all tables
             const allTableData: TableData[] = [];
             tableManagersMap.forEach((manager, idx) => {
                 allTableData[idx] = manager.getTableData();
             });
 
-            webviewManager.updateTableData(panel, allTableData, uri);
+            // Get Git diff information for all tables
+            const tablesWithGitDiff = await Promise.all(
+                allTableData.map(async (tableData, index) => {
+                    const manager = tableManagersMap.get(index);
+                    const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined;
+                    const gitDiff = await getGitDiffForTable(
+                        uri,
+                        tableData.metadata.startLine,
+                        tableData.metadata.endLine,
+                        tableData.rows.length,
+                        tableMarkdown
+                    );
+                    return { ...tableData, gitDiff };
+                })
+            );
+
+            webviewManager.updateTableData(panel, tablesWithGitDiff, uri);
             webviewManager.sendSuccess(panel, `Column moved from ${fromIndex} to ${toIndex}`);
         } catch (error) {
             console.error('Error in moveColumn:', error);
@@ -1318,12 +1445,32 @@ export function activate(context: vscode.ExtensionContext) {
                 updatedMarkdown
             )
 
+            // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
+            clearDiffCache(uri)
+
             // すべてのテーブルを再送
             const allTableData: TableData[] = []
             tableManagersMap.forEach((manager, idx) => {
                 allTableData[idx] = manager.getTableData()
             })
-            webviewManager.updateTableData(panel, allTableData, uri)
+
+            // Get Git diff information for all tables
+            const tablesWithGitDiff = await Promise.all(
+                allTableData.map(async (tableData, index) => {
+                    const manager = tableManagersMap.get(index)
+                    const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined
+                    const gitDiff = await getGitDiffForTable(
+                        uri,
+                        tableData.metadata.startLine,
+                        tableData.metadata.endLine,
+                        tableData.rows.length,
+                        tableMarkdown
+                    )
+                    return { ...tableData, gitDiff }
+                })
+            )
+
+            webviewManager.updateTableData(panel, tablesWithGitDiff, uri)
 
             const label = enc === 'sjis' ? vscode.l10n.t('csv.encoding.sjis') : vscode.l10n.t('csv.encoding.utf8')
             webviewManager.sendSuccess(panel, vscode.l10n.t('success.csvImported', csvUri.fsPath, label))
