@@ -547,6 +547,9 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
+        // ファイルが変更された場合、Git diffキャッシュをクリア
+        clearDiffCache(changedUri);
+
         // 変更されたファイルに対応するパネルを全て取得
         const filePanels = webviewManager.getPanelsForFile(changedUri.toString());
 
