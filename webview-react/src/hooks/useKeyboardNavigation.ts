@@ -277,47 +277,13 @@ export function useKeyboardNavigation({
     }
 
     const scrollCellIntoView = (row: number, col: number) => {
-      const container = document.querySelector('.table-container') as HTMLElement | null
-      if (!container) return
       const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`) as HTMLElement | null
       if (!cell) return
 
-      const header = document.querySelector('.table-editor > thead') as HTMLElement | null;
-      const headerHeight = header ? header.offsetHeight : 50;
-
-      const rowNumberCol = document.querySelector('.table-editor td.row-number') as HTMLElement | null;
-      const rowNumberColWidth = rowNumberCol ? rowNumberCol.offsetWidth : 60;
-
-      const cRect = container.getBoundingClientRect()
-      const rRect = cell.getBoundingClientRect()
-
-      let newTop = container.scrollTop
-      let newLeft = container.scrollLeft
-
-      const topBoundary = cRect.top + headerHeight;
-      const leftBoundary = cRect.left + rowNumberColWidth;
-
-      if (rRect.top < topBoundary) {
-        newTop += rRect.top - topBoundary - 8
-      } else if (rRect.bottom > cRect.bottom) {
-        newTop += rRect.bottom - cRect.bottom + 8
-      }
-
-      if (rRect.left < leftBoundary) {
-        newLeft += rRect.left - leftBoundary - 8
-      } else if (rRect.right > cRect.right) {
-        newLeft += rRect.right - cRect.right + 8
-      }
-
-      const top = Math.max(0, newTop)
-      const left = Math.max(0, newLeft)
-      if (typeof (container as any).scrollTo === 'function') {
-        container.scrollTo({ top, left, behavior: 'auto' })
-      } else {
-        // jsdom 環境フォールバック
-        container.scrollTop = top
-        container.scrollLeft = left
-      }
+      // scrollIntoView を使用して、セルをビューポート内に収める
+      // block: 'nearest' で最小限のスクロールを行う
+      // inline: 'nearest' で水平スクロールも最小限に
+      cell.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' })
     }
 
     switch (key) {
