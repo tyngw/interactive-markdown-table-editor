@@ -521,6 +521,7 @@ table.table-editor tbody tr td.editable-cell.user-resized {
 .git-diff-deleted-cell {
     padding: 4px 6px !important;
     text-align: left;
+    vertical-align: top;
     border: none !important;
     border-top: 1px dashed var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) !important;
     border-bottom: 1px dashed var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) !important;
@@ -537,6 +538,16 @@ table.table-editor tbody tr td.editable-cell.user-resized {
 
 .git-diff-deleted-cell .git-diff-deleted-content {
     opacity: 0.7;
+}
+
+/* 削除行のセル内容が追加行と同一の場合は通常色で表示 */
+.git-diff-deleted-cell.git-diff-same-content {
+    color: var(--vscode-editor-foreground, #d4d4d4);
+    background-color: rgba(212, 212, 212, 0.03);
+}
+
+.git-diff-deleted-cell.git-diff-same-content .git-diff-deleted-content {
+    opacity: 1;
 }
 
 /* 列が存在しないセルの網掛け（斜線）スタイル */

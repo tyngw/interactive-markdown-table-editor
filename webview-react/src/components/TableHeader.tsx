@@ -286,6 +286,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                         onSort(col)
                       }}
                       title="Sort column"
+                      style={{ visibility: columnDiff ? 'hidden' : 'visible' }}
                     >
                       {sortState?.column === col && sortState?.direction !== 'none' ? (
                         sortState?.direction === 'asc' ? '↑' : '↓'
@@ -375,6 +376,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                       onSort(col)
                     }}
                     title="Sort column"
+                    style={{ visibility: columnDiff ? 'hidden' : 'visible' }}
                   >
                     {sortState?.column === col && sortState?.direction !== 'none' ? (
                       sortState?.direction === 'asc' ? '↑' : '↓'

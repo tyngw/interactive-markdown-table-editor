@@ -457,6 +457,9 @@ const TableBody: React.FC<TableBodyProps> = ({
                 // 削除行の列数
                 const deletedColumnCount = deletedCells.length
                 
+                // 対応する追加行のセルを取得（内容比較用）
+                const addedCells = rowIndex >= 0 ? cells : []
+                
                 const deletedRowIndicator = (
                   <tr key={`deleted-${diff.row}-${index}`} className="git-diff-deleted-row">
                     <td className="row-number git-diff-deleted">
@@ -467,8 +470,13 @@ const TableBody: React.FC<TableBodyProps> = ({
                       if (headerConfig?.hasRowHeaders && cellIndex === 0) {
                         return null
                       }
+                      // 対応する追加行のセルと内容を比較
+                      const addedCellContent = addedCells[cellIndex] || ''
+                      const isSameContent = cellContent.trim() === addedCellContent.trim()
+                      const cellClassName = ['git-diff-deleted-cell', isSameContent ? 'git-diff-same-content' : ''].filter(Boolean).join(' ')
+                      
                       return (
-                        <td key={`deleted-cell-${diff.row}-${index}-${cellIndex}`} className="git-diff-deleted-cell">
+                        <td key={`deleted-cell-${diff.row}-${index}-${cellIndex}`} className={cellClassName}>
                           <span className="git-diff-deleted-content">{cellContent}</span>
                         </td>
                       )

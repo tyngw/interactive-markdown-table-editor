@@ -3,12 +3,14 @@ import { useStatus } from '../contexts/StatusContext'
 
 interface StatusBarProps {
   showGitDiff?: boolean
+  sortState?: { column: number; direction: 'asc' | 'desc' | 'none' }
   onGitDiffToggle?: (show: boolean) => void
 }
 
-const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, onGitDiffToggle }) => {
+const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, sortState: propSortState, onGitDiffToggle }) => {
   const { t } = useTranslation()
-  const { status, tableInfo, saveStatus, sortState } = useStatus()
+  const { status, tableInfo, saveStatus, sortState: contextSortState } = useStatus()
+  const displaySortState = propSortState || contextSortState
 
   return (
     <div className="status-bar">
@@ -36,7 +38,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, onGitDiffTog
       </div>
       <div className="status-center">
         <div className="status-message" id="statusMessage">
-          {sortState?.direction !== 'none' && (
+          {displaySortState?.direction !== 'none' && !showGitDiff && (
             <span className="status-message info">📊 {t('statusBar.sorted')}</span>
           )}
           {status.message && (
