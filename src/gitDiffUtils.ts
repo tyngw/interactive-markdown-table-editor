@@ -48,6 +48,17 @@ export interface TableGitDiff {
 }
 
 /**
+ * 列の差分情報
+ * 変更前と変更後の列数を比較して、追加・削除された列を検出
+ */
+export interface ColumnDiffInfo {
+    oldColumnCount: number;      // 変更前の列数
+    newColumnCount: number;      // 変更後の列数
+    addedColumns: number[];      // 追加された列のインデックス（変更後の列番号）
+    deletedColumns: number[];    // 削除された列のインデックス（変更前の列番号）
+}
+
+/**
  * Git APIが初期化されるまで待機する
  * @param timeoutMs タイムアウト（ミリ秒）
  * @returns 初期化されたGit API。タイムアウトした場合はnull
@@ -579,5 +590,80 @@ export function getGitThemeColors(): {
         console.error('[GitDiff] Error getting git theme colors:', error);
         return {};
     }
+}
+
+/**
+ * マークダウンテーブル行からセル数を取得
+ * 例: "| a | b | c |" -> 3
+ */
+function countTableCells(rowContent: string): number {
+    if (!rowContent || !rowContent.includes('|')) {
+        return 0;
+    }
+    // 先頭と末尾の | を削除し、| で分割
+    const trimmed = rowContent.trim();
+    const withoutLeadingPipe = trimmed.startsWith('|') ? trimmed.substring(1) : trimmed;
+    const withoutTrailingPipe = withoutLeadingPipe.endsWith('|') 
+        ? withoutLeadingPipe.substring(0, withoutLeadingPipe.length - 1) 
+        : withoutLeadingPipe;
+    return withoutTrailingPipe.split('|').length;
+}
+
+/**
+ * Git差分から列の追加・削除情報を検出
+ * 削除行と追加行の列数を比較して、列の変化を検出する
+ * 
+ * @param gitDiff 行のGit差分情報
+ * @param currentColumnCount 現在のテーブルの列数
+ * @returns 列の差分情報
+ */
+export function detectColumnDiff(
+    gitDiff: RowGitDiff[],
+    currentColumnCount: number
+): ColumnDiffInfo {
+    const result: ColumnDiffInfo = {
+        oldColumnCount: currentColumnCount,
+        newColumnCount: currentColumnCount,
+        addedColumns: [],
+        deletedColumns: []
+    };
+
+    if (!gitDiff || gitDiff.length === 0) {
+        return result;
+    }
+
+    // 削除行から変更前の列数を取得
+    const deletedRows = gitDiff.filter(d => d.isDeletedRow && d.oldContent);
+    // 追加行の列数は現在の列数と同じ
+    const newColumnCount = currentColumnCount;
+
+    // 削除行の列数を取得（最初の削除行を使用）
+    let oldColumnCount = currentColumnCount;
+    if (deletedRows.length > 0 && deletedRows[0].oldContent) {
+        oldColumnCount = countTableCells(deletedRows[0].oldContent);
+    }
+
+    result.oldColumnCount = oldColumnCount;
+    result.newColumnCount = newColumnCount;
+
+    // 列数の差分を計算
+    const columnDiff = newColumnCount - oldColumnCount;
+
+    if (columnDiff > 0) {
+        // 列が追加された場合
+        // 追加された列は末尾に追加されたと仮定
+        for (let i = oldColumnCount; i < newColumnCount; i++) {
+            result.addedColumns.push(i);
+        }
+    } else if (columnDiff < 0) {
+        // 列が削除された場合
+        // 削除された列は末尾から削除されたと仮定
+        for (let i = newColumnCount; i < oldColumnCount; i++) {
+            result.deletedColumns.push(i);
+        }
+    }
+
+    console.log('[detectColumnDiff] Result:', result);
+    return result;
 }
 

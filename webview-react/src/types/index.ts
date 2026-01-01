@@ -20,6 +20,14 @@ export interface RowGitDiff {
   isDeletedRow?: boolean  // 削除行の表示用フラグ（実データ行ではない）
 }
 
+// テーブルの列差分情報
+export interface ColumnDiffInfo {
+  oldColumnCount: number      // 変更前の列数
+  newColumnCount: number      // 変更後の列数
+  addedColumns: number[]      // 追加された列のインデックス（変更後の列番号）
+  deletedColumns: number[]    // 削除された列のインデックス（変更前の列番号）
+}
+
 // テーブルデータの型定義
 export interface TableData {
   headers: string[]
@@ -30,6 +38,7 @@ export interface TableData {
   }
   headerConfig?: HeaderConfig
   gitDiff?: RowGitDiff[]  // Git差分情報
+  columnDiff?: ColumnDiffInfo  // 列の差分情報
 }
 
 // 複数テーブル対応

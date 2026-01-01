@@ -37,6 +37,7 @@ export interface MemoizedCellProps {
   headerConfig?: HeaderConfig
   initialCellInput?: string | null
   savedHeight?: { original: number; rowMax: number }
+  isColumnNotExist?: boolean  // 列が存在しない（削除された列）場合に網掛け表示
   onMouseDown: (row: number, col: number, event: React.MouseEvent) => void
   onDoubleClick: (row: number, col: number) => void
   onCommitEdit: (row: number, col: number, value: string, move?: 'right' | 'left' | 'down' | 'up') => void
@@ -63,6 +64,7 @@ const MemoizedCell: React.FC<MemoizedCellProps> = ({
   displayRowNumber,
   initialCellInput,
   savedHeight,
+  isColumnNotExist,
   onMouseDown,
   onDoubleClick,
   onCommitEdit,
@@ -97,7 +99,8 @@ const MemoizedCell: React.FC<MemoizedCellProps> = ({
     isEditing ? 'editing' : '',
     isInFillRange ? 'fill-range' : '',
     isSearchResult ? 'search-result' : '',
-    isCurrentSearchResult ? 'current-search-result' : ''
+    isCurrentSearchResult ? 'current-search-result' : '',
+    isColumnNotExist ? 'git-diff-column-not-exist' : ''
   ].filter(Boolean).join(' ')
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -194,7 +197,8 @@ function arePropsEqual(prevProps: MemoizedCellProps, nextProps: MemoizedCellProp
     prevProps.userResized !== nextProps.userResized ||
     prevProps.displayRowNumber !== nextProps.displayRowNumber ||
     prevProps.initialCellInput !== nextProps.initialCellInput ||
-    prevProps.onMouseEnter !== nextProps.onMouseEnter
+    prevProps.onMouseEnter !== nextProps.onMouseEnter ||
+    prevProps.isColumnNotExist !== nextProps.isColumnNotExist
   ) {
     return false
   }

@@ -539,6 +539,60 @@ table.table-editor tbody tr td.editable-cell.user-resized {
     opacity: 0.7;
 }
 
+/* 列が存在しないセルの網掛け（斜線）スタイル */
+/* 列を追加した場合: 削除行の追加列セルに網掛け */
+/* 列を削除した場合: 追加行の削除列セルに網掛け */
+.git-diff-column-not-exist {
+    position: relative;
+    background-color: transparent !important;
+}
+
+.git-diff-column-not-exist::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* 濃い斜線パターン - 交互の背景色と区別しやすいように、より細かく濃くする */
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 2px,
+        rgba(128, 128, 128, 0.5) 2px,
+        rgba(128, 128, 128, 0.5) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* 削除行内の存在しない列セル - より濃い赤系の斜線 */
+.git-diff-deleted-row .git-diff-column-not-exist {
+    border-top: 1px dashed var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) !important;
+    border-bottom: 1px dashed var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) !important;
+}
+
+.git-diff-deleted-row .git-diff-column-not-exist::before {
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 2px,
+        rgba(199, 78, 57, 0.6) 2px,
+        rgba(199, 78, 57, 0.6) 4px
+    );
+}
+
+/* 追加行内の存在しない列セル - より濃い緑系の斜線 */
+tr:not(.git-diff-deleted-row) td.git-diff-column-not-exist::before {
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 2px,
+        rgba(129, 184, 139, 0.6) 2px,
+        rgba(129, 184, 139, 0.6) 4px
+    );
+}
+
 table.table-editor tbody tr td .cell-content {
     word-wrap: break-word;
     word-break: break-all;
