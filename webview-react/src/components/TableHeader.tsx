@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { SortState, ColumnWidths, HeaderConfig } from '../types'
+import { SortState, ColumnWidths, HeaderConfig, ColumnDiffInfo } from '../types'
 import { getColumnLetter } from '../utils/tableUtils'
 
 interface TableHeaderProps {
@@ -20,6 +20,7 @@ interface TableHeaderProps {
   selectedCols?: Set<number>
   fullySelectedCols?: Set<number>
   headerConfig?: HeaderConfig
+  columnDiff?: ColumnDiffInfo  // 列の差分情報
 }
 
 const TableHeader: React.FC<TableHeaderProps> = ({
@@ -36,7 +37,8 @@ const TableHeader: React.FC<TableHeaderProps> = ({
   getDropProps,
   selectedCols,
   fullySelectedCols,
-  headerConfig
+  headerConfig,
+  columnDiff
 }) => {
   // theme context はここでは未使用
   const [editingHeader, setEditingHeader] = useState<number | null>(null)
@@ -179,95 +181,226 @@ const TableHeader: React.FC<TableHeaderProps> = ({
         </th>
 
         {/* Column headers with enhanced styling */}
-        {headers.map((header, col) => {
-          const columnLetter = getColumnLetter(col)
-          const storedWidth = columnWidths[col] || 150
-          const widthStyle = {
-            width: `${storedWidth}px`,
-            minWidth: `${storedWidth}px`,
-            maxWidth: `${storedWidth}px`
-          }
-          const userResizedClass = columnWidths[col] && columnWidths[col] !== 150 ? 'user-resized' : ''
-          const isSelected = selectedCols?.has(col)
-          const isFullySelected = fullySelectedCols?.has(col)
+        {(() => {
+          // 列が削除された場合は、削除前の列構造に基づいてレンダリング
+          if (columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) {
+            return Array.from({ length: columnDiff.oldColumnCount }).map((_, oldColIdx) => {
+              const isDeletedColumn = columnDiff.deletedColumns.includes(oldColIdx)
+              
+              if (isDeletedColumn) {
+                // 削除された列の位置にはハッチングヘッダを表示
+                const columnLetter = getColumnLetter(oldColIdx)
+                const storedWidth = columnWidths[oldColIdx] || 150
+                const widthStyle = {
+                  width: `${storedWidth}px`,
+                  minWidth: `${storedWidth}px`,
+                  maxWidth: `${storedWidth}px`
+                }
+                const deletedHeaderName = columnDiff.oldHeaders && columnDiff.oldHeaders[oldColIdx]
+                  ? columnDiff.oldHeaders[oldColIdx]
+                  : '(Deleted)'
+                
+                return (
+                  <th
+                    key={`deleted-header-${oldColIdx}`}
+                    className="column-header git-diff-column-not-exist"
+                    data-col={oldColIdx}
+                    style={widthStyle}
+                    title={`Column ${columnLetter}: ${deletedHeaderName}`}
+                  >
+                    <div className="header-content">
+                      <div className="column-letter">{columnLetter}</div>
+                      <div className="column-title">{deletedHeaderName}</div>
+                    </div>
+                  </th>
+                )
+              }
+              
+              // 削除されていない列：新テーブルのヘッダを取得
+              const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
+              const newColIdx = oldColIdx - deletedBeforeThisCol
+              const header = headers[newColIdx] || ''
+              const col = newColIdx
+              
+              const columnLetter = getColumnLetter(oldColIdx)
+              const storedWidth = columnWidths[newColIdx] || 150
+              const widthStyle = {
+                width: `${storedWidth}px`,
+                minWidth: `${storedWidth}px`,
+                maxWidth: `${storedWidth}px`
+              }
+              const userResizedClass = columnWidths[newColIdx] && columnWidths[newColIdx] !== 150 ? 'user-resized' : ''
+              const isSelected = selectedCols?.has(newColIdx)
+              const isFullySelected = fullySelectedCols?.has(newColIdx)
 
-          return (
-            <th
-              key={col}
-              onClick={(e) => handleColumnHeaderClick(col, e)}
-              onMouseDown={(_e) => {
-                // Start column drag if needed
-                if (getDragProps) {
-                  // Handle drag start
-                }
-              }}
-              onDoubleClick={() => handleHeaderDoubleClick(col)}
-              onContextMenu={(e) => {
-                e.preventDefault()
-                if (onShowColumnContextMenu) {
-                  onShowColumnContextMenu(e, col)
-                }
-              }}
-              className={`column-header ${userResizedClass} ${isFullySelected ? 'selected' : (isSelected ? 'highlighted' : '')}`}
-              data-col={col}
-              style={widthStyle}
-              title={`Column ${columnLetter}: ${header}`}
-              {...(getDragProps ? getDragProps('column', col) : {})}
-              {...(getDropProps ? getDropProps('column', col) : {})}
-            >
-              <div className="header-content">
-                <div className="column-letter">{columnLetter}</div>
-                {headerConfig?.hasColumnHeaders !== false && (
-                  <>
-                    {editingHeader === col ? (
-                      <input
-                        className="header-input"
-                        type="text"
-                        defaultValue={header}
-                        autoFocus
-                        onBlur={(e) => handleHeaderBlur(col, e.target.value)}
-                        onKeyDown={(e) => handleHeaderKeyDown(e, col)}
-                      />
-                    ) : (
-                      <div className="column-title" title="Double-click to edit header">
-                        {header}
-                      </div>
-                    )}
-                  </>
-                )}
-                <div
-                  className="sort-indicator"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    console.log('🔧 Sort icon clicked for column:', col)
-                    console.log('🔧 Current sortState:', sortState)
-                    onSort(col)
+              return (
+                <th
+                  key={col}
+                  onClick={(e) => handleColumnHeaderClick(col, e)}
+                  onMouseDown={(_e) => {
+                    // Start column drag if needed
+                    if (getDragProps) {
+                      // Handle drag start
+                    }
                   }}
-                  title="Sort column"
+                  onDoubleClick={() => handleHeaderDoubleClick(col)}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    if (onShowColumnContextMenu) {
+                      onShowColumnContextMenu(e, col)
+                    }
+                  }}
+                  className={`column-header ${userResizedClass} ${isFullySelected ? 'selected' : (isSelected ? 'highlighted' : '')}`}
+                  data-col={col}
+                  style={widthStyle}
+                  title={`Column ${columnLetter}: ${header}`}
+                  {...(getDragProps ? getDragProps('column', col) : {})}
+                  {...(getDropProps ? getDropProps('column', col) : {})}
                 >
-                  {sortState?.column === col && sortState?.direction !== 'none' ? (
-                    sortState?.direction === 'asc' ? '↑' : '↓'
-                  ) : '↕'}
+                  <div className="header-content">
+                    <div className="column-letter">{columnLetter}</div>
+                    {headerConfig?.hasColumnHeaders !== false && (
+                      <>
+                        {editingHeader === col ? (
+                          <input
+                            className="header-input"
+                            type="text"
+                            defaultValue={header}
+                            autoFocus
+                            onBlur={(e) => handleHeaderBlur(col, e.target.value)}
+                            onKeyDown={(e) => handleHeaderKeyDown(e, col)}
+                          />
+                        ) : (
+                          <div className="column-title" title="Double-click to edit header">
+                            {header}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    <div
+                      className="sort-indicator"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        console.log('🔧 Sort icon clicked for column:', col)
+                        console.log('🔧 Current sortState:', sortState)
+                        onSort(col)
+                      }}
+                      title="Sort column"
+                      style={{ visibility: columnDiff ? 'hidden' : 'visible' }}
+                    >
+                      {sortState?.column === col && sortState?.direction !== 'none' ? (
+                        sortState?.direction === 'asc' ? '↑' : '↓'
+                      ) : '↕'}
+                    </div>
+                  </div>
+                  <div
+                    className="resize-handle"
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation()
+                      handleAutoFit(col)
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      handleResizeStart(e, col)
+                    }}
+                  />
+                </th>
+              )
+            })
+          }
+          
+          // 通常行：削除がない場合、既存ロジックでヘッダをレンダリング
+          return headers.map((header, col) => {
+            const columnLetter = getColumnLetter(col)
+            const storedWidth = columnWidths[col] || 150
+            const widthStyle = {
+              width: `${storedWidth}px`,
+              minWidth: `${storedWidth}px`,
+              maxWidth: `${storedWidth}px`
+            }
+            const userResizedClass = columnWidths[col] && columnWidths[col] !== 150 ? 'user-resized' : ''
+            const isSelected = selectedCols?.has(col)
+            const isFullySelected = fullySelectedCols?.has(col)
+
+            return (
+              <th
+                key={col}
+                onClick={(e) => handleColumnHeaderClick(col, e)}
+                onMouseDown={(_e) => {
+                  // Start column drag if needed
+                  if (getDragProps) {
+                    // Handle drag start
+                  }
+                }}
+                onDoubleClick={() => handleHeaderDoubleClick(col)}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  if (onShowColumnContextMenu) {
+                    onShowColumnContextMenu(e, col)
+                  }
+                }}
+                className={`column-header ${userResizedClass} ${isFullySelected ? 'selected' : (isSelected ? 'highlighted' : '')}`}
+                data-col={col}
+                style={widthStyle}
+                title={`Column ${columnLetter}: ${header}`}
+                {...(getDragProps ? getDragProps('column', col) : {})}
+                {...(getDropProps ? getDropProps('column', col) : {})}
+              >
+                <div className="header-content">
+                  <div className="column-letter">{columnLetter}</div>
+                  {headerConfig?.hasColumnHeaders !== false && (
+                    <>
+                      {editingHeader === col ? (
+                        <input
+                          className="header-input"
+                          type="text"
+                          defaultValue={header}
+                          autoFocus
+                          onBlur={(e) => handleHeaderBlur(col, e.target.value)}
+                          onKeyDown={(e) => handleHeaderKeyDown(e, col)}
+                        />
+                      ) : (
+                        <div className="column-title" title="Double-click to edit header">
+                          {header}
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div
+                    className="sort-indicator"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      console.log('🔧 Sort icon clicked for column:', col)
+                      console.log('🔧 Current sortState:', sortState)
+                      onSort(col)
+                    }}
+                    title="Sort column"
+                    style={{ visibility: columnDiff ? 'hidden' : 'visible' }}
+                  >
+                    {sortState?.column === col && sortState?.direction !== 'none' ? (
+                      sortState?.direction === 'asc' ? '↑' : '↓'
+                    ) : '↕'}
+                  </div>
                 </div>
-              </div>
-              <div
-                className="resize-handle"
-                onClick={(e) => e.stopPropagation()}
-                onDoubleClick={(e) => {
-                  e.stopPropagation()
-                  handleAutoFit(col)
-                }}
-                onMouseDown={(e) => {
-                  e.stopPropagation()
-                  handleResizeStart(e, col)
-                }}
-              />
-            </th>
-          )
-        })}
+                <div
+                  className="resize-handle"
+                  onClick={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    handleAutoFit(col)
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation()
+                    handleResizeStart(e, col)
+                  }}
+                />
+              </th>
+            )
+          })
+        })()}
       </tr>
     </thead>
   )
 }
-
 export default TableHeader
