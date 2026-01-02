@@ -8,6 +8,7 @@ import { StatusProvider } from './contexts/StatusContext'
 import { useDynamicTheme } from './contexts/DynamicThemeContext'
 import { useCommunication } from './hooks/useCommunication'
 import { getVSCodeTheme } from './styles/theme'
+import { applyCssVariablesInline } from './utils/cssVariables'
 import { TableData, SortState } from './types'
 
 function AppContent() {
@@ -118,6 +119,7 @@ function AppContent() {
     onThemeVariables: useCallback((data: any) => {
       // テーマ変数を受け取り、DynamicThemeContext 経由で更新
       console.log('[MTE][React] onThemeVariables received:', data);
+      const rootEl = (document.getElementById('mte-root') || document.getElementById('root') || document.documentElement) as HTMLElement;
       
       // cssTextが提供されている場合、DOMに注入してから テーマを再取得
       if (data && data.cssText) {
@@ -128,17 +130,30 @@ function AppContent() {
             styleEl = document.createElement('style');
             styleEl.id = 'mte-theme-overrides';
             document.head.appendChild(styleEl);
+            console.log('[MTE][React] Created new style element for theme overrides');
           }
           // CSSテキストを設定（複数セレクタで#mte-rootと#rootの両方に定義されている）
           styleEl.textContent = data.cssText;
-          console.log('[MTE][React] Applied theme CSS to DOM');
+          console.log('[MTE][React] Applied theme CSS to DOM, cssText length:', data.cssText.length);
+          console.log('[MTE][React] First 200 chars of cssText:', data.cssText.substring(0, 200));
+
+          // スタイルタグの適用順序に依存せず確実に反映させるため、受信したCSS変数をインラインで設定する
+          const applied = applyCssVariablesInline(data.cssText, rootEl);
+          console.log('[MTE][React] Applied inline CSS variables:', { applied, target: rootEl.id || 'documentElement' });
         } catch (error) {
           console.error('[MTE][React] Failed to apply theme CSS:', error);
         }
+      } else {
+        console.log('[MTE][React] No cssText provided in theme variables, theme is set to "inherit"');
       }
       
       // CSS変数を取得し、テーマオブジェクトを再構築
       const updatedTheme = getVSCodeTheme();
+      console.log('[MTE][React] Updated theme colors:', {
+        editorBackground: updatedTheme.editorBackground,
+        editorForeground: updatedTheme.editorForeground,
+        focusBorder: updatedTheme.focusBorder,
+      });
       setTheme(updatedTheme); // EmotionのThemeProviderに新しいテーマオブジェクトを渡す
     }, [setTheme]),
     onFontSettings: useCallback((data: any) => {
