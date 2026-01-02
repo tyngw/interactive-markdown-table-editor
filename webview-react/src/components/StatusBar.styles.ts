@@ -5,7 +5,6 @@
  */
 
 import styled from '@emotion/styled'
-import { VSCodeTheme } from '../styles/theme'
 
 export const StatusBarContainer = styled.div<{}>`
   position: static;
@@ -16,7 +15,7 @@ export const StatusBarContainer = styled.div<{}>`
   padding: 0 12px;
   font-size: 12px;
   z-index: 999;
-  border-top: 1px solid !important;
+  border-top: none;
   /* 色は inline style で設定される */
 `;
 
@@ -51,7 +50,7 @@ export const StatusItem = styled.div<{}>`
 
 export const SaveIndicator = styled.span<{ status: 'saved' | 'saving' | 'error' | 'failed'; isLoading?: boolean }>`
   font-size: 12px;
-  padding: 2px 8px;
+  padding: 2px 0px;
   border-radius: 12px;
   font-weight: 500;
   line-height: 18px;
@@ -72,34 +71,39 @@ export const SaveIndicator = styled.span<{ status: 'saved' | 'saving' | 'error' 
 
 export const GitDiffButton = styled.button<{ active: boolean }>`
   font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 0 10px;
+  border-radius: 0;
   font-weight: 500;
-  line-height: 18px;
+  line-height: 24px;
   display: inline-flex;
   align-items: center;
   border: none;
-  outline: 1px solid currentColor;
-  outline-offset: -1px;
+  outline: none;
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
   white-space: nowrap;
   background-color: transparent !important;
   /* 色は親コンポーネントで inline style で設定される */
+  height: 24px;
 
   &:hover {
-    opacity: 0.8;
+    background-color: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1)) !important;
+  }
+
+  &:active {
+    background-color: var(--vscode-toolbar-activeBackground, rgba(255, 255, 255, 0.15)) !important;
   }
 
   &:focus {
-    outline: 1px solid currentColor;
+    outline: 1px solid var(--vscode-focusBorder, #007acc);
     outline-offset: -1px;
   }
 
   ${props =>
     props.active &&
     `
+    background-color: var(--vscode-toolbar-activeBackground, rgba(255, 255, 255, 0.15)) !important;
     font-weight: 600;
   `}
 `;
