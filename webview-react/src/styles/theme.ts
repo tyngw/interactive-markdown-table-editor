@@ -127,9 +127,13 @@ export interface VSCodeTheme {
 export const getVSCodeTheme = (): VSCodeTheme => {
   const getVar = (name: string, fallback: string = ''): string => {
     if (typeof window === 'undefined') return fallback
-    return getComputedStyle(document.documentElement)
+    // #mte-root があればそこから取得（テーマスコープが優先），なければ#rootまたはdocumentElementから取得
+    // これにより、extension から注入されたテーマ CSS が正確に読み込まれる
+    const el = (document.getElementById('mte-root') || document.getElementById('root') || document.documentElement) as HTMLElement
+    const value = getComputedStyle(el)
       .getPropertyValue(name)
       .trim() || fallback
+    return value
   }
 
   return {

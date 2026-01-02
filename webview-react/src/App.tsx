@@ -8,6 +8,7 @@ import { StatusProvider } from './contexts/StatusContext'
 import { useDynamicTheme } from './contexts/DynamicThemeContext'
 import { useCommunication } from './hooks/useCommunication'
 import { getVSCodeTheme } from './styles/theme'
+import { applyCssVariablesInline } from './utils/cssVariables'
 import { TableData, SortState } from './types'
 
 function AppContent() {
@@ -118,10 +119,65 @@ function AppContent() {
     onThemeVariables: useCallback((data: any) => {
       // テーマ変数を受け取り、DynamicThemeContext 経由で更新
       console.log('[MTE][React] onThemeVariables received:', data);
+      const rootEl = (document.getElementById('mte-root') || document.getElementById('root') || document.documentElement) as HTMLElement;
+      
+      // cssTextが提供されている場合、DOMに注入してから テーマを再取得
+      if (data && data.cssText) {
+        try {
+          // 既存のテーマ スタイル要素を探すか、新規作成
+          let styleEl = document.getElementById('mte-theme-overrides');
+          if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'mte-theme-overrides';
+            document.head.appendChild(styleEl);
+            console.log('[MTE][React] Created new style element for theme overrides');
+          }
+          // CSSテキストを設定（複数セレクタで#mte-rootと#rootの両方に定義されている）
+          styleEl.textContent = data.cssText;
+          console.log('[MTE][React] Applied theme CSS to DOM, cssText length:', data.cssText.length);
+          console.log('[MTE][React] First 200 chars of cssText:', data.cssText.substring(0, 200));
+
+          // スタイルタグの適用順序に依存せず確実に反映させるため、受信したCSS変数をインラインで設定する
+          const applied1 = applyCssVariablesInline(data.cssText, document.documentElement);
+          const applied2 = applyCssVariablesInline(data.cssText, rootEl);
+          
+          // 設定されたインラインスタイルの内容をログ出力
+          const inlineStyleStr = document.documentElement.getAttribute('style') || '';
+          console.log('[MTE][React] Applied inline CSS variables:', { 
+            appliedToRoot: applied1, 
+            appliedToTarget: applied2,
+            targetElement: rootEl.id || 'documentElement',
+            documentElementStyleLength: inlineStyleStr.length,
+            firstFewVars: inlineStyleStr.substring(0, 200)
+          });
+          
+          // StatusBar関連の変数が正しく設定されているか確認
+          const statusBarBgValue = document.documentElement.style.getPropertyValue('--vscode-statusBar-background');
+          const statusBarFgValue = document.documentElement.style.getPropertyValue('--vscode-statusBar-foreground');
+          console.log('[MTE][React] StatusBar CSS variables on document.documentElement:', {
+            statusBarBackground: statusBarBgValue || '(not set)',
+            statusBarForeground: statusBarFgValue || '(not set)'
+          });
+        } catch (error) {
+          console.error('[MTE][React] Failed to apply theme CSS:', error);
+        }
+      } else {
+        console.log('[MTE][React] No cssText provided in theme variables, theme is set to "inherit"');
+      }
       
       // CSS変数を取得し、テーマオブジェクトを再構築
       const updatedTheme = getVSCodeTheme();
+      console.log('[MTE][React] Updated theme colors:', {
+        editorBackground: updatedTheme.editorBackground,
+        editorForeground: updatedTheme.editorForeground,
+        statusBarBackground: updatedTheme.statusBarBackground,
+        menuBackground: updatedTheme.menuBackground,
+        menuForeground: updatedTheme.menuForeground,
+        menuSelectionBackground: updatedTheme.menuSelectionBackground,
+        focusBorder: updatedTheme.focusBorder,
+      });
       setTheme(updatedTheme); // EmotionのThemeProviderに新しいテーマオブジェクトを渡す
+      console.log('[MTE][React] Theme set via setTheme, theme should be updated in context');
     }, [setTheme]),
     onFontSettings: useCallback((data: any) => {
       if (data && (data.fontFamily || data.fontSize)) {
@@ -129,6 +185,16 @@ function AppContent() {
           fontFamily: data.fontFamily,
           fontSize: data.fontSize
         })
+        
+        // Apply font settings as CSS variables on the root element
+        const rootEl = (document.getElementById('mte-root') || document.getElementById('root') || document.documentElement) as HTMLElement;
+        if (data.fontFamily) {
+          rootEl.style.setProperty('--mte-font-family', data.fontFamily);
+        }
+        if (data.fontSize && data.fontSize > 0) {
+          rootEl.style.setProperty('--mte-font-size', `${data.fontSize}px`);
+        }
+        console.log('[MTE][React] Applied font settings:', data);
       }
     }, []),
     onSetActiveTable: useCallback((index: number) => {

@@ -80,6 +80,7 @@ function resolveAssetUris(context: vscode.ExtensionContext, panel: vscode.Webvie
     const base = vscode.Uri.joinPath(context.extensionUri, 'webview-dist', 'assets');
     const script = panel.webview.asWebviewUri(vscode.Uri.joinPath(base, 'index.js'));
     const style = panel.webview.asWebviewUri(vscode.Uri.joinPath(base, 'index.css'));
+    console.log('[MTE][Ext] webviewHtmlBuilder - CSS URI resolved:', style.toString());
     return { script, style };
 }
 
@@ -93,7 +94,7 @@ export async function buildWebviewHtml(context: vscode.ExtensionContext, panel: 
     const csp = buildCsp(panel);
     const bootstrapScript = buildBootstrapScript();
 
-    return `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html lang="${displayLanguage}" data-vscode-language="${vscodeLanguage}">
 <head>
     <meta charset="UTF-8">
@@ -110,4 +111,7 @@ export async function buildWebviewHtml(context: vscode.ExtensionContext, panel: 
     <script type="module" src="${assets.script.toString()}"></script>
 </body>
 </html>`;
+
+    console.log('[MTE][Ext] buildWebviewHtml - Generated HTML head:', html.substring(0, 500));
+    return html;
 }
