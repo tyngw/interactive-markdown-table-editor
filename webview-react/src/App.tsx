@@ -5,7 +5,6 @@ import TableEditor from './components/TableEditor'
 import TableTabs from './components/TableTabs'
 import StatusBar from './components/StatusBar'
 import { StatusProvider } from './contexts/StatusContext'
-import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { useCommunication } from './hooks/useCommunication'
 import { TableData, SortState } from './types'
 
@@ -20,10 +19,9 @@ function AppContent() {
   const [fontSettings, setFontSettings] = useState<{ fontFamily?: string; fontSize?: number }>({})
   // テーブルごとのソート状態を上位で管理
   const [sortStates, setSortStates] = useState<SortState[]>([])
-  const { theme, isLoaded, applyThemeVariables } = useTheme()
-  const currentIndexRef = useRef(0)
   const pendingTabSwitchRef = useRef<{index: number, time: number} | null>(null)
   const allTablesRef = useRef<TableData[]>([])
+  const currentIndexRef = useRef<number>(0)
   // gitDiffデータを別管理して不正な再レンダリング防止
   const [gitDiffMap, setGitDiffMap] = useState<Map<number, any[]>>(new Map())
   // initialData 変更時に handleTableUpdate の呼び出しを無視するフラグ
@@ -40,12 +38,7 @@ function AppContent() {
     currentIndexRef.current = currentTableIndex
   }, [currentTableIndex])
 
-  // Debug theme loading
-  useEffect(() => {
-    // Theme state tracking disabled for production
-  }, [theme, isLoaded])
-
-  // currentTableDataを取得し、gitDiffマップから対応するデータを合成
+  // cを取得し、gitDiffマップから対応するデータを合成
   // updateTableDataに既にgitDiffが含まれている場合はそれを使用、
   // 含まれていない場合はgitDiffMapから取得
   // showGitDiffフラグはUI側で処理するため、ここでは常にgitDiffを含める
@@ -120,8 +113,44 @@ function AppContent() {
       setLoading(false)
     }, []),
     onThemeVariables: useCallback((data: any) => {
-      applyThemeVariables(data)
-    }, [applyThemeVariables]),
+      // テーマ変数を受け取り、ドキュメントにCSS変数として設定
+      console.log('[MTE][React] onThemeVariables received:', data);
+      
+      if (data && data.cssText && typeof data.cssText === 'string') {
+        // CSS文字列形式の場合
+        const style = document.createElement('style');
+        style.textContent = data.cssText;
+        style.id = 'mte-theme-variables';
+        
+        // 既存のテーマスタイルを削除
+        const existingStyle = document.getElementById('mte-theme-variables');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+        
+        document.head.appendChild(style);
+        console.log('[MTE][React] Theme CSS applied from data.cssText');
+      } else if (data && typeof data === 'string') {
+        // 直接CSS文字列が渡された場合
+        const style = document.createElement('style');
+        style.textContent = data;
+        style.id = 'mte-theme-variables';
+        
+        const existingStyle = document.getElementById('mte-theme-variables');
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+        
+        document.head.appendChild(style);
+        console.log('[MTE][React] Theme CSS applied from string');
+      } else if (data && typeof data === 'object') {
+        // Object形式の場合は、CSS変数として設定
+        Object.entries(data).forEach(([key, value]) => {
+          document.documentElement.style.setProperty(`--${key}`, String(value));
+        });
+        console.log('[MTE][React] Theme variables applied from object');
+      }
+    }, []),
     onFontSettings: useCallback((data: any) => {
       if (data && (data.fontFamily || data.fontSize)) {
         setFontSettings({
@@ -315,11 +344,7 @@ function AppContent() {
 }
 
 function App() {
-  return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
-  )
+  return <AppContent />
 }
 
 export default App
