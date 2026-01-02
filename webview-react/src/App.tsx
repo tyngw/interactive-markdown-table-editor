@@ -138,8 +138,26 @@ function AppContent() {
           console.log('[MTE][React] First 200 chars of cssText:', data.cssText.substring(0, 200));
 
           // スタイルタグの適用順序に依存せず確実に反映させるため、受信したCSS変数をインラインで設定する
-          const applied = applyCssVariablesInline(data.cssText, rootEl);
-          console.log('[MTE][React] Applied inline CSS variables:', { applied, target: rootEl.id || 'documentElement' });
+          const applied1 = applyCssVariablesInline(data.cssText, document.documentElement);
+          const applied2 = applyCssVariablesInline(data.cssText, rootEl);
+          
+          // 設定されたインラインスタイルの内容をログ出力
+          const inlineStyleStr = document.documentElement.getAttribute('style') || '';
+          console.log('[MTE][React] Applied inline CSS variables:', { 
+            appliedToRoot: applied1, 
+            appliedToTarget: applied2,
+            targetElement: rootEl.id || 'documentElement',
+            documentElementStyleLength: inlineStyleStr.length,
+            firstFewVars: inlineStyleStr.substring(0, 200)
+          });
+          
+          // StatusBar関連の変数が正しく設定されているか確認
+          const statusBarBgValue = document.documentElement.style.getPropertyValue('--vscode-statusBar-background');
+          const statusBarFgValue = document.documentElement.style.getPropertyValue('--vscode-statusBar-foreground');
+          console.log('[MTE][React] StatusBar CSS variables on document.documentElement:', {
+            statusBarBackground: statusBarBgValue || '(not set)',
+            statusBarForeground: statusBarFgValue || '(not set)'
+          });
         } catch (error) {
           console.error('[MTE][React] Failed to apply theme CSS:', error);
         }
@@ -152,9 +170,14 @@ function AppContent() {
       console.log('[MTE][React] Updated theme colors:', {
         editorBackground: updatedTheme.editorBackground,
         editorForeground: updatedTheme.editorForeground,
+        statusBarBackground: updatedTheme.statusBarBackground,
+        menuBackground: updatedTheme.menuBackground,
+        menuForeground: updatedTheme.menuForeground,
+        menuSelectionBackground: updatedTheme.menuSelectionBackground,
         focusBorder: updatedTheme.focusBorder,
       });
       setTheme(updatedTheme); // EmotionのThemeProviderに新しいテーマオブジェクトを渡す
+      console.log('[MTE][React] Theme set via setTheme, theme should be updated in context');
     }, [setTheme]),
     onFontSettings: useCallback((data: any) => {
       if (data && (data.fontFamily || data.fontSize)) {

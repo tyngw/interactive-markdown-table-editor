@@ -133,10 +133,6 @@ export const getVSCodeTheme = (): VSCodeTheme => {
     const value = getComputedStyle(el)
       .getPropertyValue(name)
       .trim() || fallback
-    // デバッグ用ログ（最初の数変数だけ）
-    if (name === '--vscode-editor-background' || name === '--vscode-foreground') {
-      console.log(`[theme.ts] getVar("${name}") = "${value}" from element:`, el.id || 'documentElement');
-    }
     return value
   }
 

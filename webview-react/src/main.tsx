@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { ThemeProvider } from '@emotion/react'
 import App from './App'
@@ -39,7 +39,49 @@ function initializeVSCodeEnvironment() {
 
 // RootApp コンポーネント: DynamicThemeContext から取得したテーマを ThemeProvider に渡す
 function RootApp() {
-  const { theme } = useDynamicTheme(); // DynamicThemeContextから現在のテーマを取得
+  const { theme, setTheme } = useDynamicTheme(); // setTheme も取得
+  
+  console.log('[RootApp] Rendering with theme from DynamicThemeContext:', {
+    statusBarBackground: theme.statusBarBackground,
+    statusBarForeground: theme.statusBarForeground,
+    statusBarBorder: theme.statusBarBorder,
+    chartsGreen: theme.chartsGreen,
+    theme: theme
+  });
+
+  // theme が変更されるたびに root 要素の CSS 変数を更新
+  useEffect(() => {
+    const documentRoot = document.documentElement
+    const mteRoot = document.getElementById('mte-root')
+    const appRoot = document.getElementById('root')
+    
+    if (!documentRoot) return
+
+    // theme オブジェクトから CSS 変数を生成して root に設定
+    const cssVars: Record<string, string> = {
+      '--vscode-menu-background': theme.menuBackground,
+      '--vscode-menu-foreground': theme.menuForeground,
+      '--vscode-menu-border': theme.menuBorder,
+      '--vscode-menu-selectionBackground': theme.menuSelectionBackground,
+      '--vscode-menu-selectionForeground': theme.menuSelectionForeground,
+      '--vscode-menu-separatorBackground': theme.menuSeparatorBackground,
+      '--vscode-disabledForeground': theme.disabledForeground,
+    }
+
+    // すべての要素にCSS変数を設定（#mte-root, #root, documentElementの全て）
+    const elements = [mteRoot, appRoot, documentRoot].filter(Boolean) as HTMLElement[]
+    elements.forEach(el => {
+      Object.entries(cssVars).forEach(([name, value]) => {
+        if (value) {
+          el.style.setProperty(name, value)
+          console.log(`[RootApp] Set CSS variable on ${el.id || 'documentElement'}: ${name}=${value}`)
+        }
+      })
+    })
+
+    console.log('[RootApp] Updated CSS variables for ContextMenu:', cssVars)
+  }, [theme])
+  
   return (
     <React.StrictMode>
       <ThemeProvider theme={theme}> {/* DynamicThemeContextから取得したテーマを渡す */}

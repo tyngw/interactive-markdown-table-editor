@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useDynamicTheme } from '../contexts/DynamicThemeContext'
 
 interface ContextMenuState {
   type: 'row' | 'column' | 'editor' | null
@@ -59,6 +60,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onToggleRowHeaders
 }) => {
   const { t } = useTranslation()
+  const { theme } = useDynamicTheme()
+  
+  console.log('[ContextMenu] Rendering with theme:', {
+    menuBackground: theme?.menuBackground,
+    menuForeground: theme?.menuForeground,
+    menuSelectionBackground: theme?.menuSelectionBackground,
+    menuSelectionForeground: theme?.menuSelectionForeground,
+  })
+  
   if (!menuState.type) return null
 
   const handleAddRowAbove = () => {
@@ -225,7 +235,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         />
         <div
           className="context-menu"
-          style={{ position: 'fixed', left: adjustedPosition.x, top: adjustedPosition.y, zIndex: 1000 }}
+          style={{
+            position: 'fixed',
+            left: adjustedPosition.x,
+            top: adjustedPosition.y,
+            zIndex: 1000,
+            backgroundColor: theme?.menuBackground || '#252526',
+            color: theme?.menuForeground || '#cccccc',
+            border: `1px solid ${theme?.menuBorder || '#454545'}`,
+          }}
         >
           <button className="context-menu-item" onClick={() => { onImportCsv?.(); onClose(); }}>
             <span className="context-menu-icon">📥</span>
@@ -295,7 +313,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             position: 'fixed',
             left: adjustedPosition.x,
             top: adjustedPosition.y,
-            zIndex: 1000
+            zIndex: 1000,
+            backgroundColor: theme?.menuBackground || '#252526',
+            color: theme?.menuForeground || '#cccccc',
+            border: `1px solid ${theme?.menuBorder || '#454545'}`,
           }}
         >
           <button className="context-menu-item" onClick={handleAddRowAbove}>
@@ -333,7 +354,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             position: 'fixed',
             left: adjustedPosition.x,
             top: adjustedPosition.y,
-            zIndex: 1000
+            zIndex: 1000,
+            backgroundColor: theme?.menuBackground || '#252526',
+            color: theme?.menuForeground || '#cccccc',
+            border: `1px solid ${theme?.menuBorder || '#454545'}`,
           }}
         >
           <button className="context-menu-item" onClick={handleAddColumnLeft}>

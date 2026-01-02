@@ -1,22 +1,23 @@
 /**
  * StatusBar.styles.ts
  * StatusBarコンポーネントのEmotionスタイル
+ * 色はコンポーネント側で inline style で直接適用するため、ここでは基本的なレイアウトスタイルのみ定義
  */
 
 import styled from '@emotion/styled'
+import { VSCodeTheme } from '../styles/theme'
 
-export const StatusBarContainer = styled.div`
+export const StatusBarContainer = styled.div<{}>`
   position: static;
   height: 24px;
-  background-color: var(--vscode-statusBar-background, #007acc);
-  color: var(--vscode-statusBar-foreground, #ffffff);
-  border-top: 1px solid var(--vscode-statusBar-border, rgba(0, 0, 0, 0.6));
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 12px;
   font-size: 12px;
   z-index: 999;
+  border-top: 1px solid !important;
+  /* 色は inline style で設定される */
 `;
 
 export const StatusSection = styled.div<{ align?: 'left' | 'center' | 'right' }>`
@@ -38,17 +39,17 @@ export const StatusSection = styled.div<{ align?: 'left' | 'center' | 'right' }>
   }};
 `
 
-export const StatusItem = styled.div`
-  color: var(--vscode-statusBar-foreground, #ffffff);
+export const StatusItem = styled.div<{}>`
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
   overflow: visible;
   white-space: nowrap;
+  /* 色は親コンポーネントで設定される */
 `
 
-export const SaveIndicator = styled.span<{ status: 'saved' | 'saving' | 'error' | 'failed' }>`
+export const SaveIndicator = styled.span<{ status: 'saved' | 'saving' | 'error' | 'failed'; isLoading?: boolean }>`
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 12px;
@@ -56,34 +57,18 @@ export const SaveIndicator = styled.span<{ status: 'saved' | 'saving' | 'error' 
   line-height: 18px;
   display: inline-flex;
   align-items: center;
-
-  ${props => {
-    const { status } = props
-    switch (status) {
-      case 'saved':
-        return `
-          color: var(--vscode-charts-green, #89d185);
-          background-color: var(--vscode-editor-lineHighlightBackground, rgba(255, 255, 255, 0.04));
-          box-shadow: inset 0 0 0 1px var(--vscode-charts-green, #89d185);
-        `
-      case 'saving':
-        return `
-          color: var(--vscode-charts-orange, #d18616);
-          background-color: var(--vscode-editor-lineHighlightBackground, rgba(255, 255, 255, 0.04));
-          box-shadow: inset 0 0 0 1px var(--vscode-charts-orange, #d18616);
-        `
-      case 'error':
-      case 'failed':
-        return `
-          color: var(--vscode-charts-red, #f48771);
-          background-color: var(--vscode-inputValidation-errorBackground, #5a1d1d);
-          box-shadow: inset 0 0 0 1px var(--vscode-inputValidation-errorBorder, #be1100);
-        `
-      default:
-        return ''
-    }
-  }}
-`
+  justify-content: center;
+  min-width: 18px;
+  min-height: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  /* 色は親コンポーネントで inline style で設定される */
+  /* isLoading が true の場合のみ表示、それ以外も領域は常に確保（min-height で確保） */
+  opacity: ${props => props.isLoading ? '1' : '0'};
+  visibility: ${props => props.isLoading ? 'visible' : 'hidden'};
+  transition: opacity 0.2s ease;
+`;
 
 export const GitDiffButton = styled.button<{ active: boolean }>`
   font-size: 12px;
@@ -94,16 +79,22 @@ export const GitDiffButton = styled.button<{ active: boolean }>`
   display: inline-flex;
   align-items: center;
   border: none;
-  background-color: var(--vscode-editor-lineHighlightBackground, rgba(255, 255, 255, 0.04));
-  color: var(--vscode-charts-green, #89d185);
-  box-shadow: inset 0 0 0 1px var(--vscode-charts-green, #89d185);
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
   white-space: nowrap;
+  background-color: transparent !important;
+  /* 色は親コンポーネントで inline style で設定される */
 
   &:hover {
     opacity: 0.8;
+  }
+
+  &:focus {
+    outline: 1px solid currentColor;
+    outline-offset: -1px;
   }
 
   ${props =>
@@ -111,34 +102,18 @@ export const GitDiffButton = styled.button<{ active: boolean }>`
     `
     font-weight: 600;
   `}
-`
+`;
 
-export const StatusSelection = styled.span`
-  color: var(--vscode-statusBarItem-prominentForeground, #ffffff);
+export const StatusSelection = styled.span<{}>`
   font-weight: 500;
+  /* 色は親コンポーネントで設定される */
 `
 
 export const StatusMessage = styled.span<{ messageType?: 'success' | 'error' | 'warning' | 'info' }>`
-  color: var(--vscode-statusBar-foreground, #ffffff);
   font-weight: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
-
-  ${props => {
-    const { messageType } = props
-    switch (messageType) {
-      case 'success':
-        return `color: var(--vscode-statusBarItem-prominentForeground, #ffffff);`
-      case 'error':
-        return `color: var(--vscode-charts-red, #f48771);`
-      case 'warning':
-        return `color: var(--vscode-charts-orange, #d18616);`
-      case 'info':
-        return `color: var(--vscode-statusBarItem-prominentForeground, #ffffff);`
-      default:
-        return ''
-    }
-  }}
-`
+  /* 色は親コンポーネントで設定される */
+`;
