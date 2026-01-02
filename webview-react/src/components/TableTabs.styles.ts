@@ -9,7 +9,7 @@ export const TabsContainer = styled.div`
   display: flex;
   border-top: 1px solid var(--vscode-panel-border, #3e3e42);
   border-bottom: 1px solid var(--vscode-panel-border, #3e3e42);
-  background-color: var(--vscode-editorGroupHeader-tabsBackground, #252526);
+  background-color: var(--vscode-panel-background, #252526);
   margin: 0;
   padding: 4px 0;
   overflow-x: auto;
@@ -35,7 +35,8 @@ export const TabsContainer = styled.div`
   &::-webkit-scrollbar-thumb:hover {
     background: var(--vscode-scrollbarSlider-hoverBackground, rgba(90, 93, 94, 0.50));
   }
-`
+` as any;
+(TabsContainer as any).defaultProps = { className: 'mte-table-tabs' };
 
 export const TabButton = styled.button<{ active: boolean }>`
   background: ${props =>
@@ -60,7 +61,8 @@ export const TabButton = styled.button<{ active: boolean }>`
     outline: 1px solid var(--vscode-focusBorder, #007acc);
     outline-offset: -1px;
   }
-`
+` as any;
+(TabButton as any).defaultProps = { className: 'mte-tab-button' };
 
 export const BottomChrome = styled.div`
   margin-top: auto;

@@ -17,7 +17,8 @@ export const StatusBarContainer = styled.div`
   padding: 0 12px;
   font-size: 12px;
   z-index: 999;
-`
+` as any;
+(StatusBarContainer as any).defaultProps = { className: 'mte-status-bar' };
 
 export const StatusSection = styled.div<{ align?: 'left' | 'center' | 'right' }>`
   display: flex;

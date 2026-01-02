@@ -229,7 +229,7 @@ export const getVSCodeTheme = (): VSCodeTheme => {
     tabHoverBackground: getVar('--vscode-tab-hoverBackground', '#2a2d2e'),
 
     // エディターグループ
-    editorGroupHeaderTabsBackground: getVar('--vscode-editorGroupHeader-tabsBackground', '#252526'),
+    editorGroupHeaderTabsBackground: getVar('--vscode-panel-background', '#252526'),
     editorGroupBorder: getVar('--vscode-editorGroup-border', '#3e3e42'),
 
     // 検証
