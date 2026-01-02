@@ -127,7 +127,9 @@ export interface VSCodeTheme {
 export const getVSCodeTheme = (): VSCodeTheme => {
   const getVar = (name: string, fallback: string = ''): string => {
     if (typeof window === 'undefined') return fallback
-    return getComputedStyle(document.documentElement)
+    // #rootがあればそこから取得（テーマスコープ）、なければdocument.documentElementから取得
+    const el = document.getElementById('root') || document.documentElement
+    return getComputedStyle(el)
       .getPropertyValue(name)
       .trim() || fallback
   }

@@ -119,6 +119,27 @@ function AppContent() {
       // テーマ変数を受け取り、DynamicThemeContext 経由で更新
       console.log('[MTE][React] onThemeVariables received:', data);
       
+      // cssTextが提供されている場合、DOMに注入してから テーマを再取得
+      if (data && data.cssText) {
+        try {
+          // cssTextのスコープセレクターを#mte-rootから#rootに変更（実際のDOM構成に合わせる）
+          let scopedCss = data.cssText.replace(/#mte-root\s*\{/g, '#root {');
+          
+          // 既存のテーマ スタイル要素を探すか、新規作成
+          let styleEl = document.getElementById('mte-theme-overrides');
+          if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'mte-theme-overrides';
+            document.head.appendChild(styleEl);
+          }
+          // CSSテキストを設定
+          styleEl.textContent = scopedCss;
+          console.log('[MTE][React] Applied theme CSS to DOM');
+        } catch (error) {
+          console.error('[MTE][React] Failed to apply theme CSS:', error);
+        }
+      }
+      
       // CSS変数を取得し、テーマオブジェクトを再構築
       const updatedTheme = getVSCodeTheme();
       setTheme(updatedTheme); // EmotionのThemeProviderに新しいテーマオブジェクトを渡す
