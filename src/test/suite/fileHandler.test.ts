@@ -145,6 +145,7 @@ suite('FileHandler Test Suite', () => {
 
     suite('updateMultipleTablesInFile', () => {
         test('should update multiple tables successfully', async () => {
+            const multiTableFile = vscode.Uri.file(path.join(testDir, 'multi-table-test.md'));
             const originalContent = [
                 '# Document Title',
                 '',
@@ -174,11 +175,11 @@ suite('FileHandler Test Suite', () => {
                 }
             ];
             
-            fs.writeFileSync(testFile.fsPath, originalContent, 'utf8');
+            fs.writeFileSync(multiTableFile.fsPath, originalContent, 'utf8');
             
-            await fileHandler.updateMultipleTablesInFile(testFile, updates);
+            await fileHandler.updateMultipleTablesInFile(multiTableFile, updates);
             
-            const updatedContent = fs.readFileSync(testFile.fsPath, 'utf8');
+            const updatedContent = fs.readFileSync(multiTableFile.fsPath, 'utf8');
             const expectedContent = [
                 '# Document Title',
                 '',
@@ -196,21 +197,29 @@ suite('FileHandler Test Suite', () => {
             ].join('\n');
             
             assert.strictEqual(updatedContent, expectedContent);
+            
+            // Cleanup
+            fs.unlinkSync(multiTableFile.fsPath);
         });
 
         test('should handle empty updates array', async () => {
+            const emptyUpdateFile = vscode.Uri.file(path.join(testDir, 'empty-update-test.md'));
             const originalContent = '# Test\n\nSome content';
-            fs.writeFileSync(testFile.fsPath, originalContent, 'utf8');
+            fs.writeFileSync(emptyUpdateFile.fsPath, originalContent, 'utf8');
             
-            await fileHandler.updateMultipleTablesInFile(testFile, []);
+            await fileHandler.updateMultipleTablesInFile(emptyUpdateFile, []);
             
-            const updatedContent = fs.readFileSync(testFile.fsPath, 'utf8');
+            const updatedContent = fs.readFileSync(emptyUpdateFile.fsPath, 'utf8');
             assert.strictEqual(updatedContent, originalContent);
+            
+            // Cleanup
+            fs.unlinkSync(emptyUpdateFile.fsPath);
         });
 
         test('should throw error for invalid line ranges in batch update', async () => {
+            const invalidRangeFile = vscode.Uri.file(path.join(testDir, 'invalid-range-test.md'));
             const content = 'Line 1\nLine 2\nLine 3';
-            fs.writeFileSync(testFile.fsPath, content, 'utf8');
+            fs.writeFileSync(invalidRangeFile.fsPath, content, 'utf8');
             
             const updates = [
                 { startLine: 0, endLine: 1, newContent: 'Valid update' },
@@ -218,12 +227,15 @@ suite('FileHandler Test Suite', () => {
             ];
             
             try {
-                await fileHandler.updateMultipleTablesInFile(testFile, updates);
+                await fileHandler.updateMultipleTablesInFile(invalidRangeFile, updates);
                 assert.fail('Expected FileSystemError to be thrown');
             } catch (error) {
                 assert.ok(error instanceof FileSystemError);
                 assert.strictEqual(error.operation, 'update');
             }
+            
+            // Cleanup
+            fs.unlinkSync(invalidRangeFile.fsPath);
         });
     });
 
@@ -252,6 +264,7 @@ suite('FileHandler Test Suite', () => {
 
     suite('updateTableByIndex', () => {
         test('should update specific table by index in multi-table document', async () => {
+            const updateIndexFile = vscode.Uri.file(path.join(testDir, 'update-index-test.md'));
             const originalContent = `# Multi-Table Document
 
 First table:
@@ -270,7 +283,7 @@ Second table:
 
 Final content.`;
 
-            fs.writeFileSync(testFile.fsPath, originalContent, 'utf8');
+            fs.writeFileSync(updateIndexFile.fsPath, originalContent, 'utf8');
 
             const newTableContent = `| Product | Price |
 |---------|-------|
@@ -278,9 +291,9 @@ Final content.`;
 | Tablet | $599 |
 | Phone | $799 |`;
 
-            await fileHandler.updateTableByIndex(testFile, 1, newTableContent);
+            await fileHandler.updateTableByIndex(updateIndexFile, 1, newTableContent);
 
-            const updatedContent = await fileHandler.readMarkdownFile(testFile);
+            const updatedContent = await fileHandler.readMarkdownFile(updateIndexFile);
             
             // Should contain the updated second table
             assert.ok(updatedContent.includes('Desktop'));
@@ -295,31 +308,39 @@ Final content.`;
             assert.ok(updatedContent.includes('Multi-Table Document'));
             assert.ok(updatedContent.includes('Text between tables'));
             assert.ok(updatedContent.includes('Final content'));
+            
+            // Cleanup
+            fs.unlinkSync(updateIndexFile.fsPath);
         });
 
         test('should handle invalid table index', async () => {
+            const invalidIndexFile = vscode.Uri.file(path.join(testDir, 'invalid-index-test.md'));
             const content = `# Single Table Document
 
 | Header 1 | Header 2 |
 |----------|----------|
 | Cell 1   | Cell 2   |`;
 
-            fs.writeFileSync(testFile.fsPath, content, 'utf8');
+            fs.writeFileSync(invalidIndexFile.fsPath, content, 'utf8');
 
             const newTableContent = `| Header 1 | Header 2 |
 |----------|----------|
 | New 1    | New 2    |`;
 
             try {
-                await fileHandler.updateTableByIndex(testFile, 5, newTableContent);
+                await fileHandler.updateTableByIndex(invalidIndexFile, 5, newTableContent);
                 assert.fail('Expected FileSystemError to be thrown');
             } catch (error) {
                 assert.ok(error instanceof FileSystemError);
                 assert.ok(error.message.includes('out of range'));
             }
+            
+            // Cleanup
+            fs.unlinkSync(invalidIndexFile.fsPath);
         });
 
         test('should update first table in multi-table document', async () => {
+            const firstTableFile = vscode.Uri.file(path.join(testDir, 'first-table-update.md'));
             const originalContent = `# Document with Multiple Tables
 
 | A | B |
@@ -332,16 +353,16 @@ Some text.
 |---|---|---|
 | 7 | 8 | 9 |`;
 
-            fs.writeFileSync(testFile.fsPath, originalContent, 'utf8');
+            fs.writeFileSync(firstTableFile.fsPath, originalContent, 'utf8');
 
             const newTableContent = `| A | B |
 |---|---|
 | Updated | Values |
 | New | Row |`;
 
-            await fileHandler.updateTableByIndex(testFile, 0, newTableContent);
+            await fileHandler.updateTableByIndex(firstTableFile, 0, newTableContent);
 
-            const updatedContent = await fileHandler.readMarkdownFile(testFile);
+            const updatedContent = await fileHandler.readMarkdownFile(firstTableFile);
             
             // Should contain the updated first table
             assert.ok(updatedContent.includes('Updated'));
@@ -356,9 +377,13 @@ Some text.
             
             // Should preserve non-table content
             assert.ok(updatedContent.includes('Some text'));
+            
+            // Cleanup
+            fs.unlinkSync(firstTableFile.fsPath);
         });
 
         test('should handle document with mixed content', async () => {
+            const mixedContentFile = vscode.Uri.file(path.join(testDir, 'mixed-content-test.md'));
             const originalContent = `# Mixed Content Document
 
 ## Introduction
@@ -386,16 +411,16 @@ Another table:
 
 Final paragraph.`;
 
-            fs.writeFileSync(testFile.fsPath, originalContent, 'utf8');
+            fs.writeFileSync(mixedContentFile.fsPath, originalContent, 'utf8');
 
             const newTableContent = `| Column | Value |
 |--------|-------|
 | Updated | 999 |
 | Column  | 888 |`;
 
-            await fileHandler.updateTableByIndex(testFile, 0, newTableContent);
+            await fileHandler.updateTableByIndex(mixedContentFile, 0, newTableContent);
 
-            const updatedContent = await fileHandler.readMarkdownFile(testFile);
+            const updatedContent = await fileHandler.readMarkdownFile(mixedContentFile);
             
             // Should contain the updated first table
             assert.ok(updatedContent.includes('Updated'));
@@ -410,6 +435,9 @@ Final paragraph.`;
             
             // Should preserve the second table
             assert.ok(updatedContent.includes('3') && updatedContent.includes('4'));
+            
+            // Cleanup
+            fs.unlinkSync(mixedContentFile.fsPath);
         });
     });
 });

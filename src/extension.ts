@@ -219,7 +219,7 @@ export function activate(context: vscode.ExtensionContext) {
                 placeHolder: vscode.l10n.t('selectTheme.placeholder'),
                 matchOnDescription: true
             });
-            if (!picked) return;
+            if (!picked) {return;}
             const themeId = picked.description === 'inherit' ? 'inherit' : picked.description || 'inherit';
             await vscode.workspace.getConfiguration('markdownTableEditor').update('theme', themeId, true);
             await applyConfiguredThemeToPanels();
@@ -1362,27 +1362,27 @@ export function activate(context: vscode.ExtensionContext) {
 
     const importCSVCommand = vscode.commands.registerCommand('markdownTableEditor.internal.importCSV', async (data: any) => {
         try {
-            const { uri: rawUri, panelId, tableIndex } = data || {}
-            const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId)
+            const { uri: rawUri, panelId, tableIndex } = data || {};
+            const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
 
             if (!uriString || !uri) {
-                console.error('Unable to resolve URI for importCSV command')
-                return
+                console.error('Unable to resolve URI for importCSV command');
+                return;
             }
             if (!panel) {
-                console.error('Panel not found for ID:', panelKey || uriString)
-                return
+                console.error('Panel not found for ID:', panelKey || uriString);
+                return;
             }
             if (!tableManagersMap) {
-                webviewManager.sendError(panel, vscode.l10n.t('error.tableManagersNotFound'))
-                return
+                webviewManager.sendError(panel, vscode.l10n.t('error.tableManagersNotFound'));
+                return;
             }
 
-            const targetTableIndex = typeof tableIndex === 'number' ? tableIndex : 0
-            const tableDataManager = tableManagersMap.get(targetTableIndex)
+            const targetTableIndex = typeof tableIndex === 'number' ? tableIndex : 0;
+            const tableDataManager = tableManagersMap.get(targetTableIndex);
             if (!tableDataManager) {
-                webviewManager.sendError(panel, vscode.l10n.t('error.tableManagerNotFoundForIndex', targetTableIndex))
-                return
+                webviewManager.sendError(panel, vscode.l10n.t('error.tableManagerNotFoundForIndex', targetTableIndex));
+                return;
             }
 
             // ファイル選択
@@ -1395,100 +1395,100 @@ export function activate(context: vscode.ExtensionContext) {
                     'All Files': ['*']
                 },
                 title: vscode.l10n.t('csv.selectFileTitle')
-            })
+            });
             if (!openUris || openUris.length === 0) {
-                                return
+                                return;
             }
-            const csvUri = openUris[0]
+            const csvUri = openUris[0];
 
             // 読込 + 自動判別
-            const buf = await vscode.workspace.fs.readFile(csvUri)
-            const enc = detectTextEncoding(Buffer.from(buf))
-            const textRaw = decodeBuffer(Buffer.from(buf), enc)
+            const buf = await vscode.workspace.fs.readFile(csvUri);
+            const enc = detectTextEncoding(Buffer.from(buf));
+            const textRaw = decodeBuffer(Buffer.from(buf), enc);
             // 文字正規化（NFKC）: 解析前に適用
-            const { normalized: text } = normalizeForImport(textRaw)
+            const { normalized: text } = normalizeForImport(textRaw);
 
             // 解析
-            const rows = parseCsv(text)
+            const rows = parseCsv(text);
             if (!rows || rows.length === 0) {
-                webviewManager.sendError(panel, vscode.l10n.t('error.csvEmpty'))
-                return
+                webviewManager.sendError(panel, vscode.l10n.t('error.csvEmpty'));
+                return;
             }
             // 有効性の軽い検証（いずれかのセルに内容があるか）
-            const hasAnyValue = rows.some(r => r.some(c => (c || '').trim().length > 0))
+            const hasAnyValue = rows.some(r => r.some(c => (c || '').trim().length > 0));
             if (!hasAnyValue) {
-                webviewManager.sendError(panel, vscode.l10n.t('error.csvNoValues'))
-                return
+                webviewManager.sendError(panel, vscode.l10n.t('error.csvNoValues'));
+                return;
             }
-            const rectangular = toRectangular(rows)
+            const rectangular = toRectangular(rows);
 
             // Export時の逆変換: セル内の改行(\n)をストレージ形式の <br/> に変換
-            const headersNormalized = rectangular.headers.map(h => (h ?? '').replace(/\n/g, '<br/>'))
-            const rowsNormalized = rectangular.rows.map(r => r.map(c => (c ?? '').replace(/\n/g, '<br/>')))
+            const headersNormalized = rectangular.headers.map(h => (h ?? '').replace(/\n/g, '<br/>'));
+            const rowsNormalized = rectangular.rows.map(r => r.map(c => (c ?? '').replace(/\n/g, '<br/>')));
 
             // 確認ダイアログ（モーダル）。承認時のみ上書き
             const confirm = await vscode.window.showWarningMessage(
                 vscode.l10n.t('csv.importConfirm'),
                 { modal: true },
                 vscode.l10n.t('csv.yes')
-            )
+            );
             if (confirm !== vscode.l10n.t('csv.yes')) {
-                                return
+                                return;
             }
 
             // Undo保存
-            await undoRedoManager.saveState(uri, 'Import CSV')
+            await undoRedoManager.saveState(uri, 'Import CSV');
 
             // テーブルに反映（置換）
-            tableDataManager.replaceContents(headersNormalized, rowsNormalized)
+            tableDataManager.replaceContents(headersNormalized, rowsNormalized);
 
             // Markdownへ反映
-            const updatedMarkdown = tableDataManager.serializeToMarkdown()
-            const tableData = tableDataManager.getTableData()
+            const updatedMarkdown = tableDataManager.serializeToMarkdown();
+            const tableData = tableDataManager.getTableData();
             await fileHandler.updateTableByIndex(
                 uri,
                 tableData.metadata.tableIndex,
                 updatedMarkdown
-            )
+            );
 
             // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
-            clearDiffCache(uri)
+            clearDiffCache(uri);
 
             // すべてのテーブルを再送
-            const allTableData: TableData[] = []
+            const allTableData: TableData[] = [];
             tableManagersMap.forEach((manager, idx) => {
-                allTableData[idx] = manager.getTableData()
-            })
+                allTableData[idx] = manager.getTableData();
+            });
 
             // Get Git diff information for all tables
             const tablesWithGitDiff = await Promise.all(
                 allTableData.map(async (tableData, index) => {
-                    const manager = tableManagersMap.get(index)
-                    const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined
+                    const manager = tableManagersMap.get(index);
+                    const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined;
                     const gitDiff = await getGitDiffForTable(
                         uri,
                         tableData.metadata.startLine,
                         tableData.metadata.endLine,
                         tableData.rows.length,
                         tableMarkdown
-                    )
-                    const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length)
-                    return { ...tableData, gitDiff, columnDiff }
+                    );
+                    const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
+                    return { ...tableData, gitDiff, columnDiff };
                 })
-            )
+            );
 
-            webviewManager.updateTableData(panel, tablesWithGitDiff, uri)
+            webviewManager.updateTableData(panel, tablesWithGitDiff, uri);
 
-            const label = enc === 'sjis' ? vscode.l10n.t('csv.encoding.sjis') : vscode.l10n.t('csv.encoding.utf8')
-            webviewManager.sendSuccess(panel, vscode.l10n.t('success.csvImported', csvUri.fsPath, label))
+            const label = enc === 'sjis' ? vscode.l10n.t('csv.encoding.sjis') : vscode.l10n.t('csv.encoding.utf8');
+            webviewManager.sendSuccess(panel, vscode.l10n.t('success.csvImported', csvUri.fsPath, label));
         } catch (error) {
-            console.error('Error in importCSV:', error)
-            const { panel } = resolvePanelContext(data?.uri, data?.panelId)
+            console.error('Error in importCSV:', error);
+            const { panel } = resolvePanelContext(data?.uri, data?.panelId);
             if (panel) {
-                webviewManager.sendError(panel, `Failed to import CSV: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                webviewManager.sendError(panel, `Failed to import CSV: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
         }
-    })
+    });
 
     context.subscriptions.push(
         openEditorCommand,

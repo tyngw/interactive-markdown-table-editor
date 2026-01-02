@@ -20,12 +20,12 @@ export function getInstalledColorThemes(): InstalledThemeInfo[] {
   for (const ext of vscode.extensions.all) {
     const contributes = (ext.packageJSON && ext.packageJSON.contributes) || {};
     const themeEntries = contributes.themes as Array<any> | undefined;
-    if (!Array.isArray(themeEntries)) continue;
+    if (!Array.isArray(themeEntries)) {continue;}
     for (const t of themeEntries) {
       try {
         const label: string = t.label || t.id || t.name || 'Unnamed Theme';
         const relPath: string = t.path;
-        if (!relPath) continue;
+        if (!relPath) {continue;}
         const themeUri = vscode.Uri.joinPath(ext.extensionUri, relPath);
         const id = `${ext.id}:${relPath}`;
         themes.push({ id, label, uiTheme: t.uiTheme, extensionId: ext.id, themePath: themeUri });
@@ -46,10 +46,10 @@ export function findThemeById(themeId: string): InstalledThemeInfo | undefined {
   const [extId, ...rest] = themeId.split(':');
   const relPath = rest.join(':');
   for (const ext of vscode.extensions.all) {
-    if (ext.id !== extId) continue;
+    if (ext.id !== extId) {continue;}
     const contributes = (ext.packageJSON && ext.packageJSON.contributes) || {};
     const themeEntries = contributes.themes as Array<any> | undefined;
-    if (!Array.isArray(themeEntries)) continue;
+    if (!Array.isArray(themeEntries)) {continue;}
     for (const t of themeEntries) {
       if (t.path === relPath) {
         return {
@@ -76,7 +76,7 @@ async function buildCssFromThemeColors(themeUri: vscode.Uri): Promise<string> {
   const entries: string[] = [];
     for (const key of Object.keys(colors)) {
       const val = colors[key];
-      if (typeof val !== 'string') continue;
+      if (typeof val !== 'string') {continue;}
   // VS Code Webview の CSS 変数名に合わせる（. を - に置換）
       const varName = `--vscode-${key.replace(/\./g, '-')}`;
   entries.push(`${varName}:${val}`);
@@ -106,7 +106,7 @@ export async function buildThemeVariablesCss(selectedThemeId: string | undefined
   }
   const css = await buildCssFromThemeColors(theme.themePath);
   // CSSが空なら簡易フォールバック
-  if (css && css.trim().length > 0) return { cssText: css };
+  if (css && css.trim().length > 0) {return { cssText: css };}
 
   const themeKind = vscode.window.activeColorTheme.kind;
   const isDark = themeKind === vscode.ColorThemeKind.Dark || themeKind === vscode.ColorThemeKind.HighContrast;
@@ -121,7 +121,7 @@ export async function buildThemeVariablesCss(selectedThemeId: string | undefined
  * Webviewにインラインstyleとして注入する <style>...</style> HTMLを生成
  */
 export function createThemeStyleTag(theme: ThemeVariables): string {
-  if (!theme.cssText) return '';
+  if (!theme.cssText) {return '';}
   const nonce = Date.now().toString();
   return `<style id="mte-theme-override" data-scope="#mte-root" nonce="${nonce}">${theme.cssText}</style>`;
 }
@@ -159,7 +159,7 @@ function buildEnsureOverrides(colors: Record<string, string>): string {
   const parts: string[] = [];
   for (const k of Object.keys(ensure)) {
     const v = ensure[k];
-    if (!v) continue;
+    if (!v) {continue;}
     parts.push(`--vscode-${k.replace(/\./g, '-')}:${v}`);
   }
   return parts.join(';');

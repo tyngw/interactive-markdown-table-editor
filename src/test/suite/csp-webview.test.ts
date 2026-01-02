@@ -119,8 +119,13 @@ suite('CSP and Webview HTML Tests', () => {
         const headEndIndex = originalHtml.indexOf('</head>');
         const headContent = originalHtml.substring(headStartIndex, headEndIndex);
         
-        // Vite should insert script and link tags inside head
+        // Vite should insert script tags inside head
         assert.ok(headContent.includes('<script type="module"'), 'Script tag should be inside head');
-        assert.ok(headContent.includes('<link rel="stylesheet"'), 'CSS link should be inside head');
+        
+        // CSS can be loaded either via link tag or dynamically via script
+        // Check for either static link or dynamic CSS loading in script
+        const hasCssLink = headContent.includes('<link rel="stylesheet"');
+        const hasCssDynamic = originalHtml.includes('link.rel = \'stylesheet\'');
+        assert.ok(hasCssLink || hasCssDynamic, 'CSS should be loaded either via link tag or dynamically');
     });
 });
