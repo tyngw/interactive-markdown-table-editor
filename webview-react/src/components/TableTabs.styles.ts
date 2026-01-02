@@ -46,7 +46,7 @@ export const TabButton = styled.button<{ active: boolean }>`
   color: ${props =>
     props.active ? 'var(--vscode-tab-activeForeground, #ffffff)' : 'var(--vscode-tab-inactiveForeground, #a6a6a6)'};
   border-bottom: 2px solid ${props =>
-    props.active ? 'var(--vscode-tab-activeBorderTop, #007acc)' : 'transparent'};
+    props.active ? 'var(--tab-border-top-color, #007acc)' : 'transparent'};
   font-size: var(--vscode-font-size, 14px);
   font-family: var(--vscode-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
   white-space: nowrap;
@@ -54,11 +54,6 @@ export const TabButton = styled.button<{ active: boolean }>`
 
   &:hover {
     background-color: var(--vscode-tab-hoverBackground, #2a2d2e);
-  }
-
-  &:focus {
-    outline: 1px solid var(--vscode-focusBorder, #007acc);
-    outline-offset: -1px;
   }
 `;
 
