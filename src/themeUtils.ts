@@ -83,14 +83,12 @@ async function buildCssFromThemeColors(themeUri: vscode.Uri): Promise<string> {
     }
     // 拡張で使用する重要トークンのフォールバック上書きを追加
     const ensure = buildEnsureOverrides(colors);
-  // テーブルエディタのルート要素とその下のいずれでもアクセスできるように複数セレクタで定義
-  const selectors = ['#mte-root', '#root'];
-  let css = '';
-  for (const selector of selectors) {
-    const base = entries.length ? `${selector}{${entries.join(';')}}` : '';
-    css += base + (ensure ? `${selector}{${ensure}}` : '');
-  }
-  return css;
+  
+  // CSS変数をグローバルスコープ（:root）とテーブルエディタスコープ（#mte-root）で定義
+  // これにより、どの要素からでも変数にアクセス可能
+  const base = entries.length ? `:root{${entries.join(';')}};#mte-root{${entries.join(';')}}` : '';
+  const overrides = ensure ? `:root{${ensure}};#mte-root{${ensure}}` : '';
+  return base + overrides;
   } catch {
     return '';
   }
@@ -114,10 +112,10 @@ export async function buildThemeVariablesCss(selectedThemeId: string | undefined
 
   const themeKind = vscode.window.activeColorTheme.kind;
   const isDark = themeKind === vscode.ColorThemeKind.Dark || themeKind === vscode.ColorThemeKind.HighContrast;
-  const selector = '#mte-root';
-  const fallback = isDark
-    ? `${selector}{--vscode-editor-background:#1e1e1e;--vscode-foreground:#cccccc;--vscode-panel-border:#3c3c3c;--vscode-focusBorder:#007acc;--vscode-list-hoverBackground:#2a2d2e;--vscode-editor-lineHighlightBackground:#2a2d2e;--vscode-descriptionForeground:#9d9d9d;--vscode-input-background:#3c3c3c;--vscode-inputOption-activeBorder:#007acc;--vscode-list-activeSelectionBackground:#094771;--vscode-list-activeSelectionForeground:#ffffff;}`
-    : `${selector}{--vscode-editor-background:#ffffff;--vscode-foreground:#333333;--vscode-panel-border:#e5e5e5;--vscode-focusBorder:#007acc;--vscode-list-hoverBackground:#f2f2f2;--vscode-editor-lineHighlightBackground:#f7f7f7;--vscode-descriptionForeground:#6e6e6e;--vscode-input-background:#f3f3f3;--vscode-inputOption-activeBorder:#007acc;--vscode-list-activeSelectionBackground:#0078d4;--vscode-list-activeSelectionForeground:#ffffff;}`;
+  const vars = isDark
+    ? '--vscode-editor-background:#1e1e1e;--vscode-foreground:#cccccc;--vscode-panel-border:#3c3c3c;--vscode-focusBorder:#007acc;--vscode-list-hoverBackground:#2a2d2e;--vscode-editor-lineHighlightBackground:#2a2d2e;--vscode-descriptionForeground:#9d9d9d;--vscode-input-background:#3c3c3c;--vscode-inputOption-activeBorder:#007acc;--vscode-list-activeSelectionBackground:#094771;--vscode-list-activeSelectionForeground:#ffffff;'
+    : '--vscode-editor-background:#ffffff;--vscode-foreground:#333333;--vscode-panel-border:#e5e5e5;--vscode-focusBorder:#007acc;--vscode-list-hoverBackground:#f2f2f2;--vscode-editor-lineHighlightBackground:#f7f7f7;--vscode-descriptionForeground:#6e6e6e;--vscode-input-background:#f3f3f3;--vscode-inputOption-activeBorder:#007acc;--vscode-list-activeSelectionBackground:#0078d4;--vscode-list-activeSelectionForeground:#ffffff;';
+  const fallback = `:root{${vars}}#mte-root{${vars}}`;
   return { cssText: fallback };
 }
 
