@@ -612,9 +612,6 @@ const TableBody: React.FC<TableBodyProps> = ({
                     const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
                     const newColIdx = oldColIdx - deletedBeforeThisCol
                     
-                    // セル編集時は新しいテーブルの列番号を使用する必要がある
-                    const colIndex = newColIdx
-                    
                     // ヘッダ行（rowIndex=-1）の場合は、columnDiff.oldHeaders から削除前のヘッダ名を取得
                     // 通常行の場合は、cells から削除前の列インデックスに対応するセル内容を取得
                     let cellContent = ''
