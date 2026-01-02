@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { ThemeProvider } from '@emotion/react'
 import App from './App'
 import { GlobalStyles } from './GlobalStyles'
+import { DynamicThemeProvider } from './contexts/DynamicThemeContext'
 import { getVSCodeTheme } from './styles/theme'
 import { ensureVsCodeApi } from './vscodeApi'
 import './index.css'
@@ -57,10 +58,12 @@ function initializeApp() {
   console.log('[MTE][React] rendering App');
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <ThemeProvider theme={theme}>
-        <GlobalStyles theme={theme} />
-        <App />
-      </ThemeProvider>
+      <DynamicThemeProvider>
+        <ThemeProvider theme={theme}>
+          <GlobalStyles theme={theme} />
+          <App />
+        </ThemeProvider>
+      </DynamicThemeProvider>
     </React.StrictMode>,
   );
 }
