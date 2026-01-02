@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { ThemeProvider } from '@emotion/react'
 import App from './App'
 import { GlobalStyles } from './GlobalStyles'
-import { DynamicThemeProvider } from './contexts/DynamicThemeContext'
+import { DynamicThemeProvider, useDynamicTheme } from './contexts/DynamicThemeContext'
 import { getVSCodeTheme } from './styles/theme'
 import { ensureVsCodeApi } from './vscodeApi'
 import './index.css'
@@ -38,6 +38,19 @@ function initializeVSCodeEnvironment() {
   }
 }
 
+// RootApp コンポーネント: DynamicThemeContext から取得したテーマを ThemeProvider に渡す
+function RootApp() {
+  const { theme } = useDynamicTheme(); // DynamicThemeContextから現在のテーマを取得
+  return (
+    <React.StrictMode>
+      <ThemeProvider theme={theme}> {/* DynamicThemeContextから取得したテーマを渡す */}
+        <GlobalStyles theme={theme} />
+        <App />
+      </ThemeProvider>
+    </React.StrictMode>
+  );
+}
+
 // DOM読み込み完了後にアプリを初期化
 function initializeApp() {
   const rootElement = document.getElementById('root');
@@ -57,14 +70,9 @@ function initializeApp() {
 
   console.log('[MTE][React] rendering App');
   ReactDOM.createRoot(rootElement).render(
-    <React.StrictMode>
-      <DynamicThemeProvider>
-        <ThemeProvider theme={theme}>
-          <GlobalStyles theme={theme} />
-          <App />
-        </ThemeProvider>
-      </DynamicThemeProvider>
-    </React.StrictMode>,
+    <DynamicThemeProvider> {/* DynamicThemeContextを一番外側に配置 */}
+      <RootApp />
+    </DynamicThemeProvider>
   );
 }
 

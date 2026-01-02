@@ -7,11 +7,12 @@ import StatusBar from './components/StatusBar'
 import { StatusProvider } from './contexts/StatusContext'
 import { useDynamicTheme } from './contexts/DynamicThemeContext'
 import { useCommunication } from './hooks/useCommunication'
+import { getVSCodeTheme } from './styles/theme'
 import { TableData, SortState } from './types'
 
 function AppContent() {
   const { t } = useTranslation()
-  const { updateTheme } = useDynamicTheme()
+  const { setTheme } = useDynamicTheme()
 
   const [allTables, setAllTables] = useState<TableData[]>([])
   const [currentTableIndex, setCurrentTableIndex] = useState(0)
@@ -118,20 +119,10 @@ function AppContent() {
       // テーマ変数を受け取り、DynamicThemeContext 経由で更新
       console.log('[MTE][React] onThemeVariables received:', data);
       
-      if (data && data.cssText && typeof data.cssText === 'string') {
-        // CSS文字列形式の場合
-        updateTheme(data.cssText);
-      } else if (data && typeof data === 'string') {
-        // 直接CSS文字列が渡された場合
-        updateTheme(data);
-      } else if (data && typeof data === 'object') {
-        // Object形式の場合は、CSS変数として設定
-        const cssText = Object.entries(data)
-          .map(([key, value]) => `--${key}: ${String(value)};`)
-          .join('\n');
-        updateTheme(`:root { ${cssText} }`);
-      }
-    }, [updateTheme]),
+      // CSS変数を取得し、テーマオブジェクトを再構築
+      const updatedTheme = getVSCodeTheme();
+      setTheme(updatedTheme); // EmotionのThemeProviderに新しいテーマオブジェクトを渡す
+    }, [setTheme]),
     onFontSettings: useCallback((data: any) => {
       if (data && (data.fontFamily || data.fontSize)) {
         setFontSettings({

@@ -35,8 +35,12 @@ export const TabsContainer = styled.div`
   &::-webkit-scrollbar-thumb:hover {
     background: var(--vscode-scrollbarSlider-hoverBackground, rgba(90, 93, 94, 0.50));
   }
-` as any;
-(TabsContainer as any).defaultProps = { className: 'mte-table-tabs' };
+  
+  /* mte-table-tabs クラスのための属性セレクタで実装 */
+  &.mte-table-tabs {
+    /* ここにクラス固有のスタイルがあれば追加 */
+  }
+`;
 
 export const TabButton = styled.button<{ active: boolean }>`
   background: ${props =>
@@ -61,8 +65,12 @@ export const TabButton = styled.button<{ active: boolean }>`
     outline: 1px solid var(--vscode-focusBorder, #007acc);
     outline-offset: -1px;
   }
-` as any;
-(TabButton as any).defaultProps = { className: 'mte-tab-button' };
+  
+  /* mte-tab-button クラスのための属性セレクタで実装 */
+  &.mte-tab-button {
+    /* ここにクラス固有のスタイルがあれば追加 */
+  }
+`;
 
 export const BottomChrome = styled.div`
   margin-top: auto;
