@@ -17,11 +17,6 @@ export const StatusBarContainer = styled.div`
   padding: 0 12px;
   font-size: 12px;
   z-index: 999;
-  
-  /* mte-status-bar クラスのための属性セレクタで実装 */
-  &.mte-status-bar {
-    /* ここにクラス固有のスタイルがあれば追加 */
-  }
 `;
 
 export const StatusSection = styled.div<{ align?: 'left' | 'center' | 'right' }>`

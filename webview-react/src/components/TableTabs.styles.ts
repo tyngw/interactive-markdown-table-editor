@@ -35,11 +35,6 @@ export const TabsContainer = styled.div`
   &::-webkit-scrollbar-thumb:hover {
     background: var(--vscode-scrollbarSlider-hoverBackground, rgba(90, 93, 94, 0.50));
   }
-  
-  /* mte-table-tabs クラスのための属性セレクタで実装 */
-  &.mte-table-tabs {
-    /* ここにクラス固有のスタイルがあれば追加 */
-  }
 `;
 
 export const TabButton = styled.button<{ active: boolean }>`
@@ -64,11 +59,6 @@ export const TabButton = styled.button<{ active: boolean }>`
   &:focus {
     outline: 1px solid var(--vscode-focusBorder, #007acc);
     outline-offset: -1px;
-  }
-  
-  /* mte-tab-button クラスのための属性セレクタで実装 */
-  &.mte-tab-button {
-    /* ここにクラス固有のスタイルがあれば追加 */
   }
 `;
 
