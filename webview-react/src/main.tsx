@@ -6,7 +6,6 @@ import { GlobalStyles } from './GlobalStyles'
 import { DynamicThemeProvider, useDynamicTheme } from './contexts/DynamicThemeContext'
 import { getVSCodeTheme } from './styles/theme'
 import { ensureVsCodeApi } from './vscodeApi'
-import './index.css'
 
 console.log('[MTE][React] bootstrap start');
 

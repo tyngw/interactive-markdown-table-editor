@@ -22,7 +22,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, sortState: p
   const displaySortState = propSortState || contextSortState
 
   return (
-    <StatusBarContainer className="mte-status-bar">
+    <StatusBarContainer data-testid="mte-status-bar">
       <StatusSection align="left">
         <StatusItem id="statusSelection">
           <SaveIndicator status={saveStatus ?? 'saved'}>
