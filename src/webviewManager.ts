@@ -557,6 +557,10 @@ export class WebviewManager {
         this.communicationManagers.set(panelId, commManager);
         this.setupCommunicationHandlers(commManager, panel, uri);
 
+        // Apply theme and font settings on initial load
+        this.applyThemeToPanel(panel);
+        this.applyFontSettingsToPanel(panel);
+
         return panel;
     }
 

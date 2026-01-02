@@ -5,12 +5,14 @@ import TableEditor from './components/TableEditor'
 import TableTabs from './components/TableTabs'
 import StatusBar from './components/StatusBar'
 import { StatusProvider } from './contexts/StatusContext'
-import { ThemeProvider, useTheme } from './contexts/ThemeContext'
+import { useDynamicTheme } from './contexts/DynamicThemeContext'
 import { useCommunication } from './hooks/useCommunication'
+import { getVSCodeTheme } from './styles/theme'
 import { TableData, SortState } from './types'
 
 function AppContent() {
   const { t } = useTranslation()
+  const { setTheme } = useDynamicTheme()
 
   const [allTables, setAllTables] = useState<TableData[]>([])
   const [currentTableIndex, setCurrentTableIndex] = useState(0)
@@ -20,10 +22,9 @@ function AppContent() {
   const [fontSettings, setFontSettings] = useState<{ fontFamily?: string; fontSize?: number }>({})
   // テーブルごとのソート状態を上位で管理
   const [sortStates, setSortStates] = useState<SortState[]>([])
-  const { theme, isLoaded, applyThemeVariables } = useTheme()
-  const currentIndexRef = useRef(0)
   const pendingTabSwitchRef = useRef<{index: number, time: number} | null>(null)
   const allTablesRef = useRef<TableData[]>([])
+  const currentIndexRef = useRef<number>(0)
   // gitDiffデータを別管理して不正な再レンダリング防止
   const [gitDiffMap, setGitDiffMap] = useState<Map<number, any[]>>(new Map())
   // initialData 変更時に handleTableUpdate の呼び出しを無視するフラグ
@@ -40,12 +41,7 @@ function AppContent() {
     currentIndexRef.current = currentTableIndex
   }, [currentTableIndex])
 
-  // Debug theme loading
-  useEffect(() => {
-    // Theme state tracking disabled for production
-  }, [theme, isLoaded])
-
-  // currentTableDataを取得し、gitDiffマップから対応するデータを合成
+  // cを取得し、gitDiffマップから対応するデータを合成
   // updateTableDataに既にgitDiffが含まれている場合はそれを使用、
   // 含まれていない場合はgitDiffMapから取得
   // showGitDiffフラグはUI側で処理するため、ここでは常にgitDiffを含める
@@ -120,8 +116,13 @@ function AppContent() {
       setLoading(false)
     }, []),
     onThemeVariables: useCallback((data: any) => {
-      applyThemeVariables(data)
-    }, [applyThemeVariables]),
+      // テーマ変数を受け取り、DynamicThemeContext 経由で更新
+      console.log('[MTE][React] onThemeVariables received:', data);
+      
+      // CSS変数を取得し、テーマオブジェクトを再構築
+      const updatedTheme = getVSCodeTheme();
+      setTheme(updatedTheme); // EmotionのThemeProviderに新しいテーマオブジェクトを渡す
+    }, [setTheme]),
     onFontSettings: useCallback((data: any) => {
       if (data && (data.fontFamily || data.fontSize)) {
         setFontSettings({
@@ -315,11 +316,7 @@ function AppContent() {
 }
 
 function App() {
-  return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
-  )
+  return <AppContent />
 }
 
 export default App
