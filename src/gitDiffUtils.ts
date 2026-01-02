@@ -225,9 +225,9 @@ function getFileStatus(
         if (workingTreeChange) {
             // ステータスを判定
             const status = workingTreeChange.status;
-            if (status === 1) return 'added';      // Status.INDEX_ADDED
-            if (status === 2) return 'deleted';    // Status.DELETED
-            if (status === 3) return 'modified';   // Status.MODIFIED
+            if (status === 1) {return 'added';}      // Status.INDEX_ADDED
+            if (status === 2) {return 'deleted';}    // Status.DELETED
+            if (status === 3) {return 'modified';}   // Status.MODIFIED
             return 'modified'; // デフォルト
         }
 
@@ -238,9 +238,9 @@ function getFileStatus(
 
         if (indexChange) {
             const status = indexChange.status;
-            if (status === 1) return 'added';
-            if (status === 2) return 'deleted';
-            if (status === 3) return 'modified';
+            if (status === 1) {return 'added';}
+            if (status === 2) {return 'deleted';}
+            if (status === 3) {return 'modified';}
             return 'modified';
         }
 
@@ -681,7 +681,7 @@ export function detectColumnDiff(
         } else {
             // row = -2 がセパレータの場合、最初の削除行から探す
             const actualHeaderRow = deletedRows.find(d => {
-                if (!d.oldContent) return false;
+                if (!d.oldContent) {return false;}
                 const headerCells = parseTableRowCells(d.oldContent);
                 return !headerCells.every(cell => cell.match(/^[\s\-]*$/) !== null);
             });
