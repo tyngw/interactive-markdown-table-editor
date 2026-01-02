@@ -113,6 +113,26 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
           min-height: 0;
           height: 100vh;
         }
+
+        /* ====== ローディングスピナー ====== */
+        @keyframes mte-spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .mte-loading-spinner {
+          display: inline-block;
+          width: 14px;
+          height: 14px;
+          border: 2px solid currentColor;
+          border-radius: 50%;
+          border-top-color: transparent;
+          animation: mte-spin 0.6s linear infinite;
+        }
       `}
     />
   )
