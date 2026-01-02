@@ -15,7 +15,7 @@ export const StatusBarContainer = styled.div<{}>`
   padding: 0 12px;
   font-size: 12px;
   z-index: 999;
-  border-top: none;
+  border-top: 1px solid var(--vscode-statusBar-border, var(--vscode-panel-border, #3e3e42));
   /* 色は inline style で設定される */
 `;
 
@@ -69,14 +69,15 @@ export const SaveIndicator = styled.span<{ status: 'saved' | 'saving' | 'error' 
   transition: opacity 0.2s ease;
 `;
 
-export const GitDiffButton = styled.button<{ active: boolean }>`
+export const GitDiffButton = styled.button<{ active: boolean; disabled?: boolean }>`
   font-size: 12px;
-  padding: 0 10px;
-  border-radius: 0;
-  font-weight: 500;
+  padding: 0;
+  border-radius: 2px;
+  font-weight: 400;
   line-height: 24px;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   border: none;
   outline: none;
   cursor: pointer;
@@ -84,28 +85,51 @@ export const GitDiffButton = styled.button<{ active: boolean }>`
   flex-shrink: 0;
   white-space: nowrap;
   background-color: transparent !important;
+  padding: 0 8px;
   /* 色は親コンポーネントで inline style で設定される */
   height: 24px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1)) !important;
   }
 
-  &:active {
+  &:active:not(:disabled) {
     background-color: var(--vscode-toolbar-activeBackground, rgba(255, 255, 255, 0.15)) !important;
   }
 
   &:focus {
-    outline: 1px solid var(--vscode-focusBorder, #007acc);
-    outline-offset: -1px;
+    outline: none;
   }
 
   ${props =>
     props.active &&
     `
     background-color: var(--vscode-toolbar-activeBackground, rgba(255, 255, 255, 0.15)) !important;
-    font-weight: 600;
   `}
+
+  ${props =>
+    props.disabled &&
+    `
+    opacity: 0.5;
+    cursor: not-allowed;
+    &:hover {
+      background-color: transparent !important;
+    }
+  `}
+`;
+
+export const GitDiffIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+`;
+
+export const GitDiffLabel = styled.span`
+  display: inline-block;
+  white-space: nowrap;
 `;
 
 export const StatusSelection = styled.span<{}>`

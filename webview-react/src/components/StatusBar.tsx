@@ -7,6 +7,8 @@ import {
   StatusItem,
   SaveIndicator,
   GitDiffButton,
+  GitDiffIcon,
+  GitDiffLabel,
   StatusSelection,
   StatusMessage,
 } from './StatusBar.styles'
@@ -62,7 +64,10 @@ const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, sortState: p
             aria-label="Git Diff"
             style={gitDiffButtonStyle}
           >
-            {showGitDiff ? '✓ Diff' : '- Diff'}
+            <GitDiffIcon>
+              {showGitDiff ? '✓' : '⊘'}
+            </GitDiffIcon>
+            <GitDiffLabel>Diff</GitDiffLabel>
           </GitDiffButton>
           {status.selection && (
             <StatusSelection>
