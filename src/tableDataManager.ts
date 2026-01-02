@@ -883,21 +883,21 @@ export class TableDataManager {
      */
     replaceContents(headers: string[], rows: string[][], alignment?: ('left' | 'center' | 'right')[]): void {
         if (!Array.isArray(headers) || headers.length === 0) {
-            throw new Error('Headers must not be empty')
+            throw new Error('Headers must not be empty');
         }
-        const colCount = headers.length
+        const colCount = headers.length;
         for (const r of rows) {
-            if (!Array.isArray(r)) throw new Error('Invalid row in rows')
-            if (r.length !== colCount) throw new Error('Row length mismatch in imported data')
+            if (!Array.isArray(r)) {throw new Error('Invalid row in rows');}
+            if (r.length !== colCount) {throw new Error('Row length mismatch in imported data');}
         }
-        const align = alignment && alignment.length === colCount ? alignment.slice() : new Array(colCount).fill('left') as ('left'|'center'|'right')[]
-        this.tableData.headers = headers.slice()
-        this.tableData.rows = rows.map(r => r.slice())
-        this.tableData.alignment = align
+        const align = alignment && alignment.length === colCount ? alignment.slice() : new Array(colCount).fill('left') as ('left'|'center'|'right')[];
+        this.tableData.headers = headers.slice();
+        this.tableData.rows = rows.map(r => r.slice());
+        this.tableData.alignment = align;
         // CSVインポート等で内容を置換する場合は、区切り線をクリア
-        this.tableData.separatorLine = undefined
-        this.updateMetadata()
-        this.notifyChange()
+        this.tableData.separatorLine = undefined;
+        this.updateMetadata();
+        this.notifyChange();
     }
 
     /**

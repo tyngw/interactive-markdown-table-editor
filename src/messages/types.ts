@@ -17,6 +17,8 @@ export type WebviewCommand =
   | 'requestThemeVariables'
   | 'undo'
   | 'redo'
+  | 'requestSync'
+  | 'stateUpdate'
   | 'webviewError'
   | 'webviewUnhandledRejection'
   | 'diag';

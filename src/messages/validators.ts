@@ -17,7 +17,7 @@ import {
 
 export const validCommands: WebviewCommand[] = [
   'requestTableData', 'updateCell', 'bulkUpdateCells', 'updateHeader', 'addRow', 'deleteRows',
-  'addColumn', 'deleteColumns', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'importCSV', 'pong', 'switchTable', 'requestThemeVariables', 'undo', 'redo',
+  'addColumn', 'deleteColumns', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'importCSV', 'pong', 'switchTable', 'requestThemeVariables', 'undo', 'redo', 'requestSync', 'stateUpdate',
   'webviewError', 'webviewUnhandledRejection', 'diag'
 ];
 
@@ -72,11 +72,11 @@ export function validateMessageData(message: WebviewMessage): boolean {
     }
     case 'exportCSV': {
       const v = d as ExportCSVData;
-      if (!isObject(v) || typeof v.csvContent !== 'string') return false;
+      if (!isObject(v) || typeof v.csvContent !== 'string') {return false;}
       // csvContent must be non-empty (ignoring surrounding whitespace)
-      if (v.csvContent.trim().length === 0) return false;
+      if (v.csvContent.trim().length === 0) {return false;}
       // if filename is provided, it must be a non-empty string
-      if ('filename' in v && (typeof (v as any).filename !== 'string' || (v as any).filename.trim().length === 0)) return false;
+      if ('filename' in v && (typeof (v as any).filename !== 'string' || (v as any).filename.trim().length === 0)) {return false;}
       return true;
     }
     case 'importCSV': {
