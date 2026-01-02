@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { TableData } from '../types'
+import { TabsContainer, TabButton } from './TableTabs.styles'
 
 interface TableTabsProps {
   tables: TableData[]
@@ -19,19 +20,19 @@ const TableTabs: React.FC<TableTabsProps> = ({
   }
 
   return (
-    <div className="table-tabs">
-  {tables.map((_, index) => (
-        <button
+    <TabsContainer>
+      {tables.map((_, index) => (
+        <TabButton
           key={index}
-          className={`tab-button ${index === currentTableIndex ? 'active' : ''}`}
+          active={index === currentTableIndex}
           onClick={() => {
             onTabChange(index)
           }}
         >
           {t('tableTabs.tableLabel', { index: index + 1 })}
-        </button>
+        </TabButton>
       ))}
-    </div>
+    </TabsContainer>
   )
 }
 

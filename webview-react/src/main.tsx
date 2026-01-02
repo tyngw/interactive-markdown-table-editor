@@ -1,8 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { ThemeProvider } from '@emotion/react'
 import App from './App'
-import './index.css'
+import { GlobalStyles } from './GlobalStyles'
+import { getVSCodeTheme } from './styles/theme'
 import { ensureVsCodeApi } from './vscodeApi'
+import './index.css'
 
 console.log('[MTE][React] bootstrap start');
 
@@ -44,10 +47,20 @@ function initializeApp() {
 
   initializeVSCodeEnvironment();
 
+  const theme = getVSCodeTheme()
+  console.log('[MTE] Theme acquired:', {
+    editorBackground: theme.editorBackground,
+    editorForeground: theme.editorForeground,
+    statusBarBackground: theme.statusBarBackground,
+  })
+
   console.log('[MTE][React] rendering App');
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <App />
+      <ThemeProvider theme={theme}>
+        <GlobalStyles theme={theme} />
+        <App />
+      </ThemeProvider>
     </React.StrictMode>,
   );
 }
