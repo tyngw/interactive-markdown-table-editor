@@ -122,9 +122,6 @@ function AppContent() {
       // cssTextが提供されている場合、DOMに注入してから テーマを再取得
       if (data && data.cssText) {
         try {
-          // cssTextのスコープセレクターを#mte-rootから#rootに変更（実際のDOM構成に合わせる）
-          let scopedCss = data.cssText.replace(/#mte-root\s*\{/g, '#root {');
-          
           // 既存のテーマ スタイル要素を探すか、新規作成
           let styleEl = document.getElementById('mte-theme-overrides');
           if (!styleEl) {
@@ -132,8 +129,8 @@ function AppContent() {
             styleEl.id = 'mte-theme-overrides';
             document.head.appendChild(styleEl);
           }
-          // CSSテキストを設定
-          styleEl.textContent = scopedCss;
+          // CSSテキストを設定（複数セレクタで#mte-rootと#rootの両方に定義されている）
+          styleEl.textContent = data.cssText;
           console.log('[MTE][React] Applied theme CSS to DOM');
         } catch (error) {
           console.error('[MTE][React] Failed to apply theme CSS:', error);
@@ -150,6 +147,16 @@ function AppContent() {
           fontFamily: data.fontFamily,
           fontSize: data.fontSize
         })
+        
+        // Apply font settings as CSS variables on the root element
+        const rootEl = (document.getElementById('mte-root') || document.getElementById('root') || document.documentElement) as HTMLElement;
+        if (data.fontFamily) {
+          rootEl.style.setProperty('--mte-font-family', data.fontFamily);
+        }
+        if (data.fontSize && data.fontSize > 0) {
+          rootEl.style.setProperty('--mte-font-size', `${data.fontSize}px`);
+        }
+        console.log('[MTE][React] Applied font settings:', data);
       }
     }, []),
     onSetActiveTable: useCallback((index: number) => {
