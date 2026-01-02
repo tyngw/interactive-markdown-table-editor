@@ -238,12 +238,53 @@ export class WebviewManager {
     }
 
     /**
+     * Get the number of active communication managers (for debugging)
+     */
+    public get communicationManagerCount(): number {
+        return this.communicationManagers.size;
+    }
+
+    /**
+     * Get all communication managers (internal use only)
+     */
+    private getCommunicationManagers(): Map<string, ExtensionCommunicationManager> {
+        return this.communicationManagers;
+    }
+
+    /**
      * Broadcast message to all panels
      */
     public broadcastMessage(command: string, data?: any): void {
         const message = { command, data };
+        if (this.panels.size === 0) {
+            console.warn(`[WebviewManager] broadcastMessage("${command}"): No active panels to broadcast to`);
+            return;
+        }
         for (const panel of this.panels.values()) {
-            panel.webview.postMessage(message);
+            try {
+                panel.webview.postMessage(message);
+            } catch (err) {
+                console.error(`[WebviewManager] Failed to post message "${command}" to panel:`, err);
+            }
+        }
+    }
+
+    /**
+     * Broadcast notification message to all panels using the new protocol
+     * This ensures theme variables are applied immediately to all open panels
+     */
+    public broadcastNotification(command: string, data?: any): void {
+        const managers = this.getCommunicationManagers();
+        if (managers.size === 0) {
+            console.warn(`[WebviewManager] broadcastNotification("${command}"): No active communication managers`);
+            return;
+        }
+        for (const commManager of managers.values()) {
+            try {
+                commManager.sendNotification(command as any, data);
+            } catch (err) {
+                console.error(`[WebviewManager] Failed to send notification "${command}":`, err);
+            }
         }
     }
 

@@ -24,10 +24,13 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             const config = vscode.workspace.getConfiguration('markdownTableEditor');
             const selectedTheme = config.get<string>('theme', 'inherit');
+            console.log(`[Extension] Applying theme: "${selectedTheme}"`);
             const themeVars = await buildThemeVariablesCss(selectedTheme);
-            webviewManager.broadcastMessage('applyThemeVariables', { cssText: themeVars.cssText });
+            const activeCount = webviewManager.communicationManagerCount;
+            console.log(`[Extension] Broadcasting applyThemeVariables to ${activeCount} communication managers`);
+            webviewManager.broadcastNotification('applyThemeVariables', { cssText: themeVars.cssText });
         } catch (err) {
-            // Theme application failed - continue silently
+            console.error('[Extension] Theme application failed:', err);
         }
     };
 
