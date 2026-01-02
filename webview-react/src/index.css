@@ -20,7 +20,7 @@
     display: flex;
     border-top: 1px solid var(--vscode-panel-border);
     border-bottom: 1px solid var(--vscode-panel-border);
-    background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-panelSectionHeader-background, var(--vscode-editor-background)));
+    background-color: var(--vscode-panel-background, #252526);
     margin: 0;
     padding: 4px 0;
     overflow-x: auto;
@@ -47,7 +47,7 @@
 .tab-button.active {
     color: var(--vscode-tab-activeForeground, var(--vscode-foreground));
     border-bottom-color: var(--vscode-tab-activeBorderTop, var(--vscode-focusBorder));
-    background-color: var(--vscode-tab-activeBackground, var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background)));
+    background-color: var(--vscode-tab-activeBackground, var(--vscode-panel-background, #1e1e1e));
 }
 
 /* ====== 1. 基本レイアウト ====== */
@@ -524,13 +524,13 @@ table.table-editor tbody tr td.editable-cell.user-resized {
     vertical-align: top;
     border: 1px solid var(--vscode-editorGroup-border, #3e3e42);
     position: relative;
-    background-color: rgba(199, 78, 57, 0.05);
+    background-color: color-mix(in srgb, var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) 12%, var(--vscode-editor-background, #1e1e1e));
     color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39);
 }
 
 /* 削除行に網掛けスタイルを適用 */
 .git-diff-deleted-row.striped-row .git-diff-deleted-cell {
-    background-color: var(--vscode-editor-hoverHighlightBackground, var(--vscode-editor-selectionHighlightBackground, var(--vscode-editor-lineHighlightBackground)));
+    background-color: color-mix(in srgb, var(--vscode-gitDecoration-deletedResourceForeground, #c74e39) 20%, var(--vscode-editor-background, #1e1e1e));
 }
 
 .git-diff-deleted-cell .git-diff-icon {
@@ -614,7 +614,7 @@ tr:not(.git-diff-deleted-row) td.git-diff-column-not-exist::before {
 
 /* ヘッダセルのカラム削除時 - 透過を避けて背景色を固定 */
 th.git-diff-column-not-exist {
-    background-color: var(--vscode-editorGroupHeader-tabsBackground, #1e1e1e) !important;
+    background-color: var(--vscode-panel-background, #1e1e1e) !important;
     border: 1px dashed var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
     position: relative;
 }
