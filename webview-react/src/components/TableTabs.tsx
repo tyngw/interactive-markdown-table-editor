@@ -20,10 +20,11 @@ const TableTabs: React.FC<TableTabsProps> = ({
   }
 
   return (
-    <TabsContainer>
+    <TabsContainer className="mte-table-tabs">
       {tables.map((_, index) => (
         <TabButton
           key={index}
+          className="mte-tab-button"
           active={index === currentTableIndex}
           onClick={() => {
             onTabChange(index)
