@@ -251,9 +251,9 @@ export class WebviewManager {
      * Backward-compatible message validator for tests
      */
     public validateMessage(message: any): boolean {
-        if (!validateBasicMessageStructure(message)) return false;
-        if (!validateMessageCommand(message)) return false;
-        if (!validateMessageData(message)) return false;
+        if (!validateBasicMessageStructure(message)) {return false;}
+        if (!validateMessageCommand(message)) {return false;}
+        if (!validateMessageData(message)) {return false;}
         return true;
     }
 

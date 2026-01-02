@@ -31,7 +31,7 @@ suite('CSV Exporter Webview Tests', () => {
                     },
                     ContentConverter: {
                         processForClipboard: function(content: any) {
-                            if (!content) return '';
+                            if (!content) {return '';}
                             // Convert <br> tags to newlines (case-insensitive, with or without closing tag)
                             return String(content).replace(/<br\s*\/?>/gi, '\n');
                         }
