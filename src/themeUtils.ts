@@ -83,10 +83,14 @@ async function buildCssFromThemeColors(themeUri: vscode.Uri): Promise<string> {
     }
     // 拡張で使用する重要トークンのフォールバック上書きを追加
     const ensure = buildEnsureOverrides(colors);
-  // テーブルエディタのルート要素配下だけに作用させる
-  const selector = '#mte-root';
-  const base = entries.length ? `${selector}{${entries.join(';')}}` : '';
-  return base + (ensure ? `${selector}{${ensure}}` : '');
+  // テーブルエディタのルート要素とその下のいずれでもアクセスできるように複数セレクタで定義
+  const selectors = ['#mte-root', '#root'];
+  let css = '';
+  for (const selector of selectors) {
+    const base = entries.length ? `${selector}{${entries.join(';')}}` : '';
+    css += base + (ensure ? `${selector}{${ensure}}` : '');
+  }
+  return css;
   } catch {
     return '';
   }
