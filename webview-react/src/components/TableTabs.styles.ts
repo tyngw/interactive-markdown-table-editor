@@ -44,17 +44,13 @@ export const TabButton = styled.button<{ active: boolean }>`
   padding: 8px 16px;
   cursor: pointer;
   color: ${props =>
-    props.active ? 'var(--vscode-tab-activeForeground, #ffffff)' : 'var(--vscode-tab-inactiveForeground, #a6a6a6)'};
+    props.active ? 'var(--vscode-foreground, #ffffff)' : 'var(--vscode-tab-inactiveForeground, #a6a6a6)'};
   border-bottom: 2px solid ${props =>
     props.active ? 'var(--tab-border-top-color, #007acc)' : 'transparent'};
   font-size: var(--vscode-font-size, 14px);
   font-family: var(--vscode-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
   white-space: nowrap;
   transition: all 0.2s ease;
-
-  &:hover {
-    background-color: var(--vscode-tab-hoverBackground, #2a2d2e);
-  }
 `;
 
 export const BottomChrome = styled.div`
@@ -62,5 +58,5 @@ export const BottomChrome = styled.div`
   display: flex;
   flex-direction: column;
   background-color: var(--vscode-editor-background, #1e1e1e);
-  border-top: 1px solid var(--vscode-panel-border, #3e3e42);
+  border-top: 1px solid var(--vscode-terminal-tab-activeBorder, #3e3e42);
 `
