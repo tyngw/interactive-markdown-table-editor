@@ -86,6 +86,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./ && npm run build-webview && npm run copy-mock",
     "compile:debug": "MTE_KEEP_CONSOLE=1 tsc -p ./ && npm run build-webview:debug && npm run copy-mock",
+    "dev": "cd webview-react && vite",
     "build-webview": "cd webview-react && npm install && npm run build && cd .. && mkdir -p out/webview && cp -r webview-dist/* out/webview/",
     "build-webview:debug": "cd webview-react && npm install && npm run build:debug && cd .. && mkdir -p out/webview && cp -r webview-dist/* out/webview/",
     "copy-mock": "mkdir -p out/src/mock && cp test/mock/* out/src/mock/",
