@@ -143,9 +143,21 @@ const MemoizedCell: React.FC<MemoizedCellProps> = ({
         ...widthStyle,
         ...(isEditing
           ? {
-            minHeight: (savedHeight?.rowMax || 32) + 'px',
-            height: 'auto',
-            maxHeight: 'none'
+            // 編集開始前に測定した行の最大高さを適用
+            // savedHeight.rowMax が利用できない場合は original にフォールバック
+            // いずれも利用できない場合は 'auto' で自然な高さにする
+            height: savedHeight?.rowMax
+              ? `${savedHeight.rowMax}px`
+              : savedHeight?.original
+                ? `${savedHeight.original}px`
+                : 'auto',
+            minHeight: savedHeight?.rowMax
+              ? `${savedHeight.rowMax}px`
+              : savedHeight?.original
+                ? `${savedHeight.original}px`
+                : 'auto',
+            // position relative でテキストエリアの absolute 配置の基準にする
+            position: 'relative'
           }
           : {})
       }}
