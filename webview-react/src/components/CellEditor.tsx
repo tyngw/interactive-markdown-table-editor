@@ -79,7 +79,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
       }
 
       // テキストエリアの高さを設定
-      textarea.style.height = `${finalHeight}px`
+      // textarea.style.height = `${finalHeight}px`
 
       // 行内の他セルとも高さを同期（行の視覚的な一貫性を維持）
       // 編集中のセルには height を、他のセルには min-height を設定
@@ -284,10 +284,14 @@ const CellEditor: React.FC<CellEditorProps> = ({
         lineHeight: '1.2',
         verticalAlign: 'top',
         textAlign: 'left',
+        // セルに完全にフィットするように配置する
         position: 'absolute',
         top: 0,
         left: 0,
+        right: 0,
+        bottom: 0,
         width: '100%',
+        height: '100%',
         zIndex: 5,
         padding: '4px 6px'
       }}
