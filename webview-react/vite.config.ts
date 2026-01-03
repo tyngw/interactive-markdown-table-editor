@@ -32,6 +32,17 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), cspFixPlugin()],
+    server: {
+      // 開発サーバーの設定
+      host: 'localhost',
+      port: 5173,
+      // HMR（Hot Module Replacement）設定
+      hmr: {
+        host: 'localhost',
+        port: 5173,
+        protocol: 'http'
+      }
+    },
     build: {
       outDir: '../webview-dist',
       rollupOptions: {
