@@ -5,6 +5,7 @@
  */
 
 import * as vscode from 'vscode';
+import { debug, info, warn, error } from './logging';
 
 /**
  * セルのGit差分状態
@@ -66,51 +67,50 @@ export interface ColumnDiffInfo {
  * @returns 初期化されたGit API。タイムアウトした場合はnull
  */
 async function waitForGitApi(timeoutMs: number = 5000): Promise<any | null> {
-    console.log('[GitDiffDebug] Starting waitForGitApi');
+    debug('[GitDiffDebug] Starting waitForGitApi');
     try {
         const gitExtension = vscode.extensions.getExtension('vscode.git');
         if (!gitExtension) {
-            console.log('[GitDiffDebug] Git extension not found.');
+            debug('[GitDiffDebug] Git extension not found.');
             return null;
         }
-        console.log(`[GitDiffDebug] Git extension found. isActive: ${gitExtension.isActive}`);
+        debug(`[GitDiffDebug] Git extension found. isActive: ${gitExtension.isActive}`);
 
         // 拡張機能が有効でない場合は有効化
         if (!gitExtension.isActive) {
-            console.log('[GitDiffDebug] Activating Git extension...');
+            debug('[GitDiffDebug] Activating Git extension...');
             await gitExtension.activate();
-            console.log('[GitDiffDebug] Git extension activated.');
+            debug('[GitDiffDebug] Git extension activated.');
         }
 
         const git = gitExtension.exports.getAPI(1);
         if (!git) {
-            console.log('[GitDiffDebug] Git API not available');
+            debug('[GitDiffDebug] Git API not available');
             return null;
         }
-        console.log(`[GitDiffDebug] Git API obtained. Initial state: ${git.state}`);
+        debug(`[GitDiffDebug] Git API obtained. Initial state: ${git.state}`);
 
         // 既に初期化済み
         if (git.state === 'initialized') {
-            console.log('[GitDiffDebug] Git API is already initialized.');
+            debug('[GitDiffDebug] Git API is already initialized.');
             return git;
         }
 
         // 初期化を待機（ポーリング）
-        console.log('[GitDiffDebug] Waiting for Git API to initialize...');
+        debug('[GitDiffDebug] Waiting for Git API to initialize...');
         const startTime = Date.now();
         while (Date.now() - startTime < timeoutMs) {
             if (git.state === 'initialized') {
-                console.log('[GitDiffDebug] Git API has been initialized.');
+                debug('[GitDiffDebug] Git API has been initialized.');
                 return git;
             }
-            console.log(`[GitDiffDebug] Polling: git.state is ${git.state}`);
+            debug(`[GitDiffDebug] Polling: git.state is ${git.state}`);
             await new Promise(resolve => setTimeout(resolve, 200)); // 200ms待機
         }
-
-        console.warn(`[GitDiffDebug] Git API did not initialize within ${timeoutMs}ms.`);
+        warn(`[GitDiffDebug] Git API did not initialize within ${timeoutMs}ms.`);
         return null;
-    } catch (error) {
-        console.error('[GitDiffDebug] Error while waiting for Git API:', error);
+    } catch (err) {
+        error('[GitDiffDebug] Error while waiting for Git API:', err);
         return null;
     }
 }
@@ -135,28 +135,28 @@ export async function getGitDiffForTable(
         // Git APIが利用可能になるまで待機
         const git = await waitForGitApi();
         if (!git) {
-            console.log('[GitDiffDebug] Exiting getGitDiffForTable because Git API is not available.');
+            warn('[GitDiffDebug] Exiting getGitDiffForTable because Git API is not available.');
             return []; // Git APIが利用できない場合は空の配列を返す
         }
 
         // ワークスペースフォルダを取得
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
         if (!workspaceFolder) {
-            console.log('[GitDiff] No workspace folder found');
+            debug('[GitDiff] No workspace folder found');
             return [];
         }
 
         // リポジトリを取得
         const repository = git.getRepository(workspaceFolder.uri);
         if (!repository) {
-            console.log('[GitDiff] No repository found');
+            debug('[GitDiff] No repository found');
             return [];
         }
 
         // ファイルの変更状態を取得
         const fileStatus = getFileStatus(repository, uri);
         if (!fileStatus) {
-            console.log('[GitDiff] File not in git repository or no changes');
+            debug('[GitDiff] File not in git repository or no changes');
             return [];
         }
 
@@ -203,8 +203,8 @@ export async function getGitDiffForTable(
         // テーブルの行とGit diffの行をマッピング
         // テーブル内容が提供されている場合は、より正確なマッピングを行う
         return mapTableRowsToGitDiff(lineDiffs, tableStartLine, rowCount, tableContent);
-    } catch (error) {
-        console.error('[GitDiff] Error getting git diff:', error);
+    } catch (err) {
+        error('[GitDiff] Error getting git diff:', err);
         return [];
     }
 }
@@ -245,8 +245,8 @@ function getFileStatus(
         }
 
         return null;
-    } catch (error) {
-        console.error('[GitDiff] Error getting file status:', error);
+    } catch (err) {
+        error('[GitDiff] Error getting file status:', err);
         return null;
     }
 }
@@ -295,7 +295,7 @@ async function getLineByLineDiff(
             });
             
             if (stderr && !stderr.includes('warning')) {
-                console.warn('[GitDiff] Git diff stderr:', stderr);
+                    warn('[GitDiff] Git diff stderr:', stderr);
             }
             
             diffOutput = stdout;
@@ -307,7 +307,7 @@ async function getLineByLineDiff(
                 diffOutput = error.stdout;
             } else if (error.code === 'ENOENT') {
                 // gitコマンドが見つからない
-                console.warn('[GitDiff] Git command not found');
+                    warn('[GitDiff] Git command not found');
                 return null;
             } else {
                 // ステージングエリアの変更を確認
@@ -323,7 +323,7 @@ async function getLineByLineDiff(
                     if (cachedError.code === 1 && cachedError.stdout) {
                         diffOutput = cachedError.stdout;
                     } else {
-                        console.log('[GitDiff] No diff found (file may be new or unchanged)');
+                        debug('[GitDiff] No diff found (file may be new or unchanged)');
                         return null;
                     }
                 }
@@ -336,8 +336,8 @@ async function getLineByLineDiff(
 
         // 差分を解析
         return parseGitDiff(diffOutput, tableStartLine, tableEndLine);
-    } catch (error) {
-        console.error('[GitDiff] Error executing git diff:', error);
+    } catch (err) {
+        error('[GitDiff] Error executing git diff:', err);
         return null;
     }
 }
@@ -405,7 +405,7 @@ function parseGitDiff(
             // 削除行を DELETED として記録
             // 削除行は oldLineNumber を使用して位置を特定
             const deletedContent = line.substring(1);
-            console.log('[parseGitDiff] DELETED line:', { oldLineNumber, newLineNumber, deletedContent });
+            debug('[parseGitDiff] DELETED line:', { oldLineNumber, newLineNumber, deletedContent });
             lineDiffs.push({
                 lineNumber: oldLineNumber,  // 削除行は元の行番号を使用
                 status: GitDiffStatus.DELETED,
@@ -417,7 +417,7 @@ function parseGitDiff(
         } else if (line.startsWith('+') && !line.startsWith('+++')) {
             // 追加行を ADDED として記録
             const addedContent = line.substring(1);
-            console.log('[parseGitDiff] ADDED line:', { newLineNumber, content: addedContent });
+            debug('[parseGitDiff] ADDED line:', { newLineNumber, content: addedContent });
             lineDiffs.push({
                 lineNumber: newLineNumber,
                 status: GitDiffStatus.ADDED,
@@ -453,7 +453,7 @@ function mapTableRowsToGitDiff(
 ): RowGitDiff[] {
     const result: RowGitDiff[] = [];
     
-    console.log('[mapTableRowsToGitDiff] Input:', {
+    debug('[mapTableRowsToGitDiff] Input:', {
         tableStartLine,
         rowCount,
         lineDiffsLength: lineDiffs.length
@@ -479,7 +479,7 @@ function mapTableRowsToGitDiff(
             ? (diff.oldLineNumber ?? diff.lineNumber) - tableStartLine - 1 - 2
             : diff.lineNumber - tableStartLine - 1 - 2;
         
-        console.log('[mapTableRowsToGitDiff] Processing:', {
+        debug('[mapTableRowsToGitDiff] Processing:', {
             status: diff.status,
             oldLineNumber: diff.oldLineNumber,
             lineNumber: diff.lineNumber,
@@ -594,8 +594,8 @@ export function getGitThemeColors(): {
             modifiedBackground: 'var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d)',
             deletedBackground: 'var(--vscode-gitDecoration-deletedResourceForeground, #c74e39)'
         };
-    } catch (error) {
-        console.error('[GitDiff] Error getting git theme colors:', error);
+    } catch (err) {
+        error('[GitDiff] Error getting git theme colors:', err);
         return {};
     }
 }
@@ -653,8 +653,15 @@ export function detectColumnDiff(
         oldHeaders: []
     };
 
+    // デバッグビルド時のみログを出力するユーティリティ
+    const isDebug = (process && process.env && (
+        process.env.NODE_ENV === 'development' ||
+        process.env.MTE_KEEP_CONSOLE === '1' ||
+        process.env.DEBUG === 'true'
+    ));
+    const debugLog = (...args: any[]) => { if (isDebug) { console.log(...args); } };
     if (!gitDiff || gitDiff.length === 0) {
-        console.log('[detectColumnDiff] No gitDiff provided');
+        debugLog('[detectColumnDiff] No gitDiff provided');
         return result;
     }
 
@@ -663,8 +670,8 @@ export function detectColumnDiff(
     const deletedRows = gitDiff.filter(d => d.status === GitDiffStatus.DELETED && d.oldContent);
     const addedRows = gitDiff.filter(d => d.status === GitDiffStatus.ADDED);
 
-    console.log('[detectColumnDiff] Found deletedRows:', deletedRows.length, 'addedRows:', addedRows.length);
-    console.log('[detectColumnDiff] First few deletedRows:', deletedRows.slice(0, 3).map(r => ({ row: r.row, content: r.oldContent?.substring(0, 30) })));
+    debugLog('[detectColumnDiff] Found deletedRows:', deletedRows.length, 'addedRows:', addedRows.length);
+    debugLog('[detectColumnDiff] First few deletedRows:', deletedRows.slice(0, 3).map(r => ({ row: r.row, content: r.oldContent?.substring(0, 30) })));
 
     // 削除前のヘッダを取得
     // row = -2 がヘッダ行、row = -1 がセパレータ行
@@ -677,7 +684,7 @@ export function detectColumnDiff(
         
         if (!isSeparatorRow) {
             result.oldHeaders = cells;
-            console.log('[detectColumnDiff] oldHeaders extracted from row -2:', result.oldHeaders);
+            debugLog('[detectColumnDiff] oldHeaders extracted from row -2:', result.oldHeaders);
         } else {
             // row = -2 がセパレータの場合、最初の削除行から探す
             const actualHeaderRow = deletedRows.find(d => {
@@ -687,7 +694,7 @@ export function detectColumnDiff(
             });
             if (actualHeaderRow && actualHeaderRow.oldContent) {
                 result.oldHeaders = parseTableRowCells(actualHeaderRow.oldContent);
-                console.log('[detectColumnDiff] oldHeaders extracted from actual header row:', result.oldHeaders);
+                debugLog('[detectColumnDiff] oldHeaders extracted from actual header row:', result.oldHeaders);
             }
         }
     }
@@ -698,9 +705,9 @@ export function detectColumnDiff(
     const firstDataDeletedRow = deletedRows.find(d => d.row >= 0);
     if (firstDataDeletedRow && firstDataDeletedRow.oldContent) {
         oldColumnCount = countTableCells(firstDataDeletedRow.oldContent);
-        console.log('[detectColumnDiff] oldColumnCount from deleted row:', oldColumnCount, 'oldContent:', firstDataDeletedRow.oldContent?.substring(0, 50));
+        debugLog('[detectColumnDiff] oldColumnCount from deleted row:', oldColumnCount, 'oldContent:', firstDataDeletedRow.oldContent?.substring(0, 50));
     } else {
-        console.log('[detectColumnDiff] No deleted rows found, oldColumnCount = currentColumnCount =', currentColumnCount);
+        debugLog('[detectColumnDiff] No deleted rows found, oldColumnCount = currentColumnCount =', currentColumnCount);
     }
 
     // 追加行から変更後の列数を取得
@@ -713,7 +720,7 @@ export function detectColumnDiff(
     // 列数の差分を計算
     const columnDiff = newColumnCount - oldColumnCount;
 
-    console.log('[detectColumnDiff] oldColumnCount:', oldColumnCount, 'newColumnCount:', newColumnCount, 'diff:', columnDiff);
+    debugLog('[detectColumnDiff] oldColumnCount:', oldColumnCount, 'newColumnCount:', newColumnCount, 'diff:', columnDiff);
 
     if (columnDiff > 0) {
         // 列が追加された場合
@@ -731,7 +738,7 @@ export function detectColumnDiff(
                 const newHeaders = parseTableRowCells(newHeaderAddedRow.newContent);
                 
                 // 両方のヘッダが存在する場合、削除された列を特定
-                console.log('[detectColumnDiff] Comparing headers - old:', result.oldHeaders, 'new:', newHeaders);
+                debugLog('[detectColumnDiff] Comparing headers - old:', result.oldHeaders, 'new:', newHeaders);
                 
                 // 削除前のヘッダで、削除後に存在しない列を見つける
                 for (let oldIdx = 0; oldIdx < result.oldHeaders.length; oldIdx++) {
@@ -742,7 +749,7 @@ export function detectColumnDiff(
                     
                     if (!foundInNew) {
                         result.deletedColumns.push(oldIdx);
-                        console.log(`[detectColumnDiff] Column ${oldIdx} (${oldHeaderName}) detected as deleted`);
+                        debugLog(`[detectColumnDiff] Column ${oldIdx} (${oldHeaderName}) detected as deleted`);
                     }
                 }
             }
@@ -753,11 +760,11 @@ export function detectColumnDiff(
             for (let i = newColumnCount; i < oldColumnCount; i++) {
                 result.deletedColumns.push(i);
             }
-            console.log('[detectColumnDiff] Using fallback: assumed columns deleted from end');
+            debugLog('[detectColumnDiff] Using fallback: assumed columns deleted from end');
         }
         
         // デバッグログ：削除された列を詳細に出力
-        console.log('[detectColumnDiff] Column deletion detected:', {
+        debugLog('[detectColumnDiff] Column deletion detected:', {
             oldColumnCount,
             newColumnCount,
             deletedCount: oldColumnCount - newColumnCount,
@@ -766,7 +773,7 @@ export function detectColumnDiff(
         });
     }
 
-    console.log('[detectColumnDiff] Final result:', result);
+    debugLog('[detectColumnDiff] Final result:', result);
     return result;
 }
 
