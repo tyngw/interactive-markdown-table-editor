@@ -70,34 +70,24 @@ export class MarkdownFileHandler implements FileHandler {
     async readMarkdownFile(uri: vscode.Uri): Promise<string> {
         try {
             this.outputChannel.appendLine(`Reading file: ${uri.fsPath}`);
-
-            // Check if file exists
-            if (!fs.existsSync(uri.fsPath)) {
-                throw new FileSystemError(
-                    `File does not exist: ${uri.fsPath}`,
-                    'read',
-                    uri
-                );
-            }
-
-            // Check if file is readable
-            try {
-                await fs.promises.access(uri.fsPath, fs.constants.R_OK);
-            } catch (error) {
-                throw new FileSystemError(
-                    `File is not readable: ${uri.fsPath}`,
-                    'read',
-                    uri,
-                    error as Error
-                );
-            }
-
             // If the document is already open in VS Code, prefer the in-memory content (includes unsaved changes)
             const openDocument = vscode.workspace.textDocuments.find(doc => doc.uri.fsPath === uri.fsPath);
             if (openDocument) {
                 const content = openDocument.getText();
                 this.outputChannel.appendLine(`Read content from open document (unsaved changes included): ${uri.fsPath} (${content.length} characters)`);
                 return content;
+            }
+
+            // Ensure file is readable on disk (will throw if missing or not accessible)
+            try {
+                await fs.promises.access(uri.fsPath, fs.constants.R_OK);
+            } catch (error) {
+                throw new FileSystemError(
+                    `File does not exist or is not readable: ${uri.fsPath}`,
+                    'read',
+                    uri,
+                    error as Error
+                );
             }
 
             // Read file content from disk as fallback
@@ -129,20 +119,16 @@ export class MarkdownFileHandler implements FileHandler {
     async writeMarkdownFile(uri: vscode.Uri, content: string): Promise<void> {
         try {
             this.outputChannel.appendLine(`Writing file: ${uri.fsPath}`);
-            
-
-            
-            // Ensure directory exists
+            // Ensure directory exists (mkdir with recursive handles existing dirs)
             const dir = path.dirname(uri.fsPath);
-            if (!fs.existsSync(dir)) {
-                await fs.promises.mkdir(dir, { recursive: true });
-            }
+            await fs.promises.mkdir(dir, { recursive: true });
 
-            // Check if file is writable (if it exists)
-            if (fs.existsSync(uri.fsPath)) {
-                try {
-                    await fs.promises.access(uri.fsPath, fs.constants.W_OK);
-                } catch (error) {
+            // If the file exists, verify it is writable; if it doesn't exist, we'll create it.
+            try {
+                await fs.promises.access(uri.fsPath, fs.constants.W_OK);
+            } catch (error: any) {
+                // If ENOENT (file missing), it's fine — we'll create the file. Otherwise surface error.
+                if (error && error.code !== 'ENOENT') {
                     throw new FileSystemError(
                         `File is not writable: ${uri.fsPath}`,
                         'write',
@@ -151,7 +137,6 @@ export class MarkdownFileHandler implements FileHandler {
                     );
                 }
             }
-
             // Write file content
             await fs.promises.writeFile(uri.fsPath, content, 'utf8');
             this.outputChannel.appendLine(`Successfully wrote file: ${uri.fsPath} (${content.length} characters)`);
@@ -412,59 +397,6 @@ export class MarkdownFileHandler implements FileHandler {
     private normalizeTableLines(content: string): string[] {
         const { normalizeTableLines } = this.getFileUtils();
         return normalizeTableLines(content);
-    }
-
-    private contentEndsWithLineBreak(content: string, eol: string): boolean {
-        const { contentEndsWithLineBreak } = this.getFileUtils();
-        return contentEndsWithLineBreak(content, eol);
-    }
-
-    private buildUpdatedContent(
-        uri: vscode.Uri,
-        operation: string,
-        originalContent: string,
-        startLine: number,
-        endLine: number,
-        replacementLines: string[],
-        eol: string
-    ): string {
-        const { buildUpdatedContent } = this.getFileUtils();
-        return buildUpdatedContent(originalContent, startLine, endLine, replacementLines, eol);
-    }
-
-    private async applyFullDocumentUpdate(
-        document: vscode.TextDocument,
-        originalContent: string,
-        updatedContent: string,
-        operation: string
-    ): Promise<boolean> {
-        // If there are no changes between original and updated content,
-        // avoid calling VSCode APIs which trigger saves and file-system events.
-        if (originalContent === updatedContent) {
-            this.outputChannel.appendLine(`No changes detected for: ${document.uri.fsPath} (skipping apply/save)`);
-            return false;
-        }
-        const uri = document.uri;
-        const edit = new vscode.WorkspaceEdit();
-        const fullRange = new vscode.Range(
-            document.positionAt(0),
-            document.positionAt(originalContent.length)
-        );
-
-        edit.replace(uri, fullRange, updatedContent);
-
-        const applied = await vscode.workspace.applyEdit(edit);
-        if (!applied) {
-            throw new FileSystemError('Failed to apply document edit', operation, uri);
-        }
-
-        const saved = await document.save();
-        if (!saved) {
-            throw new FileSystemError('Failed to save document after update', operation, uri);
-        }
-
-        await this.notifyFileChange(uri);
-        return true;
     }
 
     /**
