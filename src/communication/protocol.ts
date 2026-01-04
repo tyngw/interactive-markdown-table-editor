@@ -101,6 +101,7 @@ export enum WebviewCommand {
   IMPORT_CSV = 'importCSV',
   SWITCH_TABLE = 'switchTable',
   REQUEST_THEME_VARIABLES = 'requestThemeVariables',
+  REQUEST_FONT_SETTINGS = 'requestFontSettings',
   UNDO = 'undo',
   REDO = 'redo',
   PONG = 'pong',
@@ -211,6 +212,7 @@ export type WebviewCommandDataMap = {
   [WebviewCommand.IMPORT_CSV]: ImportCSVData;
   [WebviewCommand.SWITCH_TABLE]: SwitchTableData;
   [WebviewCommand.REQUEST_THEME_VARIABLES]: void;
+  [WebviewCommand.REQUEST_FONT_SETTINGS]: void;
   [WebviewCommand.UNDO]: void;
   [WebviewCommand.REDO]: void;
   [WebviewCommand.PONG]: { timestamp: number };
