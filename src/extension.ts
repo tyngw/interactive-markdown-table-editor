@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { debug, info, warn, error } from './logging';
 import { WebviewManager } from './webviewManager';
 import { TableDataManager, TableData } from './tableDataManager';
 import { MarkdownParser } from './markdownParser';
@@ -24,13 +25,13 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             const config = vscode.workspace.getConfiguration('markdownTableEditor');
             const selectedTheme = config.get<string>('theme', 'inherit');
-            console.log(`[Extension] Applying theme: "${selectedTheme}"`);
+            info(`[Extension] Applying theme: "${selectedTheme}"`);
             const themeVars = await buildThemeVariablesCss(selectedTheme);
             const activeCount = webviewManager.communicationManagerCount;
-            console.log(`[Extension] Broadcasting applyThemeVariables to ${activeCount} communication managers`);
+            info(`[Extension] Broadcasting applyThemeVariables to ${activeCount} communication managers`);
             webviewManager.broadcastNotification('applyThemeVariables', { cssText: themeVars.cssText });
         } catch (err) {
-            console.error('[Extension] Theme application failed:', err);
+            error('[Extension] Theme application failed:', err);
         }
     };
 
@@ -518,10 +519,10 @@ export function activate(context: vscode.ExtensionContext) {
 
                 // Asynchronously load and send Git diffs for all tables
                 (async () => {
-                    console.log('[GitDiffDebug] Starting async Git diff loading.');
+                    debug('[GitDiffDebug] Starting async Git diff loading.');
                     const tablesWithGitDiff = await Promise.all(
                         allTableData.map(async (tableData, index) => {
-                            console.log(`[GitDiffDebug] Getting diff for table ${index}`);
+                            debug(`[GitDiffDebug] Getting diff for table ${index}`);
                             const manager = tableManagersMap.get(index);
                             const tableMarkdown = manager ? manager.serializeToMarkdown() : undefined;
                             const gitDiff = await getGitDiffForTable(
@@ -531,14 +532,14 @@ export function activate(context: vscode.ExtensionContext) {
                                 tableData.rows.length,
                                 tableMarkdown
                             );
-                            console.log(`[GitDiffDebug] Got diff for table ${index}:`, gitDiff.length > 0 ? gitDiff : 'No diff');
+                            debug(`[GitDiffDebug] Got diff for table ${index}:`, gitDiff.length > 0 ? gitDiff : 'No diff');
                             const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
                             return { ...tableData, gitDiff, columnDiff };
                         })
                     );
 
                     // すべてのテーブルの差分を含めて再送信
-                    console.log('[GitDiffDebug] Sending complete table data with Git diffs to webview.');
+                    debug('[GitDiffDebug] Sending complete table data with Git diffs to webview.');
                     webviewManager.updateTableData(panel, tablesWithGitDiff, fileUri);
                 })();
 

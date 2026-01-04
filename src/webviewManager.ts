@@ -7,6 +7,7 @@ import { UndoRedoManager } from './undoRedoManager';
 import { WebviewMessage } from './messages/types';
 export type { WebviewMessage } from './messages/types';
 import { validateBasicMessageStructure, validateMessageCommand, validateMessageData } from './messages/validators';
+import { debug, info, warn, error as logError } from './logging';
 import { ExtensionCommunicationManager } from './communication/ExtensionCommunicationManager';
 import { WebviewCommand } from './communication/protocol';
 
@@ -631,12 +632,12 @@ export class WebviewManager {
             const gitColors = getGitThemeColors();
             message.gitThemeColors = gitColors;
         } catch (error) {
-            console.warn('[WebviewManager] Failed to get Git theme colors:', error);
+            warn('[WebviewManager] Failed to get Git theme colors:', error);
         }
 
         try {
             const tables = Array.isArray(tableData) ? tableData.length : 1;
-            console.log('[MTE][Ext] Sending updateTableData', { tables, hasUri: !!uri, panelActive: panel.active, panelVisible: panel.visible });
+            debug('[MTE][Ext] Sending updateTableData', { tables, hasUri: !!uri, panelActive: panel.active, panelVisible: panel.visible });
         } catch {}
 
         // Send via new communication manager
@@ -645,9 +646,9 @@ export class WebviewManager {
         if (commManager) {
             try {
                 commManager.updateTableData(message);
-                console.log('[MTE][Ext] updateTableData sent via communication manager in', Date.now() - start, 'ms');
+                debug('[MTE][Ext] updateTableData sent via communication manager in', Date.now() - start, 'ms');
             } catch (error) {
-                console.error('[MTE][Ext] Failed to send via communication manager:', error);
+                logError('[MTE][Ext] Failed to send via communication manager:', error);
             }
         } else {
             console.warn('[MTE][Ext] Communication manager not found for panel:', panelId);
@@ -1518,122 +1519,121 @@ export class WebviewManager {
     ): void {
         // Register handlers for all webview commands
         commManager.registerHandler(WebviewCommand.REQUEST_TABLE_DATA, async (data) => {
-            console.log('[MTE][Ext] Handler: REQUEST_TABLE_DATA');
             await this.handleRequestTableData(panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.UPDATE_CELL, async (data) => {
-            console.log('[MTE][Ext] Handler: UPDATE_CELL', data);
+            debug('[MTE][Ext] Handler: UPDATE_CELL', data);
             await this.handleCellUpdate(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.BULK_UPDATE_CELLS, async (data) => {
-            console.log('[MTE][Ext] Handler: BULK_UPDATE_CELLS', data);
+            debug('[MTE][Ext] Handler: BULK_UPDATE_CELLS', data);
             await this.handleBulkUpdateCells(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.UPDATE_HEADER, async (data) => {
-            console.log('[MTE][Ext] Handler: UPDATE_HEADER', data);
+            debug('[MTE][Ext] Handler: UPDATE_HEADER', data);
             await this.handleHeaderUpdate(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.ADD_ROW, async (data) => {
-            console.log('[MTE][Ext] Handler: ADD_ROW', data);
+            debug('[MTE][Ext] Handler: ADD_ROW', data);
             await this.handleAddRow(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.DELETE_ROWS, async (data) => {
-            console.log('[MTE][Ext] Handler: DELETE_ROWS', data);
+            debug('[MTE][Ext] Handler: DELETE_ROWS', data);
             await this.handleDeleteRows(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.ADD_COLUMN, async (data) => {
-            console.log('[MTE][Ext] Handler: ADD_COLUMN', data);
+            debug('[MTE][Ext] Handler: ADD_COLUMN', data);
             await this.handleAddColumn(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.DELETE_COLUMNS, async (data) => {
-            console.log('[MTE][Ext] Handler: DELETE_COLUMNS', data);
+            debug('[MTE][Ext] Handler: DELETE_COLUMNS', data);
             await this.handleDeleteColumns(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.SORT, async (data) => {
-            console.log('[MTE][Ext] Handler: SORT', data);
+            debug('[MTE][Ext] Handler: SORT', data);
             await this.handleSort(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.MOVE_ROW, async (data) => {
-            console.log('[MTE][Ext] Handler: MOVE_ROW', data);
+            debug('[MTE][Ext] Handler: MOVE_ROW', data);
             await this.handleMoveRow(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.MOVE_COLUMN, async (data) => {
-            console.log('[MTE][Ext] Handler: MOVE_COLUMN', data);
+            debug('[MTE][Ext] Handler: MOVE_COLUMN', data);
             await this.handleMoveColumn(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.EXPORT_CSV, async (data) => {
-            console.log('[MTE][Ext] Handler: EXPORT_CSV', data);
+            debug('[MTE][Ext] Handler: EXPORT_CSV', data);
             await this.handleExportCSV(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.IMPORT_CSV, async (data) => {
-            console.log('[MTE][Ext] Handler: IMPORT_CSV', data);
+            debug('[MTE][Ext] Handler: IMPORT_CSV', data);
             await this.handleImportCSV(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.SWITCH_TABLE, async (data) => {
-            console.log('[MTE][Ext] Handler: SWITCH_TABLE', data);
+            debug('[MTE][Ext] Handler: SWITCH_TABLE', data);
             await this.handleSwitchTable(data, panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.REQUEST_THEME_VARIABLES, async (data) => {
-            console.log('[MTE][Ext] Handler: REQUEST_THEME_VARIABLES');
+            debug('[MTE][Ext] Handler: REQUEST_THEME_VARIABLES');
             await this.handleRequestThemeVariables(panel);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.REQUEST_FONT_SETTINGS, async (data) => {
-            console.log('[MTE][Ext] Handler: REQUEST_FONT_SETTINGS');
+            debug('[MTE][Ext] Handler: REQUEST_FONT_SETTINGS');
             await this.handleRequestFontSettings(panel);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.UNDO, async (data) => {
-            console.log('[MTE][Ext] Handler: UNDO');
+            debug('[MTE][Ext] Handler: UNDO');
             await this.handleUndo(panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.REDO, async (data) => {
-            console.log('[MTE][Ext] Handler: REDO');
+            debug('[MTE][Ext] Handler: REDO');
             await this.handleRedo(panel, uri);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.PONG, async (data) => {
-            console.log('[MTE][Ext] Handler: PONG');
+            debug('[MTE][Ext] Handler: PONG');
             const panelId = this.findPanelId(panel);
             this.markConnectionHealthy(panelId);
             return { success: true };
         });
 
         commManager.registerHandler(WebviewCommand.REQUEST_SYNC, async (data) => {
-            console.log('[MTE][Ext] Handler: REQUEST_SYNC');
+            debug('[MTE][Ext] Handler: REQUEST_SYNC');
             // 現在の状態を送信
             this.refreshPanelData(panel, uri);
             return { success: true };
@@ -1641,7 +1641,7 @@ export class WebviewManager {
 
         // Handle webview state update (e.g., webview signals it's ready)
         commManager.registerHandler(WebviewCommand.STATE_UPDATE, async (data) => {
-            console.log('[MTE][Ext] Handler: STATE_UPDATE', data);
+            debug('[MTE][Ext] Handler: STATE_UPDATE', data);
             try {
                 // If webview signals ready, re-apply theme and font to ensure initial state
                 if (!data || data.ready === undefined || data.ready === true) {
@@ -1651,12 +1651,12 @@ export class WebviewManager {
                     this.markConnectionHealthy(panelId);
                 }
             } catch (e) {
-                console.warn('[MTE][Ext] Error handling STATE_UPDATE:', e);
+                warn('[MTE][Ext] Error handling STATE_UPDATE:', e);
             }
             return { success: true };
         });
 
-        console.log('[MTE][Ext] All communication handlers registered');
+        info('[MTE][Ext] All communication handlers registered');
     }
 
     /**
