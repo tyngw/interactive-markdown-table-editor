@@ -467,6 +467,74 @@ export class MarkdownFileHandler implements FileHandler {
         return true;
     }
 
+    /**
+     * Apply multiple range replacements using a single WorkspaceEdit.
+     * Replacements must be specified using 0-based inclusive line numbers.
+     * They will be sorted in descending order by startLine before being
+     * added to the WorkspaceEdit so that earlier edits do not shift later ranges.
+     */
+    private async applyWorkspaceEditsForReplacements(
+        document: vscode.TextDocument,
+        replacements: Array<{
+            startLine: number;
+            endLine: number;
+            replacementText: string;
+        }>,
+        operation: string
+    ): Promise<boolean> {
+        if (replacements.length === 0) {
+            return false;
+        }
+
+        const eol = this.getEolString(document);
+
+        // Sort descending by startLine so that applying edits won't invalidate
+        // the ranges of earlier (lower-line) edits.
+        const sorted = [...replacements].sort((a, b) => b.startLine - a.startLine);
+
+        // Build list of edits that actually change content by comparing current range text
+        const editsToApply: Array<{range: vscode.Range; text: string}> = [];
+        for (const r of sorted) {
+            const startPos = new vscode.Position(r.startLine, 0);
+            // endLine is inclusive, so use the end of that line
+            const endLineIndex = Math.max(r.endLine, r.startLine);
+            const endPos = document.lineAt(endLineIndex).range.end;
+            const range = new vscode.Range(startPos, endPos);
+
+            // Normalize replacement line endings to document EOL
+            const normalizedText = r.replacementText.split(/\r\n|\n|\r/).join(eol);
+
+            const currentText = document.getText(range);
+            if (currentText !== normalizedText) {
+                editsToApply.push({ range, text: normalizedText });
+            }
+        }
+
+        if (editsToApply.length === 0) {
+            this.outputChannel.appendLine(`No changes detected for: ${document.uri.fsPath} (skipping apply/save)`);
+            return false;
+        }
+
+        const uri = document.uri;
+        const edit = new vscode.WorkspaceEdit();
+        for (const e of editsToApply) {
+            edit.replace(uri, e.range, e.text);
+        }
+
+        const applied = await vscode.workspace.applyEdit(edit);
+        if (!applied) {
+            throw new FileSystemError('Failed to apply document edit', operation, uri);
+        }
+
+        const saved = await document.save();
+        if (!saved) {
+            throw new FileSystemError('Failed to save document after update', operation, uri);
+        }
+
+        await this.notifyFileChange(uri);
+        return true;
+    }
+
     private async updateTableInDocument(
         document: vscode.TextDocument,
         startLine: number,
@@ -475,19 +543,15 @@ export class MarkdownFileHandler implements FileHandler {
         originalContent?: string
     ): Promise<boolean> {
         const eol = this.getEolString(document);
-        const baseContent = originalContent ?? document.getText();
         const replacementLines = this.normalizeTableLines(newTableContent);
-        const updatedContent = this.buildUpdatedContent(
-            document.uri,
-            'update',
-            baseContent,
-            startLine,
-            endLine,
-            replacementLines,
-            eol
+        const replacementText = replacementLines.join(eol);
+
+        const applied = await this.applyWorkspaceEditsForReplacements(
+            document,
+            [{ startLine, endLine, replacementText }],
+            'update'
         );
 
-        const applied = await this.applyFullDocumentUpdate(document, baseContent, updatedContent, 'update');
         return applied;
     }
 
@@ -500,23 +564,15 @@ export class MarkdownFileHandler implements FileHandler {
         }>
     ): Promise<boolean> {
         const eol = this.getEolString(document);
-        const originalContent = document.getText();
         const sortedUpdates = [...updates].sort((a, b) => b.startLine - a.startLine);
 
-        let workingContent = originalContent;
-        for (const update of sortedUpdates) {
-            const replacementLines = this.normalizeTableLines(update.newContent);
-            workingContent = this.buildUpdatedContent(
-                document.uri,
-                'update',
-                workingContent,
-                update.startLine,
-                update.endLine,
-                replacementLines,
-                eol
-            );
-        }
-        const applied = await this.applyFullDocumentUpdate(document, originalContent, workingContent, 'update');
+        const replacements = sortedUpdates.map(u => ({
+            startLine: u.startLine,
+            endLine: u.endLine,
+            replacementText: this.normalizeTableLines(u.newContent).join(eol)
+        }));
+
+        const applied = await this.applyWorkspaceEditsForReplacements(document, replacements, 'update');
         return applied;
     }
 
