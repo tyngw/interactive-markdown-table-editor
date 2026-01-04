@@ -499,6 +499,13 @@ export class WebviewCommunicationManager {
   }
 
   /**
+   * Request font settings from the extension
+   */
+  public async requestFontSettings(): Promise<any> {
+    return this.sendRequest(WebviewCommand.REQUEST_FONT_SETTINGS);
+  }
+
+  /**
    * Undo
    */
   public undo(): void {

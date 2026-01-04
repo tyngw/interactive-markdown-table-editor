@@ -243,12 +243,22 @@ function AppContent() {
 
     // テーマ変数をリクエスト（一度だけ）
     if (!themeRequested) {
+      // Webview が初期化完了したことを通知し、拡張側から初期設定を受け取る
+      communication.notifyReady()
+      // それと並行してテーマ・フォントを冗長に要求
       communication.requestThemeVariables()
+      if ((communication as any).requestFontSettings) {
+        (communication as any).requestFontSettings()
+      }
       setThemeRequested(true)
 
-      // VSCodeの初期化遅延に対応するため、少し遅延してもう一度リクエスト
+      // VSCode の初期化遅延に対応するため、少し遅延してもう一度通知と要求を送る
       setTimeout(() => {
+        communication.notifyReady()
         communication.requestThemeVariables()
+        if ((communication as any).requestFontSettings) {
+          (communication as any).requestFontSettings()
+        }
       }, 500)
     }
 
