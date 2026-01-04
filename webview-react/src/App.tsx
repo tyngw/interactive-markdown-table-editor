@@ -4,7 +4,7 @@ import './i18n'
 import TableEditor from './components/TableEditor'
 import TableTabs from './components/TableTabs'
 import StatusBar from './components/StatusBar'
-import { StatusProvider } from './contexts/StatusContext'
+import { StatusProvider, useStatus } from './contexts/StatusContext'
 import { useDynamicTheme } from './contexts/DynamicThemeContext'
 import { useCommunication } from './hooks/useCommunication'
 import { getVSCodeTheme } from './styles/theme'
@@ -14,6 +14,8 @@ import { TableData, SortState } from './types'
 function AppContent() {
   const { t } = useTranslation()
   const { setTheme } = useDynamicTheme()
+
+  const { updateSaveStatus } = useStatus()
 
   const [allTables, setAllTables] = useState<TableData[]>([])
   const [currentTableIndex, setCurrentTableIndex] = useState(0)
@@ -116,6 +118,23 @@ function AppContent() {
       setError(errorMessage)
       setLoading(false)
     }, []),
+    onSuccess: useCallback((data: any) => {
+      try {
+        if (data && data.data && data.data.kind === 'save') {
+          const phase = data.data.phase
+          if (phase === 'started') {
+            updateSaveStatus('saving')
+          } else if (phase === 'completed') {
+            updateSaveStatus('saved')
+          } else if (phase === 'skipped') {
+            // No save occurred; ensure indicator not shown
+            updateSaveStatus(null)
+          }
+        }
+      } catch (e) {
+        console.error('[MTE][React] onSuccess handler error', e)
+      }
+    }, [updateSaveStatus]),
     onThemeVariables: useCallback((data: any) => {
       // テーマ変数を受け取り、DynamicThemeContext 経由で更新
       console.log('[MTE][React] onThemeVariables received:', data);
@@ -332,57 +351,59 @@ function AppContent() {
   }
 
   return (
-    <StatusProvider>
-      <div id="mte-root">
-        <div id="app">
-        <TableEditor
-          tableData={currentTableData}
+    <div id="mte-root">
+      <div id="app">
+      <TableEditor
+        tableData={currentTableData}
+        currentTableIndex={currentTableIndex}
+        allTables={allTables}
+        onTableUpdate={handleTableUpdate}
+        onSendMessage={communication.sendMessage}
+        onTableSwitch={handleTabChange}
+        sortState={sortStates[currentTableIndex]}
+        setSortState={(updater) => {
+          setSortStates((prev) => {
+            const next = [...prev]
+            const current = prev[currentTableIndex] ?? { column: -1, direction: 'none' }
+            next[currentTableIndex] = typeof updater === 'function' ? (updater as any)(current) : updater
+            return next
+          })
+        }}
+        showGitDiff={showGitDiff}
+      />
+      <div className="bottom-chrome">
+        <TableTabs
+          tables={allTables}
           currentTableIndex={currentTableIndex}
-          allTables={allTables}
-          onTableUpdate={handleTableUpdate}
-          onSendMessage={communication.sendMessage}
-          onTableSwitch={handleTabChange}
-          sortState={sortStates[currentTableIndex]}
-          setSortState={(updater) => {
-            setSortStates((prev) => {
-              const next = [...prev]
-              const current = prev[currentTableIndex] ?? { column: -1, direction: 'none' }
-              next[currentTableIndex] = typeof updater === 'function' ? (updater as any)(current) : updater
-              return next
-            })
-          }}
-          showGitDiff={showGitDiff}
+          onTabChange={handleTabChange}
         />
-        <div className="bottom-chrome">
-          <TableTabs
-            tables={allTables}
-            currentTableIndex={currentTableIndex}
-            onTabChange={handleTabChange}
-          />
-          <StatusBar 
-            showGitDiff={showGitDiff} 
-            sortState={sortStates[currentTableIndex]}
-            onGitDiffToggle={(show) => {
-              // ソート済み状態でgit差分表示をONにする場合、ソートを解除
-              if (show && sortStates[currentTableIndex]?.direction !== 'none') {
-                setSortStates((prev) => {
-                  const next = [...prev]
-                  next[currentTableIndex] = { column: -1, direction: 'none' }
-                  return next
-                })
-              }
-              setShowGitDiff(show)
-            }}
-          />
-        </div>
-        </div>
+        <StatusBar 
+          showGitDiff={showGitDiff} 
+          sortState={sortStates[currentTableIndex]}
+          onGitDiffToggle={(show) => {
+            // ソート済み状態でgit差分表示をONにする場合、ソートを解除
+            if (show && sortStates[currentTableIndex]?.direction !== 'none') {
+              setSortStates((prev) => {
+                const next = [...prev]
+                next[currentTableIndex] = { column: -1, direction: 'none' }
+                return next
+              })
+            }
+            setShowGitDiff(show)
+          }}
+        />
       </div>
-    </StatusProvider>
+      </div>
+    </div>
   )
 }
 
 function App() {
-  return <AppContent />
+  return (
+    <StatusProvider>
+      <AppContent />
+    </StatusProvider>
+  )
 }
 
 export default App

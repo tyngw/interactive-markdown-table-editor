@@ -99,7 +99,8 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
       console.log('[useCommunication] Received operation success:', data);
       const cb = callbacksRef.current;
       if (cb.onSuccess) {
-        cb.onSuccess(data.message || 'Operation successful');
+        // Pass full data object so the caller can inspect details (e.g., save phases)
+        cb.onSuccess(data);
       }
     });
 

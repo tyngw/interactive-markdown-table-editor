@@ -386,11 +386,30 @@ export function activate(context: vscode.ExtensionContext) {
 
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableByIndex(
+
+            // Notify webview that a save is about to start for UI feedback
+            try {
+                webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+            } catch (e) {
+                // Non-fatal - continue
+            }
+
+            const applied = await fileHandler.updateTableByIndex(
                 uri,
                 tableData.metadata.tableIndex,
                 updatedMarkdown
             );
+
+            // Notify webview of save result
+            try {
+                if (applied) {
+                    webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+                } else {
+                    webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                }
+            } catch (e) {
+                // ignore
+            }
 
             // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
             clearDiffCache(uri);
@@ -725,11 +744,30 @@ export function activate(context: vscode.ExtensionContext) {
             const tableData = tableDataManager.getTableData();
 
             const fileUri = vscode.Uri.parse(uriString);
-            await fileHandler.updateTableByIndex(
+
+            // Notify webview that a save is about to start for UI feedback
+            try {
+                webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+            } catch (e) {
+                // Non-fatal - continue
+            }
+
+            const applied = await fileHandler.updateTableByIndex(
                 fileUri,
                 tableData.metadata.tableIndex,
                 updatedMarkdown
             );
+
+            // Notify webview of save result
+            try {
+                if (applied) {
+                    webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+                } else {
+                    webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                }
+            } catch (e) {
+                // ignore
+            }
 
             // Don't send any update back to webview to avoid re-rendering
             // The webview has already updated the cell locally
@@ -828,11 +866,30 @@ export function activate(context: vscode.ExtensionContext) {
             console.log('Table data after update:', JSON.stringify(tableData));
 
             const fileUri = vscode.Uri.parse(uriString);
-            await fileHandler.updateTableByIndex(
+
+            // Notify webview that a save is about to start for UI feedback
+            try {
+                webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+            } catch (e) {
+                // Non-fatal - continue
+            }
+
+            const applied = await fileHandler.updateTableByIndex(
                 fileUri,
                 tableData.metadata.tableIndex,
                 updatedMarkdown
             );
+
+            // Notify webview of save result
+            try {
+                if (applied) {
+                    webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+                } else {
+                    webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                }
+            } catch (e) {
+                // ignore
+            }
         } catch (error) {
             console.error('Error in bulkUpdateCells:', error);
             const actualPanelId = data.panelId || data.uri || webviewManager.getActivePanelUri();
@@ -1075,11 +1132,30 @@ export function activate(context: vscode.ExtensionContext) {
 
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableByIndex(
+
+            // Notify webview that a save is about to start for UI feedback
+            try {
+                webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+            } catch (e) {
+                // Non-fatal - continue
+            }
+
+            const applied = await fileHandler.updateTableByIndex(
                 uri,
                 tableData.metadata.tableIndex,
                 updatedMarkdown
             );
+
+            // Notify webview of save result
+            try {
+                if (applied) {
+                    webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+                } else {
+                    webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                }
+            } catch (e) {
+                // ignore
+            }
 
             // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
             clearDiffCache(uri);
@@ -1149,11 +1225,30 @@ export function activate(context: vscode.ExtensionContext) {
 
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableByIndex(
+
+            // Notify webview that a save is about to start for UI feedback
+            try {
+                webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+            } catch (e) {
+                // Non-fatal - continue
+            }
+
+            const applied = await fileHandler.updateTableByIndex(
                 uri,
                 tableData.metadata.tableIndex,
                 updatedMarkdown
             );
+
+            // Notify webview of save result
+            try {
+                if (applied) {
+                    webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+                } else {
+                    webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                }
+            } catch (e) {
+                // ignore
+            }
 
             // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
             clearDiffCache(uri);
@@ -1223,11 +1318,30 @@ export function activate(context: vscode.ExtensionContext) {
 
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
-            await fileHandler.updateTableByIndex(
+
+            // Notify webview that a save is about to start for UI feedback
+            try {
+                webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+            } catch (e) {
+                // Non-fatal - continue
+            }
+
+            const applied = await fileHandler.updateTableByIndex(
                 uri,
                 tableData.metadata.tableIndex,
                 updatedMarkdown
             );
+
+            // Notify webview of save result
+            try {
+                if (applied) {
+                    webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+                } else {
+                    webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                }
+            } catch (e) {
+                // ignore
+            }
 
             // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
             clearDiffCache(uri);

@@ -708,6 +708,19 @@ export class WebviewManager {
     }
 
     /**
+     * Send operation success notification to webview
+     */
+    public sendOperationSuccess(panel: vscode.WebviewPanel, message: string, data?: any): void {
+        const panelId = this.findPanelId(panel);
+        const commManager = this.communicationManagers.get(panelId);
+        if (commManager) {
+            commManager.sendOperationSuccess(message, data);
+        } else {
+            console.warn('[MTE][Ext] Communication manager not found for sendOperationSuccess');
+        }
+    }
+
+    /**
      * Send cell update error to webview for potential rollback
      */
     public sendCellUpdateError(panel: vscode.WebviewPanel, errorInfo: { row: number; col: number; error: string }): void {
