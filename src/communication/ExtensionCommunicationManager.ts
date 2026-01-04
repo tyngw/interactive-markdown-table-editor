@@ -4,6 +4,7 @@
  */
 
 import * as vscode from 'vscode';
+import { debug, warn, error as logError } from '../logging';
 import {
   ProtocolMessage,
   RequestMessage,
@@ -73,7 +74,6 @@ export class ExtensionCommunicationManager {
     }
 
     const protocolMessage = message as ProtocolMessage;
-    console.log('[ExtComm] Received message:', protocolMessage.type, protocolMessage.command, protocolMessage.id);
 
     try {
       switch (protocolMessage.type) {
@@ -280,10 +280,9 @@ export class ExtensionCommunicationManager {
   private postMessage(message: ProtocolMessage): void {
     try {
       this.panel.webview.postMessage(message);
-      console.log('[ExtComm] Sent message:', message.type, message.command, message.id);
-    } catch (error) {
-      console.error('[ExtComm] Failed to post message:', error);
-      throw error;
+    } catch (err) {
+      logError('[ExtComm] Failed to post message:', err);
+      throw err;
     }
   }
 
@@ -292,7 +291,6 @@ export class ExtensionCommunicationManager {
    */
   public registerHandler(command: string, handler: (data: any) => Promise<any>): void {
     this.messageHandlers.set(command, handler);
-    console.log('[ExtComm] Registered handler for command:', command);
   }
 
   /**
