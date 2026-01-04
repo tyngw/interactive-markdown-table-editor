@@ -8,12 +8,14 @@ import * as path from 'path';
 export interface FileHandler {
     readMarkdownFile(uri: vscode.Uri): Promise<string>;
     writeMarkdownFile(uri: vscode.Uri, content: string): Promise<void>;
-    updateTableInFile(uri: vscode.Uri, startLine: number, endLine: number, newTableContent: string): Promise<void>;
+    // Returns true when the document was changed and saved
+    updateTableInFile(uri: vscode.Uri, startLine: number, endLine: number, newTableContent: string): Promise<boolean>;
+    // Returns true when changes were applied
     updateMultipleTablesInFile(uri: vscode.Uri, updates: Array<{
         startLine: number;
         endLine: number;
         newContent: string;
-    }>): Promise<void>;
+    }>): Promise<boolean>;
 }
 
 /**
@@ -36,9 +38,19 @@ export class FileSystemError extends Error {
  */
 export class MarkdownFileHandler implements FileHandler {
     private readonly outputChannel: vscode.OutputChannel;
+    private readonly parser: any;
 
-    constructor() {
-        this.outputChannel = vscode.window.createOutputChannel('Markdown Table Editor');
+    constructor(parser?: any, outputChannel?: vscode.OutputChannel) {
+        // Allow injection for testability; fall back to defaults when omitted
+        this.outputChannel = outputChannel ?? vscode.window.createOutputChannel('Markdown Table Editor');
+        if (parser) {
+            this.parser = parser;
+        } else {
+            // lazy-require to avoid test-time side effects when mocked
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const MarkdownIt = require('markdown-it');
+            this.parser = new MarkdownIt({ html: true, linkify: true, typographer: true });
+        }
     }
 
     /**
@@ -161,7 +173,7 @@ export class MarkdownFileHandler implements FileHandler {
         uri: vscode.Uri, 
         tableIndex: number,
         newTableContent: string
-    ): Promise<void> {
+    ): Promise<boolean> {
         try {
             this.outputChannel.appendLine(`Updating table ${tableIndex} in file: ${uri.fsPath}`);
 
@@ -169,15 +181,8 @@ export class MarkdownFileHandler implements FileHandler {
             const document = await vscode.workspace.openTextDocument(uri);
             const currentContent = document.getText();
 
-            // Parse the content to get current table positions
-            const MarkdownIt = require('markdown-it');
-            const md = new MarkdownIt({
-                html: true,
-                linkify: true,
-                typographer: true
-            });
-            
-            const tokens = md.parse(currentContent, {});
+            // Parse the content to get current table positions using injected parser
+            const tokens = this.parser.parse(currentContent, {});
             const currentTables = this.extractTablePositionsFromTokens(tokens, currentContent);
             
             if (tableIndex < 0 || tableIndex >= currentTables.length) {
@@ -192,10 +197,16 @@ export class MarkdownFileHandler implements FileHandler {
             this.outputChannel.appendLine(`Target table found at lines ${targetTable.startLine}-${targetTable.endLine}`);
             
             // Update using the accurate line numbers on the live document
-            await this.updateTableInDocument(document, targetTable.startLine, targetTable.endLine, newTableContent, currentContent);
-            
-            this.outputChannel.appendLine(`Successfully updated table ${tableIndex} in file: ${uri.fsPath}`);
-            
+            const applied = await this.updateTableInDocument(document, targetTable.startLine, targetTable.endLine, newTableContent, currentContent);
+
+            if (applied) {
+                this.outputChannel.appendLine(`Successfully updated table ${tableIndex} in file: ${uri.fsPath}`);
+            } else {
+                this.outputChannel.appendLine(`No changes applied for table ${tableIndex} in file: ${uri.fsPath}`);
+            }
+
+            return applied;
+
         } catch (error) {
             if (error instanceof FileSystemError) {
                 throw error;
@@ -272,14 +283,20 @@ export class MarkdownFileHandler implements FileHandler {
         startLine: number, 
         endLine: number, 
         newTableContent: string
-    ): Promise<void> {
+    ): Promise<boolean> {
         try {
             this.outputChannel.appendLine(`Updating table in file: ${uri.fsPath} (lines ${startLine}-${endLine})`);
 
             const document = await vscode.workspace.openTextDocument(uri);
-            await this.updateTableInDocument(document, startLine, endLine, newTableContent);
+            const applied = await this.updateTableInDocument(document, startLine, endLine, newTableContent);
 
-            this.outputChannel.appendLine(`Successfully updated table in file: ${uri.fsPath}`);
+            if (applied) {
+                this.outputChannel.appendLine(`Successfully updated table in file: ${uri.fsPath}`);
+            } else {
+                this.outputChannel.appendLine(`No changes applied for file: ${uri.fsPath}`);
+            }
+
+            return applied;
 
         } catch (error) {
             if (error instanceof FileSystemError) {
@@ -309,14 +326,18 @@ export class MarkdownFileHandler implements FileHandler {
             endLine: number;
             newContent: string;
         }>
-    ): Promise<void> {
+    ): Promise<boolean> {
         try {
             this.outputChannel.appendLine(`Updating ${updates.length} tables in file: ${uri.fsPath}`);
 
             const document = await vscode.workspace.openTextDocument(uri);
-            await this.updateMultipleTablesInDocument(document, updates);
-
-            this.outputChannel.appendLine(`Successfully updated ${updates.length} tables in file: ${uri.fsPath}`);
+            const applied = await this.updateMultipleTablesInDocument(document, updates);
+            if (applied) {
+                this.outputChannel.appendLine(`Successfully updated ${updates.length} tables in file: ${uri.fsPath}`);
+            } else {
+                this.outputChannel.appendLine(`No changes applied for file: ${uri.fsPath}`);
+            }
+            return applied;
 
         } catch (error) {
             if (error instanceof FileSystemError) {
@@ -340,20 +361,18 @@ export class MarkdownFileHandler implements FileHandler {
         return document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
     }
 
+    // Delegate pure content helpers to fileUtils for testability
     private normalizeTableLines(content: string): string[] {
-        const rawLines = content.split(/\r?\n/);
-        const filtered = rawLines.filter(line => line.trim() !== '' || line === '');
-        while (filtered.length > 0 && filtered[filtered.length - 1].trim() === '') {
-            filtered.pop();
-        }
-        return filtered;
+        // lazy-load to avoid circular imports during some test runners
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { normalizeTableLines } = require('./fileUtils');
+        return normalizeTableLines(content);
     }
 
     private contentEndsWithLineBreak(content: string, eol: string): boolean {
-        if (!content.length) {
-            return false;
-        }
-        return content.endsWith(eol);
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { contentEndsWithLineBreak } = require('./fileUtils');
+        return contentEndsWithLineBreak(content, eol);
     }
 
     private buildUpdatedContent(
@@ -365,30 +384,9 @@ export class MarkdownFileHandler implements FileHandler {
         replacementLines: string[],
         eol: string
     ): string {
-        const lines = originalContent.split(/\r?\n/);
-
-        if (startLine < 0 || endLine >= lines.length || startLine > endLine) {
-            throw new FileSystemError(
-                `Invalid line range: ${startLine}-${endLine} (file has ${lines.length} lines, valid range: 0-${Math.max(0, lines.length - 1)})`,
-                operation,
-                uri
-            );
-        }
-
-        const beforeTable = lines.slice(0, startLine);
-        const afterTable = lines.slice(endLine + 1);
-        const updatedLines = [...beforeTable, ...replacementLines, ...afterTable];
-
-        let updatedContent = updatedLines.join(eol);
-        const originalEndsWithBreak = this.contentEndsWithLineBreak(originalContent, eol);
-
-        if (originalEndsWithBreak && !updatedContent.endsWith(eol)) {
-            updatedContent += eol;
-        } else if (!originalEndsWithBreak && updatedContent.endsWith(eol)) {
-            updatedContent = updatedContent.slice(0, -eol.length);
-        }
-
-        return updatedContent;
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { buildUpdatedContent } = require('./fileUtils');
+        return buildUpdatedContent(originalContent, startLine, endLine, replacementLines, eol);
     }
 
     private async applyFullDocumentUpdate(
@@ -396,7 +394,13 @@ export class MarkdownFileHandler implements FileHandler {
         originalContent: string,
         updatedContent: string,
         operation: string
-    ): Promise<void> {
+    ): Promise<boolean> {
+        // If there are no changes between original and updated content,
+        // avoid calling VSCode APIs which trigger saves and file-system events.
+        if (originalContent === updatedContent) {
+            this.outputChannel.appendLine(`No changes detected for: ${document.uri.fsPath} (skipping apply/save)`);
+            return false;
+        }
         const uri = document.uri;
         const edit = new vscode.WorkspaceEdit();
         const fullRange = new vscode.Range(
@@ -417,6 +421,7 @@ export class MarkdownFileHandler implements FileHandler {
         }
 
         this.notifyFileChange(uri);
+        return true;
     }
 
     private async updateTableInDocument(
@@ -425,7 +430,7 @@ export class MarkdownFileHandler implements FileHandler {
         endLine: number,
         newTableContent: string,
         originalContent?: string
-    ): Promise<void> {
+    ): Promise<boolean> {
         const eol = this.getEolString(document);
         const baseContent = originalContent ?? document.getText();
         const replacementLines = this.normalizeTableLines(newTableContent);
@@ -439,7 +444,8 @@ export class MarkdownFileHandler implements FileHandler {
             eol
         );
 
-        await this.applyFullDocumentUpdate(document, baseContent, updatedContent, 'update');
+        const applied = await this.applyFullDocumentUpdate(document, baseContent, updatedContent, 'update');
+        return applied;
     }
 
     private async updateMultipleTablesInDocument(
@@ -449,7 +455,7 @@ export class MarkdownFileHandler implements FileHandler {
             endLine: number;
             newContent: string;
         }>
-    ): Promise<void> {
+    ): Promise<boolean> {
         const eol = this.getEolString(document);
         const originalContent = document.getText();
         const sortedUpdates = [...updates].sort((a, b) => b.startLine - a.startLine);
@@ -467,8 +473,8 @@ export class MarkdownFileHandler implements FileHandler {
                 eol
             );
         }
-
-        await this.applyFullDocumentUpdate(document, originalContent, workingContent, 'update');
+        const applied = await this.applyFullDocumentUpdate(document, originalContent, workingContent, 'update');
+        return applied;
     }
 
     /**
