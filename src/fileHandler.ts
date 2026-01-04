@@ -460,7 +460,20 @@ export class MarkdownFileHandler implements FileHandler {
 
         const saved = await document.save();
         if (!saved) {
-            throw new FileSystemError('Failed to save document after update', operation, uri);
+            // document.save() で false が返る環境があるため、フォールバックとして
+            // ドキュメントの現在のテキストを直接ファイルへ書き込む。
+            // これは最終手段のためログを残す。
+            try {
+                this.outputChannel.appendLine(`document.save() returned false for ${uri.fsPath}, attempting direct fs write fallback`);
+                const currentText = document.getText();
+                await fs.promises.writeFile(uri.fsPath, currentText, 'utf8');
+                this.outputChannel.appendLine(`Fallback write succeeded for ${uri.fsPath}`);
+                await this.notifyFileChange(uri);
+                return true;
+            } catch (fallbackError) {
+                this.outputChannel.appendLine(`Fallback write failed for ${uri.fsPath}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
+                throw new FileSystemError('Failed to save document after update (and fallback write failed)', operation, uri, fallbackError as Error);
+            }
         }
 
         await this.notifyFileChange(uri);
