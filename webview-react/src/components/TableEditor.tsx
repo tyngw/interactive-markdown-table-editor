@@ -407,10 +407,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
     } else {
       // 通常のデータセルはrows配列を更新
       updateCell(row, col, value)
-      updateSaveStatus('saving')
       const modelRow = toModelRow(row)
       onSendMessage({ command: 'updateCell', data: withTableIndex({ row: modelRow, col, value }) })
-      setTimeout(() => updateSaveStatus('saved'), 500)
     }
   }, [updateCell, updateHeader, onSendMessage, updateSaveStatus, toModelRow, withTableIndex])
 
