@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { debug, info, warn, error } from './logging';
 
 export interface ThemeVariables {
   cssText: string;
@@ -73,19 +74,19 @@ async function loadThemeJson(themeUri: vscode.Uri): Promise<Record<string, any>>
   const json = JSON.parse(Buffer.from(bytes).toString('utf8'));
   
   // include ディレクティブがある場合、インクルードされたテーマもロード
-  if (json.include) {
+    if (json.include) {
     const themeDir = vscode.Uri.joinPath(themeUri, '..');
     const includeUri = vscode.Uri.joinPath(themeDir, json.include);
-    console.log(`[themeUtils] Theme includes: ${json.include}, resolving to ${includeUri.toString()}`);
+    debug(`[themeUtils] Theme includes: ${json.include}, resolving to ${includeUri.toString()}`);
     try {
       const includeBytes = await vscode.workspace.fs.readFile(includeUri);
       const includeJson = JSON.parse(Buffer.from(includeBytes).toString('utf8'));
       // colors を統合（include されたテーマが優先）
       const mergedColors = { ...includeJson.colors, ...json.colors };
       json.colors = mergedColors;
-      console.log(`[themeUtils] Merged colors from included theme, total colors: ${Object.keys(mergedColors).length}`);
+      debug(`[themeUtils] Merged colors from included theme, total colors: ${Object.keys(mergedColors).length}`);
     } catch (error) {
-      console.warn(`[themeUtils] Failed to load included theme: ${error}`);
+      warn(`[themeUtils] Failed to load included theme: ${error}`);
     }
   }
   
@@ -97,23 +98,23 @@ async function loadThemeJson(themeUri: vscode.Uri): Promise<Record<string, any>>
  */
 async function buildCssFromThemeColors(themeUri: vscode.Uri): Promise<string> {
   try {
-    console.log(`[themeUtils] Reading theme file from: ${themeUri.toString()}`);
+    debug(`[themeUtils] Reading theme file from: ${themeUri.toString()}`);
     const json = await loadThemeJson(themeUri);
     
     // theme JSONの構造をデバッグ出力
     const topLevelKeys = Object.keys(json);
-    console.log(`[themeUtils] Theme JSON top-level keys: ${topLevelKeys.join(', ')}`);
+    debug(`[themeUtils] Theme JSON top-level keys: ${topLevelKeys.join(', ')}`);
     
     const colors = json.colors || {};
-    console.log(`[themeUtils] Successfully loaded theme colors from ${themeUri.toString()}, found ${Object.keys(colors).length} colors`);
+    debug(`[themeUtils] Successfully loaded theme colors from ${themeUri.toString()}, found ${Object.keys(colors).length} colors`);
     
     if (Object.keys(colors).length === 0) {
-      console.log(`[themeUtils] No colors found in theme JSON. Checking if colors is under a different key...`);
-      console.log(`[themeUtils] JSON keys available:`, topLevelKeys);
+      debug(`[themeUtils] No colors found in theme JSON. Checking if colors is under a different key...`);
+      debug(`[themeUtils] JSON keys available:`, topLevelKeys);
       
       // セマンティックトークンカラーから基本的な色を抽出してみる
       if (json.semanticTokenColors) {
-        console.log(`[themeUtils] Found semanticTokenColors, but preferring colors object. Theme may need include processing.`);
+        debug(`[themeUtils] Found semanticTokenColors, but preferring colors object. Theme may need include processing.`);
       }
     }
     
@@ -140,11 +141,11 @@ async function buildCssFromThemeColors(themeUri: vscode.Uri): Promise<string> {
     ? targets.map((t) => `${t}{${ensure}}`).join(';')
     : '';
   const result = base + overrides;
-  console.log(`[themeUtils] Built CSS with ${entries.length} variables and ${ensure ? 'overrides' : 'no overrides'}`);
-  console.log(`[themeUtils] First 500 chars of CSS: ${result.substring(0, 500)}`);
+    debug(`[themeUtils] Built CSS with ${entries.length} variables and ${ensure ? 'overrides' : 'no overrides'}`);
+    debug(`[themeUtils] First 500 chars of CSS: ${result.substring(0, 500)}`);
   return result;
-  } catch (error) {
-    console.warn(`[themeUtils] Failed to read theme colors from ${themeUri.toString()}:`, error);
+  } catch (err) {
+    warn(`[themeUtils] Failed to read theme colors from ${themeUri.toString()}:`, err);
     return '';
   }
 }
@@ -154,32 +155,32 @@ async function buildCssFromThemeColors(themeUri: vscode.Uri): Promise<string> {
  */
 export async function buildThemeVariablesCss(selectedThemeId: string | undefined): Promise<ThemeVariables> {
   const choice = selectedThemeId ?? 'inherit';
-  console.log(`[themeUtils] buildThemeVariablesCss called with selectedThemeId: "${selectedThemeId}" (choice: "${choice}")`);
+  debug(`[themeUtils] buildThemeVariablesCss called with selectedThemeId: "${selectedThemeId}" (choice: "${choice}")`);
   
   if (choice === 'inherit') {
-    console.log(`[themeUtils] Theme is set to inherit, returning empty cssText`);
+    debug(`[themeUtils] Theme is set to inherit, returning empty cssText`);
     return { cssText: '' };
   }
   
   const theme = findThemeById(choice);
   if (!theme) {
-    console.warn(`[themeUtils] Theme not found for id: ${choice}, returning empty cssText`);
+    warn(`[themeUtils] Theme not found for id: ${choice}, returning empty cssText`);
     return { cssText: '' };
   }
   
-  console.log(`[themeUtils] Found theme: ${theme.label} from extension ${theme.extensionId}`);
+  debug(`[themeUtils] Found theme: ${theme.label} from extension ${theme.extensionId}`);
   const css = await buildCssFromThemeColors(theme.themePath);
   
   // CSSが正常に生成された場合はそれを使用
   if (css && css.trim().length > 0) {
-    console.log(`[themeUtils] Successfully built CSS from theme file, cssText length: ${css.length}`);
+    debug(`[themeUtils] Successfully built CSS from theme file, cssText length: ${css.length}`);
     return { cssText: css };
   }
 
   // CSS生成失敗時のフォールバック
   // テーマ ID から光度を推測する（Light, Light+, Dark, Dark+ など）
   // VSCode本体のテーマには依存せず、テーマファイルの特性から判断
-  console.warn(`[themeUtils] Failed to build CSS from theme "${theme.label}", using theme-based fallback`);
+  warn(`[themeUtils] Failed to build CSS from theme "${theme.label}", using theme-based fallback`);
   const isDark = !theme.label.toLowerCase().includes('light');
   const vars = isDark
     ? '--vscode-editor-background:#1e1e1e;--vscode-foreground:#cccccc;--vscode-panel-border:#3c3c3c;--vscode-focusBorder:#007acc;--vscode-list-hoverBackground:#2a2d2e;--vscode-editor-lineHighlightBackground:#2a2d2e;--vscode-descriptionForeground:#9d9d9d;--vscode-input-background:#3c3c3c;--vscode-inputOption-activeBorder:#007acc;--vscode-list-activeSelectionBackground:#094771;--vscode-list-activeSelectionForeground:#ffffff;'
