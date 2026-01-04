@@ -1156,6 +1156,13 @@ export class WebviewManager {
     }
 
     /**
+     * Handle font settings request from webview
+     */
+    private async handleRequestFontSettings(panel: vscode.WebviewPanel): Promise<void> {
+        await this.applyFontSettingsToPanel(panel);
+    }
+
+    /**
      * Dispose all resources
      */
     public dispose(): void {
@@ -1600,6 +1607,12 @@ export class WebviewManager {
             return { success: true };
         });
 
+        commManager.registerHandler(WebviewCommand.REQUEST_FONT_SETTINGS, async (data) => {
+            console.log('[MTE][Ext] Handler: REQUEST_FONT_SETTINGS');
+            await this.handleRequestFontSettings(panel);
+            return { success: true };
+        });
+
         commManager.registerHandler(WebviewCommand.UNDO, async (data) => {
             console.log('[MTE][Ext] Handler: UNDO');
             await this.handleUndo(panel, uri);
@@ -1623,6 +1636,23 @@ export class WebviewManager {
             console.log('[MTE][Ext] Handler: REQUEST_SYNC');
             // 現在の状態を送信
             this.refreshPanelData(panel, uri);
+            return { success: true };
+        });
+
+        // Handle webview state update (e.g., webview signals it's ready)
+        commManager.registerHandler(WebviewCommand.STATE_UPDATE, async (data) => {
+            console.log('[MTE][Ext] Handler: STATE_UPDATE', data);
+            try {
+                // If webview signals ready, re-apply theme and font to ensure initial state
+                if (!data || data.ready === undefined || data.ready === true) {
+                    await this.applyThemeToPanel(panel);
+                    await this.applyFontSettingsToPanel(panel);
+                    const panelId = this.findPanelId(panel);
+                    this.markConnectionHealthy(panelId);
+                }
+            } catch (e) {
+                console.warn('[MTE][Ext] Error handling STATE_UPDATE:', e);
+            }
             return { success: true };
         });
 

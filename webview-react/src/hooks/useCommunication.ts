@@ -358,6 +358,22 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     return manager.requestThemeVariables();
   }, []);
 
+  const requestFontSettings = useCallback(async () => {
+    const manager = commManagerRef.current;
+    if (!manager) return;
+    // WebviewCommunicationManager exposes requestFontSettings
+    if ((manager as any).requestFontSettings) {
+      return (manager as any).requestFontSettings();
+    }
+    return undefined;
+  }, []);
+
+  const notifyReady = useCallback(() => {
+    const manager = commManagerRef.current;
+    if (!manager) return;
+    manager.sendNotification('stateUpdate' as any, { ready: true });
+  }, []);
+
   const undo = useCallback(() => {
     const manager = commManagerRef.current;
     if (!manager) return;
@@ -395,8 +411,10 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     importCSV,
     switchTable,
     requestThemeVariables,
+    requestFontSettings,
     undo,
     redo,
     requestSync
+    , notifyReady
   };
 }

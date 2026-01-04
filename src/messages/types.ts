@@ -15,6 +15,7 @@ export type WebviewCommand =
   | 'pong'
   | 'switchTable'
   | 'requestThemeVariables'
+  | 'requestFontSettings'
   | 'undo'
   | 'redo'
   | 'requestSync'
