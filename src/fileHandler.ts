@@ -39,6 +39,8 @@ export class FileSystemError extends Error {
 export class MarkdownFileHandler implements FileHandler {
     private readonly outputChannel: vscode.OutputChannel;
     private readonly parser: any;
+    // cache for lazily-required utilities to avoid repeated require calls
+    private fileUtils?: any;
 
     constructor(parser?: any, outputChannel?: vscode.OutputChannel) {
         // Allow injection for testability; fall back to defaults when omitted
@@ -51,6 +53,15 @@ export class MarkdownFileHandler implements FileHandler {
             const MarkdownIt = require('markdown-it');
             this.parser = new MarkdownIt({ html: true, linkify: true, typographer: true });
         }
+    }
+
+    // Lazily require and cache helper utilities (avoids repeated require() calls)
+    private getFileUtils(): any {
+        if (!this.fileUtils) {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            this.fileUtils = require('./fileUtils');
+        }
+        return this.fileUtils;
     }
 
     /**
@@ -146,7 +157,7 @@ export class MarkdownFileHandler implements FileHandler {
             this.outputChannel.appendLine(`Successfully wrote file: ${uri.fsPath} (${content.length} characters)`);
             
             // Notify VSCode about file changes
-            this.notifyFileChange(uri);
+            await this.notifyFileChange(uri);
             
         } catch (error) {
             if (error instanceof FileSystemError) {
@@ -176,36 +187,35 @@ export class MarkdownFileHandler implements FileHandler {
     ): Promise<boolean> {
         try {
             this.outputChannel.appendLine(`Updating table ${tableIndex} in file: ${uri.fsPath}`);
+            // Use withOpenDocument to open the live document and ensure consistent error handling
+            return await this.withOpenDocument<boolean>(uri, 'update', async (document) => {
+                const current = document.getText();
+                const tokens = this.parser.parse(current, {});
+                const currentTables = this.extractTablePositionsFromTokens(tokens, current);
 
-            // Open the document to ensure we operate on the latest in-memory content (including unsaved changes)
-            const document = await vscode.workspace.openTextDocument(uri);
-            const currentContent = document.getText();
+                if (tableIndex < 0 || tableIndex >= currentTables.length) {
+                    throw new FileSystemError(
+                        `Table index ${tableIndex} is out of range (found ${currentTables.length} tables)`,
+                        'update',
+                        uri
+                    );
+                }
 
-            // Parse the content to get current table positions using injected parser
-            const tokens = this.parser.parse(currentContent, {});
-            const currentTables = this.extractTablePositionsFromTokens(tokens, currentContent);
-            
-            if (tableIndex < 0 || tableIndex >= currentTables.length) {
-                throw new FileSystemError(
-                    `Table index ${tableIndex} is out of range (found ${currentTables.length} tables)`,
+                const targetTable = currentTables[tableIndex];
+                this.outputChannel.appendLine(`Target table found at lines ${targetTable.startLine}-${targetTable.endLine}`);
+
+                // Update using the accurate line numbers on the live document
+                const applied = await this.updateTableInDocument(document, targetTable.startLine, targetTable.endLine, newTableContent, current);
+                return this.handleApplyResult(
+                    uri,
                     'update',
-                    uri
+                    applied,
+                    `Successfully updated table ${tableIndex} in file: ${uri.fsPath}`,
+                    `No changes applied for table ${tableIndex} in file: ${uri.fsPath}`
                 );
-            }
+            });
             
-            const targetTable = currentTables[tableIndex];
-            this.outputChannel.appendLine(`Target table found at lines ${targetTable.startLine}-${targetTable.endLine}`);
             
-            // Update using the accurate line numbers on the live document
-            const applied = await this.updateTableInDocument(document, targetTable.startLine, targetTable.endLine, newTableContent, currentContent);
-
-            if (applied) {
-                this.outputChannel.appendLine(`Successfully updated table ${tableIndex} in file: ${uri.fsPath}`);
-            } else {
-                this.outputChannel.appendLine(`No changes applied for table ${tableIndex} in file: ${uri.fsPath}`);
-            }
-
-            return applied;
 
         } catch (error) {
             if (error instanceof FileSystemError) {
@@ -278,6 +288,43 @@ export class MarkdownFileHandler implements FileHandler {
         
         return tables;
     }
+
+    /**
+     * Open a document and run an async callback with unified error wrapping.
+     * This centralizes the `openTextDocument` call and FileSystemError construction for failures.
+     */
+    private async withOpenDocument<T>(uri: vscode.Uri, operation: string, fn: (document: vscode.TextDocument) => Promise<T>): Promise<T> {
+        try {
+            const document = await vscode.workspace.openTextDocument(uri);
+            return await fn(document);
+        } catch (error) {
+            if (error instanceof FileSystemError) {
+                throw error;
+            }
+            const fileError = new FileSystemError(
+                `Failed to ${operation} document: ${uri.fsPath}`,
+                operation,
+                uri,
+                error as Error
+            );
+            this.outputChannel.appendLine(`Error during ${operation}: ${fileError.message}`);
+            this.showErrorNotification(fileError);
+            throw fileError;
+        }
+    }
+
+    /**
+     * Centralize handling of apply/save results.
+     * Logs success or no-op messages and returns the `applied` value for convenience.
+     */
+    private handleApplyResult(uri: vscode.Uri, operation: string, applied: boolean, successMsg?: string, noChangeMsg?: string): boolean {
+        if (applied) {
+            this.outputChannel.appendLine(successMsg ?? `Successfully ${operation} for file: ${uri.fsPath}`);
+        } else {
+            this.outputChannel.appendLine(noChangeMsg ?? `No changes applied for file: ${uri.fsPath}`);
+        }
+        return applied;
+    }
     async updateTableInFile(
         uri: vscode.Uri, 
         startLine: number, 
@@ -286,17 +333,16 @@ export class MarkdownFileHandler implements FileHandler {
     ): Promise<boolean> {
         try {
             this.outputChannel.appendLine(`Updating table in file: ${uri.fsPath} (lines ${startLine}-${endLine})`);
-
-            const document = await vscode.workspace.openTextDocument(uri);
-            const applied = await this.updateTableInDocument(document, startLine, endLine, newTableContent);
-
-            if (applied) {
-                this.outputChannel.appendLine(`Successfully updated table in file: ${uri.fsPath}`);
-            } else {
-                this.outputChannel.appendLine(`No changes applied for file: ${uri.fsPath}`);
-            }
-
-            return applied;
+            return await this.withOpenDocument<boolean>(uri, 'update', async (document) => {
+                const applied = await this.updateTableInDocument(document, startLine, endLine, newTableContent);
+                return this.handleApplyResult(
+                    uri,
+                    'update',
+                    applied,
+                    `Successfully updated table in file: ${uri.fsPath}`,
+                    `No changes applied for file: ${uri.fsPath}`
+                );
+            });
 
         } catch (error) {
             if (error instanceof FileSystemError) {
@@ -329,15 +375,16 @@ export class MarkdownFileHandler implements FileHandler {
     ): Promise<boolean> {
         try {
             this.outputChannel.appendLine(`Updating ${updates.length} tables in file: ${uri.fsPath}`);
-
-            const document = await vscode.workspace.openTextDocument(uri);
-            const applied = await this.updateMultipleTablesInDocument(document, updates);
-            if (applied) {
-                this.outputChannel.appendLine(`Successfully updated ${updates.length} tables in file: ${uri.fsPath}`);
-            } else {
-                this.outputChannel.appendLine(`No changes applied for file: ${uri.fsPath}`);
-            }
-            return applied;
+            return await this.withOpenDocument<boolean>(uri, 'update', async (document) => {
+                const applied = await this.updateMultipleTablesInDocument(document, updates);
+                return this.handleApplyResult(
+                    uri,
+                    'update',
+                    applied,
+                    `Successfully updated ${updates.length} tables in file: ${uri.fsPath}`,
+                    `No changes applied for file: ${uri.fsPath}`
+                );
+            });
 
         } catch (error) {
             if (error instanceof FileSystemError) {
@@ -363,15 +410,12 @@ export class MarkdownFileHandler implements FileHandler {
 
     // Delegate pure content helpers to fileUtils for testability
     private normalizeTableLines(content: string): string[] {
-        // lazy-load to avoid circular imports during some test runners
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { normalizeTableLines } = require('./fileUtils');
+        const { normalizeTableLines } = this.getFileUtils();
         return normalizeTableLines(content);
     }
 
     private contentEndsWithLineBreak(content: string, eol: string): boolean {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { contentEndsWithLineBreak } = require('./fileUtils');
+        const { contentEndsWithLineBreak } = this.getFileUtils();
         return contentEndsWithLineBreak(content, eol);
     }
 
@@ -384,8 +428,7 @@ export class MarkdownFileHandler implements FileHandler {
         replacementLines: string[],
         eol: string
     ): string {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { buildUpdatedContent } = require('./fileUtils');
+        const { buildUpdatedContent } = this.getFileUtils();
         return buildUpdatedContent(originalContent, startLine, endLine, replacementLines, eol);
     }
 
@@ -420,7 +463,7 @@ export class MarkdownFileHandler implements FileHandler {
             throw new FileSystemError('Failed to save document after update', operation, uri);
         }
 
-        this.notifyFileChange(uri);
+        await this.notifyFileChange(uri);
         return true;
     }
 
@@ -480,34 +523,22 @@ export class MarkdownFileHandler implements FileHandler {
     /**
      * Notify VSCode about file changes
      */
-    private notifyFileChange(uri: vscode.Uri): void {
+    private async notifyFileChange(uri: vscode.Uri): Promise<void> {
+        // Use async/await style and avoid no-op workspace edits. This method is best-effort.
         try {
-            // Fire file change event to update editors and other extensions
-            vscode.workspace.fs.stat(uri).then(() => {
-                // This will trigger file watchers and update open editors
-                this.outputChannel.appendLine(`File change notification sent for: ${uri.fsPath}`);
-                
-                // Also trigger a workspace edit event to ensure proper change detection
-                const edit = new vscode.WorkspaceEdit();
-                // This creates an empty edit but triggers change detection
-                vscode.workspace.applyEdit(edit);
-                
-            }, (error: any) => {
-                this.outputChannel.appendLine(`Warning: Could not notify file change: ${error.message}`);
-            });
-            
-            // Additionally, try to refresh any open text editors for this file
-            const openEditors = vscode.window.visibleTextEditors.filter(
-                editor => editor.document.uri.fsPath === uri.fsPath
-            );
-            
-            if (openEditors.length > 0) {
-                this.outputChannel.appendLine(`Found ${openEditors.length} open editor(s) for file: ${uri.fsPath}`);
-                // The file system change should automatically refresh the editors
-            }
-            
-        } catch (error) {
-            this.outputChannel.appendLine(`Error in file change notification: ${error}`);
+            await vscode.workspace.fs.stat(uri);
+            this.outputChannel.appendLine(`File change notification sent for: ${uri.fsPath}`);
+        } catch (error: any) {
+            this.outputChannel.appendLine(`Warning: Could not notify file change: ${error?.message ?? error}`);
+            return;
+        }
+
+        // Additionally, log any visible editors for the file (no manual refresh required)
+        const openEditors = vscode.window.visibleTextEditors.filter(
+            editor => editor.document.uri.fsPath === uri.fsPath
+        );
+        if (openEditors.length > 0) {
+            this.outputChannel.appendLine(`Found ${openEditors.length} open editor(s) for file: ${uri.fsPath}`);
         }
     }
 
