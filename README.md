@@ -28,8 +28,6 @@ A VS Code extension that provides an intuitive interface for editing Markdown ta
   - Persistent column widths across sessions
 - Sorting: Click column header sorting button to sort data in the table editor without modifying the file
 
-### Advanced Features
-
 ### Autofill
 - Drag the fill handle (bottom-right corner of selection) to auto-fill cells
 - Automatically detects patterns: numbers (1, 2, 3...), dates, weekdays, months
@@ -46,7 +44,7 @@ A VS Code extension that provides an intuitive interface for editing Markdown ta
 ### Multiple Tables
 - Manage and edit multiple tables within a single document using tab interface. Accurately tracks and updates each table with index management
 
-#### Git Diff Display
+### Git Diff Display
 - Uses the VS Code Git extension and the system `git` command to fetch per-row diffs (added/deleted) for tables in the open Markdown file and display them in the table editor.
 - Prerequisites: workspace must be a Git repository, the VS Code Git extension must be active, and `git` must be installed on the system and available in PATH.
 
