@@ -2,7 +2,7 @@
   "name": "interactive-markdown-table-editor",
   "displayName": "Interactive Markdown Table Editor",
   "description": "Edit Markdown tables with an intuitive interface",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publisher": "tyngw",
   "repository": {
     "type": "git",
