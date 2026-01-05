@@ -2,7 +2,7 @@
 
 Interactive Markdown Table Editor は、Markdownで記述されたテーブルを直感的に編集できるVSCode拡張機能です。
 
-![Product Image](docs/product-image.gif)
+![Product Image](docs/product-image.webp)
 
 ## クイックスタート
 

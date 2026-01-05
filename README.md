@@ -2,7 +2,7 @@
 
 A VS Code extension that provides an intuitive interface for editing Markdown tables.
 
-![Product Image](docs/product-image.gif)
+![Product Image](docs/product-image.webp)
 
 ## Quick Start
 
