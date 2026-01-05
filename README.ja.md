@@ -2,7 +2,7 @@
 
 Interactive Markdown Table Editor は、Markdownで記述されたテーブルを直感的に編集できるVSCode拡張機能です。
 
-![Product Image](docs/product-image.gif)
+![Product Image](docs/product-image.webp)
 
 ## クイックスタート
 
@@ -28,7 +28,6 @@ Interactive Markdown Table Editor は、Markdownで記述されたテーブル�
   - 列幅はセッション間で保持
 - ソート：列ヘッダーのソートボタンクリックでファイルを変更せずにテーブルエディタ上でデータを並び替え。
 
-
 ### オートフィル
 - 選択範囲の右下隅のフィルハンドルをドラッグして自動入力
 - 数値（1, 2, 3...）、日付、曜日、月のパターンを自動認識
@@ -45,7 +44,7 @@ Interactive Markdown Table Editor は、Markdownで記述されたテーブル�
 ### 複数テーブル
 - 複数テーブル対応：1文書内の複数テーブルをタブインターフェースで管理・編集。テーブルインデックスで正確に追跡・更新
 
-#### Git差分表示
+### Git差分表示
 - VS Code の Git 拡張とシステムの `git` を利用して、開いているMarkdownファイル内のテーブル行ごとの差分（追加／削除）を取得し、テーブルエディタで表示します。
 - 前提：ワークスペースが Git リポジトリであること、VS Code の Git 拡張が有効であること、システムに `git` がインストールされていること。
 
