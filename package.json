@@ -16,7 +16,7 @@
     "editor"
   ],
   "engines": {
-    "vscode": "^1.107.0"
+    "vscode": "^1.70.0"
   },
   "categories": [
     "Other"
@@ -98,7 +98,7 @@
     "@types/glob": "^8.1.0",
     "@types/mocha": "^9.1.1",
     "@types/node": "^16.18.126",
-    "@types/vscode": "^1.107.0",
+    "@types/vscode": "^1.70.0",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "@vscode/l10n-dev": "^0.0.35",
