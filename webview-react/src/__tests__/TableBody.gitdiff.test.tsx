@@ -69,6 +69,8 @@ describe('TableBody - git diff deleted row hatching', () => {
     expect(dataCells[1].classList.contains('git-diff-column-not-exist')).toBe(true)
     // Third data cell contains '3'
     expect(dataCells[2].textContent?.trim()).toBe('3')
+    // Cells after the added column with identical content should be rendered as same-content (not highlighted red)
+    expect(dataCells[2].classList.contains('git-diff-same-content')).toBe(true)
   })
 
   test('when a column is deleted in the middle, deleted row shows the deleted column data in-place', () => {
