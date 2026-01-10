@@ -533,7 +533,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                         const oldIdx = newToOld.has(newColIdx) ? newToOld.get(newColIdx)! : undefined
                         if (typeof oldIdx === 'number' && oldIdx >= 0 && deletedCells[oldIdx] !== undefined) {
                           const cellContent = deletedCells[oldIdx]
-                          const addedCellContent = addedCells[oldIdx] || ''
+                          const addedCellContent = addedCells[newColIdx] || ''
                           const isSameContent = cellContent.trim() === (addedCellContent || '').trim()
                           const cellClassName = ['git-diff-deleted-cell', isSameContent ? 'git-diff-same-content' : ''].filter(Boolean).join(' ')
                           const cellLines = convertBrTagsToNewlines(cellContent).split('\n')
