@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useMemo } from 'react'
 import { EditorState, CellPosition, HeaderConfig, RowGitDiff, GitDiffStatus, ColumnDiffInfo } from '../types'
-import { processCellContentForStorage } from '../utils/contentConverter'
+import { processCellContentForStorage, convertBrTagsToNewlines } from '../utils/contentConverter'
 import { cleanupCellVisualArtifacts, queryCellElement } from '../utils/cellDomUtils'
 import MemoizedCell from './MemoizedCell'
 
@@ -484,9 +484,16 @@ const TableBody: React.FC<TableBodyProps> = ({
                       const isSameContent = cellContent.trim() === addedCellContent.trim()
                       const cellClassName = ['git-diff-deleted-cell', isSameContent ? 'git-diff-same-content' : ''].filter(Boolean).join(' ')
                       
+                      // <br/> タグを改行に変換して表示
+                      const cellLines = convertBrTagsToNewlines(cellContent).split('\n')
+                      
                       return (
                         <td key={`deleted-cell-${diff.row}-${index}-${cellIndex}`} className={cellClassName}>
-                          <span className="git-diff-deleted-content">{cellContent}</span>
+                          <span className="git-diff-deleted-content">
+                            {cellLines.map((line, lineIndex) => (
+                              <div key={lineIndex}>{line}</div>
+                            ))}
+                          </span>
                         </td>
                       )
                     })}
