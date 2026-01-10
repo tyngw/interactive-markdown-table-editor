@@ -6,6 +6,10 @@
 
 import * as vscode from 'vscode';
 import { debug, info, warn, error } from './logging';
+import { 
+    detectColumnDiffSimple,
+    RowGitDiffInput 
+} from './columnDiff';
 
 /**
  * セルのGit差分状態
@@ -600,42 +604,10 @@ export function getGitThemeColors(): {
     }
 }
 
-/**
- * マークダウンテーブル行からセル数を取得
- * 例: "| a | b | c |" -> 3
- */
-function countTableCells(rowContent: string): number {
-    if (!rowContent || !rowContent.includes('|')) {
-        return 0;
-    }
-    // 先頭と末尾の | を削除し、| で分割
-    const trimmed = rowContent.trim();
-    const withoutLeadingPipe = trimmed.startsWith('|') ? trimmed.substring(1) : trimmed;
-    const withoutTrailingPipe = withoutLeadingPipe.endsWith('|') 
-        ? withoutLeadingPipe.substring(0, withoutLeadingPipe.length - 1) 
-        : withoutLeadingPipe;
-    return withoutTrailingPipe.split('|').length;
-}
+
 
 /**
- * マークダウンテーブル行から列の値を抽出
- * 例: "| a | b | c |" -> ['a', 'b', 'c']
- */
-function parseTableRowCells(rowContent: string): string[] {
-    if (!rowContent || !rowContent.includes('|')) {
-        return [];
-    }
-    const trimmed = rowContent.trim();
-    const withoutLeadingPipe = trimmed.startsWith('|') ? trimmed.substring(1) : trimmed;
-    const withoutTrailingPipe = withoutLeadingPipe.endsWith('|') 
-        ? withoutLeadingPipe.substring(0, withoutLeadingPipe.length - 1) 
-        : withoutLeadingPipe;
-    return withoutTrailingPipe.split('|').map(cell => cell.trim());
-}
-
-/**
- * Git差分から列の追加・削除情報を検出
- * 削除行と追加行の列数を比較して、列の変化を検出する
+ * Git差分から列の追加・削除情報を検出（columnDiff モジュールへのデリゲーション）
  * 
  * @param gitDiff 行のGit差分情報
  * @param currentColumnCount 現在のテーブルの列数
@@ -645,135 +617,13 @@ export function detectColumnDiff(
     gitDiff: RowGitDiff[],
     currentColumnCount: number
 ): ColumnDiffInfo {
-    const result: ColumnDiffInfo = {
-        oldColumnCount: currentColumnCount,
-        newColumnCount: currentColumnCount,
-        addedColumns: [],
-        deletedColumns: [],
-        oldHeaders: []
-    };
-
-    // デバッグビルド時のみログを出力するユーティリティ
-    const isDebug = (process && process.env && (
-        process.env.NODE_ENV === 'development' ||
-        process.env.MTE_KEEP_CONSOLE === '1' ||
-        process.env.DEBUG === 'true'
-    ));
-    const debugLog = (...args: any[]) => { if (isDebug) { console.log(...args); } };
-    if (!gitDiff || gitDiff.length === 0) {
-        debugLog('[detectColumnDiff] No gitDiff provided');
-        return result;
-    }
-
-    // 削除行と追加行を分類
-    // status フィールドで判定
-    const deletedRows = gitDiff.filter(d => d.status === GitDiffStatus.DELETED && d.oldContent);
-    const addedRows = gitDiff.filter(d => d.status === GitDiffStatus.ADDED);
-
-    debugLog('[detectColumnDiff] Found deletedRows:', deletedRows.length, 'addedRows:', addedRows.length);
-    debugLog('[detectColumnDiff] First few deletedRows:', deletedRows.slice(0, 3).map(r => ({ row: r.row, content: r.oldContent?.substring(0, 30) })));
-
-    // 削除前のヘッダを取得
-    // row = -2 がヘッダ行、row = -1 がセパレータ行
-    // ヘッダ行（row = -2）を探し、セパレータ行ではなく実際のテキストを含む行を選ぶ
-    const headerDeletedRow = deletedRows.find(d => d.row === -2);
-    if (headerDeletedRow && headerDeletedRow.oldContent) {
-        // セパレータ行（すべてのセルが --- または空白）ではなく、実際のヘッダテキストを確認
-        const cells = parseTableRowCells(headerDeletedRow.oldContent);
-        const isSeparatorRow = cells.every(cell => cell.match(/^[\s\-]*$/) !== null);
-        
-        if (!isSeparatorRow) {
-            result.oldHeaders = cells;
-            debugLog('[detectColumnDiff] oldHeaders extracted from row -2:', result.oldHeaders);
-        } else {
-            // row = -2 がセパレータの場合、最初の削除行から探す
-            const actualHeaderRow = deletedRows.find(d => {
-                if (!d.oldContent) {return false;}
-                const headerCells = parseTableRowCells(d.oldContent);
-                return !headerCells.every(cell => cell.match(/^[\s\-]*$/) !== null);
-            });
-            if (actualHeaderRow && actualHeaderRow.oldContent) {
-                result.oldHeaders = parseTableRowCells(actualHeaderRow.oldContent);
-                debugLog('[detectColumnDiff] oldHeaders extracted from actual header row:', result.oldHeaders);
-            }
-        }
-    }
-
-    // 削除行から変更前の列数を取得
-    // 複数の削除行がある場合は、最初のデータ行削除行を使用（同じテーブル内は同じ列数）
-    let oldColumnCount = currentColumnCount;
-    const firstDataDeletedRow = deletedRows.find(d => d.row >= 0);
-    if (firstDataDeletedRow && firstDataDeletedRow.oldContent) {
-        oldColumnCount = countTableCells(firstDataDeletedRow.oldContent);
-        debugLog('[detectColumnDiff] oldColumnCount from deleted row:', oldColumnCount, 'oldContent:', firstDataDeletedRow.oldContent?.substring(0, 50));
-    } else {
-        debugLog('[detectColumnDiff] No deleted rows found, oldColumnCount = currentColumnCount =', currentColumnCount);
-    }
-
-    // 追加行から変更後の列数を取得
-    // 追加行は常に現在のテーブルの列数を持つ
-    const newColumnCount = currentColumnCount;
-
-    result.oldColumnCount = oldColumnCount;
-    result.newColumnCount = newColumnCount;
-
-    // 列数の差分を計算
-    const columnDiff = newColumnCount - oldColumnCount;
-
-    debugLog('[detectColumnDiff] oldColumnCount:', oldColumnCount, 'newColumnCount:', newColumnCount, 'diff:', columnDiff);
-
-    if (columnDiff > 0) {
-        // 列が追加された場合
-        // 追加された列は末尾に追加されたと仮定
-        for (let i = oldColumnCount; i < newColumnCount; i++) {
-            result.addedColumns.push(i);
-        }
-    } else if (columnDiff < 0) {
-        // 列が削除された場合
-        // 削除前後のヘッダ名を比較して、実際に削除された列インデックスを特定
-        if (result.oldHeaders && result.oldHeaders.length > 0) {
-            // 追加行から変更後のヘッダを取得
-            const newHeaderAddedRow = addedRows.find(d => d.row === -2);
-            if (newHeaderAddedRow && newHeaderAddedRow.newContent) {
-                const newHeaders = parseTableRowCells(newHeaderAddedRow.newContent);
-                
-                // 両方のヘッダが存在する場合、削除された列を特定
-                debugLog('[detectColumnDiff] Comparing headers - old:', result.oldHeaders, 'new:', newHeaders);
-                
-                // 削除前のヘッダで、削除後に存在しない列を見つける
-                for (let oldIdx = 0; oldIdx < result.oldHeaders.length; oldIdx++) {
-                    const oldHeaderName = result.oldHeaders[oldIdx];
-                    
-                    // このヘッダが新しいヘッダ列に存在するか確認
-                    const foundInNew = newHeaders.some(newHeader => newHeader === oldHeaderName);
-                    
-                    if (!foundInNew) {
-                        result.deletedColumns.push(oldIdx);
-                        debugLog(`[detectColumnDiff] Column ${oldIdx} (${oldHeaderName}) detected as deleted`);
-                    }
-                }
-            }
-        }
-        
-        // フォールバック：ヘッダが利用できない場合は末尾から削除されたと仮定
-        if (result.deletedColumns.length === 0) {
-            for (let i = newColumnCount; i < oldColumnCount; i++) {
-                result.deletedColumns.push(i);
-            }
-            debugLog('[detectColumnDiff] Using fallback: assumed columns deleted from end');
-        }
-        
-        // デバッグログ：削除された列を詳細に出力
-        debugLog('[detectColumnDiff] Column deletion detected:', {
-            oldColumnCount,
-            newColumnCount,
-            deletedCount: oldColumnCount - newColumnCount,
-            deletedColumns: result.deletedColumns,
-            oldHeaders: result.oldHeaders
-        });
-    }
-
-    debugLog('[detectColumnDiff] Final result:', result);
-    return result;
+    const input: RowGitDiffInput[] = gitDiff.map(d => ({
+        row: d.row,
+        status: d.status as 'unchanged' | 'added' | 'deleted',
+        oldContent: d.oldContent,
+        newContent: d.newContent,
+        isDeletedRow: d.isDeletedRow
+    }));
+    return detectColumnDiffSimple(input, currentColumnCount);
 }
 
