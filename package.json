@@ -92,9 +92,13 @@
     "copy-mock": "mkdir -p out/src/mock && cp test/mock/* out/src/mock/",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
-    "test": "npm run compile && npm run lint && node ./out/test/runTest.js"
+    "test": "npm run compile && npm run lint && node ./out/test/runTest.js",
+    "test:all": "npm run test && npm run test:playwright",
+    "test:playwright": "playwright test",
+    "test:playwright:debug": "playwright test --debug"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "@types/glob": "^8.1.0",
     "@types/mocha": "^9.1.1",
     "@types/node": "^16.18.126",
