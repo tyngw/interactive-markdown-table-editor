@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { WebviewManager, WebviewMessage } from '../../webviewManager';
-import { TableData } from '../../tableDataManager';
+import { WebviewManager, WebviewMessage } from '../../src/webviewManager';
+import { TableData } from '../../src/tableDataManager';
 
 /**
  * Interface Tests for Webview-Extension Communication

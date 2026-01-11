@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { WebviewManager } from '../../webviewManager';
-import { TableData } from '../../tableDataManager';
+import { WebviewManager } from '../../src/webviewManager';
+import { TableData } from '../../src/tableDataManager';
 
 suite('WebviewManager Test Suite', () => {
     let webviewManager: WebviewManager;

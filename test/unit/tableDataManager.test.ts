@@ -1,6 +1,6 @@
 const assert = require('assert');
-import { TableDataManager, TableData } from '../../tableDataManager';
-import { TableNode } from '../../markdownParser';
+import { TableDataManager, TableData } from '../../src/tableDataManager';
+import { TableNode } from '../../src/markdownParser';
 
 suite('TableDataManager Test Suite', () => {
     let sampleTableNode: TableNode;
