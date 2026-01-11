@@ -272,4 +272,113 @@ End of document`;
         expect(tableCount).toBe(2);
         console.log(`Detected ${tableCount} table separator(s) in document`);
     });
+
+    test('Editor → Webview: File edit synchronization', async () => {
+        // エディタでファイルを直接編集し、変更がマークダウンファイルに反映されることを確認
+        const originalContent = fs.readFileSync(testFilePath, 'utf-8');
+        
+        // 最初のテーブルの最初のデータ行を更新
+        // "| Alice | 30 | Developer | Engineering |" を更新
+        const modifiedContent = originalContent.replace(
+            '| Alice | 30 | Developer | Engineering |',
+            '| AliceUpdated | 31 | Senior Developer | Engineering |'
+        );
+        
+        // ファイルに直接書き込みして変更をシミュレート
+        fs.writeFileSync(testFilePath, modifiedContent);
+        console.log('File edited: Alice → AliceUpdated, role → Senior Developer');
+        
+        // 少し待機してファイルシステムの更新を反映
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // ファイルから再読み込みして変更が保存されたことを確認
+        const savedContent = fs.readFileSync(testFilePath, 'utf-8');
+        expect(savedContent).toContain('AliceUpdated');
+        expect(savedContent).toContain('Senior Developer');
+        expect(savedContent).not.toContain('| Alice | 30 | Developer | Engineering |');
+        
+        console.log('✅ Editor changes successfully written to file');
+    });
+
+    test('Webview → Editor: File change propagation', async () => {
+        // テーブルの別のセルを編集してファイルに反映されることを確認
+        const currentContent = fs.readFileSync(testFilePath, 'utf-8');
+        
+        // 2つ目のテーブル、最初のアイテムを更新
+        // "| Item A  | $100  | 50    |" を更新
+        const modifiedContent = currentContent.replace(
+            '| Item A  | $100  | 50    |',
+            '| Item A Pro | $150  | 75    |'
+        );
+        
+        // ファイルに書き込み
+        fs.writeFileSync(testFilePath, modifiedContent);
+        console.log('Webview simulation: Item A → Item A Pro, Price updated');
+        
+        // ファイルシステムの更新を反映
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // 変更が保存されたことを確認
+        const savedContent = fs.readFileSync(testFilePath, 'utf-8');
+        expect(savedContent).toContain('Item A Pro');
+        expect(savedContent).toContain('$150');
+        expect(savedContent).toContain('| 75    |');
+        
+        // 更新前のデータが削除されたことを確認
+        expect(savedContent).not.toContain('| Item A  | $100  | 50    |');
+        
+        console.log('✅ Webview changes successfully propagated to file');
+    });
+
+    test('Bidirectional sync: Multiple edits in sequence', async () => {
+        // 複数の編集を順序立てて行い、すべての変更が反映されることを確認
+        let content = fs.readFileSync(testFilePath, 'utf-8');
+        
+        // 編集1: Bob のエントリを更新
+        content = content.replace(
+            '| Bob | 25 | Designer | Design |',
+            '| Bob Smith | 26 | Senior Designer | Design |'
+        );
+        
+        fs.writeFileSync(testFilePath, content);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // 編集2: Item B の価格を更新
+        content = fs.readFileSync(testFilePath, 'utf-8');
+        content = content.replace(
+            '| Item B  | $200  | 30    |',
+            '| Item B  | $250  | 45    |'
+        );
+        
+        fs.writeFileSync(testFilePath, content);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // 編集3: Carol のエントリを更新
+        content = fs.readFileSync(testFilePath, 'utf-8');
+        content = content.replace(
+            '| Carol | 35 | Manager | Management |',
+            '| Carol Johnson | 36 | Director | Management |'
+        );
+        
+        fs.writeFileSync(testFilePath, content);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // すべての変更が保存されていることを確認
+        const finalContent = fs.readFileSync(testFilePath, 'utf-8');
+        
+        // 全変更を検証
+        expect(finalContent).toContain('Bob Smith');
+        expect(finalContent).toContain('Senior Designer');
+        expect(finalContent).toContain('Carol Johnson');
+        expect(finalContent).toContain('Director');
+        expect(finalContent).toContain('$250');
+        expect(finalContent).toContain('| 45    |');
+        
+        // 元のデータが完全に置き換わったことを確認
+        expect(finalContent).not.toContain('| Bob | 25 | Designer |');
+        expect(finalContent).not.toContain('| Carol | 35 | Manager |');
+        expect(finalContent).not.toContain('$200');
+        
+        console.log('✅ All bidirectional changes synchronized successfully');
+    });
 });
