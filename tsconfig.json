@@ -12,7 +12,8 @@
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["node", "vscode", "mocha"]
+    "types": ["node", "vscode", "mocha"],
+    "skipLibCheck": true
   },
   "include": [
     "src/**/*",
