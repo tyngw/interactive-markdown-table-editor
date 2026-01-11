@@ -18,9 +18,9 @@ inclusion: always
 All code changes must include corresponding tests:
 
 ### Test Structure
-- **Unit tests**: Add to `src/test/` using Mocha framework for extension code
+- **Unit tests**: Add to `test/unit/` using Mocha framework for extension code
 - **React tests**: Add to `webview-react/src/__tests__/` using Jest and React Testing Library
-- **Integration tests**: Add to `src/test/suite/` or `test/integration/` for cross-component functionality
+- **Integration tests**: Add to `test/unit/` or `test/integration/` for cross-component functionality
 
 ### Test Execution
 1. Run `npm run compile` after changes

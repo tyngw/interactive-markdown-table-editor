@@ -28,22 +28,22 @@
   - webview-react/src/__tests__/communication/WebviewCommunicationManager.test.ts
 
 2) `src/test/`（拡張機能側のユニット／統合テスト群）
-- 主要ファイル（15件、`src/test/suite/` にまとまっている）:
-  - src/test/runTest.ts
-  - src/test/suite/fileHandler.test.ts
-  - src/test/suite/csp-webview.test.ts
-  - src/test/suite/index.ts
-  - src/test/suite/csv-export-interface.test.ts
-  - src/test/suite/tableDataManager.test.ts
-  - src/test/suite/markdownParser.test.ts
-  - src/test/suite/protocol-validators.test.ts
-  - src/test/suite/csv-exporter-webview.test.ts
-  - src/test/suite/coreModule.test.ts
-  - src/test/suite/webview-extension-interface.test.ts
-  - src/test/suite/webview-interface-mock.test.ts
-  - src/test/suite/webviewManager.test.ts
-  - src/test/suite/uiux.test.ts
-  - src/test/suite/columnDiff.test.ts
+- 主要ファイル（15件、`test/unit/` にまとまっている）:
+  - test/runTest.ts
+  - test/unit/fileHandler.test.ts
+  - test/unit/csp-webview.test.ts
+  - test/unit/index.ts
+  - test/unit/csv-export-interface.test.ts
+  - test/unit/tableDataManager.test.ts
+  - test/unit/markdownParser.test.ts
+  - test/unit/protocol-validators.test.ts
+  - test/unit/csv-exporter-webview.test.ts
+  - test/unit/coreModule.test.ts
+  - test/unit/webview-extension-interface.test.ts
+  - test/unit/webview-interface-mock.test.ts
+  - test/unit/webviewManager.test.ts
+  - test/unit/uiux.test.ts
+  - test/unit/columnDiff.test.ts
 
 3) ルートの `test/`（補助スクリプト・集約テスト・統合テスト）
 - 代表的なファイル:
@@ -62,18 +62,18 @@
 
 以下はワークスペース内で検出した `.test.` / `.e2e.` / `.integration.` / `__tests__` に該当するファイルの一覧です。
 
-- src/test/suite/fileHandler.test.ts
-- src/test/suite/csp-webview.test.ts
-- src/test/suite/csv-export-interface.test.ts
-- src/test/suite/tableDataManager.test.ts
-- src/test/suite/markdownParser.test.ts
-- src/test/suite/protocol-validators.test.ts
-- src/test/suite/csv-exporter-webview.test.ts
-- src/test/suite/coreModule.test.ts
-- src/test/suite/webview-extension-interface.test.ts
-- src/test/suite/webview-interface-mock.test.ts
-- src/test/suite/webviewManager.test.ts
-- src/test/suite/uiux.test.ts
+- test/unit/fileHandler.test.ts
+- test/unit/csp-webview.test.ts
+- test/unit/csv-export-interface.test.ts
+- test/unit/tableDataManager.test.ts
+- test/unit/markdownParser.test.ts
+- test/unit/protocol-validators.test.ts
+- test/unit/csv-exporter-webview.test.ts
+- test/unit/coreModule.test.ts
+- test/unit/webview-extension-interface.test.ts
+- test/unit/webview-interface-mock.test.ts
+- test/unit/webviewManager.test.ts
+- test/unit/uiux.test.ts
 - test/gitDiffUtils.test.ts
 - test/e2e/workflow.e2e.test.js
 - test/e2e/workflow.e2e.test.ts
