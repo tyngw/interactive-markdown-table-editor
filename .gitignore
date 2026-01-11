@@ -7,3 +7,5 @@ node_modules
 # Performance test files
 test_*.js
 test_*.html
+playwright-report/
+test-results/
