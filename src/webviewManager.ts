@@ -112,7 +112,7 @@ export class WebviewManager {
             console.log('WebviewManager: Starting async initialization...');
             
             // Check if webview build directory exists and is accessible
-            const reactBuildPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview-dist');
+            const reactBuildPath = vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webview');
             try {
                 await vscode.workspace.fs.stat(reactBuildPath);
                 console.log('WebviewManager: React build directory verified');
@@ -414,7 +414,6 @@ export class WebviewManager {
                     enableScripts: true,
                     retainContextWhenHidden: true,
                     localResourceRoots: [
-                        vscode.Uri.joinPath(this.context.extensionUri, 'webview-dist'),
                         vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webview'),
                         vscode.Uri.joinPath(this.context.extensionUri, 'webview')
                     ]
@@ -434,7 +433,7 @@ export class WebviewManager {
         }
 
         // Use React build for webview with enhanced error handling and retry logic
-        const reactBuildPath = vscode.Uri.joinPath(this.context.extensionUri, 'webview-dist');
+        const reactBuildPath = vscode.Uri.joinPath(this.context.extensionUri, 'out', 'webview');
         
         // Enhanced build path validation
         let html: string = '';

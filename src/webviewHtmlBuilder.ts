@@ -77,7 +77,7 @@ function buildBootstrapScript(): string {
 }
 
 function resolveAssetUris(context: vscode.ExtensionContext, panel: vscode.WebviewPanel): ResolvedAssetUris {
-    const base = vscode.Uri.joinPath(context.extensionUri, 'webview-dist', 'assets');
+    const base = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', 'assets');
     const script = panel.webview.asWebviewUri(vscode.Uri.joinPath(base, 'index.js'));
     const style = panel.webview.asWebviewUri(vscode.Uri.joinPath(base, 'index.css'));
     console.log('[MTE][Ext] webviewHtmlBuilder - CSS URI resolved:', style.toString());
