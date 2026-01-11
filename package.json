@@ -92,7 +92,7 @@
     "copy-mock": "mkdir -p out/src/mock && cp test/mock/* out/src/mock/",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
-    "test": "npm run compile && npm run lint && node ./out/src/test/runTest.js"
+    "test": "npm run compile && npm run lint && node ./out/test/runTest.js"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",
