@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { MarkdownFileHandler, FileSystemError, getFileHandler } from '../../fileHandler';
+import { MarkdownFileHandler, FileSystemError, getFileHandler } from '../../src/fileHandler';
 
 suite('FileHandler Test Suite', () => {
     let fileHandler: MarkdownFileHandler;

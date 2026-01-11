@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     build: {
-      outDir: '../webview-dist',
+      outDir: '../out/webview',
       rollupOptions: {
         output: {
           entryFileNames: 'assets/index.js',

@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { WebviewManager } from '../../webviewManager';
+import { WebviewManager } from '../../src/webviewManager';
 
 suite('CSP and Webview HTML Tests', () => {
     let webviewManager: WebviewManager;

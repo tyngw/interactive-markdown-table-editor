@@ -3,7 +3,6 @@ dist
 node_modules
 .vscode-test/
 *.vsix
-webview-dist/
 
 # Performance test files
 test_*.js

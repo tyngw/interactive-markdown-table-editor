@@ -22,7 +22,7 @@ import {
     detectColumnDiffSimple,
     // 型
     RowGitDiffInput
-} from '../../columnDiff';
+} from '../../src/columnDiff';
 
 suite('ColumnDiff Module Tests', () => {
     

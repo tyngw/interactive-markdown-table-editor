@@ -38,6 +38,3 @@ console.log
 
 # 元のwebviewファイルを除外（React版のみ使用）
 webview/**
-
-# webview-distは残す（React版のビルド結果）
-!webview-dist/**

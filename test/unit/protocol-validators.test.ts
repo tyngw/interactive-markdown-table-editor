@@ -1,6 +1,6 @@
 import * as assert from 'assert';
-import { WebviewCommand } from '../../communication/protocol';
-import { validCommands, validateMessageData, validateMessageCommand } from '../../messages/validators';
+import { WebviewCommand } from '../../src/communication/protocol';
+import { validCommands, validateMessageData, validateMessageCommand } from '../../src/messages/validators';
 
 /**
  * Protocol and Validator Completeness Tests
