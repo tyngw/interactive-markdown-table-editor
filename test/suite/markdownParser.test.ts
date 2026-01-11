@@ -1,5 +1,5 @@
 const assert = require('assert');
-import { MarkdownParser, TableNode, TableManager } from '../../markdownParser';
+import { MarkdownParser, TableNode, TableManager } from '../../src/markdownParser';
 import * as vscode from 'vscode';
 
 suite('MarkdownParser Test Suite', () => {
@@ -516,7 +516,7 @@ Another good table:
 // Error class tests
 suite('MarkdownParser Error Classes', () => {
     test('should create MarkdownParsingError correctly', () => {
-        const error = new (require('../../markdownParser').MarkdownParsingError)(
+        const error = new (require('../../src/markdownParser').MarkdownParsingError)(
             'Test error message',
             'testOperation',
             { line: 5, column: 10 },
@@ -531,7 +531,7 @@ suite('MarkdownParser Error Classes', () => {
     });
 
     test('should create TableValidationError correctly', () => {
-        const error = new (require('../../markdownParser').TableValidationError)(
+        const error = new (require('../../src/markdownParser').TableValidationError)(
             'Validation failed',
             2,
             ['Issue 1', 'Issue 2'],

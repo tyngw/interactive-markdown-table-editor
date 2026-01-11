@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { WebviewManager, WebviewMessage } from '../../webviewManager';
+import { WebviewManager, WebviewMessage } from '../../src/webviewManager';
 
 /**
  * CSV Export Interface Tests
