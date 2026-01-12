@@ -275,4 +275,130 @@ Normal text continues here.`;
         assert.ok(readBack.includes('3'));
         assert.ok(readBack.includes('4'));
     });
+
+    test('Multiple tables independent editing workflow', async () => {
+        const testFilePath = path.join(testDir, 'multi-table-edit.md');
+        const fileHandler = getFileHandler();
+        const parser = new MarkdownParser();
+
+        // Create a file with two independent tables
+        const multiTableContent = `# Sales Report
+
+## Q1 Sales
+| Product | Units | Revenue |
+|---------|-------|---------|
+| Laptop | 10 | $15,000 |
+| Mouse | 50 | $2,500 |
+| Keyboard | 30 | $3,000 |
+
+## Q2 Sales
+| Product | Units | Revenue |
+|---------|-------|---------|
+| Monitor | 20 | $8,000 |
+| Headphones | 15 | $1,500 |
+| Webcam | 8 | $800 |`;
+
+        // Write the initial file using fs (direct write to bypass VS Code API)
+        fs.writeFileSync(testFilePath, multiTableContent);
+
+        // Step 1: Read and parse
+        const content = await fileHandler.readMarkdownFile(vscode.Uri.file(testFilePath));
+        const ast = parser.parseDocument(content);
+        const tables = parser.findTablesInDocument(ast);
+
+        assert.strictEqual(tables.length, 2, 'Should find exactly two tables');
+        
+        // Step 2: Verify table contents
+        const table1Manager = new TableDataManager(tables[0], testFilePath, 0);
+        const table1Data = table1Manager.getTableData();
+        assert.strictEqual(table1Data.headers.length, 3);
+        assert.strictEqual(table1Data.rows.length, 3);
+        assert.strictEqual(table1Data.rows[0][0], 'Laptop');
+
+        const table2Manager = new TableDataManager(tables[1], testFilePath, 1);
+        const table2Data = table2Manager.getTableData();
+        assert.strictEqual(table2Data.headers.length, 3);
+        assert.strictEqual(table2Data.rows.length, 3);
+        assert.strictEqual(table2Data.rows[0][0], 'Monitor');
+
+        // Step 3: Edit Table 1 (Q1 Sales)
+        table1Manager.updateCell(0, 1, '12'); // Change Laptop units from 10 to 12
+        table1Manager.updateCell(0, 2, '$18,000'); // Update revenue
+        table1Manager.updateCell(1, 0, 'Trackpad'); // Change Mouse to Trackpad
+        
+        // Step 4: Edit Table 2 (Q2 Sales) independently
+        table2Manager.updateCell(0, 1, '25'); // Change Monitor units from 20 to 25
+        table2Manager.updateCell(0, 2, '$10,000'); // Update revenue
+        table2Manager.addRow();
+        table2Manager.updateCell(3, 0, 'Desk Lamp');
+        table2Manager.updateCell(3, 1, '5');
+        table2Manager.updateCell(3, 2, '$500');
+        
+        // Step 5: Serialize and manually reconstruct file
+        // This bypasses VS Code's openTextDocument to avoid test environment issues
+        const table1Serialized = table1Manager.serializeToMarkdown();
+        const table2Serialized = table2Manager.serializeToMarkdown();
+        
+        // Create new content by replacing the old tables with new ones
+        let updatedContent = content;
+        
+        // Replace table 1 (using line ranges from original parse)
+        const lines = content.split('\n');
+        
+        // Build new file content by sections:
+        // - Lines 0 to table1.startLine-1: Keep as-is (header, pre-table content)
+        // - table1.startLine to table1.endLine: Replace with modified table
+        // - After table1.endLine until table2.startLine-1: Keep as-is (content between tables)
+        // - table2.startLine to table2.endLine: Replace with modified table  
+        // - After table2.endLine: Keep as-is (remaining content)
+        
+        const beforeTable1 = lines.slice(0, tables[0].startLine);
+        const afterTable1Before2 = lines.slice(tables[0].endLine + 1, tables[1].startLine);
+        const afterTable2 = lines.slice(tables[1].endLine + 1);
+        
+        const newLines = [
+            ...beforeTable1,
+            ...table1Serialized.split('\n'),
+            ...afterTable1Before2,
+            ...table2Serialized.split('\n'),
+            ...afterTable2
+        ];
+        
+        updatedContent = newLines.join('\n');
+        
+        // Write back using fs (bypass VS Code API issues in test environment)
+        fs.writeFileSync(testFilePath, updatedContent);
+
+        // Step 6: Verify changes were persisted correctly
+        const persistedContent = await fileHandler.readMarkdownFile(vscode.Uri.file(testFilePath));
+        
+        // Verify Table 1 changes
+        assert.ok(persistedContent.includes('Trackpad'), 'Table 1 should have Trackpad update');
+        assert.ok(persistedContent.includes('12'), 'Table 1 should have updated Laptop units');
+        assert.ok(persistedContent.includes('$18,000'), 'Table 1 should have updated Laptop revenue');
+        
+        // Verify Table 2 changes
+        assert.ok(persistedContent.includes('25'), 'Table 2 should have updated Monitor units');
+        assert.ok(persistedContent.includes('Desk Lamp'), 'Table 2 should have new row with Desk Lamp');
+        assert.ok(persistedContent.includes('$10,000'), 'Table 2 should have updated Monitor revenue');
+        
+        // Verify other content is preserved
+        assert.ok(persistedContent.includes('# Sales Report'), 'Document header should be preserved');
+        assert.ok(persistedContent.includes('## Q1 Sales'), 'Q1 section title should be preserved');
+        assert.ok(persistedContent.includes('## Q2 Sales'), 'Q2 section title should be preserved');
+
+        // Step 7: Re-parse to verify structural integrity
+        const finalAst = parser.parseDocument(persistedContent);
+        const finalTables = parser.findTablesInDocument(finalAst);
+        
+        assert.strictEqual(finalTables.length, 2, 'Should still have exactly two tables after updates');
+        
+        const finalTable1 = new TableDataManager(finalTables[0], testFilePath, 0).getTableData();
+        assert.strictEqual(finalTable1.rows[1][0], 'Trackpad', 'Verify Table 1 row 2 cell 1 persisted');
+        assert.strictEqual(finalTable1.rows[0][1], '12', 'Verify Table 1 row 1 cell 2 persisted (Laptop units updated)');
+        
+        const finalTable2 = new TableDataManager(finalTables[1], testFilePath, 1).getTableData();
+        assert.strictEqual(finalTable2.rows.length, 4, 'Table 2 should have 4 rows after adding new row');
+        assert.strictEqual(finalTable2.rows[3][0], 'Desk Lamp', 'Verify Table 2 new row persisted');
+    });
 });
