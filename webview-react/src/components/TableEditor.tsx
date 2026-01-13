@@ -822,6 +822,56 @@ const TableEditor: React.FC<TableEditorProps> = ({
     }
   }, [updateInputCapturePosition])
 
+  // スクロール時にセルがヘッダや行番号の裏に隠れないよう、
+  // スクロールコンテナに scroll-padding を動的に設定する。
+  // header や row-number のサイズが変わったときに再計測する。
+  useEffect(() => {
+    const updateScrollPadding = () => {
+      const container = document.querySelector('.table-container') as HTMLElement | null
+      const table = container?.querySelector('.table-editor') as HTMLElement | null
+      if (!container || !table) return
+
+      // ヘッダ高さを決定（thead の高さ）。存在しない場合は0。
+      const thead = table.querySelector('thead') as HTMLElement | null
+      const headerHeight = thead ? Math.ceil(thead.getBoundingClientRect().height) : 0
+
+      // 行番号幅を決定（最初の .row-number セルの幅）。存在しない場合は0。
+      const rowNumberCell = table.querySelector('.row-number') as HTMLElement | null
+      const rowNumberWidth = rowNumberCell ? Math.ceil(rowNumberCell.getBoundingClientRect().width) : 0
+
+      // 少し余裕を持たせるパディング（ボーダーや薄い余白分）。
+      const extra = 2
+
+      // CSS のプロパティはキャメルケースで style にセット
+      try {
+        container.style.scrollPaddingTop = `${headerHeight + extra}px`
+        container.style.scrollPaddingLeft = `${rowNumberWidth + extra}px`
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    // 初回とリサイズで更新
+    updateScrollPadding()
+    window.addEventListener('resize', updateScrollPadding)
+
+    // MutationObserver でヘッダや行番号のサイズ変化を監視
+    const containerEl = document.querySelector('.table-container')
+    let observer: MutationObserver | null = null
+    if (containerEl && 'MutationObserver' in window) {
+      observer = new MutationObserver(() => {
+        // microtask で再計測
+        requestAnimationFrame(updateScrollPadding)
+      })
+      observer.observe(containerEl, { attributes: true, subtree: true, childList: true })
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateScrollPadding)
+      if (observer) observer.disconnect()
+    }
+  }, [editorState.columnWidths, effectiveHeaderConfig, displayedTableData.headers, displayedTableData.rows])
+
   useKeyboardNavigation({
     tableData: displayedTableData,
     currentEditingCell: editorState.currentEditingCell,
