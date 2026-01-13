@@ -223,12 +223,23 @@ export function useKeyboardNavigation({
     if (activeEl) {
       const tag = activeEl.tagName?.toLowerCase()
       const isInputCapture = activeEl.classList?.contains('input-capture')
-      const isFormField = tag === 'input' || tag === 'textarea' || activeEl.isContentEditable
       const isHeaderEditing = activeEl.classList?.contains('header-input')
       const isCellEditing = activeEl.classList?.contains('cell-input')
-      // Allow keyboard navigation for input-capture element
-      if (!isInputCapture && (isFormField || isHeaderEditing || isCellEditing)) {
-        return
+
+      // Treat generic form fields separately from table header/cell editors.
+      // If focus is in an ordinary input/textarea/contentEditable outside the
+      // table, we must not intercept keys. However, when focus is on a
+      // header/cell editor element, only block navigation while the table
+      // actually considers a cell to be in editing state (`currentEditingCell`).
+      const isFormField = (tag === 'input' || tag === 'textarea' || activeEl.isContentEditable) && !isHeaderEditing && !isCellEditing
+
+      if (!isInputCapture) {
+        if (isFormField) {
+          return
+        }
+        if ((isHeaderEditing || isCellEditing) && currentEditingCell) {
+          return
+        }
       }
     }
 
