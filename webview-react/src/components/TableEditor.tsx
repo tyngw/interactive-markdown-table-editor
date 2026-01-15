@@ -890,10 +890,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     headerConfig: editorState.headerConfig,
     onOpenSearch: useCallback((withReplace = false) => {
       openSearch(withReplace)
-      if (withReplace) {
-        toggleReplace()
-      }
-    }, [openSearch, toggleReplace])
+    }, [openSearch])
   })
 
   const handleExportCsv = useCallback(() => {
