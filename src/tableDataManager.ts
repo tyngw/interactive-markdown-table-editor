@@ -9,6 +9,8 @@ export interface TableData {
     rows: string[][];
     alignment: ('left' | 'center' | 'right')[];
     separatorLine?: string; // オリジナルの区切り線を保持
+    rawLines?: string[]; // 元のテーブル行（ヘッダー＋区切り線＋データ行）
+    editedCells?: Set<string>; // 編集されたセルの位置 ("row,col" 形式)
     metadata: TableMetadata;
 }
 
@@ -60,6 +62,8 @@ export class TableDataManager {
             rows: tableNode.rows.map(row => [...row]),
             alignment: [...tableNode.alignment],
             separatorLine: tableNode.separatorLine, // オリジナルの区切り線を保持
+            rawLines: tableNode.rawLines ? [...tableNode.rawLines] : undefined, // 元のテーブル行を保持
+            editedCells: new Set(), // 初期状態では編集なし
             metadata: {
                 sourceUri,
                 startLine: tableNode.startLine,
@@ -92,6 +96,11 @@ export class TableDataManager {
         }
 
         this.tableData.rows[row][col] = value;
+        // 編集されたセルを記録
+        if (!this.tableData.editedCells) {
+            this.tableData.editedCells = new Set();
+        }
+        this.tableData.editedCells.add(`${row},${col}`);
         this.updateMetadata();
         this.notifyChange();
     }
@@ -105,6 +114,11 @@ export class TableDataManager {
         }
 
         this.tableData.headers[col] = value;
+        // ヘッダーは特別なマーカーで記録
+        if (!this.tableData.editedCells) {
+            this.tableData.editedCells = new Set();
+        }
+        this.tableData.editedCells.add(`header,${col}`);
         this.updateMetadata();
         this.notifyChange();
     }
@@ -132,6 +146,9 @@ export class TableDataManager {
         }
         this.tableData.rows.splice(insertIndex, 0, ...newRows);
 
+        // 構造が変わったため元の rawLines は無効化
+        this.tableData.rawLines = undefined;
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -145,6 +162,9 @@ export class TableDataManager {
         }
 
         this.tableData.rows.splice(index, 1);
+        // 構造が変わったため元の rawLines は無効化
+        this.tableData.rawLines = undefined;
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -187,6 +207,9 @@ export class TableDataManager {
         // Update separator line to match new column count
         this.updateSeparatorLineForColumnChange(insertIndex, count, 'add');
 
+        // 構造が変わったため元の rawLines は無効化
+        this.tableData.rawLines = undefined;
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -216,6 +239,9 @@ export class TableDataManager {
 
         // Update separator line to match new column count
         this.updateSeparatorLineForColumnChange(index, 1, 'delete');
+
+        // 構造が変わったため元の rawLines は無効化
+        this.tableData.rawLines = undefined;
 
         this.updateMetadata();
         this.notifyChange();
@@ -261,6 +287,9 @@ export class TableDataManager {
         const row = this.tableData.rows.splice(fromIndex, 1)[0];
         this.tableData.rows.splice(toIndex, 0, row);
 
+        // 移動により元行の順序が変わるため rawLines を無効化
+        this.tableData.rawLines = undefined;
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -289,6 +318,9 @@ export class TableDataManager {
 
         // Move separator in separator line
         this.updateSeparatorLineForColumnMove(fromIndex, toIndex);
+
+        // 列移動により rawLines は無効化
+        this.tableData.rawLines = undefined;
 
         this.updateMetadata();
         this.notifyChange();
@@ -583,8 +615,178 @@ export class TableDataManager {
 
     /**
      * Serialize table to Markdown format
+     * 元の行形式を保持し、編集されたセルのみを更新する
      */
     serializeToMarkdown(): string {
+        // rawLines があり、編集されたセルがない場合は元のテーブルをそのまま返す
+        if (this.tableData.rawLines && this.tableData.rawLines.length > 0 && 
+            (!this.tableData.editedCells || this.tableData.editedCells.size === 0)) {
+            return this.tableData.rawLines.join('\n');
+        }
+
+        // rawLines がない場合は通常生成
+        if (!this.tableData.rawLines || this.tableData.rawLines.length === 0) {
+            return this.generateMarkdownTable();
+        }
+
+        // rawLines がある場合、編集されたセルのみを置き換える
+        const lines = this.tableData.rawLines.map(line => line);
+        const editedCells = this.tableData.editedCells || new Set<string>();
+
+        // ヘッダーの編集があればヘッダー行を更新
+        const headerEditedCols = new Set<number>();
+        for (const key of editedCells) {
+            if (key.startsWith('header,')) {
+                const parts = key.split(',');
+                const col = parseInt(parts[1], 10);
+                if (!isNaN(col)) {
+                    headerEditedCols.add(col);
+                }
+            }
+        }
+        if (headerEditedCols.size > 0) {
+            lines[0] = this.updateTableLine(lines[0], this.tableData.headers, headerEditedCols);
+        }
+
+        // データ行ごとに編集された列セットを作成して行単位で更新
+        const rowEdits = new Map<number, Set<number>>();
+        for (const key of editedCells) {
+            if (key.startsWith('header,')) {
+                continue;
+            }
+            const parts = key.split(',');
+            const row = parseInt(parts[0], 10);
+            const col = parseInt(parts[1], 10);
+            if (isNaN(row) || isNaN(col)) {
+                continue;
+            }
+            if (!rowEdits.has(row)) {
+                rowEdits.set(row, new Set<number>());
+            }
+            rowEdits.get(row)!.add(col);
+        }
+
+        for (const [row, cols] of rowEdits.entries()) {
+            const rawLineIndex = row + 2; // header + separator の分
+            if (rawLineIndex >= 0 && rawLineIndex < lines.length) {
+                lines[rawLineIndex] = this.updateTableLine(lines[rawLineIndex], this.tableData.rows[row], cols);
+            }
+        }
+
+        return lines.join('\n');
+    }
+
+    /**
+     * テーブル行を新しい値で更新（元の間隔を保持）
+     */
+    private updateTableLine(originalLine: string, newValues: string[], editedCols?: Set<number>): string {
+        // 安全にパイプを検出して分割（エスケープされた \| は無視）
+        const parsed = this.splitLineByUnescapedPipe(originalLine);
+        if (!parsed || parsed.cells.length === 0) {
+            // フォールバック: 既存の簡易処理
+            const parts = originalLine.split('|');
+            const result = [''];
+            for (let i = 1; i < parts.length - 1; i++) {
+                const cellIndex = i - 1;
+                const originalCell = parts[i];
+                if (cellIndex < newValues.length) {
+                    const escapedValue = this.escapePipeCharacters(newValues[cellIndex]);
+                    if (editedCols && editedCols.has(cellIndex)) {
+                        result.push(' ' + escapedValue + ' ');
+                    } else {
+                        const match = originalCell.match(/^(\s*)(.*?)(\s*)$/);
+                        const leadingSpace = match ? match[1] : ' ';
+                        const trailingSpace = match ? match[3] : ' ';
+                        result.push(leadingSpace + escapedValue + trailingSpace);
+                    }
+                } else {
+                    result.push(originalCell);
+                }
+            }
+            result.push('');
+            return result.join('|');
+        }
+
+        // 複数セルが正しく解析できた場合、編集対象のセルだけ差分置換する
+        const { pipePositions, ranges, cells } = parsed;
+        const pieces: string[] = [];
+
+        // 先頭はパイプ以前のプレフィックス
+        const firstPipe = pipePositions.length > 0 ? pipePositions[0] : -1;
+        const prefix = firstPipe >= 0 ? originalLine.slice(0, firstPipe + 1) : '';
+        pieces.push(prefix);
+
+        for (let i = 0; i < cells.length; i++) {
+            const contentStart = ranges[i].start;
+            const contentEnd = ranges[i].end;
+            let content: string;
+
+            if (i < newValues.length && editedCols && editedCols.has(i)) {
+                // 編集セルは常に単一スペースで整形
+                content = ' ' + this.escapePipeCharacters(newValues[i]) + ' ';
+            } else {
+                // 未編集セルは元の文字列をそのまま保持
+                content = originalLine.slice(contentStart, contentEnd);
+            }
+
+            pieces.push(content);
+
+            // 各セルの後に元のパイプ文字を追加（次のパイプ位置を利用）
+            const nextPipePos = pipePositions[i + 1];
+            if (typeof nextPipePos === 'number') {
+                pieces.push(originalLine.slice(nextPipePos, nextPipePos + 1));
+            }
+        }
+
+        // 末尾に残った部分（最後のパイプ以降）を追加
+        if (pipePositions.length > 0) {
+            const lastPipe = pipePositions[pipePositions.length - 1];
+            if (lastPipe + 1 < originalLine.length) {
+                pieces.push(originalLine.slice(lastPipe + 1));
+            }
+        }
+
+        return pieces.join('');
+    }
+
+    /**
+     * 行をエスケープされていないパイプで解析する
+     * 戻り値: pipePositions: '|' の位置配列, cells: 各セルの文字列, ranges: 各セルの開始/終了インデックス
+     */
+    private splitLineByUnescapedPipe(line: string): { pipePositions: number[]; cells: string[]; ranges: { start: number; end: number }[] } | null {
+        const pipePositions: number[] = [];
+        for (let i = 0; i < line.length; i++) {
+            if (line[i] === '|') {
+                const prev = i - 1;
+                if (prev >= 0 && line[prev] === '\\') {
+                    // エスケープされたパイプは無視
+                    continue;
+                }
+                pipePositions.push(i);
+            }
+        }
+
+        if (pipePositions.length < 2) {
+            return null;
+        }
+
+        const cells: string[] = [];
+        const ranges: { start: number; end: number }[] = [];
+
+        for (let j = 0; j < pipePositions.length - 1; j++) {
+            const start = pipePositions[j] + 1;
+            const end = pipePositions[j + 1];
+            cells.push(line.slice(start, end));
+            ranges.push({ start, end });
+        }
+
+        return { pipePositions, cells, ranges };
+    }
+
+    /**
+     * Generate Markdown table from scratch (従来の方法)
+     */
+    private generateMarkdownTable(): string {
         let markdown = '';
 
         // Header row - escape pipe characters in headers
@@ -873,6 +1075,18 @@ export class TableDataManager {
             }
         }
 
+        // 記録: 編集されたセルをマーク（バルク更新でも差分出力されるようにする）
+        if (!this.tableData.editedCells) {
+            this.tableData.editedCells = new Set<string>();
+        }
+        for (const update of updates) {
+            if (update.row === -1) {
+                this.tableData.editedCells.add(`header,${update.col}`);
+            } else {
+                this.tableData.editedCells.add(`${update.row},${update.col}`);
+            }
+        }
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -896,6 +1110,8 @@ export class TableDataManager {
         this.tableData.alignment = align;
         // CSVインポート等で内容を置換する場合は、区切り線をクリア
         this.tableData.separatorLine = undefined;
+        // 構造が変わったため rawLines を無効化
+        this.tableData.rawLines = undefined;
         this.updateMetadata();
         this.notifyChange();
     }
@@ -917,6 +1133,9 @@ export class TableDataManager {
         );
 
         this.tableData.rows.splice(startIndex, 0, ...newRows);
+        // 構造が変わったため元の rawLines は無効化
+        this.tableData.rawLines = undefined;
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -937,6 +1156,9 @@ export class TableDataManager {
         for (const index of sortedIndices) {
             this.tableData.rows.splice(index, 1);
         }
+
+        // 構造が変わったため元の rawLines は無効化
+        this.tableData.rawLines = undefined;
 
         this.updateMetadata();
         this.notifyChange();
@@ -979,6 +1201,9 @@ export class TableDataManager {
         // Update separator line to match new column count
         this.updateSeparatorLineForColumnChange(startIndex, count, 'add');
 
+        // 構造が変わったため元の rawLines は無効化
+        this.tableData.rawLines = undefined;
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -1015,6 +1240,9 @@ export class TableDataManager {
             // Update separator line for each deletion
             this.updateSeparatorLineForColumnChange(index, 1, 'delete');
         }
+
+        // 構造が変わったため元の rawLines は無効化
+        this.tableData.rawLines = undefined;
 
         this.updateMetadata();
         this.notifyChange();
@@ -1121,6 +1349,9 @@ export class TableDataManager {
         const duplicatedRow = [...this.tableData.rows[rowIndex]];
 
         this.tableData.rows.splice(targetIndex, 0, duplicatedRow);
+        // 構造が変わったため rawLines を無効化
+        this.tableData.rawLines = undefined;
+
         this.updateMetadata();
         this.notifyChange();
     }
@@ -1148,6 +1379,9 @@ export class TableDataManager {
             const duplicatedCell = row[colIndex];
             row.splice(targetIndex, 0, duplicatedCell);
         }
+
+        // 構造が変わったため rawLines を無効化
+        this.tableData.rawLines = undefined;
 
         this.updateMetadata();
         this.notifyChange();
