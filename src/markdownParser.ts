@@ -35,6 +35,7 @@ export interface TableNode {
     rows: string[][];
     alignment: ('left' | 'center' | 'right')[];
     separatorLine?: string; // オリジナルの区切り線を保持
+    rawLines?: string[]; // 元のテーブル行を保持（ヘッダーと各データ行）
 }
 
 export interface MarkdownAST {
@@ -244,13 +245,27 @@ export class MarkdownParser {
                 return null;
             }
 
-            const tableNode: TableNode = {
+            const tempTableNode: TableNode = {
                 startLine,
                 endLine,
                 headers,
                 rows,
                 alignment,
                 separatorLine: this.extractSeparatorLine(content, { startLine, endLine, headers, rows, alignment })
+            };
+
+            // 元のテーブル行を抽出
+            const boundaries = this.getTableBoundaries(content, tempTableNode);
+            const rawLines = boundaries.actualContent.slice(); // ヘッダー＋区切り線＋データ行
+
+            const tableNode: TableNode = {
+                startLine,
+                endLine,
+                headers,
+                rows,
+                alignment,
+                separatorLine: tempTableNode.separatorLine,
+                rawLines
             };
 
             return tableNode;
