@@ -285,7 +285,7 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
         }
 
         table.table-editor thead {
-          background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background));
+          background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-sideBar-background, var(--vscode-activityBar-background)));
           position: relative;
           z-index: 150;
         }
@@ -303,7 +303,8 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
 
         /* ====== テーブルヘッダー ====== */
         table.table-editor thead th {
-          background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background));
+          background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-sideBar-background, var(--vscode-activityBar-background)));
+          
           border: 1px solid var(--vscode-panel-border);
           padding: 10px 12px;
           text-align: left;
@@ -427,7 +428,8 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
 
         /* ====== 行番号セル ====== */
         table.table-editor tbody tr td.row-number {
-          background-color: var(--vscode-sideBar-background, var(--vscode-activityBar-background));
+          background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-sideBar-background, var(--vscode-activityBar-background)));
+          
           border: 1px solid var(--vscode-panel-border);
           font-weight: 700;
           text-align: left;
