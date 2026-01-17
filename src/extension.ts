@@ -9,7 +9,7 @@ import { UndoRedoManager } from './undoRedoManager';
 import { decodeBuffer, detectTextEncoding, parseCsv, toRectangular } from './csvUtils';
 import { normalizeForImport } from './encodingNormalizer';
 import { normalizeForShiftJisExport } from './encodingNormalizer';
-import { getGitDiffForTable, RowGitDiff, clearDiffCache, detectColumnDiff } from './gitDiffUtils';
+import { getGitDiffForTable, RowGitDiff, clearDiffCache } from './gitDiffUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     // VS Code automatically loads l10n files based on vscode.env.language
@@ -433,8 +433,7 @@ export function activate(context: vscode.ExtensionContext) {
                         tableData.rows.length,
                         tableMarkdown
                     );
-                    const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
-                    return { ...tableData, gitDiff, columnDiff };
+                    return { ...tableData, gitDiff };
                 })
             );
 
@@ -533,8 +532,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 tableMarkdown
                             );
                             debug(`[GitDiffDebug] Got diff for table ${index}:`, gitDiff.length > 0 ? gitDiff : 'No diff');
-                            const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
-                            return { ...tableData, gitDiff, columnDiff };
+                            return { ...tableData, gitDiff };
                         })
                     );
 
@@ -622,8 +620,7 @@ export function activate(context: vscode.ExtensionContext) {
                                     tableData.rows.length,
                                     tableMarkdown
                                 );
-                                const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
-                                return { ...tableData, gitDiff, columnDiff };
+                                return { ...tableData, gitDiff };
                             })
                         );
 
@@ -1179,8 +1176,7 @@ export function activate(context: vscode.ExtensionContext) {
                         tableData.rows.length,
                         tableMarkdown
                     );
-                    const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
-                    return { ...tableData, gitDiff, columnDiff };
+                    return { ...tableData, gitDiff };
                 })
             );
 
@@ -1272,8 +1268,7 @@ export function activate(context: vscode.ExtensionContext) {
                         tableData.rows.length,
                         tableMarkdown
                     );
-                    const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
-                    return { ...tableData, gitDiff, columnDiff };
+                    return { ...tableData, gitDiff };
                 })
             );
 
@@ -1365,8 +1360,7 @@ export function activate(context: vscode.ExtensionContext) {
                         tableData.rows.length,
                         tableMarkdown
                     );
-                    const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
-                    return { ...tableData, gitDiff, columnDiff };
+                    return { ...tableData, gitDiff };
                 })
             );
 
@@ -1590,8 +1584,7 @@ export function activate(context: vscode.ExtensionContext) {
                         tableData.rows.length,
                         tableMarkdown
                     );
-                    const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
-                    return { ...tableData, gitDiff, columnDiff };
+                    return { ...tableData, gitDiff };
                 })
             );
 

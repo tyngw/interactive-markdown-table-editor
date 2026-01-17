@@ -13,7 +13,6 @@ jest.mock('react-i18next', () => ({
 const minimalTableData = {
   headers: ['A', 'B', 'C'],
   rows: [['1', '2', '3'], ['4', '5', '6']],
-  columnDiff: undefined,
   gitDiff: undefined
 }
 

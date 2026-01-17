@@ -6,10 +6,6 @@
 
 import * as vscode from 'vscode';
 import { debug, info, warn, error } from './logging';
-import { 
-    detectColumnDiffSimple,
-    RowGitDiffInput 
-} from './columnDiff';
 
 /**
  * セルのGit差分状態
@@ -51,18 +47,6 @@ export interface RowGitDiff {
 export interface TableGitDiff {
     tableIndex: number;
     rows: RowGitDiff[];
-}
-
-/**
- * 列の差分情報
- * 変更前と変更後の列数を比較して、追加・削除された列を検出
- */
-export interface ColumnDiffInfo {
-    oldColumnCount: number;      // 変更前の列数
-    newColumnCount: number;      // 変更後の列数
-    addedColumns: number[];      // 追加された列のインデックス（変更後の列番号）
-    deletedColumns: number[];    // 削除された列のインデックス（変更前の列番号）
-    oldHeaders?: string[];       // 変更前のヘッダ（削除列表示用）
 }
 
 /**
@@ -604,26 +588,36 @@ export function getGitThemeColors(): {
     }
 }
 
-
+/**
+ * マークダウンテーブル行からセル数を取得
+ * 例: "| a | b | c |" -> 3
+ */
+function countTableCells(rowContent: string): number {
+    if (!rowContent || !rowContent.includes('|')) {
+        return 0;
+    }
+    // 先頭と末尾の | を削除し、| で分割
+    const trimmed = rowContent.trim();
+    const withoutLeadingPipe = trimmed.startsWith('|') ? trimmed.substring(1) : trimmed;
+    const withoutTrailingPipe = withoutLeadingPipe.endsWith('|') 
+        ? withoutLeadingPipe.substring(0, withoutLeadingPipe.length - 1) 
+        : withoutLeadingPipe;
+    return withoutTrailingPipe.split('|').length;
+}
 
 /**
- * Git差分から列の追加・削除情報を検出（columnDiff モジュールへのデリゲーション）
- * 
- * @param gitDiff 行のGit差分情報
- * @param currentColumnCount 現在のテーブルの列数
- * @returns 列の差分情報
+ * マークダウンテーブル行から列の値を抽出
+ * 例: "| a | b | c |" -> ['a', 'b', 'c']
  */
-export function detectColumnDiff(
-    gitDiff: RowGitDiff[],
-    currentColumnCount: number
-): ColumnDiffInfo {
-    const input: RowGitDiffInput[] = gitDiff.map(d => ({
-        row: d.row,
-        status: d.status as 'unchanged' | 'added' | 'deleted',
-        oldContent: d.oldContent,
-        newContent: d.newContent,
-        isDeletedRow: d.isDeletedRow
-    }));
-    return detectColumnDiffSimple(input, currentColumnCount);
+function parseTableRowCells(rowContent: string): string[] {
+    if (!rowContent || !rowContent.includes('|')) {
+        return [];
+    }
+    const trimmed = rowContent.trim();
+    const withoutLeadingPipe = trimmed.startsWith('|') ? trimmed.substring(1) : trimmed;
+    const withoutTrailingPipe = withoutLeadingPipe.endsWith('|') 
+        ? withoutLeadingPipe.substring(0, withoutLeadingPipe.length - 1) 
+        : withoutLeadingPipe;
+    return withoutTrailingPipe.split('|').map(cell => cell.trim());
 }
 

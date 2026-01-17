@@ -51,8 +51,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
   const effectiveSortState = sortState ?? internalSortState
   const effectiveSetSortState = setSortState ?? setInternalSortState
 
-  // columnDiff をログ出力
-  console.log('[TableEditor] tableData.columnDiff:', tableData.columnDiff, 'headers:', tableData.headers)
+  // columnDiff removed after feature revert
 
   const [internalHeaderConfig, setInternalHeaderConfig] = useState<HeaderConfig>({
     hasColumnHeaders: true,
@@ -980,7 +979,6 @@ const TableEditor: React.FC<TableEditorProps> = ({
             selectedCols={selectedCols}
             fullySelectedCols={editorState.fullySelectedCols}
             headerConfig={effectiveHeaderConfig}
-            columnDiff={showGitDiff ? tableData.columnDiff : undefined}
           />
           <TableBody
             headers={displayedTableData.headers}
@@ -1013,7 +1011,6 @@ const TableEditor: React.FC<TableEditorProps> = ({
             isSearchResult={isSearchResult}
             isCurrentSearchResult={isCurrentSearchResult}
             gitDiff={showGitDiff ? tableData.gitDiff : undefined}
-            columnDiff={showGitDiff ? tableData.columnDiff : undefined}
           />
         </table>
       </div>
