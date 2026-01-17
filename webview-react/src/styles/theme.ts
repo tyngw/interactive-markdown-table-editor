@@ -232,8 +232,8 @@ export const getVSCodeTheme = (): VSCodeTheme => {
     tabInactiveForeground: getVar('--vscode-tab-inactiveForeground', '#a6a6a6'),
     tabHoverBackground: getVar('--vscode-tab-hoverBackground', '#2a2d2e'),
 
-    // エディターグループ
-    editorGroupHeaderTabsBackground: getVar('--vscode-panel-background', '#252526'),
+    // エディターグループ（正しい CSS 変数名を参照し、フォールバックを確保）
+    editorGroupHeaderTabsBackground: getVar('--vscode-editorGroupHeader-tabsBackground', getVar('--vscode-panel-background', '#252526')),
     editorGroupBorder: getVar('--vscode-editorGroup-border', '#3e3e42'),
 
     // 検証

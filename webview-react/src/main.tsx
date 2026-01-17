@@ -58,14 +58,34 @@ function RootApp() {
     if (!documentRoot) return
 
     // theme オブジェクトから CSS 変数を生成して root に設定
+    // 列ヘッダ・行番号に使われる変数を含め、必要なテーマ変数を明示的に注入する
     const cssVars: Record<string, string> = {
-      '--vscode-menu-background': theme.menuBackground,
-      '--vscode-menu-foreground': theme.menuForeground,
-      '--vscode-menu-border': theme.menuBorder,
-      '--vscode-menu-selectionBackground': theme.menuSelectionBackground,
-      '--vscode-menu-selectionForeground': theme.menuSelectionForeground,
-      '--vscode-menu-separatorBackground': theme.menuSeparatorBackground,
-      '--vscode-disabledForeground': theme.disabledForeground,
+      '--vscode-editor-background': theme.editorBackground || '#1e1e1e',
+      '--vscode-editor-foreground': theme.editorForeground || '#d4d4d4',
+      '--vscode-sideBar-background': theme.sideBarBackground || '#252526',
+      '--vscode-sideBar-foreground': theme.sideBarForeground || '#cccccc',
+      '--vscode-descriptionForeground': theme.descriptionForeground || '#a6a6a6',
+      '--vscode-panel-border': theme.panelBorder || '#3e3e42',
+      '--vscode-editorGroupHeader-tabsBackground': theme.editorGroupHeaderTabsBackground || theme.panelBackground || '#252526',
+      '--vscode-focusBorder': theme.focusBorder || '#007acc',
+      '--vscode-tab-activeForeground': (theme as any).tabActiveForeground || '#ffffff',
+      '--vscode-tab-inactiveForeground': (theme as any).tabInactiveForeground || '#a6a6a6',
+      '--vscode-button-background': theme.buttonBackground || '#0e639c',
+      '--vscode-button-foreground': theme.buttonForeground || '#ffffff',
+      '--vscode-input-background': theme.inputBackground || '#3c3c3c',
+      '--vscode-input-foreground': theme.inputForeground || '#cccccc',
+      '--vscode-list-hoverBackground': theme.listHoverBackground || '#2a2d2e',
+      '--vscode-list-activeSelectionBackground': theme.listActiveSelectionBackground || '#094771',
+      '--vscode-list-inactiveSelectionBackground': theme.listInactiveSelectionBackground || '#37373d',
+      '--vscode-scrollbarSlider-background': theme.scrollbarSliderBackground || 'rgba(90, 93, 94, 0.31)',
+      '--vscode-disabledForeground': theme.disabledForeground || '#656565',
+      // Menu-related fallbacks retained
+      '--vscode-menu-background': theme.menuBackground || '#252526',
+      '--vscode-menu-foreground': theme.menuForeground || '#cccccc',
+      '--vscode-menu-border': theme.menuBorder || '#454545',
+      '--vscode-menu-selectionBackground': theme.menuSelectionBackground || '#094771',
+      '--vscode-menu-selectionForeground': theme.menuSelectionForeground || '#ffffff',
+      '--vscode-menu-separatorBackground': theme.menuSeparatorBackground || '#454545',
     }
 
     // すべての要素にCSS変数を設定（#mte-root, #root, documentElementの全て）
