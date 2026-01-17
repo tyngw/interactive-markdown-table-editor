@@ -160,6 +160,19 @@ function AppContent() {
           const applied1 = applyCssVariablesInline(data.cssText, document.documentElement);
           const applied2 = applyCssVariablesInline(data.cssText, rootEl);
           
+          // **重要**：テーマCSS適用後、RootAppで設定した重要な変数を再度保証する
+          // (cssText内で異なる値が設定されている場合に上書きされることを防ぐ)
+          const elementsToEnsure = [document.documentElement, rootEl].filter(Boolean) as HTMLElement[];
+          elementsToEnsure.forEach(el => {
+            // ライトテーム対応のための重要な変数を再度設定
+            if (el.style.getPropertyValue('--vscode-sideBar-foreground').trim() === '') {
+              el.style.setProperty('--vscode-sideBar-foreground', '#cccccc');
+            }
+            if (el.style.getPropertyValue('--vscode-descriptionForeground').trim() === '') {
+              el.style.setProperty('--vscode-descriptionForeground', '#a6a6a6');
+            }
+          });
+          
           // 設定されたインラインスタイルの内容をログ出力
           const inlineStyleStr = document.documentElement.getAttribute('style') || '';
           console.log('[MTE][React] Applied inline CSS variables:', { 
