@@ -453,27 +453,41 @@ export class MarkdownFileHandler implements FileHandler {
             edit.replace(uri, e.range, e.text);
         }
 
+        // Use centralized apply+save implementation so all update flows go through the same path
+        return await this.applyWorkspaceEditAndSave(edit, uri, operation);
+    }
+
+    /**
+     * Apply a given WorkspaceEdit and ensure the document is saved and VSCode is notified.
+     * This centralizes apply+save behavior so callers don't need to manage saves themselves.
+     */
+    public async applyWorkspaceEditAndSave(
+        edit: vscode.WorkspaceEdit,
+        uri: vscode.Uri,
+        operation: string = 'apply'
+    ): Promise<boolean> {
+        // Apply the edit
         const applied = await vscode.workspace.applyEdit(edit);
         if (!applied) {
             throw new FileSystemError('Failed to apply document edit', operation, uri);
         }
 
-        const saved = await document.save();
-        if (!saved) {
-            // document.save() で false が返る環境があるため、フォールバックとして
-            // ドキュメントの現在のテキストを直接ファイルへ書き込む。
-            // これは最終手段のためログを残す。
-            try {
+        // Ensure document is saved; if document.save() returns false, fall back to direct write
+        try {
+            const document = await vscode.workspace.openTextDocument(uri);
+            const saved = await document.save();
+            if (!saved) {
                 this.outputChannel.appendLine(`document.save() returned false for ${uri.fsPath}, attempting direct fs write fallback`);
                 const currentText = document.getText();
                 await fs.promises.writeFile(uri.fsPath, currentText, 'utf8');
                 this.outputChannel.appendLine(`Fallback write succeeded for ${uri.fsPath}`);
                 await this.notifyFileChange(uri);
                 return true;
-            } catch (fallbackError) {
-                this.outputChannel.appendLine(`Fallback write failed for ${uri.fsPath}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
-                throw new FileSystemError('Failed to save document after update (and fallback write failed)', operation, uri, fallbackError as Error);
             }
+        } catch (error) {
+            this.outputChannel.appendLine(`Failed to save document after apply for ${uri.fsPath}: ${error instanceof Error ? error.message : String(error)}`);
+            // Continue to throw a FileSystemError to surface the failure
+            throw new FileSystemError('Failed to save document after apply', operation, uri, error as Error);
         }
 
         await this.notifyFileChange(uri);

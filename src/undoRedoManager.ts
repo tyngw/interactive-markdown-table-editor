@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { getFileHandler } from './fileHandler';
 
 interface UndoRedoState {
     uri: string;
@@ -94,18 +95,8 @@ export class UndoRedoManager {
             );
             edit.replace(uri, fullRange, previousState.content);
 
-            const success = await vscode.workspace.applyEdit(edit);
-
-            if (success) {
-                // Persist change to disk so that Editor side observes the update
-                try {
-                    const saved = await document.save();
-                    if (!saved) {
-                        console.warn('[MTE][UndoRedo] document.save() returned false for', uriString);
-                    }
-                } catch (e) {
-                    console.error('[MTE][UndoRedo] Failed to save document after undo:', e);
-                }
+            try {
+                await getFileHandler().applyWorkspaceEditAndSave(edit, uri, 'undo');
                 // Only save to redo stack AFTER successful undo
                 let redoStack = this.redoStack.get(uriString);
                 if (!redoStack) {
@@ -114,10 +105,10 @@ export class UndoRedoManager {
                 }
                 redoStack.push(currentStateBeforeUndo);
                 return true;
-            } else {
+            } catch (e) {
                 // Restore undo stack if edit failed
                 undoStack.push(previousState);
-                console.error('[MTE][UndoRedo] Undo failed to apply');
+                console.error('[MTE][UndoRedo] Undo failed to apply:', e);
                 return false;
             }
         } catch (error) {
@@ -158,18 +149,8 @@ export class UndoRedoManager {
             );
             edit.replace(uri, fullRange, nextState.content);
 
-            const success = await vscode.workspace.applyEdit(edit);
-
-            if (success) {
-                // Persist change to disk so that Editor side observes the update
-                try {
-                    const saved = await document.save();
-                    if (!saved) {
-                        console.warn('[MTE][UndoRedo] document.save() returned false for', uriString);
-                    }
-                } catch (e) {
-                    console.error('[MTE][UndoRedo] Failed to save document after redo:', e);
-                }
+            try {
+                await getFileHandler().applyWorkspaceEditAndSave(edit, uri, 'redo');
                 // Only save to undo stack AFTER successful redo
                 let undoStack = this.undoStack.get(uriString);
                 if (!undoStack) {
@@ -178,10 +159,10 @@ export class UndoRedoManager {
                 }
                 undoStack.push(currentStateBeforeRedo);
                 return true;
-            } else {
+            } catch (e) {
                 // Restore redo stack if edit failed
                 redoStack.push(nextState);
-                console.error('[MTE][UndoRedo] Redo failed to apply');
+                console.error('[MTE][UndoRedo] Redo failed to apply:', e);
                 return false;
             }
         } catch (error) {
