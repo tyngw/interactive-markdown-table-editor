@@ -17,14 +17,19 @@ export function run(): Promise<void> {
 
     return new Promise((c, e) => {
         try {
-            // Get all test files
+            // Get all test files under vscode-tests
             const globber = new GlobSync('**/**.test.js', { cwd: testsRoot });
             const files = globber.found;
 
-            // Add files to the test suite
-            files.forEach((f: string) =>
-                mocha.addFile(path.resolve(testsRoot, f))
-            );
+            // Also include unit tests (compiled JS) so unit tests run inside the
+            // VS Code extension test host where `vscode` module is available.
+            const unitRoot = path.resolve(__dirname, '..', 'unit');
+            const unitGlobber = new GlobSync('**/**.test.js', { cwd: unitRoot });
+            const unitFiles = unitGlobber.found.map((f: string) => path.resolve(unitRoot, f));
+
+            // Add files to the test suite (vscode-tests first, then unit tests)
+            files.forEach((f: string) => mocha.addFile(path.resolve(testsRoot, f)));
+            unitFiles.forEach((f: string) => mocha.addFile(f));
 
             // Run the mocha test
             mocha.run((failures: number) => {

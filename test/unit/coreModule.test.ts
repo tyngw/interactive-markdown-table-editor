@@ -13,12 +13,12 @@ import * as fs from 'fs';
 suite('Core Module System Tests', () => {
     
     test('React webview build exists', () => {
-        const webviewPath = path.join(__dirname, '../../../../out/webview');
+        const webviewPath = path.join(__dirname, '../../webview');
         assert.ok(fs.existsSync(webviewPath), 'React webview build should exist at ' + webviewPath);
     });
     
     test('Webview index.html is valid', () => {
-        const htmlPath = path.join(__dirname, '../../../../out/webview/index.html');
+        const htmlPath = path.join(__dirname, '../../webview/index.html');
         assert.ok(fs.existsSync(htmlPath), 'index.html should exist at ' + htmlPath);
         
         const content = fs.readFileSync(htmlPath, 'utf8');
@@ -28,7 +28,7 @@ suite('Core Module System Tests', () => {
     });
     
     test('Webview assets are built', () => {
-        const assetsPath = path.join(__dirname, '../../../../out/webview/assets');
+        const assetsPath = path.join(__dirname, '../../webview/assets');
         assert.ok(fs.existsSync(assetsPath), 'Assets directory should exist at ' + assetsPath);
         
         // Check for main script
