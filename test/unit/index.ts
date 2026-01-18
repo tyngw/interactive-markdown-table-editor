@@ -11,7 +11,9 @@ export function run(): Promise<void> {
         color: true
     });
 
-    const testsRoot = path.resolve(__dirname, '..');
+    // Limit unit test discovery to the unit test folder to avoid pulling
+    // in e2e/integration tests that require the `vscode` runtime.
+    const testsRoot = path.resolve(__dirname);
 
     return new Promise((resolve, reject) => {
         glob('**/**.test.js', { cwd: testsRoot }, (err: any, files: string[]) => {

@@ -89,7 +89,7 @@
     "dev": "cd webview-react && vite",
     "build-webview": "cd webview-react && npm install && npm run build",
     "build-webview:debug": "cd webview-react && npm install && npm run build:debug",
-    "copy-mock": "mkdir -p out/src/mock && cp test/mock/* out/src/mock/",
+    "copy-mock": "mkdir -p out/src/mock out/mock && cp test/mock/* out/src/mock/ && cp test/mock/* out/mock/",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
     "test": "npm run compile && npm run lint && node ./out/test/runTest.js",

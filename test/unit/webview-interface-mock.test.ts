@@ -14,7 +14,7 @@ suite('Webview Interface Mock Tests', () => {
 
     suiteSetup(() => {
         // Load the mock module
-        const mockPath = path.join(__dirname, '../../mock/webview-interface-mock.js');
+        const mockPath = path.join(__dirname, '../../src/mock/webview-interface-mock.js');
         const mockContent = fs.readFileSync(mockPath, 'utf8');
         
         // Evaluate the mock module in a controlled environment
