@@ -185,14 +185,15 @@ const TableHeader: React.FC<TableHeaderProps> = ({
           // 列が削除された場合は、削除前の列構造に基づいてレンダリング
           // 新しいmappingを活用して中間列の追加/削除を正確に処理
           if (columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) {
-            // mapping が存在する場合はそれを使用して、旧→新の対応を取る
-            const hasMapping = columnDiff.mapping && columnDiff.mapping.length > 0
-            
-            return Array.from({ length: columnDiff.oldColumnCount }).map((_, oldColIdx) => {
+            const hasMapping = !!(columnDiff.mapping && columnDiff.mapping.length > 0)
+
+            // 旧列基準で一旦ヘッダセル配列を構築し、追加された列は positions を使って挿入する
+            const displayHeaders: Array<JSX.Element> = []
+
+            for (let oldColIdx = 0; oldColIdx < columnDiff.oldColumnCount; oldColIdx++) {
               const isDeletedColumn = columnDiff.deletedColumns.includes(oldColIdx)
-              
+
               if (isDeletedColumn) {
-                // 削除された列の位置にはハッチングヘッダを表示
                 const columnLetter = getColumnLetter(oldColIdx)
                 const storedWidth = columnWidths[oldColIdx] || 150
                 const widthStyle = {
@@ -203,15 +204,14 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                 const deletedHeaderName = columnDiff.oldHeaders && columnDiff.oldHeaders[oldColIdx]
                   ? columnDiff.oldHeaders[oldColIdx]
                   : '(Deleted)'
-                
-                // positions から confidence を取得（あれば）
+
                 const positionInfo = columnDiff.positions?.find(
                   p => p.type === 'removed' && p.index === oldColIdx
                 )
                 const confidence = positionInfo?.confidence ?? 0.5
                 const confidenceLabel = confidence >= 0.85 ? '' : ' (推定)'
-                
-                return (
+
+                displayHeaders.push(
                   <th
                     key={`deleted-header-${oldColIdx}`}
                     className="column-header git-diff-column-not-exist"
@@ -225,9 +225,10 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                     </div>
                   </th>
                 )
+                continue
               }
-              
-              // 削除されていない列：mapping または計算で新テーブルのヘッダを取得
+
+              // 削除されていない列：mapping または削除前考慮で新インデックスを算出してヘッダ名を取得
               let newColIdx: number
               if (hasMapping && columnDiff.mapping![oldColIdx] !== -1) {
                 newColIdx = columnDiff.mapping![oldColIdx]
@@ -235,10 +236,10 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                 const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
                 newColIdx = oldColIdx - deletedBeforeThisCol
               }
-              
+
               const header = headers[newColIdx] || ''
               const col = newColIdx
-              
+
               const columnLetter = getColumnLetter(oldColIdx)
               const storedWidth = columnWidths[newColIdx] || 150
               const widthStyle = {
@@ -250,12 +251,11 @@ const TableHeader: React.FC<TableHeaderProps> = ({
               const isSelected = selectedCols?.has(newColIdx)
               const isFullySelected = fullySelectedCols?.has(newColIdx)
 
-              return (
+              displayHeaders.push(
                 <th
                   key={col}
                   onClick={(e) => handleColumnHeaderClick(col, e)}
                   onMouseDown={(_e) => {
-                    // Start column drag if needed
                     if (getDragProps) {
                       // Handle drag start
                     }
@@ -324,7 +324,49 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   />
                 </th>
               )
-            })
+            }
+
+            // positions を使って追加列をヘッダに挿入（追加列は newIndex / index を使用）
+            if (columnDiff.positions && columnDiff.positions.length > 0) {
+              const addedPositions = columnDiff.positions.filter(p => p.type === 'added')
+              addedPositions.forEach(pos => {
+                const insertIdx = pos.newIndex ?? pos.index
+                const addedColWidth = columnWidths[insertIdx] || 150
+                const headerContent = headers[insertIdx] || ''
+                const headerCell = (
+                  <th
+                    key={`header-added-${insertIdx}`}
+                    data-col={insertIdx}
+                    className="column-header"
+                    style={{
+                      width: `${addedColWidth}px`,
+                      minWidth: `${addedColWidth}px`,
+                      maxWidth: `${addedColWidth}px`
+                    }}
+                    onClick={(e) => handleColumnHeaderClick(insertIdx, e)}
+                    onDoubleClick={() => handleHeaderDoubleClick(insertIdx)}
+                  >
+                    <div className="header-content">
+                      <div className="column-letter">{getColumnLetter(insertIdx)}</div>
+                      {headerConfig?.hasColumnHeaders !== false && (
+                        <div className="column-title" title="Double-click to edit header">{headerContent}</div>
+                      )}
+                    </div>
+                    <div
+                      className="resize-handle"
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={(e) => { e.stopPropagation(); handleAutoFit(insertIdx) }}
+                      onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, insertIdx) }}
+                    />
+                  </th>
+                )
+
+                // 配列長を超える場合は末尾に追加される（splice の挙動）
+                displayHeaders.splice(insertIdx, 0, headerCell)
+              })
+            }
+
+            return displayHeaders
           }
           
           // 通常行：削除がない場合、既存ロジックでヘッダをレンダリング
