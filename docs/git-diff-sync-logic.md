@@ -14,6 +14,7 @@
 - この構成により UI の応答性を維持しつつ、git 差分情報を遅延更新する形を取っています（差分が空で到着する初動は想定内で、後続の `updateGitDiff` で補完されます）。
 
 
+
 ## データフロー
 
 ### 1. 初期ロード時（`requestTableData` コマンド）
@@ -60,8 +61,7 @@ Extension                                  Webview
     |                                        |
     | (2) セルを更新                        |
     | (3) ファイルに保存                    |
-    | (4) clearDiffCache() 呼び出し         |
-    | (5) updateTableData に差分を含めて送信 |
+    | (4) updateTableData に差分を含めて送信 |
     |------------------------------------>  |
     |                                        | handleTableDataMessage
     |                                        | - allTables 更新
@@ -83,9 +83,8 @@ Extension                                  Webview
 Extension                                  Webview
     |                                        |
     | (1) ファイル変更検知                  |
-    | (2) clearDiffCache() 呼び出し         |
-    | (3) 差分を再計算してから                |
-    | (4) updateTableData 送信              |
+    | (2) 差分を再計算してから              |
+    | (3) updateTableData 送信              |
     |------------------------------------>  |
     |                                        | handleTableDataMessage
     |                                        | - UI 更新
@@ -192,7 +191,6 @@ const onGitDiffData = useCallback((diffData: Array<{tableIndex: number, gitDiff:
 **原因の仮説：**
 1. `getGitDiffForTable()` の計算タイミングが短い（< 50ms）
 2. ファイル保存直後に git のステージング状態がまだ更新されていない
-3. `clearDiffCache()` のタイミング問題
 
 **ログ証拠：**
 ```
@@ -281,24 +279,6 @@ webviewManager.updateTableData(panel, tablesWithGitDiff, uri)
 **欠点：**
 - テーブル表示が遅延（差分計算待機）
 
-### 案 C: git diff キャッシュ戦略改善
-
-`clearDiffCache()` を呼ぶタイミングと、キャッシュの有効期間を明確にする：
-
-```typescript
-// ファイル保存直後は差分計算を強制（キャッシュ無視）
-const gitDiff = await getGitDiffForTable(
-  uri,
-  tableData.metadata.startLine,
-  tableData.metadata.endLine,
-  tableData.rows.length,
-  tableMarkdown,
-  true  // forceRecalculate フラグを追加
-)
-```
-
----
-
 ## 推奨実装方針
 
 **短期（現在の運用）：**
@@ -306,9 +286,8 @@ const gitDiff = await getGitDiffForTable(
 - 実装面では `columnDiffMap` / `gitDiffMap` による差分の個別管理で既知のタイミング問題に対応しています。
 
 **長期（安定性向上）：**
-- 案 C を検討：git diff キャッシュ戦略を明確化
-- タイムスタンプベースのキャッシュ検証を導入
-- git 差分計算の単体テストを拡充
+- 差分計算の単体テストを拡充
+- E2E テストで git diff 表示の回帰を担保
 
 ---
 
@@ -414,8 +393,6 @@ webviewManager.updateTableData(panel, tablesWithGitDiff, uri);
 // 差分計算を背景でスケジュール
 (async () => {
     try {
-        clearDiffCache(fileUri);
-        
         // ... 非同期で全テーブルの差分計算 ...
         const tablesWithGitDiff = await Promise.all(...);
         

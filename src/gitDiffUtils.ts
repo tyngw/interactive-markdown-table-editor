@@ -17,18 +17,6 @@ export enum GitDiffStatus {
     DELETED = 'deleted'
 }
 
-/**
- * Git diffキャッシュ
- * 同じファイルの同じ範囲に対するdiff結果をキャッシュして、パフォーマンスを向上
- */
-interface DiffCacheEntry {
-    uri: string;
-    timestamp: number;
-    lineDiffs: LineDiff[];
-}
-
-const diffCache = new Map<string, DiffCacheEntry>();
-const CACHE_TTL = 5000; // 5秒間キャッシュを保持
 
 /**
  * 行のGit差分情報
@@ -160,30 +148,8 @@ export async function getGitDiffForTable(
             return [];
         }
 
-        // 詳細な行ごとの差分情報を取得（キャッシュを使用）
-        const cacheKey = `${uri.toString()}:${tableStartLine}:${tableEndLine}`;
-        const cached = diffCache.get(cacheKey);
-        const now = Date.now();
-        
-        let lineDiffs: LineDiff[] | null = null;
-        
-        // キャッシュをチェック
-        if (cached && (now - cached.timestamp) < CACHE_TTL) {
-            lineDiffs = cached.lineDiffs;
-            console.log('[GitDiff] Using cached diff result');
-        } else {
-            // キャッシュが無効または存在しない場合、新しいdiffを取得
-            lineDiffs = await getLineByLineDiff(uri, workspaceFolder.uri.fsPath, tableStartLine, tableEndLine);
-            
-            // キャッシュを更新
-            if (lineDiffs) {
-                diffCache.set(cacheKey, {
-                    uri: uri.toString(),
-                    timestamp: now,
-                    lineDiffs: lineDiffs
-                });
-            }
-        }
+        // 詳細な行ごとの差分情報を取得（毎回新規に取得する）
+        const lineDiffs = await getLineByLineDiff(uri, workspaceFolder.uri.fsPath, tableStartLine, tableEndLine);
         
         if (!lineDiffs || lineDiffs.length === 0) {
             // 差分情報が取得できない場合、ファイル全体の状態を使用
@@ -342,24 +308,7 @@ async function getLineByLineDiff(
     }
 }
 
-/**
- * キャッシュをクリア（ファイルが変更された場合など）
- */
-export function clearDiffCache(uri?: vscode.Uri): void {
-    if (uri) {
-        // 特定のファイルのキャッシュをクリア
-        const keysToDelete: string[] = [];
-        for (const [key, entry] of diffCache.entries()) {
-            if (entry.uri === uri.toString()) {
-                keysToDelete.push(key);
-            }
-        }
-        keysToDelete.forEach(key => diffCache.delete(key));
-    } else {
-        // すべてのキャッシュをクリア
-        diffCache.clear();
-    }
-}
+// キャッシュ機構を無効化したため、clearDiffCache は不要になりました。
 
 /**
  * Git diffの出力を解析して行ごとの差分情報を抽出
