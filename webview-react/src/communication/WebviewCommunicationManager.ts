@@ -182,12 +182,20 @@ export class WebviewCommunicationManager {
    */
   private async handleNotification(message: NotificationMessage): Promise<void> {
     this.isConnected = true;
+    // 詳細ログ: 受信通知の内容とハンドラー存在を記録
+    try {
+      console.log('[WebComm] Notification received:', message.command, 'data:', message.data);
+    } catch (_) {
+      console.log('[WebComm] Notification received (could not stringify data):', message.command);
+    }
 
     // 通知ハンドラー（同期的）を実行
     const notificationHandler = this.notificationHandlers.get(message.command);
+    console.log('[WebComm] notificationHandler exists:', Boolean(notificationHandler));
     if (notificationHandler) {
       try {
         notificationHandler(message.data);
+        console.log('[WebComm] notificationHandler executed for', message.command);
       } catch (error) {
         console.error('[WebComm] Notification handler error:', error);
       }

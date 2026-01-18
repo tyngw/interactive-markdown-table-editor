@@ -64,10 +64,21 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     });
 
     manager.registerNotificationHandler(ExtensionCommand.UPDATE_GIT_DIFF, (data) => {
-      console.log('[useCommunication] Received git diff update:', data);
+      // 詳細ログ: 受信した生データとネスト有無を記録
+      try {
+        console.log('[useCommunication] Received git diff update (raw):', data);
+      } catch (e) {
+        console.log('[useCommunication] Received git diff update (raw) - could not stringify');
+      }
       const cb = callbacksRef.current;
       if (cb.onGitDiffData) {
-        cb.onGitDiffData(data);
+        // 拡張側が { data: payload } の形式でラップして送る場合があるため展開
+        if (data && typeof data === 'object' && 'data' in data) {
+          console.log('[useCommunication] Unwrapping nested .data for git diff');
+          cb.onGitDiffData((data as any).data);
+        } else {
+          cb.onGitDiffData(data);
+        }
       }
     });
 

@@ -538,9 +538,25 @@ export function activate(context: vscode.ExtensionContext) {
                         })
                     );
 
-                    // すべてのテーブルの差分を含めて再送信
-                    debug('[GitDiffDebug] Sending complete table data with Git diffs to webview.');
-                    webviewManager.updateTableData(panel, tablesWithGitDiff, fileUri);
+                    // すべてのテーブルの差分を個別通知で送信（初回のテーブルデータ送信はそのまま維持）
+                    debug('[GitDiffDebug] Sending Git diffs to webview via updateGitDiff.');
+                    try {
+                        const diffsPayload = tablesWithGitDiff.map((tbl, idx) => ({
+                            tableIndex: idx,
+                            gitDiff: tbl.gitDiff,
+                            columnDiff: (tbl as any).columnDiff
+                        }));
+                        // 既存の updateTableData の再送を止め、差分情報のみ別通知で送る
+                        webviewManager.updateGitDiff(panel, diffsPayload);
+                    } catch (err) {
+                        console.error('[GitDiffDebug] Failed to send git diffs via updateGitDiff:', err);
+                        // フォールバック: 互換性のために tablesWithGitDiff を再送しておく
+                        try {
+                            webviewManager.updateTableData(panel, tablesWithGitDiff, fileUri);
+                        } catch (err2) {
+                            console.error('[GitDiffDebug] Fallback updateTableData also failed:', err2);
+                        }
+                    }
                 })();
 
 

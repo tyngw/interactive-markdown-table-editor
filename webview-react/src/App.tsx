@@ -96,8 +96,27 @@ function AppContent() {
       setCurrentTableIndex(0)
       currentIndexRef.current = 0
     }
-    // テーブルデータ更新時にgitDiffMapをリセット（古いデータの遺残を防ぐ）
-    setGitDiffMap(new Map())
+    // テーブルデータ更新時は、受信した各テーブルに含まれるgitDiffで既存の
+    // gitDiffMapを上書きし、含まれていないテーブルについては既存の値を保持する。
+    // これにより、初回ロードで差分が未計算の一時的な更新が来ても、
+    // 既に取得済みのgitDiffが上書きされて消えるのを防ぐ。
+    setGitDiffMap(prev => {
+      const next = new Map(prev);
+      try {
+        if (Array.isArray(data)) {
+          data.forEach((tbl: any, idx: number) => {
+            if (tbl && tbl.gitDiff) {
+              next.set(idx, tbl.gitDiff);
+            }
+          });
+        } else if (data && (data as any).gitDiff) {
+          next.set(0, (data as any).gitDiff);
+        }
+      } catch (e) {
+        // 保守的に何もしない
+      }
+      return next;
+    })
     setLoading(false)
   }, [])
 

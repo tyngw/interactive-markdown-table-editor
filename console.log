@@ -1,0 +1,112 @@
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: null, displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+index.js:1 [useSelection] selectCell called: {row: 0, col: 1, extend: false, toggle: false, currentAnchor: {…}}
+index.js:1 [useSelection] Single cell selection, setting new anchor: {row: 0, col: 1}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [useCommunication] Sending message: updateCell {row: 0, col: 1, value: '3台x', tableIndex: 0}
+index.js:149 [WebComm] Sent message: notification updateCell 1768710483453-fmqifaz1s
+index.js:1 [useSelection] selectCell called: {row: 1, col: 1, extend: false, toggle: false, currentAnchor: {…}}
+index.js:1 [useSelection] Single cell selection, setting new anchor: {row: 1, col: 1}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: null, displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+index.js:1 [MTE][useTableEditor] initialData changed. {internalUpdateRef: true, withinEchoWindow: true, wasInternal: true, currentEditingCell: null, initializeSelectionOnDataChange: true, …}
+index.js:1 [MTE][useTableEditor] Skipping sort reset and selection initialization due to internal or echo update
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:149 [WebComm] Received message: notification operationSuccess 1768710483464-gyqxb76vz
+index.js:149 [WebComm] Notification received: operationSuccess data: {message: 'save-started', data: {…}}
+index.js:149 [WebComm] notificationHandler exists: true
+index.js:149 [useCommunication] Received operation success: {message: 'save-started', data: {…}}
+index.js:149 [WebComm] notificationHandler executed for operationSuccess
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: 'saving', displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+console.ts:139 [Extension Host] [ExtComm] Sending updateTableData to webview, preview: {keys: Array(4)} (at console.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:215:29517))
+console.ts:139 [Extension Host] [ExtComm] table 0 has gitDiff: true has columnDiff: true (at console.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:215:29517))
+console.ts:139 [Extension Host] [ExtComm] Sending updateTableData to webview, preview: {keys: Array(4)} (at console.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:215:29517))
+console.ts:139 [Extension Host] [ExtComm] table 0 has gitDiff: true has columnDiff: true (at console.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:215:29517))
+index.js:149 [WebComm] Received message: notification updateTableData 1768710483488-x5i3hmf0n
+index.js:149 [WebComm] Notification received: updateTableData data: {command: 'updateTableData', data: Array(1), fileInfo: {…}, gitThemeColors: {…}}
+index.js:149 [WebComm] notificationHandler exists: true
+index.js:149 [useCommunication] Received table data update: {command: 'updateTableData', data: Array(1), fileInfo: {…}, gitThemeColors: {…}}
+index.js:149 [WebComm] notificationHandler executed for updateTableData
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: 'saving', displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+index.js:1 [MTE][useTableEditor] initialData changed. {internalUpdateRef: true, withinEchoWindow: true, wasInternal: true, currentEditingCell: null, initializeSelectionOnDataChange: true, …}
+index.js:1 [MTE][useTableEditor] Skipping sort reset and selection initialization due to internal or echo update
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: 'saving', displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+index.js:149 [WebComm] Received message: notification updateTableData 1768710483495-ut9ekl5y6
+index.js:149 [WebComm] Notification received: updateTableData data: {command: 'updateTableData', data: Array(1), fileInfo: {…}, gitThemeColors: {…}}
+index.js:149 [WebComm] notificationHandler exists: true
+index.js:149 [useCommunication] Received table data update: {command: 'updateTableData', data: Array(1), fileInfo: {…}, gitThemeColors: {…}}
+index.js:149 [WebComm] notificationHandler executed for updateTableData
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: 'saving', displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+index.js:1 [MTE][useTableEditor] initialData changed. {internalUpdateRef: true, withinEchoWindow: true, wasInternal: true, currentEditingCell: null, initializeSelectionOnDataChange: true, …}
+index.js:1 [MTE][useTableEditor] Skipping sort reset and selection initialization due to internal or echo update
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: 'saving', displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+console.ts:139 [Extension Host] [ExtComm] Sending updateTableData to webview, preview: {keys: Array(4)} (at console.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:215:29517))
+console.ts:139 [Extension Host] [ExtComm] table 0 has gitDiff: true has columnDiff: true (at console.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:215:29517))
+index.js:149 [WebComm] Received message: notification updateTableData 1768710483537-5osttlwvl
+index.js:149 [WebComm] Notification received: updateTableData data: {command: 'updateTableData', data: Array(1), fileInfo: {…}, gitThemeColors: {…}}
+index.js:149 [WebComm] notificationHandler exists: true
+index.js:149 [useCommunication] Received table data update: {command: 'updateTableData', data: Array(1), fileInfo: {…}, gitThemeColors: {…}}
+index.js:149 [WebComm] notificationHandler executed for updateTableData
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: 'saving', displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+index.js:1 [MTE][useTableEditor] initialData changed. {internalUpdateRef: true, withinEchoWindow: true, wasInternal: true, currentEditingCell: null, initializeSelectionOnDataChange: true, …}
+index.js:1 [MTE][useTableEditor] Skipping sort reset and selection initialization due to internal or echo update
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+console.ts:139 [Extension Host] [ExtComm] Sending updateTableData to webview, preview: {keys: Array(4)} (at console.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:215:29517))
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: 'saving', displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+console.ts:139 [Extension Host] [ExtComm] table 0 has gitDiff: true has columnDiff: true (at console.<anonymous> (file:///Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/workbench/api/node/extensionHostProcess.js:215:29517))
+index.js:149 [WebComm] Received message: notification updateTableData 1768710483547-fq2hqem6f
+index.js:149 [WebComm] Notification received: updateTableData data: {command: 'updateTableData', data: Array(1), fileInfo: {…}, gitThemeColors: {…}}
+index.js:149 [WebComm] notificationHandler exists: true
+index.js:149 [useCommunication] Received table data update: {command: 'updateTableData', data: Array(1), fileInfo: {…}, gitThemeColors: {…}}
+index.js:149 [WebComm] notificationHandler executed for updateTableData
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: 'saving', displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+index.js:1 [MTE][useTableEditor] initialData changed. {internalUpdateRef: true, withinEchoWindow: true, wasInternal: true, currentEditingCell: null, initializeSelectionOnDataChange: true, …}
+index.js:1 [MTE][useTableEditor] Skipping sort reset and selection initialization due to internal or echo update
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: 'saving', displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+index.js:149 [WebComm] Received message: notification operationSuccess 1768710483550-cdf0a8vyx
+index.js:149 [WebComm] Notification received: operationSuccess data: {message: 'save-completed', data: {…}}
+index.js:149 [WebComm] notificationHandler exists: true
+index.js:149 [useCommunication] Received operation success: {message: 'save-completed', data: {…}}
+index.js:149 [WebComm] notificationHandler executed for operationSuccess
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: 'saved', displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}
+index.js:1 [TableEditor] tableData.columnDiff: {oldColumnCount: 2, newColumnCount: 2, addedColumns: Array(0), deletedColumns: Array(0), oldHeaders: Array(0)} headers: (2) ['ハードウェア名称', '台数']
+index.js:1 [ContextMenu] Rendering with theme: {menuBackground: '#252526', menuForeground: '#cccccc', menuSelectionBackground: '#005FB8', menuSelectionForeground: '#ffffff'}
+index.js:149 [StatusBar] Rendering with props: {showGitDiff: false, propSortState: {…}, saveStatus: null, displaySortState: {…}, themeStatusBarBackground: '#F8F8F8', …}

@@ -374,6 +374,27 @@ export class ExtensionCommunicationManager {
    * テーブルデータ更新の送信
    */
   public updateTableData(data: any): void {
+    // 詳細ログ: 送信前にデータの形状と gitDiff の有無を記録
+    try {
+      const preview = Array.isArray(data)
+        ? { length: data.length, sampleKeys: data[0] && typeof data[0] === 'object' ? Object.keys(data[0]) : undefined }
+        : { keys: data && typeof data === 'object' ? Object.keys(data) : undefined };
+      console.log('[ExtComm] Sending updateTableData to webview, preview:', preview);
+
+      // If wrapper object (e.g., {command, data, ...}), inspect nested data
+      const nested = data && typeof data === 'object' && Array.isArray((data as any).data) ? (data as any).data : null;
+      const arrayToInspect = Array.isArray(data) ? data : nested;
+
+      if (Array.isArray(arrayToInspect)) {
+        arrayToInspect.forEach((tbl: any, i: number) => {
+          try {
+            console.log('[ExtComm] table', i, 'has gitDiff:', !!(tbl && tbl.gitDiff), 'has columnDiff:', !!(tbl && tbl.columnDiff));
+          } catch (_) { /* noop */ }
+        });
+      }
+    } catch (_) {
+      console.log('[ExtComm] Sending updateTableData (could not stringify preview)');
+    }
     this.sendNotification(ExtensionCommand.UPDATE_TABLE_DATA, data);
   }
 
@@ -381,6 +402,16 @@ export class ExtensionCommunicationManager {
    * Git差分更新の送信
    */
   public updateGitDiff(data: any): void {
+    // 詳細ログ: 送信前にパネル・データ形状を記録
+    try {
+      console.log('[ExtComm] Sending updateGitDiff to webview panel:', {
+        panelId: (this.panel && (this.panel as any).viewType) || 'unknown',
+        hasData: !!data,
+        keys: data && typeof data === 'object' ? Object.keys(data) : undefined
+      });
+    } catch (_) {
+      console.log('[ExtComm] Sending updateGitDiff (could not stringify details)');
+    }
     this.sendNotification(ExtensionCommand.UPDATE_GIT_DIFF, data);
   }
 
