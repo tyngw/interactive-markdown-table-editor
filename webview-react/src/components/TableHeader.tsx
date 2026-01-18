@@ -183,7 +183,11 @@ const TableHeader: React.FC<TableHeaderProps> = ({
         {/* Column headers with enhanced styling */}
         {(() => {
           // 列が削除された場合は、削除前の列構造に基づいてレンダリング
+          // 新しいmappingを活用して中間列の追加/削除を正確に処理
           if (columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) {
+            // mapping が存在する場合はそれを使用して、旧→新の対応を取る
+            const hasMapping = columnDiff.mapping && columnDiff.mapping.length > 0
+            
             return Array.from({ length: columnDiff.oldColumnCount }).map((_, oldColIdx) => {
               const isDeletedColumn = columnDiff.deletedColumns.includes(oldColIdx)
               
@@ -200,13 +204,20 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   ? columnDiff.oldHeaders[oldColIdx]
                   : '(Deleted)'
                 
+                // positions から confidence を取得（あれば）
+                const positionInfo = columnDiff.positions?.find(
+                  p => p.type === 'removed' && p.index === oldColIdx
+                )
+                const confidence = positionInfo?.confidence ?? 0.5
+                const confidenceLabel = confidence >= 0.85 ? '' : ' (推定)'
+                
                 return (
                   <th
                     key={`deleted-header-${oldColIdx}`}
                     className="column-header git-diff-column-not-exist"
                     data-col={oldColIdx}
                     style={widthStyle}
-                    title={`Column ${columnLetter}: ${deletedHeaderName}`}
+                    title={`Column ${columnLetter}: ${deletedHeaderName}${confidenceLabel}`}
                   >
                     <div className="header-content">
                       <div className="column-letter">{columnLetter}</div>
@@ -216,9 +227,15 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                 )
               }
               
-              // 削除されていない列：新テーブルのヘッダを取得
-              const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
-              const newColIdx = oldColIdx - deletedBeforeThisCol
+              // 削除されていない列：mapping または計算で新テーブルのヘッダを取得
+              let newColIdx: number
+              if (hasMapping && columnDiff.mapping![oldColIdx] !== -1) {
+                newColIdx = columnDiff.mapping![oldColIdx]
+              } else {
+                const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
+                newColIdx = oldColIdx - deletedBeforeThisCol
+              }
+              
               const header = headers[newColIdx] || ''
               const col = newColIdx
               

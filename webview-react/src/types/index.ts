@@ -20,6 +20,16 @@ export interface RowGitDiff {
   isDeletedRow?: boolean  // 削除行の表示用フラグ（実データ行ではない）
 }
 
+// 列の位置変更情報
+export interface ColumnPositionChange {
+  index: number              // 変更位置（追加の場合は新しい列番号、削除の場合は旧列番号）
+  type: 'added' | 'removed' | 'renamed'
+  header?: string            // ヘッダ名（わかる場合）
+  confidence: number         // 検出信頼度（0.0〜1.0）
+  oldIndex?: number          // renamed時の旧インデックス
+  newIndex?: number          // renamed時の新インデックス
+}
+
 // テーブルの列差分情報
 export interface ColumnDiffInfo {
   oldColumnCount: number      // 変更前の列数
@@ -27,6 +37,11 @@ export interface ColumnDiffInfo {
   addedColumns: number[]      // 追加された列のインデックス（変更後の列番号）
   deletedColumns: number[]    // 削除された列のインデックス（変更前の列番号）
   oldHeaders?: string[]       // 変更前のヘッダ（削除列表示用）
+  newHeaders?: string[]       // 変更後のヘッダ
+  changeType?: 'added' | 'removed' | 'mixed' | 'none'  // 変更種別
+  positions?: ColumnPositionChange[]  // 各位置の変更詳細
+  mapping?: number[]          // 旧インデックス→新インデックスのマッピング（-1は削除）
+  heuristics?: string[]       // 適用した検出手法のメモ
 }
 
 // テーブルデータの型定義

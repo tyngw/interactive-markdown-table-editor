@@ -454,11 +454,116 @@ const TableBody: React.FC<TableBodyProps> = ({
                 const deletedCells = diff.oldContent ? parseTableRowCells(diff.oldContent) : []
                 // 現在の列数（追加された列を含む）
                 const currentColumnCount = headers.length
-                // 削除行の列数
-                const deletedColumnCount = deletedCells.length
                 
                 // 対応する追加行のセルを取得（内容比較用）
                 const addedCells = rowIndex >= 0 ? cells : []
+                
+                // positions/mapping ベースで表示セル配列を構築
+                const displayCells: Array<JSX.Element | null> = []
+                
+                // mapping が利用可能な場合はそれを使用
+                if (columnDiff && columnDiff.mapping && columnDiff.mapping.length > 0) {
+                  // 旧テーブルの各列について処理
+                  for (let oldColIdx = 0; oldColIdx < columnDiff.mapping.length; oldColIdx++) {
+                    const newColIdx = columnDiff.mapping[oldColIdx]
+                    const cellContent = deletedCells[oldColIdx] || ''
+                    
+                    if (headerConfig?.hasRowHeaders && oldColIdx === 0) {
+                      continue
+                    }
+                    
+                    if (newColIdx === -1) {
+                      // この列は削除された → 通常セルとして表示（ハッチングなし）
+                      const cellLines = convertBrTagsToNewlines(cellContent).split('\n')
+                      displayCells.push(
+                        <td key={`deleted-cell-${diff.row}-${index}-${oldColIdx}`} className="git-diff-deleted-cell">
+                          <span className="git-diff-deleted-content">
+                            {cellLines.map((line, lineIndex) => (
+                              <div key={lineIndex}>{line}</div>
+                            ))}
+                          </span>
+                        </td>
+                      )
+                    } else {
+                      // この列は残存 → 内容比較してスタイル決定
+                      const addedCellContent = addedCells[newColIdx] || ''
+                      const isSameContent = cellContent.trim() === addedCellContent.trim()
+                      const cellClassName = ['git-diff-deleted-cell', isSameContent ? 'git-diff-same-content' : ''].filter(Boolean).join(' ')
+                      const cellLines = convertBrTagsToNewlines(cellContent).split('\n')
+                      
+                      displayCells.push(
+                        <td key={`deleted-cell-${diff.row}-${index}-${oldColIdx}`} className={cellClassName}>
+                          <span className="git-diff-deleted-content">
+                            {cellLines.map((line, lineIndex) => (
+                              <div key={lineIndex}>{line}</div>
+                            ))}
+                          </span>
+                        </td>
+                      )
+                    }
+                  }
+                  
+                  // positions を使って追加列のプレースホルダを適切な位置に挿入
+                  if (columnDiff.positions && columnDiff.positions.length > 0) {
+                    const addedPositions = columnDiff.positions.filter(p => p.type === 'added')
+                    addedPositions.forEach(pos => {
+                      const insertIdx = pos.newIndex ?? pos.index
+                      const addedColWidth = editorState.columnWidths[insertIdx] || 150
+                      const placeholder = (
+                        <td 
+                          key={`deleted-hatched-${diff.row}-${index}-${insertIdx}`} 
+                          className="git-diff-deleted-cell git-diff-column-not-exist"
+                          data-is-placeholder={true}
+                          data-placeholder-reason="added-column"
+                          style={{ width: `${addedColWidth}px`, minWidth: `${addedColWidth}px`, maxWidth: `${addedColWidth}px` }}
+                        >
+                          <span className="git-diff-deleted-content"></span>
+                        </td>
+                      )
+                      // 正しい位置に挿入
+                      displayCells.splice(insertIdx, 0, placeholder)
+                    })
+                  }
+                } else {
+                  // mapping がない場合は従来のロジック（フォールバック）
+                  deletedCells.forEach((cellContent, cellIndex) => {
+                    if (headerConfig?.hasRowHeaders && cellIndex === 0) {
+                      return
+                    }
+                    
+                    const addedCellContent = addedCells[cellIndex] || ''
+                    const isSameContent = cellContent.trim() === addedCellContent.trim()
+                    const cellClassName = ['git-diff-deleted-cell', isSameContent ? 'git-diff-same-content' : ''].filter(Boolean).join(' ')
+                    const cellLines = convertBrTagsToNewlines(cellContent).split('\n')
+                    
+                    displayCells.push(
+                      <td key={`deleted-cell-${diff.row}-${index}-${cellIndex}`} className={cellClassName}>
+                        <span className="git-diff-deleted-content">
+                          {cellLines.map((line, lineIndex) => (
+                            <div key={lineIndex}>{line}</div>
+                          ))}
+                        </span>
+                      </td>
+                    )
+                  })
+                  
+                  // 末尾パディング（フォールバック）
+                  if (currentColumnCount > deletedCells.length) {
+                    Array.from({ length: currentColumnCount - deletedCells.length }).forEach((_, i) => {
+                      const addedColIndex = deletedCells.length + i
+                      const addedColWidth = editorState.columnWidths[addedColIndex] || 150
+                      displayCells.push(
+                        <td 
+                          key={`deleted-hatched-${diff.row}-${index}-${addedColIndex}`} 
+                          className="git-diff-deleted-cell git-diff-column-not-exist"
+                          style={{ width: `${addedColWidth}px`, minWidth: `${addedColWidth}px`, maxWidth: `${addedColWidth}px` }}
+                        >
+                          <span className="git-diff-deleted-content"></span>
+                        </td>
+                      )
+                    })
+                  }
+                }
                 
                 const deletedRowIndicator = (
                   <tr
@@ -469,54 +574,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                     <td className="row-number git-diff-deleted">
                       <span className="git-diff-icon git-diff-deleted">-</span>
                     </td>
-                    {/* 削除行のセルを表示 */}
-                    {deletedCells.map((cellContent, cellIndex) => {
-                      if (headerConfig?.hasRowHeaders && cellIndex === 0) {
-                        return null
-                      }
-                      // 列削除を考慮したセルインデックスのマッピング
-                      // 削除されたセルのインデックスを数えて、追加行でのインデックスを計算
-                      let addedCellIndex = cellIndex
-                      if (columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) {
-                        // cellIndexより前に削除された列の数を数える
-                        const deletedCountBefore = columnDiff.deletedColumns.filter(col => col < cellIndex).length
-                        addedCellIndex = cellIndex - deletedCountBefore
-                      }
-                      
-                      // 対応する追加行のセルと内容を比較
-                      const addedCellContent = addedCells[addedCellIndex] || ''
-                      const isSameContent = cellContent.trim() === addedCellContent.trim()
-                      const cellClassName = ['git-diff-deleted-cell', isSameContent ? 'git-diff-same-content' : ''].filter(Boolean).join(' ')
-                      
-                      // <br/> タグを改行に変換して表示
-                      const cellLines = convertBrTagsToNewlines(cellContent).split('\n')
-                      
-                      return (
-                        <td key={`deleted-cell-${diff.row}-${index}-${cellIndex}`} className={cellClassName}>
-                          <span className="git-diff-deleted-content">
-                            {cellLines.map((line, lineIndex) => (
-                              <div key={lineIndex}>{line}</div>
-                            ))}
-                          </span>
-                        </td>
-                      )
-                    })}
-                    {/* 列が追加された場合、削除行には存在しない列に網掛けセルを追加 */}
-                    {currentColumnCount > deletedColumnCount && 
-                      Array.from({ length: currentColumnCount - deletedColumnCount }).map((_, i) => {
-                        const addedColIndex = deletedColumnCount + i
-                        const addedColWidth = editorState.columnWidths[addedColIndex] || 150
-                        return (
-                          <td 
-                            key={`deleted-hatched-${diff.row}-${index}-${addedColIndex}`} 
-                            className="git-diff-deleted-cell git-diff-column-not-exist"
-                            style={{ width: `${addedColWidth}px`, minWidth: `${addedColWidth}px`, maxWidth: `${addedColWidth}px` }}
-                          >
-                            <span className="git-diff-deleted-content"></span>
-                          </td>
-                        )
-                      })
-                    }
+                    {displayCells}
                   </tr>
                 )
                 renderedRows.push(deletedRowIndicator)
@@ -604,11 +662,24 @@ const TableBody: React.FC<TableBodyProps> = ({
                     }
                     
                     if (isDeletedColumn) {
-                      // 削除された列の位置にはハッチングセルを表示
+                      // 削除された列の位置にはハッチングセルを表示（プレースホルダ）
+                      // positions から confidence を取得（あれば）
+                      const positionInfo = columnDiff.positions?.find(
+                        p => p.type === 'removed' && p.index === oldColIdx
+                      )
+                      const confidence = positionInfo?.confidence ?? 0.5
+                      const isPlaceholder = true
+                      const placeholderTitle = confidence >= 0.85 
+                        ? 'この列は削除されました'
+                        : 'この列は削除されました（推定）'
+                      
                       return (
                         <td 
                           key={`added-hatched-${rowIndex}-${oldColIdx}`}
                           className="git-diff-column-not-exist"
+                          data-is-placeholder={isPlaceholder}
+                          data-placeholder-reason="deleted-column"
+                          title={placeholderTitle}
                           style={{ 
                             width: `${editorState.columnWidths[oldColIdx] || 150}px`,
                             minWidth: `${editorState.columnWidths[oldColIdx] || 150}px`,
@@ -619,9 +690,15 @@ const TableBody: React.FC<TableBodyProps> = ({
                     }
                     
                     // 削除されていない列：新テーブルのセル内容を取得
-                    // oldColIdx から newColIdx へのマッピング
-                    const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
-                    const newColIdx = oldColIdx - deletedBeforeThisCol
+                    // mapping が存在する場合はそれを使用、なければ従来のロジック
+                    let newColIdx: number
+                    const hasMapping = columnDiff.mapping && columnDiff.mapping.length > 0
+                    if (hasMapping && columnDiff.mapping![oldColIdx] !== -1) {
+                      newColIdx = columnDiff.mapping![oldColIdx]
+                    } else {
+                      const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
+                      newColIdx = oldColIdx - deletedBeforeThisCol
+                    }
                     
                     // ヘッダ行（rowIndex=-1）の場合は、columnDiff.oldHeaders から削除前のヘッダ名を取得
                     // 通常行の場合は、cells から削除前の列インデックスに対応するセル内容を取得
