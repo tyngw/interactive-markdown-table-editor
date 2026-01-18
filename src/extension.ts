@@ -9,7 +9,7 @@ import { UndoRedoManager } from './undoRedoManager';
 import { decodeBuffer, detectTextEncoding, parseCsv, toRectangular } from './csvUtils';
 import { normalizeForImport } from './encodingNormalizer';
 import { normalizeForShiftJisExport } from './encodingNormalizer';
-import { getGitDiffForTable, clearDiffCache, detectColumnDiff } from './gitDiffUtils';
+import { getGitDiffForTable, detectColumnDiff } from './gitDiffUtils';
 
 // 各ファイルの差分計算状況を追跡するマップ
 // キー: ファイル URI, 値: 計算中のプロミスまたは null
@@ -354,7 +354,7 @@ export function activate(context: vscode.ExtensionContext) {
         const newCalculation = previousCalculation
             .then(async () => {
                 try {
-                    clearDiffCache(fileUri);
+                    // キャッシュを無効化したため、以前はここでキャッシュをクリアしていましたが不要です
                     
                     // Get all table data managers for this file
                     const allTableData: TableData[] = [];
@@ -666,8 +666,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        // ファイルが変更された場合、Git diffキャッシュをクリア
-        clearDiffCache(changedUri);
+        // キャッシュ機構を無効化したため、かつてここでキャッシュをクリアしていました（削除済み）
 
         // 変更されたファイルに対応するパネルを全て取得
         const filePanels = webviewManager.getPanelsForFile(changedUri.toString());
@@ -1630,8 +1629,7 @@ export function activate(context: vscode.ExtensionContext) {
                 updatedMarkdown
             );
 
-            // Git差分情報のキャッシュをクリア（ファイルが変更されたため）
-            clearDiffCache(uri);
+            // キャッシュ機構を無効化したため、この呼び出しは不要になりました
 
             // すべてのテーブルを再送
             const allTableData: TableData[] = [];
