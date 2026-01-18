@@ -333,24 +333,54 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                 const insertIdx = pos.newIndex ?? pos.index
                 const addedColWidth = columnWidths[insertIdx] || 150
                 const headerContent = headers[insertIdx] || ''
+                // ヘッダを通常ヘッダと同様の構造で生成してスタイル差を無くす
+                const userResizedClassAdded = columnWidths[insertIdx] && columnWidths[insertIdx] !== 150 ? 'user-resized' : ''
+                const isSelectedAdded = selectedCols?.has(insertIdx)
+                const isFullySelectedAdded = fullySelectedCols?.has(insertIdx)
+
                 const headerCell = (
                   <th
                     key={`header-added-${insertIdx}`}
                     data-col={insertIdx}
-                    className="column-header"
+                    className={`column-header ${userResizedClassAdded} ${isFullySelectedAdded ? 'selected' : (isSelectedAdded ? 'highlighted' : '')}`}
                     style={{
                       width: `${addedColWidth}px`,
                       minWidth: `${addedColWidth}px`,
                       maxWidth: `${addedColWidth}px`
                     }}
                     onClick={(e) => handleColumnHeaderClick(insertIdx, e)}
+                    onMouseDown={(_e) => { if (getDragProps) { /* noop */ } }}
                     onDoubleClick={() => handleHeaderDoubleClick(insertIdx)}
+                    onContextMenu={(e) => { e.preventDefault(); if (onShowColumnContextMenu) { onShowColumnContextMenu(e, insertIdx) } }}
+                    {...(getDragProps ? getDragProps('column', insertIdx) : {})}
+                    {...(getDropProps ? getDropProps('column', insertIdx) : {})}
                   >
                     <div className="header-content">
                       <div className="column-letter">{getColumnLetter(insertIdx)}</div>
                       {headerConfig?.hasColumnHeaders !== false && (
-                        <div className="column-title" title="Double-click to edit header">{headerContent}</div>
+                        editingHeader === insertIdx ? (
+                          <input
+                            className="header-input"
+                            type="text"
+                            defaultValue={headerContent}
+                            autoFocus
+                            onBlur={(e) => handleHeaderBlur(insertIdx, e.target.value)}
+                            onKeyDown={(e) => handleHeaderKeyDown(e, insertIdx)}
+                          />
+                        ) : (
+                          <div className="column-title" title="Double-click to edit header">{headerContent}</div>
+                        )
                       )}
+                      <div
+                        className="sort-indicator"
+                        onClick={(e) => { e.stopPropagation(); onSort(insertIdx) }}
+                        title="Sort column"
+                        style={{ visibility: columnDiff ? 'hidden' : 'visible' }}
+                      >
+                        {sortState?.column === insertIdx && sortState?.direction !== 'none' ? (
+                          sortState?.direction === 'asc' ? '↑' : '↓'
+                        ) : '↕'}
+                      </div>
                     </div>
                     <div
                       className="resize-handle"
