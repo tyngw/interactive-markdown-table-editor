@@ -351,6 +351,314 @@ webviewManager.updateTableData(panel, tablesWithGitDiff, uri)
 
 ---
 
+## 列追加・削除検知（仕様）
+
+### 目的
+
+Markdown テーブルにおける列の追加・削除を、git diff 機能で確実に検知するための仕様を定義する。
+
+### 仕様概要
+
+- 列数は「エスケープされていないパイプ文字（`|`）」の数をもとに判定する。
+- 前回の列数と現在の列数が異なる場合に、列の追加／削除を検知し `columnDiff` を生成する。
+- 判定はヘッダ行（最初の表見出し行）を主要な基準とするが、必要に応じてデータ行も参照できる。
+
+### アルゴリズム（要点）
+
+1. 対象行の抽出
+   - テーブルのヘッダ行（および区切り行）を対象とする。複数テーブルがある場合は各テーブルごとに判定する。
+   - フェンス付きコードブロック内や、テーブル外の行は無視する。
+
+2. エスケープ & コードスパン処理
+   - 逆スラッシュでエスケープされたパイプ（`\|`）は列区切りと見なさない。
+   - バッククォートで囲まれたコードスパン（`` `...` ``）内のパイプは無視する。
+
+3. 列数算出（ヘッダ行に対して）
+   - ヘッダ行を左からスキャンし、エスケープやコードスパン内でない `|` を検出するたびにカウントを増やす。
+   - 列数 = 有効な `|` の数 + 1（ただし、パイプが1つも見つからない場合は 1 列と扱う）。
+
+4. 変化検出
+   - 既存データ（直近のコミット／保存時の表）とワークツリー（編集後の表）それぞれで上記算出を行い、列数が異なれば追加/削除を検知する。
+   - 変更内容は `columnDiff` として次の情報を含める：
+     - `oldColumnCount`: 以前の列数
+     - `newColumnCount`: 現在の列数
+     - `changeType`: `added` | `removed`
+     - `notes` (任意): 追加・削除された列の推定位置やヘッダテキストの差（文字列ベースのヒューリスティック）
+
+### 通信フォーマット（updateGitDiff に含める想定）
+
+例:
+
+```json
+{
+  "tableIndex": 0,
+  "gitDiff": [ /* 既存の行差分 */ ],
+  "columnDiff": {
+    "oldColumnCount": 3,
+    "newColumnCount": 4,
+    "changeType": "added",
+    "notes": "header: 新しい列 'Tag' を検出"
+  }
+}
+```
+
+Webview 側では受け取った `columnDiff` を `columnDiffMap` に格納し、`currentTableData` の合成ロジックで優先的に使用する。
+
+### 判定タイミング
+
+- `getGitDiffForTable()` 実行時（差分計算フェーズ）で、コミット時の表とワークツリーの表を比較して判定する。
+- `updateTableData` を受信した際にも行数を再計測し、即時に列変化があれば短時間で `updateGitDiff` を送ることで UI に反映する。
+
+### テストケース（必須）
+
+- 単純な表: `| a | b | c |` → 列数 3
+- 先頭/末尾パイプ省略: `a | b | c` → 列数 3
+- エスケープされたパイプ: `a \| b | c` → 列数 2
+- コードスパン内のパイプ: `` `a|b` | c`` → 列数 2
+- 追加/削除の差分: コミット時列数 3 → ワークツリー列数 4（追加と判定）
+
+上記をカバーするユニットテストを `src/gitDiffUtils.ts` の列カウントロジックに追加することを推奨する。
+
+### 中間列（インサート／削除）検知の強化
+
+目的：既存テーブルの途中（中間）に列が追加または削除された場合でも、正しい位置と変更内容を検知して `columnDiff` を生成する。
+
+方針（要点）
+
+- 単純な列数差だけでなく、ヘッダセル単位のマッチングで「どの位置」に列の増減があったかを特定する。
+- ヘッダ名が変更された場合や重複ヘッダがある場合は、複数のヒューリスティックを組み合わせて推定する。
+
+アルゴリズム（推奨実装）
+
+1. ヘッダセルの抽出
+   - ヘッダ行をパイプ区切りで分割する際、前節のエスケープ／コードスパン処理を適用して正確なセルテキスト配列 `oldHeaders` / `newHeaders` を得る。
+   - 各セルは `trim()` して正規化（連続空白を単一化、全角半角の簡易正規化など）する。
+
+2. 直接マッチング（パス1）
+   - 同一文字列のヘッダセルを優先してインデックスをマップする（最左優先でペアリング）。
+
+3. ファジーマッチング（パス2）
+   - 残った未マッチセルについては、正規化した小文字比較、類似度（例：レーベンシュタイン距離やトークンの部分一致）でマッチ候補を探す。
+
+4. LCS（最長共通部分列）による挿入位置検出（パス3）
+   - `oldHeaders` と `newHeaders` の LCS を計算し、LCS を保持する要素が連続する位置を基準に、LCS に含まれない要素が挿入／削除された範囲として扱う。
+   - 例えば old=[A,B,C] new=[A,B,X,C] の場合、LCS=[A,B,C] から X が index=2 に挿入されたと判定する。
+
+5. 行ベースの補正（フォールバック）
+   - ヘッダ情報で確定できない場合は、複数のデータ行を参照して各行ごとの列数・セル分割結果の多数決を取り、最も頻度の高い列配置を採用する。
+
+6. 出力（`columnDiff` の拡張）
+   - 既存の `oldColumnCount` / `newColumnCount` / `changeType` に加え、以下を含める：
+     - `positions`: 変更箇所の配列。各要素は `{ index: number, type: 'added'|'removed', header?: string, confidence: 0.0-1.0 }`。
+     - `mapping`: 旧インデックスから新インデックスへの推定マッピング（任意、デバッグ用）。
+
+通信フォーマット 例（拡張）:
+
+```json
+{
+  "tableIndex": 0,
+  "columnDiff": {
+    "oldColumnCount": 3,
+    "newColumnCount": 4,
+    "changeType": "added",
+    "positions": [
+      { "index": 2, "type": "added", "header": "Tag", "confidence": 0.95 }
+    ],
+    "mapping": [0,1,3]
+  }
+}
+```
+
+実例パターンと期待される判定
+
+- 例1（中間追加）
+  - old header: `| A | B | C |`
+  - new header: `| A | B | X | C |`
+  - 検知: added at index 2, header `X`
+
+- 例2（中間削除）
+  - old header: `| A | B | X | C |`
+  - new header: `| A | B | C |`
+  - 検知: removed at index 2, header `X`
+
+- 例3（ヘッダ名変更 + 中間挿入）
+  - old header: `| A | B | C |`
+  - new header: `| A | NewB | X | C |`
+  - 検知: added at index 2 (X), and B→NewB はファジーマッチで mapping を検出（confidence 低め）
+
+テストの追加提案
+
+- `src/gitDiffUtils.ts` に下記ユニットテストを追加:
+  - LCS を使った挿入/削除検出の複数ケース
+  - ファジーマッチングでヘッダ置換を推定するケース
+  - 行ベース多数決で不整合なテーブル行を補正するケース
+
+運用注意点
+
+- confidence が低い検知結果は UI 表示で「推定」扱いにするか、ユーザーに確認を促すフローを検討する。
+- 複雑な差分では `positions` を詳細表示し、必要に応じて手動マッピングを行える UI 機能を検討する。
+
+### アルゴリズム（詳細）
+
+以下は中間列の追加／削除を高精度で検知するための具体アルゴリズムです。実装は `src/gitDiffUtils.ts` に関数群として切り出すことを想定しています。
+
+1) 行トークン化: `tokenizeRow(row: string): string[]`
+  - 文字列を左から走査し、次を追跡する状態機械を使う。
+    - `escaped` (直前が `\\` か)
+    - `inCodeSpan` (バッククォートペア内か)
+  - エスケープされておらずコードスパン外の `|` を見つけたらセル境界として分割する。
+  - 各セルは `trim()` して返す。
+
+2) 正規化: `normalizeHeader(s: string): string`
+  - 連続空白を単一スペースへ、先頭末尾の空白除去、全角/半角の軽微正規化、必要に応じ小文字化を行う。
+
+3) ヘッダ配列取得
+  - `oldHeaders = tokenizeRow(oldHeaderLine).map(normalizeHeader)`
+  - `newHeaders = tokenizeRow(newHeaderLine).map(normalizeHeader)`
+
+4) 直接マッチングパス（Exact）
+  - 左から順に同一文字列のセルを最左優先でペアリングし、ペア済み要素は除外する。
+  - ペアリング成功の要素は `mapping` に oldIndex→newIndex を登録、`positions` に変更なしとして扱う。
+
+5) LCS による差分境界検出
+  - 残った `oldRemaining` と `newRemaining` に対し、文字列等価を用いて LCS（最長共通部分列）を求める（DP、O(n*m)）。
+  - LCS に含まれない `newRemaining` 要素は `added`、`oldRemaining` の LCS 非含有要素は `removed` と判定する。
+  - 連続する追加/削除はまとめてレンジとして扱う。
+
+6) ファジーマッチ（Rename 推定）
+  - LCS で解決できない未マッチ要素に対して、レーベンシュタイン比率やトークン一致率で候補を評価。
+  - 類似度が閾値（推奨: 0.7）以上なら `renamed` と推定し、低めの `confidence` を付与して `mapping` を作る。
+
+7) データ行による補正（フォールバック）
+  - ヘッダだけで位置が不確かな場合は、上位 N 行のデータ行を tokenize して列インデックスの多数決を取る。
+  - 例えば多くの行で新列が右端に存在しないなら中間追加の可能性が高いと判断する。
+
+8) 出力構造の組立て
+  - `columnDiff`:
+    - `oldColumnCount`, `newColumnCount`, `changeType` (`added`/`removed`/`mixed`)
+    - `positions`: [{ index: number, type: 'added'|'removed'|'renamed', header?: string, confidence: number }]
+    - `mapping`: number[] (oldIndex -> newIndex or -1)
+    - `heuristics`: string[] (適用した手法のメモ、デバッグ用)
+
+9) 信頼度設計（推奨値）
+  - exact match: confidence = 1.0
+  - LCS-inferred: confidence = 0.85
+  - fuzzy rename: confidence = 0.6〜0.8（類似度に比例）
+  - ファイル保存直後や git の状態が不安定な場合は confidence を自動的に減衰させるオプションを用意する。
+
+10) 疑似コード（要点）
+
+```typescript
+function detectColumnDiff(oldLine: string, newLine: string, dataRows: string[]): ColumnDiff {
+  const oldH = tokenizeRow(oldLine).map(normalizeHeader);
+  const newH = tokenizeRow(newLine).map(normalizeHeader);
+
+  const mapping = new Array(oldH.length).fill(-1);
+  const positions: any[] = [];
+
+  // exact match pass
+  for (let i=0;i<oldH.length;i++){
+   for (let j=0;j<newH.length;j++){
+    if (mapping[i]===-1 && oldH[i]===newH[j]){ mapping[i]=j; markMatched(j); break; }
+   }
+  }
+
+  // LCS pass on unmatched
+  const lcs = computeLCS(getUnmatched(oldH), getUnmatched(newH));
+  inferAddsRemovesFromLCS(lcs, oldH, newH, mapping, positions);
+
+  // fuzzy for remaining
+  fuzzyMatchRemaining(oldH, newH, mapping, positions);
+
+  // fallback using dataRows if ambiguity
+  if (isAmbiguous(mapping)) { majorityVoteByRows(dataRows, mapping, positions); }
+
+  return buildColumnDiff(oldH.length, newH.length, mapping, positions);
+}
+```
+
+実装注意点:
+- `tokenizeRow` は必ずテストで網羅する（エスケープ、コードスパン、先頭/末尾パイプ、省略表記など）。
+- LCS はヘッダ数が小さい（通常 < 50）ため性能問題になりにくいが、極端な大規模ヘッダ列を想定する場合は最適化を検討する。
+
+単体テスト（推奨）:
+- 単一追加・単一削除・連続追加・連続削除・ヘッダ名変更＋挿入・エスケープ/コードスパン混在 の各ケースを `unit` テストに追加する。
+
+### 採用アルゴリズム：サンプリング＋マッチ数最小列を対象にする手法
+
+目的：計算コストを抑えつつ、ヘッダ名変更やノイズの影響を軽減して中間列（挿入/削除）を高確度で検出する。
+
+概要（要点）
+
+- 全行を比較する代わりに、データ行をサンプリングして各列の「セル一致数」を集計する。
+- サンプルごとに oldColumns と newColumns を token 化し、セル値の単純一致でマッチをカウントする。
+- 各列ペアの類似度行列を作らず、代わりに「ある列が何回マッチしたか（match count）」を基準に、マッチ数が最も低い列を変更候補とする。
+
+アルゴリズム手順
+
+1. サンプリング
+  - テーブルのデータ行から最大 `K` 行（推奨: 8〜12）を均等に抽出する（先頭、中間、末尾を含める）。
+
+2. トークン化・正規化
+  - 各サンプル行を `tokenizeRow` で分割し、セルを `normalizeHeader` 相当で正規化する（空白正規化、小文字化など）。
+
+3. マッチ集計
+  - サンプルごとに、new 列 j に対して old 列 i がセル文字列で一致するかを判定し、一致した場合に `matchCount[i]++` および `matchCountNew[j]++` をインクリメントする。
+  - 完全一致のみをカウントし、必要に応じてファジー一致を別レイヤーで扱う（confidence 降下）。
+
+4. 変化候補選定（マッチ数最小）
+  - old 側で `matchCount` が最も低いインデックスを `removed` 候補とする。同様に new 側で最小の `matchCountNew` を `added` 候補とする。
+  - 複数列が最小値を共有する場合は LCS/順序情報で絞り込むか、データ行多数決で補正する。
+
+5. 出力構築
+  - 検出結果を `columnDiff.positions` として出力し、`confidence` を `matches / K`（単純割合）で算出して付与する。
+
+疑似コード（重点）
+
+```typescript
+function detectByMatchCount(oldHeaders, newHeaders, dataSamples){
+  const K = dataSamples.length;
+  const oldN = oldHeaders.length, newN = newHeaders.length;
+  const matchCountOld = new Array(oldN).fill(0);
+  const matchCountNew = new Array(newN).fill(0);
+
+  for (const row of dataSamples) {
+   const oldCells = tokenizeRow(row.old).map(normalizeHeader);
+   const newCells = tokenizeRow(row.new).map(normalizeHeader);
+   for (let i=0;i<oldN;i++) for (let j=0;j<newN;j++){
+    if (oldCells[i] && newCells[j] && oldCells[i] === newCells[j]){
+      matchCountOld[i]++;
+      matchCountNew[j]++;
+    }
+   }
+  }
+
+  const removedIdx = argMin(matchCountOld);
+  const addedIdx = argMin(matchCountNew);
+
+  return buildColumnDiffFromCandidates(removedIdx, addedIdx, matchCountOld[removedIdx]/K);
+}
+```
+
+設計上の注意点
+
+- K を小さくしすぎるとノイズに弱くなる（少なくとも 4〜8 を推奨）。
+- ヘッダ名が完全に変わった場合、サンプルの一致が得られず low-match 列と判定されるのは望む挙動（追加/削除の候補）だが、rename の可能性を示すためにファジー比較を副次的に実施することを推奨する。
+- matchCount が全てゼロに近い場合は `confidence` が低く UI で「推定」と表示する。
+
+メリット
+
+- 計算が単純で実装コスト・CPU負荷が低い（O(K * n * m) の簡単集計）。
+- 類似度行列やハンガリアン法を使わないためロジックが理解しやすい。
+
+テスト
+
+- サンプリング数 `K` を変えて安定性を確認するテスト。
+- old/new の中間追加・削除ケースで `removedIdx` / `addedIdx` が想定通りになることを検証。
+
+
+
+
 ## 実装状況（Plan A - 非同期差分分離）
 
 ### 実装内容
