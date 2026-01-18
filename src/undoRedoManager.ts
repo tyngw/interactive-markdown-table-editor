@@ -97,6 +97,15 @@ export class UndoRedoManager {
             const success = await vscode.workspace.applyEdit(edit);
 
             if (success) {
+                // Persist change to disk so that Editor side observes the update
+                try {
+                    const saved = await document.save();
+                    if (!saved) {
+                        console.warn('[MTE][UndoRedo] document.save() returned false for', uriString);
+                    }
+                } catch (e) {
+                    console.error('[MTE][UndoRedo] Failed to save document after undo:', e);
+                }
                 // Only save to redo stack AFTER successful undo
                 let redoStack = this.redoStack.get(uriString);
                 if (!redoStack) {
@@ -152,6 +161,15 @@ export class UndoRedoManager {
             const success = await vscode.workspace.applyEdit(edit);
 
             if (success) {
+                // Persist change to disk so that Editor side observes the update
+                try {
+                    const saved = await document.save();
+                    if (!saved) {
+                        console.warn('[MTE][UndoRedo] document.save() returned false for', uriString);
+                    }
+                } catch (e) {
+                    console.error('[MTE][UndoRedo] Failed to save document after redo:', e);
+                }
                 // Only save to undo stack AFTER successful redo
                 let undoStack = this.undoStack.get(uriString);
                 if (!undoStack) {
