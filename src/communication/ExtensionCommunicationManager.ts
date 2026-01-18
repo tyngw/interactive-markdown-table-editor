@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { debug, warn, error as logError } from '../logging';
+import { error as logError } from '../logging';
 import {
   ProtocolMessage,
   RequestMessage,
@@ -13,7 +13,6 @@ import {
   AckMessage,
   MessageType,
   ExtensionCommand,
-  WebviewCommand,
   generateMessageId,
   CommunicationConfig,
   DEFAULT_CONFIG,
@@ -342,7 +341,7 @@ export class ExtensionCommunicationManager {
     console.log('[ExtComm] Disposing communication manager');
 
     // 保留中のリクエストをすべてキャンセル
-    for (const [id, pending] of this.pendingRequests.entries()) {
+    for (const [, pending] of this.pendingRequests.entries()) {
       clearTimeout(pending.timeout);
       pending.reject(new Error('Communication manager disposed'));
     }

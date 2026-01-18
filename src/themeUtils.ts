@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { debug, info, warn, error } from './logging';
+import { debug, warn } from './logging';
 
 export interface ThemeVariables {
   cssText: string;

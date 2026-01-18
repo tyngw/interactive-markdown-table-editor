@@ -1,5 +1,3 @@
-import * as vscode from 'vscode';
-
 /**
  * Split content into normalized lines for table replacement.
  * Trims trailing empty lines while preserving intentional empty lines within content.
