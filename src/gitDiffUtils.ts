@@ -5,7 +5,7 @@
  */
 
 import * as vscode from 'vscode';
-import { debug, info, warn, error } from './logging';
+import { debug, warn, error } from './logging';
 
 /**
  * セルのGit差分状態
@@ -368,8 +368,8 @@ export function clearDiffCache(uri?: vscode.Uri): void {
  */
 function parseGitDiff(
     diffOutput: string,
-    tableStartLine: number,
-    tableEndLine: number
+    _tableStartLine: number,
+    _tableEndLine: number
 ): LineDiff[] {
     const lineDiffs: LineDiff[] = [];
     const lines = diffOutput.split('\n');
@@ -449,7 +449,7 @@ function mapTableRowsToGitDiff(
     lineDiffs: LineDiff[],
     tableStartLine: number,
     rowCount: number,
-    tableContent?: string
+    _tableContent?: string
 ): RowGitDiff[] {
     const result: RowGitDiff[] = [];
     
@@ -490,7 +490,7 @@ function mapTableRowsToGitDiff(
     }
     
     // 各 hunk を処理
-    for (const [hunkId, hunk] of hunkMap.entries()) {
+    for (const [, hunk] of hunkMap.entries()) {
         const { deleted, added } = hunk;
         
         // 削除行と追加行をペアリング
@@ -499,7 +499,7 @@ function mapTableRowsToGitDiff(
         
         // 追加行のうち、最初の pairCount 個が変更後の行（削除行と対応）
         // 最後の (added.length - pairCount) 個が純粋な新規追加行
-        const pureAddedCount = added.length - pairCount;
+        // const pureAddedCount = added.length - pairCount; // not needed directly
         
         // 1. 削除行と対応する追加行をペアで出力（削除行が先）
         for (let i = 0; i < pairCount; i++) {

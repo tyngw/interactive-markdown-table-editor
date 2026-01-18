@@ -504,7 +504,6 @@ export class MarkdownParser {
      * 区切り線（2行目）を抽出してTableNodeに保存
      */
     extractSeparatorLine(content: string, tableNode: TableNode): string | undefined {
-        const lines = content.split('\n');
         const boundaries = this.getTableBoundaries(content, tableNode);
         
         // テーブルの2行目が区切り線

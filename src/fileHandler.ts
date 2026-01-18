@@ -223,7 +223,7 @@ export class MarkdownFileHandler implements FileHandler {
     /**
      * Extract table positions from markdown tokens
      */
-    private extractTablePositionsFromTokens(tokens: any[], content: string): Array<{
+    private extractTablePositionsFromTokens(tokens: any[], _content: string): Array<{
         startLine: number;
         endLine: number;
         tableIndex: number;
@@ -499,7 +499,7 @@ export class MarkdownFileHandler implements FileHandler {
         startLine: number,
         endLine: number,
         newTableContent: string,
-        originalContent?: string
+        _originalContent?: string
     ): Promise<boolean> {
         const eol = this.getEolString(document);
         const replacementLines = this.normalizeTableLines(newTableContent);

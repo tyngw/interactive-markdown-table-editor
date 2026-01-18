@@ -95,7 +95,7 @@ export function toRectangular(rows: string[][]): { headers: string[]; rows: stri
     }
     const maxCols = work.reduce((m, r) => Math.max(m, r.length), 0);
     const norm = work.map(r => r.concat(Array(Math.max(0, maxCols - r.length)).fill('')));
-    let headers = (norm[0] || []).map((h, i) => (h || '').trim());
+    let headers = (norm[0] || []).map((h) => (h || '').trim());
     // BOM除去（先頭セル）
     if (headers.length > 0) {headers[0] = stripBom(headers[0]);}
     headers = headers.map((h, i) => h || `Column ${i + 1}`);

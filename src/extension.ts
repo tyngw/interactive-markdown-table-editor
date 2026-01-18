@@ -9,7 +9,7 @@ import { UndoRedoManager } from './undoRedoManager';
 import { decodeBuffer, detectTextEncoding, parseCsv, toRectangular } from './csvUtils';
 import { normalizeForImport } from './encodingNormalizer';
 import { normalizeForShiftJisExport } from './encodingNormalizer';
-import { getGitDiffForTable, RowGitDiff, clearDiffCache, detectColumnDiff } from './gitDiffUtils';
+import { getGitDiffForTable, clearDiffCache, detectColumnDiff } from './gitDiffUtils';
 
 // 各ファイルの差分計算状況を追跡するマップ
 // キー: ファイル URI, 値: 計算中のプロミスまたは null
@@ -73,16 +73,16 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            let selectedTableNode;
+            
             let selectedTableIndex = 0;
 
             if (tables.length === 1) {
                 // Only one table, use it directly
-                selectedTableNode = tables[0];
+                // default to first table (no variable needed)
                 selectedTableIndex = 0;
             } else {
                 // Multiple tables, don't prompt user - show all in webview with tabs
-                selectedTableNode = tables[0]; // Default to first table for backward compatibility
+                // default to first table (no variable needed)
                 selectedTableIndex = 0;
             }
 
@@ -115,7 +115,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             // Create and show the webview panel with all tables
-            const panel = await webviewManager.createTableEditorPanel(allTableData, uri);
+            await webviewManager.createTableEditorPanel(allTableData, uri);
 
             // Apply configured theme to the panel (async, after panel is ready)
             applyConfiguredThemeToPanels();
@@ -159,16 +159,16 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            let selectedTableNode;
+            
             let selectedTableIndex = 0;
 
             if (tables.length === 1) {
                 // Only one table, use it directly
-                selectedTableNode = tables[0];
+                // default to first table (no variable needed)
                 selectedTableIndex = 0;
             } else {
                 // Multiple tables, don't prompt user - show all in webview with tabs
-                selectedTableNode = tables[0]; // Default to first table for backward compatibility
+                // default to first table (no variable needed)
                 selectedTableIndex = 0;
             }
 
@@ -184,13 +184,12 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
             // Create webview panel in new panel with actual data
-            const { panel, panelId: uniquePanelId } = await webviewManager.createTableEditorPanelNewPanel(allTableData, uri);
+            const { panelId: uniquePanelId } = await webviewManager.createTableEditorPanelNewPanel(allTableData, uri);
 
             // Update the managers to use the unique panel ID
             const updatedTableManagersMap = new Map<number, TableDataManager>();
             tables.forEach((table, index) => {
                 const manager = new TableDataManager(table, uniquePanelId, index);
-                const tableData = manager.getTableData();
                 updatedTableManagersMap.set(index, manager);
             });
 
@@ -452,7 +451,7 @@ export function activate(context: vscode.ExtensionContext) {
     const runTableEdit = async <T>(commandData: any, options: TableEditOptions<T>): Promise<void> => {
         
         const { uri: rawUri, panelId } = commandData;
-        const { uri, uriString, panel, panelKey, tableManagersMap } = resolvePanelContext(rawUri, panelId);
+        const { uri, uriString, panel, tableManagersMap } = resolvePanelContext(rawUri, panelId);
 
         if (!uriString || !uri) {
                         return;

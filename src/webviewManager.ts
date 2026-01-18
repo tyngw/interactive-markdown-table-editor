@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { TableData } from './tableDataManager';
-import * as fs from 'fs';
+// 'fs' not used directly in this module; avoid unused import
 import { buildThemeVariablesCss } from './themeUtils';
 import { UndoRedoManager } from './undoRedoManager';
-import { WebviewMessage } from './messages/types';
 export type { WebviewMessage } from './messages/types';
 import { validateBasicMessageStructure, validateMessageCommand, validateMessageData } from './messages/validators';
 import { debug, info, warn, error as logError } from './logging';
@@ -520,7 +519,6 @@ export class WebviewManager {
             }
 
             // Replace asset paths with webview URIs (be careful not to double-replace)
-            const originalHtml = html;
             // First replace relative paths
             html = html.replace(/src="\.\/assets\//g, `src="${assetsUriString}/`);
             html = html.replace(/href="\.\/assets\//g, `href="${assetsUriString}/`);
@@ -1517,121 +1515,121 @@ export class WebviewManager {
         uri: vscode.Uri
     ): void {
         // Register handlers for all webview commands
-        commManager.registerHandler(WebviewCommand.REQUEST_TABLE_DATA, async (data) => {
+        commManager.registerHandler(WebviewCommand.REQUEST_TABLE_DATA, async (_data) => {
             await this.handleRequestTableData(panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.UPDATE_CELL, async (data) => {
-            debug('[MTE][Ext] Handler: UPDATE_CELL', data);
-            await this.handleCellUpdate(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.UPDATE_CELL, async (_data) => {
+            debug('[MTE][Ext] Handler: UPDATE_CELL', _data);
+            await this.handleCellUpdate(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.BULK_UPDATE_CELLS, async (data) => {
-            debug('[MTE][Ext] Handler: BULK_UPDATE_CELLS', data);
-            await this.handleBulkUpdateCells(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.BULK_UPDATE_CELLS, async (_data) => {
+            debug('[MTE][Ext] Handler: BULK_UPDATE_CELLS', _data);
+            await this.handleBulkUpdateCells(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.UPDATE_HEADER, async (data) => {
-            debug('[MTE][Ext] Handler: UPDATE_HEADER', data);
-            await this.handleHeaderUpdate(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.UPDATE_HEADER, async (_data) => {
+            debug('[MTE][Ext] Handler: UPDATE_HEADER', _data);
+            await this.handleHeaderUpdate(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.ADD_ROW, async (data) => {
-            debug('[MTE][Ext] Handler: ADD_ROW', data);
-            await this.handleAddRow(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.ADD_ROW, async (_data) => {
+            debug('[MTE][Ext] Handler: ADD_ROW', _data);
+            await this.handleAddRow(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.DELETE_ROWS, async (data) => {
-            debug('[MTE][Ext] Handler: DELETE_ROWS', data);
-            await this.handleDeleteRows(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.DELETE_ROWS, async (_data) => {
+            debug('[MTE][Ext] Handler: DELETE_ROWS', _data);
+            await this.handleDeleteRows(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.ADD_COLUMN, async (data) => {
-            debug('[MTE][Ext] Handler: ADD_COLUMN', data);
-            await this.handleAddColumn(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.ADD_COLUMN, async (_data) => {
+            debug('[MTE][Ext] Handler: ADD_COLUMN', _data);
+            await this.handleAddColumn(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.DELETE_COLUMNS, async (data) => {
-            debug('[MTE][Ext] Handler: DELETE_COLUMNS', data);
-            await this.handleDeleteColumns(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.DELETE_COLUMNS, async (_data) => {
+            debug('[MTE][Ext] Handler: DELETE_COLUMNS', _data);
+            await this.handleDeleteColumns(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.SORT, async (data) => {
-            debug('[MTE][Ext] Handler: SORT', data);
-            await this.handleSort(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.SORT, async (_data) => {
+            debug('[MTE][Ext] Handler: SORT', _data);
+            await this.handleSort(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.MOVE_ROW, async (data) => {
-            debug('[MTE][Ext] Handler: MOVE_ROW', data);
-            await this.handleMoveRow(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.MOVE_ROW, async (_data) => {
+            debug('[MTE][Ext] Handler: MOVE_ROW', _data);
+            await this.handleMoveRow(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.MOVE_COLUMN, async (data) => {
-            debug('[MTE][Ext] Handler: MOVE_COLUMN', data);
-            await this.handleMoveColumn(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.MOVE_COLUMN, async (_data) => {
+            debug('[MTE][Ext] Handler: MOVE_COLUMN', _data);
+            await this.handleMoveColumn(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.EXPORT_CSV, async (data) => {
-            debug('[MTE][Ext] Handler: EXPORT_CSV', data);
-            await this.handleExportCSV(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.EXPORT_CSV, async (_data) => {
+            debug('[MTE][Ext] Handler: EXPORT_CSV', _data);
+            await this.handleExportCSV(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.IMPORT_CSV, async (data) => {
-            debug('[MTE][Ext] Handler: IMPORT_CSV', data);
-            await this.handleImportCSV(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.IMPORT_CSV, async (_data) => {
+            debug('[MTE][Ext] Handler: IMPORT_CSV', _data);
+            await this.handleImportCSV(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.SWITCH_TABLE, async (data) => {
-            debug('[MTE][Ext] Handler: SWITCH_TABLE', data);
-            await this.handleSwitchTable(data, panel, uri);
+        commManager.registerHandler(WebviewCommand.SWITCH_TABLE, async (_data) => {
+            debug('[MTE][Ext] Handler: SWITCH_TABLE', _data);
+            await this.handleSwitchTable(_data, panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.REQUEST_THEME_VARIABLES, async (data) => {
+        commManager.registerHandler(WebviewCommand.REQUEST_THEME_VARIABLES, async (_data) => {
             debug('[MTE][Ext] Handler: REQUEST_THEME_VARIABLES');
             await this.handleRequestThemeVariables(panel);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.REQUEST_FONT_SETTINGS, async (data) => {
+        commManager.registerHandler(WebviewCommand.REQUEST_FONT_SETTINGS, async (_data) => {
             debug('[MTE][Ext] Handler: REQUEST_FONT_SETTINGS');
             await this.handleRequestFontSettings(panel);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.UNDO, async (data) => {
+        commManager.registerHandler(WebviewCommand.UNDO, async (_data) => {
             debug('[MTE][Ext] Handler: UNDO');
             await this.handleUndo(panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.REDO, async (data) => {
+        commManager.registerHandler(WebviewCommand.REDO, async (_data) => {
             debug('[MTE][Ext] Handler: REDO');
             await this.handleRedo(panel, uri);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.PONG, async (data) => {
+        commManager.registerHandler(WebviewCommand.PONG, async (_data) => {
             debug('[MTE][Ext] Handler: PONG');
             const panelId = this.findPanelId(panel);
             this.markConnectionHealthy(panelId);
             return { success: true };
         });
 
-        commManager.registerHandler(WebviewCommand.REQUEST_SYNC, async (data) => {
+        commManager.registerHandler(WebviewCommand.REQUEST_SYNC, async (_data) => {
             debug('[MTE][Ext] Handler: REQUEST_SYNC');
             // 現在の状態を送信
             this.refreshPanelData(panel, uri);

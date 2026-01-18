@@ -84,8 +84,8 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./ && npm run build-webview && npm run copy-mock",
-    "compile:debug": "MTE_KEEP_CONSOLE=1 tsc -p ./ && npm run build-webview:debug && npm run copy-mock",
+    "compile": "npm run lint && tsc -p ./ && npm run build-webview && npm run copy-mock",
+    "compile:debug": "npm run lint && MTE_KEEP_CONSOLE=1 tsc -p ./ && npm run build-webview:debug && npm run copy-mock",
     "dev": "cd webview-react && vite",
     "build-webview": "cd webview-react && npm install && npm run build",
     "build-webview:debug": "cd webview-react && npm install && npm run build:debug",
