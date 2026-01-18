@@ -30,6 +30,8 @@ function AppContent() {
   const currentIndexRef = useRef<number>(0)
   // gitDiffデータを別管理して不正な再レンダリング防止
   const [gitDiffMap, setGitDiffMap] = useState<Map<number, any[]>>(new Map())
+  // columnDiffデータも別管理
+  const [columnDiffMap, setColumnDiffMap] = useState<Map<number, any>>(new Map())
   // initialData 変更時に handleTableUpdate の呼び出しを無視するフラグ
   const isInitializing = useRef(false)
   // Git差分表示フラグ
@@ -54,17 +56,26 @@ function AppContent() {
       return null
     }
     
-    // baseTableに既にgitDiffが含まれている場合はそのまま返す
-    if (baseTable.gitDiff) {
-      return baseTable
+    let result = { ...baseTable }
+    
+    // baseTableに既にgitDiffが含まれていない場合、gitDiffMapから取得
+    if (!result.gitDiff) {
+      const gitDiff = gitDiffMap.get(currentTableIndex)
+      if (gitDiff) {
+        result.gitDiff = gitDiff
+      }
     }
-    // gitDiffマップがある場合は合成
-    const gitDiff = gitDiffMap.get(currentTableIndex)
-    if (gitDiff) {
-      return { ...baseTable, gitDiff }
+    
+    // baseTableに既にcolumnDiffが含まれていない場合、columnDiffMapから取得
+    if (!result.columnDiff) {
+      const columnDiff = columnDiffMap.get(currentTableIndex)
+      if (columnDiff) {
+        result.columnDiff = columnDiff
+      }
     }
-    return baseTable
-  }, [allTables, currentTableIndex, gitDiffMap])
+    
+    return result
+  }, [allTables, currentTableIndex, gitDiffMap, columnDiffMap])
 
 
   // onTableData コールバックは定義せず、通信マネージャーのハンドラーで直接状態更新
@@ -117,17 +128,44 @@ function AppContent() {
       }
       return next;
     })
+    setColumnDiffMap(prev => {
+      const next = new Map(prev);
+      try {
+        if (Array.isArray(data)) {
+          data.forEach((tbl: any, idx: number) => {
+            if (tbl && tbl.columnDiff) {
+              next.set(idx, tbl.columnDiff);
+            }
+          });
+        } else if (data && (data as any).columnDiff) {
+          next.set(0, (data as any).columnDiff);
+        }
+      } catch (e) {
+        // 保守的に何もしない
+      }
+      return next;
+    })
     setLoading(false)
   }, [])
 
   const communication = useCommunication({
     onTableData: handleTableDataMessage,
-    onGitDiffData: useCallback((diffData: Array<{tableIndex: number, gitDiff: any[]}>) => {
+    onGitDiffData: useCallback((diffData: Array<{tableIndex: number, gitDiff: any[], columnDiff?: any}>) => {
       // gitDiffを別状態で管理して、allTablesの参照を変えない
       setGitDiffMap(prevMap => {
         const newMap = new Map(prevMap);
         diffData.forEach(diff => {
           newMap.set(diff.tableIndex, diff.gitDiff);
+        });
+        return newMap;
+      });
+      // columnDiffも別状態で管理
+      setColumnDiffMap(prevMap => {
+        const newMap = new Map(prevMap);
+        diffData.forEach(diff => {
+          if (diff.columnDiff) {
+            newMap.set(diff.tableIndex, diff.columnDiff);
+          }
         });
         return newMap;
       });
