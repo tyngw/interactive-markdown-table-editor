@@ -38,6 +38,19 @@ export interface TableGitDiff {
 }
 
 /**
+ * 列の位置変更情報
+ * 中間列の追加・削除を検知した際の詳細情報
+ */
+export interface ColumnPositionChange {
+    index: number;              // 変更位置（追加の場合は新しい列番号、削除の場合は旧列番号）
+    type: 'added' | 'removed' | 'renamed';
+    header?: string;            // ヘッダ名（わかる場合）
+    confidence: number;         // 検出信頼度（0.0〜1.0）
+    oldIndex?: number;          // renamed時の旧インデックス
+    newIndex?: number;          // renamed時の新インデックス
+}
+
+/**
  * 列の差分情報
  * 変更前と変更後の列数を比較して、追加・削除された列を検出
  */
@@ -47,6 +60,11 @@ export interface ColumnDiffInfo {
     addedColumns: number[];      // 追加された列のインデックス（変更後の列番号）
     deletedColumns: number[];    // 削除された列のインデックス（変更前の列番号）
     oldHeaders?: string[];       // 変更前のヘッダ（削除列表示用）
+    newHeaders?: string[];       // 変更後のヘッダ
+    changeType?: 'added' | 'removed' | 'mixed' | 'none';  // 変更種別
+    positions?: ColumnPositionChange[];  // 各位置の変更詳細
+    mapping?: number[];          // 旧インデックス→新インデックスのマッピング（-1は削除）
+    heuristics?: string[];       // 適用した検出手法のメモ
 }
 
 /**
@@ -526,6 +544,416 @@ function mapTableRowsToGitDiff(
     return uniqueDiffs;
 }
 
+// ============================================================
+// 中間列検知の強化ロジック
+// ============================================================
+
+/**
+ * マークダウンテーブル行をセルに分割（エスケープ/コードスパン対応）
+ * エスケープされた | (\|) やコードスパン内の | は区切りとして扱わない
+ * 
+ * @param row テーブル行の文字列
+ * @returns セルの配列
+ */
+export function tokenizeRow(row: string): string[] {
+    if (!row || typeof row !== 'string') {
+        return [];
+    }
+    
+    const cells: string[] = [];
+    let current = '';
+    let escaped = false;
+    let inCodeSpan = false;
+    let backtickCount = 0;
+    
+    // 先頭・末尾の空白をトリム
+    const trimmed = row.trim();
+    
+    for (let i = 0; i < trimmed.length; i++) {
+        const char = trimmed[i];
+        
+        // エスケープ処理
+        if (char === '\\' && !escaped) {
+            escaped = true;
+            current += char;
+            continue;
+        }
+        
+        // バッククォート（コードスパン）処理
+        if (char === '`' && !escaped) {
+            if (!inCodeSpan) {
+                // コードスパン開始を検出
+                let count = 1;
+                while (i + count < trimmed.length && trimmed[i + count] === '`') {
+                    count++;
+                }
+                backtickCount = count;
+                inCodeSpan = true;
+                current += trimmed.substring(i, i + count);
+                i += count - 1;
+                continue;
+            } else {
+                // コードスパン終了を検出
+                let count = 1;
+                while (i + count < trimmed.length && trimmed[i + count] === '`') {
+                    count++;
+                }
+                if (count === backtickCount) {
+                    inCodeSpan = false;
+                    current += trimmed.substring(i, i + count);
+                    i += count - 1;
+                    continue;
+                }
+                current += char;
+                continue;
+            }
+        }
+        
+        // パイプ文字（セル区切り）処理
+        if (char === '|' && !escaped && !inCodeSpan) {
+            cells.push(current.trim());
+            current = '';
+            escaped = false;
+            continue;
+        }
+        
+        current += char;
+        escaped = false;
+    }
+    
+    // 最後のセルを追加
+    if (current.trim() !== '' || cells.length > 0) {
+        cells.push(current.trim());
+    }
+    
+    // 先頭・末尾の空セルを除去（| a | b | のような形式対応）
+    while (cells.length > 0 && cells[0] === '') {
+        cells.shift();
+    }
+    while (cells.length > 0 && cells[cells.length - 1] === '') {
+        cells.pop();
+    }
+    
+    return cells;
+}
+
+/**
+ * ヘッダセル文字列を正規化
+ * 連続空白を単一スペースに、先頭末尾の空白除去、小文字化
+ * 
+ * @param s ヘッダセル文字列
+ * @returns 正規化された文字列
+ */
+export function normalizeHeader(s: string): string {
+    if (!s || typeof s !== 'string') {
+        return '';
+    }
+    return s
+        .trim()
+        .replace(/\s+/g, ' ')  // 連続空白を単一スペースに
+        .toLowerCase();         // 小文字化
+}
+
+/**
+ * 2つの配列の最長共通部分列(LCS)を計算
+ * 
+ * @param arr1 配列1
+ * @param arr2 配列2
+ * @returns LCSの要素インデックスペア [{i1, i2}, ...]
+ */
+export function computeLCS(arr1: string[], arr2: string[]): Array<{i1: number, i2: number}> {
+    const n = arr1.length;
+    const m = arr2.length;
+    
+    if (n === 0 || m === 0) {
+        return [];
+    }
+    
+    // DP テーブル
+    const dp: number[][] = Array(n + 1).fill(null).map(() => Array(m + 1).fill(0));
+    
+    // LCS長を計算
+    for (let i = 1; i <= n; i++) {
+        for (let j = 1; j <= m; j++) {
+            if (arr1[i - 1] === arr2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    
+    // バックトラックしてLCSを構築
+    const result: Array<{i1: number, i2: number}> = [];
+    let i = n, j = m;
+    
+    while (i > 0 && j > 0) {
+        if (arr1[i - 1] === arr2[j - 1]) {
+            result.unshift({ i1: i - 1, i2: j - 1 });
+            i--;
+            j--;
+        } else if (dp[i - 1][j] > dp[i][j - 1]) {
+            i--;
+        } else {
+            j--;
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * レーベンシュタイン距離に基づく類似度を計算
+ * 
+ * @param s1 文字列1
+ * @param s2 文字列2
+ * @returns 類似度（0.0〜1.0）
+ */
+export function calculateSimilarity(s1: string, s2: string): number {
+    if (s1 === s2) {
+        return 1.0;
+    }
+    if (s1.length === 0 || s2.length === 0) {
+        return 0.0;
+    }
+    
+    const n = s1.length;
+    const m = s2.length;
+    
+    // レーベンシュタイン距離を計算
+    const dp: number[][] = Array(n + 1).fill(null).map(() => Array(m + 1).fill(0));
+    
+    for (let i = 0; i <= n; i++) {
+        dp[i][0] = i;
+    }
+    for (let j = 0; j <= m; j++) {
+        dp[0][j] = j;
+    }
+    
+    for (let i = 1; i <= n; i++) {
+        for (let j = 1; j <= m; j++) {
+            const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+            dp[i][j] = Math.min(
+                dp[i - 1][j] + 1,      // 削除
+                dp[i][j - 1] + 1,      // 挿入
+                dp[i - 1][j - 1] + cost // 置換
+            );
+        }
+    }
+    
+    const distance = dp[n][m];
+    const maxLen = Math.max(n, m);
+    return 1.0 - (distance / maxLen);
+}
+
+/**
+ * サンプリング+マッチ数最小列を使った中間列検知
+ * ドキュメントで推奨されたアルゴリズム
+ * 
+ * @param oldHeaders 変更前のヘッダ配列
+ * @param newHeaders 変更後のヘッダ配列
+ * @param oldDataRows 変更前のデータ行配列（オプション）
+ * @param newDataRows 変更後のデータ行配列（オプション）
+ * @returns 列差分情報
+ */
+export function detectColumnDiffWithPositions(
+    oldHeaders: string[],
+    newHeaders: string[],
+    oldDataRows?: string[][],
+    newDataRows?: string[][]
+): ColumnDiffInfo {
+    const heuristics: string[] = [];
+    const oldN = oldHeaders.length;
+    const newN = newHeaders.length;
+    
+    const result: ColumnDiffInfo = {
+        oldColumnCount: oldN,
+        newColumnCount: newN,
+        addedColumns: [],
+        deletedColumns: [],
+        oldHeaders: [...oldHeaders],
+        newHeaders: [...newHeaders],
+        changeType: 'none',
+        positions: [],
+        mapping: new Array(oldN).fill(-1),
+        heuristics
+    };
+    
+    // 列数が同じで変更がない場合
+    if (oldN === newN && oldHeaders.every((h, i) => normalizeHeader(h) === normalizeHeader(newHeaders[i]))) {
+        result.mapping = Array.from({ length: oldN }, (_, i) => i);
+        heuristics.push('exact_match_all');
+        return result;
+    }
+    
+    // 正規化したヘッダを作成
+    const normalizedOld = oldHeaders.map(normalizeHeader);
+    const normalizedNew = newHeaders.map(normalizeHeader);
+    
+    // 1. 直接マッチングパス（完全一致）
+    const mapping = new Array(oldN).fill(-1);
+    const usedNewIndices = new Set<number>();
+    
+    for (let i = 0; i < oldN; i++) {
+        for (let j = 0; j < newN; j++) {
+            if (!usedNewIndices.has(j) && normalizedOld[i] === normalizedNew[j]) {
+                mapping[i] = j;
+                usedNewIndices.add(j);
+                heuristics.push(`exact_match:${i}->${j}`);
+                break;
+            }
+        }
+    }
+    
+    // 2. LCS による差分境界検出
+    const unmatchedOld = normalizedOld.map((h, i) => ({ header: h, index: i })).filter(x => mapping[x.index] === -1);
+    const unmatchedNew = normalizedNew.map((h, j) => ({ header: h, index: j })).filter(x => !usedNewIndices.has(x.index));
+    
+    if (unmatchedOld.length > 0 && unmatchedNew.length > 0) {
+        const lcs = computeLCS(
+            unmatchedOld.map(x => x.header),
+            unmatchedNew.map(x => x.header)
+        );
+        
+        for (const pair of lcs) {
+            const oldIdx = unmatchedOld[pair.i1].index;
+            const newIdx = unmatchedNew[pair.i2].index;
+            if (mapping[oldIdx] === -1 && !usedNewIndices.has(newIdx)) {
+                mapping[oldIdx] = newIdx;
+                usedNewIndices.add(newIdx);
+                heuristics.push(`lcs_match:${oldIdx}->${newIdx}`);
+            }
+        }
+    }
+    
+    // 3. ファジーマッチ（残りの未マッチ要素）
+    const FUZZY_THRESHOLD = 0.6;
+    const stillUnmatchedOld = normalizedOld.map((h, i) => ({ header: h, index: i })).filter(x => mapping[x.index] === -1);
+    const stillUnmatchedNew = normalizedNew.map((h, j) => ({ header: h, index: j })).filter(x => !usedNewIndices.has(x.index));
+    
+    for (const oldItem of stillUnmatchedOld) {
+        let bestMatch: { index: number; similarity: number } | null = null;
+        
+        for (const newItem of stillUnmatchedNew) {
+            if (usedNewIndices.has(newItem.index)) {
+                continue;
+            }
+            
+            const similarity = calculateSimilarity(oldItem.header, newItem.header);
+            if (similarity >= FUZZY_THRESHOLD && (!bestMatch || similarity > bestMatch.similarity)) {
+                bestMatch = { index: newItem.index, similarity };
+            }
+        }
+        
+        if (bestMatch) {
+            mapping[oldItem.index] = bestMatch.index;
+            usedNewIndices.add(bestMatch.index);
+            heuristics.push(`fuzzy_match:${oldItem.index}->${bestMatch.index}(${bestMatch.similarity.toFixed(2)})`);
+            
+            // renamed として positions に追加
+            result.positions!.push({
+                index: oldItem.index,
+                type: 'renamed',
+                header: oldHeaders[oldItem.index],
+                confidence: bestMatch.similarity,
+                oldIndex: oldItem.index,
+                newIndex: bestMatch.index
+            });
+        }
+    }
+    
+    // 4. サンプリングによる補正（データ行がある場合）
+    if (oldDataRows && newDataRows && oldDataRows.length > 0 && newDataRows.length > 0) {
+        const K = Math.min(8, oldDataRows.length, newDataRows.length);
+        const sampleIndices: number[] = [];
+        
+        // 均等にサンプリング
+        for (let i = 0; i < K; i++) {
+            sampleIndices.push(Math.floor(i * oldDataRows.length / K));
+        }
+        
+        const matchCountOld = new Array(oldN).fill(0);
+        const matchCountNew = new Array(newN).fill(0);
+        
+        for (const sampleIdx of sampleIndices) {
+            const oldRow = oldDataRows[sampleIdx] || [];
+            const newRow = newDataRows[sampleIdx] || [];
+            
+            for (let i = 0; i < oldN; i++) {
+                for (let j = 0; j < newN; j++) {
+                    const oldCell = normalizeHeader(oldRow[i] || '');
+                    const newCell = normalizeHeader(newRow[j] || '');
+                    if (oldCell && newCell && oldCell === newCell) {
+                        matchCountOld[i]++;
+                        matchCountNew[j]++;
+                    }
+                }
+            }
+        }
+        
+        heuristics.push(`sampling:K=${K}`);
+        
+        // マッチ数が少ない列を変更候補として特定
+        const unmappedOld = mapping.map((m, i) => ({ mapped: m !== -1, index: i, count: matchCountOld[i] }))
+            .filter(x => !x.mapped);
+        const unmappedNew = Array.from({ length: newN }, (_, j) => j)
+            .filter(j => !usedNewIndices.has(j))
+            .map(j => ({ index: j, count: matchCountNew[j] }));
+        
+        // マッチ数が最小の列を追加・削除候補に
+        if (unmappedOld.length > 0) {
+            unmappedOld.sort((a, b) => a.count - b.count);
+            heuristics.push(`low_match_old:${unmappedOld.map(x => x.index).join(',')}`);
+        }
+        if (unmappedNew.length > 0) {
+            unmappedNew.sort((a, b) => a.count - b.count);
+            heuristics.push(`low_match_new:${unmappedNew.map(x => x.index).join(',')}`);
+        }
+    }
+    
+    // 5. 最終的な追加・削除列の決定
+    // mapping が -1 の列は削除された列
+    for (let i = 0; i < oldN; i++) {
+        if (mapping[i] === -1) {
+            result.deletedColumns.push(i);
+            result.positions!.push({
+                index: i,
+                type: 'removed',
+                header: oldHeaders[i],
+                confidence: 0.85
+            });
+        }
+    }
+    
+    // usedNewIndices に含まれない新しい列は追加された列
+    for (let j = 0; j < newN; j++) {
+        if (!usedNewIndices.has(j)) {
+            result.addedColumns.push(j);
+            result.positions!.push({
+                index: j,
+                type: 'added',
+                header: newHeaders[j],
+                confidence: 0.85
+            });
+        }
+    }
+    
+    // changeType を決定
+    if (result.addedColumns.length > 0 && result.deletedColumns.length > 0) {
+        result.changeType = 'mixed';
+    } else if (result.addedColumns.length > 0) {
+        result.changeType = 'added';
+    } else if (result.deletedColumns.length > 0) {
+        result.changeType = 'removed';
+    } else {
+        result.changeType = 'none';
+    }
+    
+    result.mapping = mapping;
+    
+    return result;
+}
+
 /**
  * Gitのテーマ色を取得
  * VS CodeのテーマからGit関連の色を取得
@@ -550,56 +978,31 @@ export function getGitThemeColors(): {
 }
 
 /**
- * マークダウンテーブル行からセル数を取得
- * 例: "| a | b | c |" -> 3
- */
-function countTableCells(rowContent: string): number {
-    if (!rowContent || !rowContent.includes('|')) {
-        return 0;
-    }
-    // 先頭と末尾の | を削除し、| で分割
-    const trimmed = rowContent.trim();
-    const withoutLeadingPipe = trimmed.startsWith('|') ? trimmed.substring(1) : trimmed;
-    const withoutTrailingPipe = withoutLeadingPipe.endsWith('|') 
-        ? withoutLeadingPipe.substring(0, withoutLeadingPipe.length - 1) 
-        : withoutLeadingPipe;
-    return withoutTrailingPipe.split('|').length;
-}
-
-/**
- * マークダウンテーブル行から列の値を抽出
- * 例: "| a | b | c |" -> ['a', 'b', 'c']
- */
-function parseTableRowCells(rowContent: string): string[] {
-    if (!rowContent || !rowContent.includes('|')) {
-        return [];
-    }
-    const trimmed = rowContent.trim();
-    const withoutLeadingPipe = trimmed.startsWith('|') ? trimmed.substring(1) : trimmed;
-    const withoutTrailingPipe = withoutLeadingPipe.endsWith('|') 
-        ? withoutLeadingPipe.substring(0, withoutLeadingPipe.length - 1) 
-        : withoutLeadingPipe;
-    return withoutTrailingPipe.split('|').map(cell => cell.trim());
-}
-
-/**
  * Git差分から列の追加・削除情報を検出
  * 削除行と追加行の列数を比較して、列の変化を検出する
+ * 中間列の追加・削除も検知可能な強化版
  * 
  * @param gitDiff 行のGit差分情報
  * @param currentColumnCount 現在のテーブルの列数
+ * @param currentHeaders 現在のヘッダ配列（オプション、中間列検知精度向上用）
  * @returns 列の差分情報
  */
 export function detectColumnDiff(
     gitDiff: RowGitDiff[],
-    currentColumnCount: number
+    currentColumnCount: number,
+    currentHeaders?: string[]
 ): ColumnDiffInfo {
     const result: ColumnDiffInfo = {
         oldColumnCount: currentColumnCount,
         newColumnCount: currentColumnCount,
         addedColumns: [],
         deletedColumns: [],
-        oldHeaders: []
+        oldHeaders: [],
+        newHeaders: currentHeaders || [],
+        changeType: 'none',
+        positions: [],
+        mapping: [],
+        heuristics: []
     };
 
     // デバッグビルド時のみログを出力するユーティリティ
@@ -608,119 +1011,163 @@ export function detectColumnDiff(
         process.env.MTE_KEEP_CONSOLE === '1' ||
         process.env.DEBUG === 'true'
     ));
-    const debugLog = (...args: any[]) => { if (isDebug) { console.log(...args); } };
+    const debugLog = (...args: any[]) => {
+        if (isDebug) {
+            console.log(...args);
+        }
+    };
+    
     if (!gitDiff || gitDiff.length === 0) {
         debugLog('[detectColumnDiff] No gitDiff provided');
+        result.mapping = Array.from({ length: currentColumnCount }, (_, i) => i);
         return result;
     }
 
     // 削除行と追加行を分類
-    // status フィールドで判定
     const deletedRows = gitDiff.filter(d => d.status === GitDiffStatus.DELETED && d.oldContent);
-    const addedRows = gitDiff.filter(d => d.status === GitDiffStatus.ADDED);
+    const addedRows = gitDiff.filter(d => d.status === GitDiffStatus.ADDED && d.newContent);
 
     debugLog('[detectColumnDiff] Found deletedRows:', deletedRows.length, 'addedRows:', addedRows.length);
-    debugLog('[detectColumnDiff] First few deletedRows:', deletedRows.slice(0, 3).map(r => ({ row: r.row, content: r.oldContent?.substring(0, 30) })));
 
-    // 削除前のヘッダを取得
-    // row = -2 がヘッダ行、row = -1 がセパレータ行
-    // ヘッダ行（row = -2）を探し、セパレータ行ではなく実際のテキストを含む行を選ぶ
+    // 削除前のヘッダを取得（row = -2 がヘッダ行）
+    let oldHeaders: string[] = [];
     const headerDeletedRow = deletedRows.find(d => d.row === -2);
     if (headerDeletedRow && headerDeletedRow.oldContent) {
-        // セパレータ行（すべてのセルが --- または空白）ではなく、実際のヘッダテキストを確認
-        const cells = parseTableRowCells(headerDeletedRow.oldContent);
-        const isSeparatorRow = cells.every(cell => cell.match(/^[\s\-]*$/) !== null);
+        const cells = tokenizeRow(headerDeletedRow.oldContent);
+        const isSeparatorRow = cells.every(cell => cell.match(/^[\s\-:]*$/) !== null);
         
         if (!isSeparatorRow) {
-            result.oldHeaders = cells;
-            debugLog('[detectColumnDiff] oldHeaders extracted from row -2:', result.oldHeaders);
+            oldHeaders = cells;
+            debugLog('[detectColumnDiff] oldHeaders extracted from row -2:', oldHeaders);
         } else {
-            // row = -2 がセパレータの場合、最初の削除行から探す
+            // セパレータの場合は最初の非セパレータ削除行から探す
             const actualHeaderRow = deletedRows.find(d => {
-                if (!d.oldContent) {return false;}
-                const headerCells = parseTableRowCells(d.oldContent);
-                return !headerCells.every(cell => cell.match(/^[\s\-]*$/) !== null);
+                if (!d.oldContent) {
+                    return false;
+                }
+                const headerCells = tokenizeRow(d.oldContent);
+                return !headerCells.every(cell => cell.match(/^[\s\-:]*$/) !== null);
             });
             if (actualHeaderRow && actualHeaderRow.oldContent) {
-                result.oldHeaders = parseTableRowCells(actualHeaderRow.oldContent);
-                debugLog('[detectColumnDiff] oldHeaders extracted from actual header row:', result.oldHeaders);
+                oldHeaders = tokenizeRow(actualHeaderRow.oldContent);
+                debugLog('[detectColumnDiff] oldHeaders extracted from actual header row:', oldHeaders);
             }
         }
     }
-
+    
+    // 変更後のヘッダを取得
+    let newHeaders: string[] = currentHeaders || [];
+    const headerAddedRow = addedRows.find(d => d.row === -2);
+    if (headerAddedRow && headerAddedRow.newContent) {
+        const cells = tokenizeRow(headerAddedRow.newContent);
+        const isSeparatorRow = cells.every(cell => cell.match(/^[\s\-:]*$/) !== null);
+        if (!isSeparatorRow) {
+            newHeaders = cells;
+        }
+    }
+    
+    // データ行を抽出（中間列検知のサンプリング用）
+    const oldDataRows: string[][] = [];
+    const newDataRows: string[][] = [];
+    
+    for (const d of deletedRows) {
+        if (d.row >= 0 && d.oldContent) {
+            const cells = tokenizeRow(d.oldContent);
+            if (!cells.every(c => c.match(/^[\s\-:]*$/) !== null)) {
+                oldDataRows.push(cells);
+            }
+        }
+    }
+    
+    for (const d of addedRows) {
+        if (d.row >= 0 && d.newContent) {
+            const cells = tokenizeRow(d.newContent);
+            if (!cells.every(c => c.match(/^[\s\-:]*$/) !== null)) {
+                newDataRows.push(cells);
+            }
+        }
+    }
+    
+    // oldHeaders/newHeaders の両方がある場合は強化版アルゴリズムを使用
+    if (oldHeaders.length > 0 && newHeaders.length > 0) {
+        debugLog('[detectColumnDiff] Using enhanced column diff detection');
+        const enhancedResult = detectColumnDiffWithPositions(
+            oldHeaders,
+            newHeaders,
+            oldDataRows.length > 0 ? oldDataRows : undefined,
+            newDataRows.length > 0 ? newDataRows : undefined
+        );
+        
+        // 結果をマージ
+        result.oldColumnCount = enhancedResult.oldColumnCount;
+        result.newColumnCount = enhancedResult.newColumnCount;
+        result.addedColumns = enhancedResult.addedColumns;
+        result.deletedColumns = enhancedResult.deletedColumns;
+        result.oldHeaders = enhancedResult.oldHeaders;
+        result.newHeaders = enhancedResult.newHeaders;
+        result.changeType = enhancedResult.changeType;
+        result.positions = enhancedResult.positions;
+        result.mapping = enhancedResult.mapping;
+        result.heuristics = enhancedResult.heuristics;
+        
+        debugLog('[detectColumnDiff] Enhanced result:', result);
+        return result;
+    }
+    
+    // フォールバック：従来のシンプルなロジック
+    debugLog('[detectColumnDiff] Using fallback simple logic');
+    result.oldHeaders = oldHeaders;
+    result.newHeaders = newHeaders;
+    result.heuristics = ['fallback_simple'];
+    
     // 削除行から変更前の列数を取得
-    // 複数の削除行がある場合は、最初のデータ行削除行を使用（同じテーブル内は同じ列数）
     let oldColumnCount = currentColumnCount;
-    const firstDataDeletedRow = deletedRows.find(d => d.row >= 0);
+    const firstDataDeletedRow = deletedRows.find(d => d.row >= 0 && d.oldContent);
     if (firstDataDeletedRow && firstDataDeletedRow.oldContent) {
-        oldColumnCount = countTableCells(firstDataDeletedRow.oldContent);
-        debugLog('[detectColumnDiff] oldColumnCount from deleted row:', oldColumnCount, 'oldContent:', firstDataDeletedRow.oldContent?.substring(0, 50));
-    } else {
-        debugLog('[detectColumnDiff] No deleted rows found, oldColumnCount = currentColumnCount =', currentColumnCount);
+        oldColumnCount = tokenizeRow(firstDataDeletedRow.oldContent).length;
+    } else if (oldHeaders.length > 0) {
+        oldColumnCount = oldHeaders.length;
     }
 
-    // 追加行から変更後の列数を取得
-    // 追加行は常に現在のテーブルの列数を持つ
     const newColumnCount = currentColumnCount;
 
     result.oldColumnCount = oldColumnCount;
     result.newColumnCount = newColumnCount;
 
-    // 列数の差分を計算
     const columnDiff = newColumnCount - oldColumnCount;
 
     debugLog('[detectColumnDiff] oldColumnCount:', oldColumnCount, 'newColumnCount:', newColumnCount, 'diff:', columnDiff);
 
     if (columnDiff > 0) {
-        // 列が追加された場合
-        // 追加された列は末尾に追加されたと仮定
+        // 列が追加された（末尾に追加と仮定）
         for (let i = oldColumnCount; i < newColumnCount; i++) {
             result.addedColumns.push(i);
+            result.positions!.push({
+                index: i,
+                type: 'added',
+                header: newHeaders[i] || '',
+                confidence: 0.5
+            });
         }
+        result.changeType = 'added';
     } else if (columnDiff < 0) {
-        // 列が削除された場合
-        // 削除前後のヘッダ名を比較して、実際に削除された列インデックスを特定
-        if (result.oldHeaders && result.oldHeaders.length > 0) {
-            // 追加行から変更後のヘッダを取得
-            const newHeaderAddedRow = addedRows.find(d => d.row === -2);
-            if (newHeaderAddedRow && newHeaderAddedRow.newContent) {
-                const newHeaders = parseTableRowCells(newHeaderAddedRow.newContent);
-                
-                // 両方のヘッダが存在する場合、削除された列を特定
-                debugLog('[detectColumnDiff] Comparing headers - old:', result.oldHeaders, 'new:', newHeaders);
-                
-                // 削除前のヘッダで、削除後に存在しない列を見つける
-                for (let oldIdx = 0; oldIdx < result.oldHeaders.length; oldIdx++) {
-                    const oldHeaderName = result.oldHeaders[oldIdx];
-                    
-                    // このヘッダが新しいヘッダ列に存在するか確認
-                    const foundInNew = newHeaders.some(newHeader => newHeader === oldHeaderName);
-                    
-                    if (!foundInNew) {
-                        result.deletedColumns.push(oldIdx);
-                        debugLog(`[detectColumnDiff] Column ${oldIdx} (${oldHeaderName}) detected as deleted`);
-                    }
-                }
-            }
+        // 列が削除された（末尾から削除と仮定）
+        for (let i = newColumnCount; i < oldColumnCount; i++) {
+            result.deletedColumns.push(i);
+            result.positions!.push({
+                index: i,
+                type: 'removed',
+                header: oldHeaders[i] || '',
+                confidence: 0.5
+            });
         }
-        
-        // フォールバック：ヘッダが利用できない場合は末尾から削除されたと仮定
-        if (result.deletedColumns.length === 0) {
-            for (let i = newColumnCount; i < oldColumnCount; i++) {
-                result.deletedColumns.push(i);
-            }
-            debugLog('[detectColumnDiff] Using fallback: assumed columns deleted from end');
-        }
-        
-        // デバッグログ：削除された列を詳細に出力
-        debugLog('[detectColumnDiff] Column deletion detected:', {
-            oldColumnCount,
-            newColumnCount,
-            deletedCount: oldColumnCount - newColumnCount,
-            deletedColumns: result.deletedColumns,
-            oldHeaders: result.oldHeaders
-        });
+        result.changeType = 'removed';
     }
+    
+    // mapping を生成（シンプルな1:1マッピング）
+    result.mapping = Array.from({ length: oldColumnCount }, (_, i) => 
+        i < newColumnCount ? i : -1
+    );
 
     debugLog('[detectColumnDiff] Final result:', result);
     return result;

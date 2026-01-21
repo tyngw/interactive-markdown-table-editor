@@ -454,11 +454,116 @@ const TableBody: React.FC<TableBodyProps> = ({
                 const deletedCells = diff.oldContent ? parseTableRowCells(diff.oldContent) : []
                 // 現在の列数（追加された列を含む）
                 const currentColumnCount = headers.length
-                // 削除行の列数
-                const deletedColumnCount = deletedCells.length
                 
                 // 対応する追加行のセルを取得（内容比較用）
                 const addedCells = rowIndex >= 0 ? cells : []
+                
+                // positions/mapping ベースで表示セル配列を構築
+                const displayCells: Array<JSX.Element | null> = []
+                
+                // mapping が利用可能な場合はそれを使用
+                if (columnDiff && columnDiff.mapping && columnDiff.mapping.length > 0) {
+                  // 旧テーブルの各列について処理
+                  for (let oldColIdx = 0; oldColIdx < columnDiff.mapping.length; oldColIdx++) {
+                    const newColIdx = columnDiff.mapping[oldColIdx]
+                    const cellContent = deletedCells[oldColIdx] || ''
+                    
+                    if (headerConfig?.hasRowHeaders && oldColIdx === 0) {
+                      continue
+                    }
+                    
+                    if (newColIdx === -1) {
+                      // この列は削除された → 通常セルとして表示（ハッチングなし）
+                      const cellLines = convertBrTagsToNewlines(cellContent).split('\n')
+                      displayCells.push(
+                        <td key={`deleted-cell-${diff.row}-${index}-${oldColIdx}`} className="git-diff-deleted-cell">
+                          <span className="git-diff-deleted-content">
+                            {cellLines.map((line, lineIndex) => (
+                              <div key={lineIndex}>{line}</div>
+                            ))}
+                          </span>
+                        </td>
+                      )
+                    } else {
+                      // この列は残存 → 内容比較してスタイル決定
+                      const addedCellContent = addedCells[newColIdx] || ''
+                      const isSameContent = cellContent.trim() === addedCellContent.trim()
+                      const cellClassName = ['git-diff-deleted-cell', isSameContent ? 'git-diff-same-content' : ''].filter(Boolean).join(' ')
+                      const cellLines = convertBrTagsToNewlines(cellContent).split('\n')
+                      
+                      displayCells.push(
+                        <td key={`deleted-cell-${diff.row}-${index}-${oldColIdx}`} className={cellClassName}>
+                          <span className="git-diff-deleted-content">
+                            {cellLines.map((line, lineIndex) => (
+                              <div key={lineIndex}>{line}</div>
+                            ))}
+                          </span>
+                        </td>
+                      )
+                    }
+                  }
+                  
+                  // positions を使って追加列のプレースホルダを適切な位置に挿入
+                  if (columnDiff.positions && columnDiff.positions.length > 0) {
+                    const addedPositions = columnDiff.positions.filter(p => p.type === 'added')
+                    addedPositions.forEach(pos => {
+                      const insertIdx = pos.newIndex ?? pos.index
+                      const addedColWidth = editorState.columnWidths[insertIdx] || 150
+                      const placeholder = (
+                        <td 
+                          key={`deleted-hatched-${diff.row}-${index}-${insertIdx}`} 
+                          className="git-diff-deleted-cell git-diff-column-not-exist"
+                          data-is-placeholder={true}
+                          data-placeholder-reason="added-column"
+                          style={{ width: `${addedColWidth}px`, minWidth: `${addedColWidth}px`, maxWidth: `${addedColWidth}px` }}
+                        >
+                          <span className="git-diff-deleted-content"></span>
+                        </td>
+                      )
+                      // 正しい位置に挿入
+                      displayCells.splice(insertIdx, 0, placeholder)
+                    })
+                  }
+                } else {
+                  // mapping がない場合は従来のロジック（フォールバック）
+                  deletedCells.forEach((cellContent, cellIndex) => {
+                    if (headerConfig?.hasRowHeaders && cellIndex === 0) {
+                      return
+                    }
+                    
+                    const addedCellContent = addedCells[cellIndex] || ''
+                    const isSameContent = cellContent.trim() === addedCellContent.trim()
+                    const cellClassName = ['git-diff-deleted-cell', isSameContent ? 'git-diff-same-content' : ''].filter(Boolean).join(' ')
+                    const cellLines = convertBrTagsToNewlines(cellContent).split('\n')
+                    
+                    displayCells.push(
+                      <td key={`deleted-cell-${diff.row}-${index}-${cellIndex}`} className={cellClassName}>
+                        <span className="git-diff-deleted-content">
+                          {cellLines.map((line, lineIndex) => (
+                            <div key={lineIndex}>{line}</div>
+                          ))}
+                        </span>
+                      </td>
+                    )
+                  })
+                  
+                  // 末尾パディング（フォールバック）
+                  if (currentColumnCount > deletedCells.length) {
+                    Array.from({ length: currentColumnCount - deletedCells.length }).forEach((_, i) => {
+                      const addedColIndex = deletedCells.length + i
+                      const addedColWidth = editorState.columnWidths[addedColIndex] || 150
+                      displayCells.push(
+                        <td 
+                          key={`deleted-hatched-${diff.row}-${index}-${addedColIndex}`} 
+                          className="git-diff-deleted-cell git-diff-column-not-exist"
+                          style={{ width: `${addedColWidth}px`, minWidth: `${addedColWidth}px`, maxWidth: `${addedColWidth}px` }}
+                        >
+                          <span className="git-diff-deleted-content"></span>
+                        </td>
+                      )
+                    })
+                  }
+                }
                 
                 const deletedRowIndicator = (
                   <tr
@@ -469,54 +574,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                     <td className="row-number git-diff-deleted">
                       <span className="git-diff-icon git-diff-deleted">-</span>
                     </td>
-                    {/* 削除行のセルを表示 */}
-                    {deletedCells.map((cellContent, cellIndex) => {
-                      if (headerConfig?.hasRowHeaders && cellIndex === 0) {
-                        return null
-                      }
-                      // 列削除を考慮したセルインデックスのマッピング
-                      // 削除されたセルのインデックスを数えて、追加行でのインデックスを計算
-                      let addedCellIndex = cellIndex
-                      if (columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) {
-                        // cellIndexより前に削除された列の数を数える
-                        const deletedCountBefore = columnDiff.deletedColumns.filter(col => col < cellIndex).length
-                        addedCellIndex = cellIndex - deletedCountBefore
-                      }
-                      
-                      // 対応する追加行のセルと内容を比較
-                      const addedCellContent = addedCells[addedCellIndex] || ''
-                      const isSameContent = cellContent.trim() === addedCellContent.trim()
-                      const cellClassName = ['git-diff-deleted-cell', isSameContent ? 'git-diff-same-content' : ''].filter(Boolean).join(' ')
-                      
-                      // <br/> タグを改行に変換して表示
-                      const cellLines = convertBrTagsToNewlines(cellContent).split('\n')
-                      
-                      return (
-                        <td key={`deleted-cell-${diff.row}-${index}-${cellIndex}`} className={cellClassName}>
-                          <span className="git-diff-deleted-content">
-                            {cellLines.map((line, lineIndex) => (
-                              <div key={lineIndex}>{line}</div>
-                            ))}
-                          </span>
-                        </td>
-                      )
-                    })}
-                    {/* 列が追加された場合、削除行には存在しない列に網掛けセルを追加 */}
-                    {currentColumnCount > deletedColumnCount && 
-                      Array.from({ length: currentColumnCount - deletedColumnCount }).map((_, i) => {
-                        const addedColIndex = deletedColumnCount + i
-                        const addedColWidth = editorState.columnWidths[addedColIndex] || 150
-                        return (
-                          <td 
-                            key={`deleted-hatched-${diff.row}-${index}-${addedColIndex}`} 
-                            className="git-diff-deleted-cell git-diff-column-not-exist"
-                            style={{ width: `${addedColWidth}px`, minWidth: `${addedColWidth}px`, maxWidth: `${addedColWidth}px` }}
-                          >
-                            <span className="git-diff-deleted-content"></span>
-                          </td>
-                        )
-                      })
-                    }
+                    {displayCells}
                   </tr>
                 )
                 renderedRows.push(deletedRowIndicator)
@@ -583,117 +641,355 @@ const TableBody: React.FC<TableBodyProps> = ({
                 </td>
     
                 {(() => {
-                  const shouldUseDeletedBeforeColumns = (gitDiffStatus === GitDiffStatus.ADDED || rowIndex === -1) && columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0
+                  const hasColumnChanges = columnDiff && (
+                    (columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) ||
+                    (columnDiff.positions && columnDiff.positions.some(p => p.type === 'added'))
+                  )
+                  const shouldUseDeletedBeforeColumns = (gitDiffStatus === GitDiffStatus.ADDED || rowIndex === -1) && hasColumnChanges
                   if (rowIndex === -1) {
-                    console.log('[TableBody] ヘッダ行チェック:', { rowIndex, gitDiffStatus, columnDiff: columnDiff ? { deletedColumns: columnDiff.deletedColumns, oldColumnCount: columnDiff.oldColumnCount } : null, shouldUseDeletedBeforeColumns })
+                    console.log('[TableBody] ヘッダ行チェック:', { rowIndex, gitDiffStatus, columnDiff: columnDiff ? { deletedColumns: columnDiff.deletedColumns, oldColumnCount: columnDiff.oldColumnCount, positions: columnDiff.positions } : null, shouldUseDeletedBeforeColumns })
                   }
                   return shouldUseDeletedBeforeColumns
                 })() && columnDiff ? (
-                  // 削除前の列数分のセルを生成（追加行またはヘッダ行の場合）
-                  Array.from({ length: columnDiff.oldColumnCount }).map((_, oldColIdx) => {
-                    // 行ヘッダーONの場合、先頭列をスキップ
-                    if (headerConfig?.hasRowHeaders && oldColIdx === 0) {
-                      return null
-                    }
+                  // positions/mapping ベースで表示セル配列を構築（追加行またはヘッダ行）
+                  (() => {
+                    const displayCells: Array<JSX.Element | null> = []
                     
-                    const isDeletedColumn = columnDiff.deletedColumns.includes(oldColIdx)
-                    
-                    // デバッグ：追加行またはヘッダ行で各列の処理をログ出力
-                    if (rowIndex === -1 || rowIndex === 0) {
-                      console.log(`[TableBody] Row ${rowIndex}, oldColIdx=${oldColIdx}: isDeleted=${isDeletedColumn}`)
-                    }
-                    
-                    if (isDeletedColumn) {
-                      // 削除された列の位置にはハッチングセルを表示
-                      return (
-                        <td 
-                          key={`added-hatched-${rowIndex}-${oldColIdx}`}
-                          className="git-diff-column-not-exist"
-                          style={{ 
-                            width: `${editorState.columnWidths[oldColIdx] || 150}px`,
-                            minWidth: `${editorState.columnWidths[oldColIdx] || 150}px`,
-                            maxWidth: `${editorState.columnWidths[oldColIdx] || 150}px`
-                          }}
-                        />
-                      )
-                    }
-                    
-                    // 削除されていない列：新テーブルのセル内容を取得
-                    // oldColIdx から newColIdx へのマッピング
-                    const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
-                    const newColIdx = oldColIdx - deletedBeforeThisCol
-                    
-                    // ヘッダ行（rowIndex=-1）の場合は、columnDiff.oldHeaders から削除前のヘッダ名を取得
-                    // 通常行の場合は、cells から削除前の列インデックスに対応するセル内容を取得
-                    let cellContent = ''
-                    if (rowIndex === -1 && columnDiff.oldHeaders && columnDiff.oldHeaders[oldColIdx]) {
-                      cellContent = columnDiff.oldHeaders[oldColIdx]
+                    // mapping が利用可能な場合
+                    if (columnDiff.mapping && columnDiff.mapping.length > 0) {
+                      // 旧テーブルの各列について処理
+                      for (let oldColIdx = 0; oldColIdx < columnDiff.mapping.length; oldColIdx++) {
+                        if (headerConfig?.hasRowHeaders && oldColIdx === 0) {
+                          continue
+                        }
+                        
+                        const newColIdx = columnDiff.mapping[oldColIdx]
+                        
+                        if (newColIdx === -1) {
+                          // この列は削除された
+                          if (rowIndex === -1) {
+                            // ヘッダ行：削除列のヘッダ名を旧テーブルから表示
+                            const headerContent = columnDiff.oldHeaders?.[oldColIdx] || ''
+                            displayCells.push(
+                              <td 
+                                key={`header-deleted-${oldColIdx}`}
+                                className="column-header git-diff-column-not-exist"
+                                data-is-placeholder={true}
+                                data-placeholder-reason="deleted-column"
+                                title="この列は削除されました"
+                                style={{ 
+                                  width: `${editorState.columnWidths[oldColIdx] || 150}px`,
+                                  minWidth: `${editorState.columnWidths[oldColIdx] || 150}px`,
+                                  maxWidth: `${editorState.columnWidths[oldColIdx] || 150}px`
+                                }}
+                              >
+                                <div className="column-header-content">{headerContent}</div>
+                              </td>
+                            )
+                          } else {
+                            // データ行：ハッチングプレースホルダを表示
+                            const positionInfo = columnDiff.positions?.find(
+                              p => p.type === 'removed' && p.index === oldColIdx
+                            )
+                            const confidence = positionInfo?.confidence ?? 0.5
+                            const placeholderTitle = confidence >= 0.85 
+                              ? 'この列は削除されました'
+                              : 'この列は削除されました（推定）'
+                            
+                            displayCells.push(
+                              <td 
+                                key={`added-hatched-deleted-${rowIndex}-${oldColIdx}`}
+                                className="git-diff-column-not-exist"
+                                data-is-placeholder={true}
+                                data-placeholder-reason="deleted-column"
+                                title={placeholderTitle}
+                                style={{ 
+                                  width: `${editorState.columnWidths[oldColIdx] || 150}px`,
+                                  minWidth: `${editorState.columnWidths[oldColIdx] || 150}px`,
+                                  maxWidth: `${editorState.columnWidths[oldColIdx] || 150}px`
+                                }}
+                              />
+                            )
+                          }
+                        } else {
+                          // この列は残存 → 実際のセルを表示
+                          let cellContent = ''
+                          if (rowIndex === -1) {
+                            // ヘッダ行：残存列のヘッダ名を新しいテーブルから取得
+                            cellContent = headers[newColIdx] || ''
+                          } else {
+                            // データ行：セル内容を取得
+                            cellContent = cells[newColIdx] || ''
+                          }
+                          
+                          const storedWidth = editorState.columnWidths[newColIdx] || 150
+                          
+                          // ヘッダ行の場合
+                          if (rowIndex === -1) {
+                            displayCells.push(
+                              <td
+                                key={newColIdx}
+                                data-col={newColIdx}
+                                className="column-header"
+                                style={{
+                                  width: `${storedWidth}px`,
+                                  minWidth: `${storedWidth}px`,
+                                  maxWidth: `${storedWidth}px`
+                                }}
+                              >
+                                <div className="column-header-content">{cellContent}</div>
+                              </td>
+                            )
+                          } else {
+                            // 通常行の場合
+                            const isEditing = isCellEditing(rowIndex, newColIdx)
+                            const isSelected = isCellSelected(rowIndex, newColIdx)
+                            const isAnchor = isAnchorCell(rowIndex, newColIdx)
+                            const borders = getSelectionBorders(rowIndex, newColIdx)
+                            const isInFillRange = isCellInFillRange(rowIndex, newColIdx)
+                            const showFillHandle = isBottomRightCell(rowIndex, newColIdx) && !isEditing
+                            const isSResult = isSearchResult ? isSearchResult(rowIndex, newColIdx) : false
+                            const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, newColIdx) : false
+                            const userResized = !!(editorState.columnWidths[newColIdx] && editorState.columnWidths[newColIdx] !== 150)
+                            const isSingleSelection = isSingleCellSelection()
+                            const savedHeight = savedHeightsRef.current.get(`${rowIndex}-${newColIdx}`)
+                            
+                            displayCells.push(
+                              <MemoizedCell
+                                key={newColIdx}
+                                rowIndex={rowIndex}
+                                colIndex={newColIdx}
+                                cell={cellContent}
+                                isSelected={isSelected}
+                                isAnchor={isAnchor}
+                                isSingleSelection={isSingleSelection}
+                                borders={borders}
+                                isEditing={isEditing}
+                                isInFillRange={isInFillRange}
+                                isSearchResult={isSResult}
+                                isCurrentSearchResult={isCSResult}
+                                showFillHandle={showFillHandle}
+                                storedWidth={storedWidth}
+                                userResized={userResized}
+                                displayRowNumber={displayRowNumber}
+                                headerConfig={headerConfig}
+                                initialCellInput={isEditing ? initialCellInput : null}
+                                savedHeight={savedHeight}
+                                onMouseDown={handleCellMouseDown}
+                                onMouseEnter={handleCellMouseEnter}
+                                onDoubleClick={startCellEdit}
+                                onCommitEdit={commitCellEdit}
+                                onCancelEdit={cancelCellEdit}
+                                onFillHandleMouseDown={onFillHandleMouseDown}
+                                isColumnNotExist={false}
+                              />
+                            )
+                          }
+                        }
+                      }
+                      
+                      // positions を使って追加列を適切な位置に挿入
+                      if (columnDiff.positions && columnDiff.positions.length > 0) {
+                        const addedPositions = columnDiff.positions.filter(p => p.type === 'added')
+                        addedPositions.forEach(pos => {
+                          const insertIdx = pos.newIndex ?? pos.index
+                          const addedColWidth = editorState.columnWidths[insertIdx] || 150
+                          
+                          // ヘッダ行の場合は実際のヘッダ名を表示
+                          if (rowIndex === -1) {
+                            const headerContent = headers[insertIdx] || ''
+                            const headerCell = (
+                              <td
+                                key={`header-added-${insertIdx}`}
+                                data-col={insertIdx}
+                                className="column-header"
+                                style={{
+                                  width: `${addedColWidth}px`,
+                                  minWidth: `${addedColWidth}px`,
+                                  maxWidth: `${addedColWidth}px`
+                                }}
+                              >
+                                <div className="column-header-content">{headerContent}</div>
+                              </td>
+                            )
+                            // DELETED行と同じロジック：新テーブルのインデックスで挿入
+                            displayCells.splice(insertIdx, 0, headerCell)
+                          } else if (gitDiffStatus === GitDiffStatus.ADDED) {
+                            // ADDED行：追加列は通常セル（編集可能）
+                            const cellContent = cells[insertIdx] || ''
+                            const isEditing = isCellEditing(rowIndex, insertIdx)
+                            const isSelected = isCellSelected(rowIndex, insertIdx)
+                            const isAnchor = isAnchorCell(rowIndex, insertIdx)
+                            const borders = getSelectionBorders(rowIndex, insertIdx)
+                            const isInFillRange = isCellInFillRange(rowIndex, insertIdx)
+                            const showFillHandle = isBottomRightCell(rowIndex, insertIdx) && !isEditing
+                            const isSResult = isSearchResult ? isSearchResult(rowIndex, insertIdx) : false
+                            const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, insertIdx) : false
+                            const userResized = !!(editorState.columnWidths[insertIdx] && editorState.columnWidths[insertIdx] !== 150)
+                            const isSingleSelection = isSingleCellSelection()
+                            const savedHeight = savedHeightsRef.current.get(`${rowIndex}-${insertIdx}`)
+                            
+                            const addedCell = (
+                              <MemoizedCell
+                                key={`added-cell-${rowIndex}-${insertIdx}`}
+                                rowIndex={rowIndex}
+                                colIndex={insertIdx}
+                                cell={cellContent}
+                                isSelected={isSelected}
+                                isAnchor={isAnchor}
+                                isSingleSelection={isSingleSelection}
+                                borders={borders}
+                                isEditing={isEditing}
+                                isInFillRange={isInFillRange}
+                                isSearchResult={isSResult}
+                                isCurrentSearchResult={isCSResult}
+                                showFillHandle={showFillHandle}
+                                storedWidth={addedColWidth}
+                                userResized={userResized}
+                                displayRowNumber={displayRowNumber}
+                                headerConfig={headerConfig}
+                                initialCellInput={isEditing ? initialCellInput : null}
+                                savedHeight={savedHeight}
+                                onMouseDown={handleCellMouseDown}
+                                onMouseEnter={handleCellMouseEnter}
+                                onDoubleClick={startCellEdit}
+                                onCommitEdit={commitCellEdit}
+                                onCancelEdit={cancelCellEdit}
+                                onFillHandleMouseDown={onFillHandleMouseDown}
+                                isColumnNotExist={false}
+                              />
+                            )
+                            displayCells.splice(insertIdx, 0, addedCell)
+                          } else {
+                            // その他のデータ行：ハッチングプレースホルダを表示
+                            const placeholder = (
+                              <td 
+                                key={`added-hatched-added-${rowIndex}-${insertIdx}`} 
+                                className="git-diff-column-not-exist"
+                                data-is-placeholder={true}
+                                data-placeholder-reason="added-column"
+                                title="この列は追加されました"
+                                style={{ 
+                                  width: `${addedColWidth}px`, 
+                                  minWidth: `${addedColWidth}px`, 
+                                  maxWidth: `${addedColWidth}px` 
+                                }}
+                              />
+                            )
+                            displayCells.splice(insertIdx, 0, placeholder)
+                          }
+                        })
+                      }
+                      
+                      return displayCells
                     } else {
-                      cellContent = cells[newColIdx] || ''
+                      // mapping がない場合はフォールバック（従来のロジック）
+                      return Array.from({ length: columnDiff.oldColumnCount }).map((_, oldColIdx) => {
+                        if (headerConfig?.hasRowHeaders && oldColIdx === 0) {
+                          return null
+                        }
+                        
+                        const isDeletedColumn = columnDiff.deletedColumns.includes(oldColIdx)
+                        
+                        if (isDeletedColumn) {
+                          const positionInfo = columnDiff.positions?.find(
+                            p => p.type === 'removed' && p.index === oldColIdx
+                          )
+                          const confidence = positionInfo?.confidence ?? 0.5
+                          const placeholderTitle = confidence >= 0.85 
+                            ? 'この列は削除されました'
+                            : 'この列は削除されました（推定）'
+                          
+                          return (
+                            <td 
+                              key={`added-hatched-fb-${rowIndex}-${oldColIdx}`}
+                              className="git-diff-column-not-exist"
+                              data-is-placeholder={true}
+                              data-placeholder-reason="deleted-column"
+                              title={placeholderTitle}
+                              style={{ 
+                                width: `${editorState.columnWidths[oldColIdx] || 150}px`,
+                                minWidth: `${editorState.columnWidths[oldColIdx] || 150}px`,
+                                maxWidth: `${editorState.columnWidths[oldColIdx] || 150}px`
+                              }}
+                            />
+                          )
+                        }
+                        
+                        const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
+                        const newColIdx = oldColIdx - deletedBeforeThisCol
+                        
+                        let cellContent = ''
+                        if (rowIndex === -1 && columnDiff.oldHeaders && columnDiff.oldHeaders[oldColIdx]) {
+                          cellContent = columnDiff.oldHeaders[oldColIdx]
+                        } else {
+                          cellContent = cells[newColIdx] || ''
+                        }
+                        
+                        const storedWidth = editorState.columnWidths[newColIdx] || 150
+                        
+                        if (rowIndex === -1) {
+                          return (
+                            <td
+                              key={newColIdx}
+                              data-col={newColIdx}
+                              className="column-header"
+                              style={{
+                                width: `${storedWidth}px`,
+                                minWidth: `${storedWidth}px`,
+                                maxWidth: `${storedWidth}px`
+                              }}
+                            >
+                              <div className="column-header-content">{cellContent}</div>
+                            </td>
+                          )
+                        }
+                        
+                        const isEditing = isCellEditing(rowIndex, newColIdx)
+                        const isSelected = isCellSelected(rowIndex, newColIdx)
+                        const isAnchor = isAnchorCell(rowIndex, newColIdx)
+                        const borders = getSelectionBorders(rowIndex, newColIdx)
+                        const isInFillRange = isCellInFillRange(rowIndex, newColIdx)
+                        const showFillHandle = isBottomRightCell(rowIndex, newColIdx) && !isEditing
+                        const isSResult = isSearchResult ? isSearchResult(rowIndex, newColIdx) : false
+                        const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, newColIdx) : false
+                        const userResized = !!(editorState.columnWidths[newColIdx] && editorState.columnWidths[newColIdx] !== 150)
+                        const isSingleSelection = isSingleCellSelection()
+                        const savedHeight = savedHeightsRef.current.get(`${rowIndex}-${newColIdx}`)
+                        
+                        return (
+                          <MemoizedCell
+                            key={newColIdx}
+                            rowIndex={rowIndex}
+                            colIndex={newColIdx}
+                            cell={cellContent}
+                            isSelected={isSelected}
+                            isAnchor={isAnchor}
+                            isSingleSelection={isSingleSelection}
+                            borders={borders}
+                            isEditing={isEditing}
+                            isInFillRange={isInFillRange}
+                            isSearchResult={isSResult}
+                            isCurrentSearchResult={isCSResult}
+                            showFillHandle={showFillHandle}
+                            storedWidth={storedWidth}
+                            userResized={userResized}
+                            displayRowNumber={displayRowNumber}
+                            headerConfig={headerConfig}
+                            initialCellInput={isEditing ? initialCellInput : null}
+                            savedHeight={savedHeight}
+                            onMouseDown={handleCellMouseDown}
+                            onMouseEnter={handleCellMouseEnter}
+                            onDoubleClick={startCellEdit}
+                            onCommitEdit={commitCellEdit}
+                            onCancelEdit={cancelCellEdit}
+                            onFillHandleMouseDown={onFillHandleMouseDown}
+                            isColumnNotExist={false}
+                          />
+                        )
+                      })
                     }
-                    
-                    const storedWidth = editorState.columnWidths[newColIdx] || 150
-                    const isEditing = isCellEditing(rowIndex, newColIdx)
-                    const isSelected = isCellSelected(rowIndex, newColIdx)
-                    const isAnchor = isAnchorCell(rowIndex, newColIdx)
-                    const borders = getSelectionBorders(rowIndex, newColIdx)
-                    const isInFillRange = isCellInFillRange(rowIndex, newColIdx)
-                    const showFillHandle = isBottomRightCell(rowIndex, newColIdx) && !isEditing
-                    const isSResult = isSearchResult ? isSearchResult(rowIndex, newColIdx) : false
-                    const isCSResult = isCurrentSearchResult ? isCurrentSearchResult(rowIndex, newColIdx) : false
-                    const userResized = !!(editorState.columnWidths[newColIdx] && editorState.columnWidths[newColIdx] !== 150)
-                    const isSingleSelection = isSingleCellSelection()
-                    const savedHeight = savedHeightsRef.current.get(`${rowIndex}-${newColIdx}`)
-                    
-                    // ヘッダ行の場合は、MemoizedCellを使わず直接テーブルセルを返す
-                    if (rowIndex === -1) {
-                      return (
-                        <td
-                          key={newColIdx}
-                          data-col={newColIdx}
-                          className="column-header"
-                          style={{
-                            width: `${storedWidth}px`,
-                            minWidth: `${storedWidth}px`,
-                            maxWidth: `${storedWidth}px`
-                          }}
-                        >
-                          <div className="column-header-content">{cellContent}</div>
-                        </td>
-                      )
-                    }
-                    
-                    return (
-                      <MemoizedCell
-                        key={newColIdx}
-                        rowIndex={rowIndex}
-                        colIndex={newColIdx}
-                        cell={cellContent}
-                        isSelected={isSelected}
-                        isAnchor={isAnchor}
-                        isSingleSelection={isSingleSelection}
-                        borders={borders}
-                        isEditing={isEditing}
-                        isInFillRange={isInFillRange}
-                        isSearchResult={isSResult}
-                        isCurrentSearchResult={isCSResult}
-                        showFillHandle={showFillHandle}
-                        storedWidth={storedWidth}
-                        userResized={userResized}
-                        displayRowNumber={displayRowNumber}
-                        headerConfig={headerConfig}
-                        initialCellInput={isEditing ? initialCellInput : null}
-                        savedHeight={savedHeight}
-                        onMouseDown={handleCellMouseDown}
-                        onMouseEnter={handleCellMouseEnter}
-                        onDoubleClick={startCellEdit}
-                        onCommitEdit={commitCellEdit}
-                        onCancelEdit={cancelCellEdit}
-                        onFillHandleMouseDown={onFillHandleMouseDown}
-                        isColumnNotExist={false}
-                      />
-                    )
-                  })
+                  })()
                 ) : (
                   // 通常行：削除がない場合、既存ロジックでセルをレンダリング
                   cells.map((cell, colIndex) => {

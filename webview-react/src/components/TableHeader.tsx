@@ -183,66 +183,140 @@ const TableHeader: React.FC<TableHeaderProps> = ({
         {/* Column headers with enhanced styling */}
         {(() => {
           // 列が削除された場合は、削除前の列構造に基づいてレンダリング
+          // 新しいmappingを活用して中間列の追加/削除を正確に処理
           if (columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) {
-            return Array.from({ length: columnDiff.oldColumnCount }).map((_, oldColIdx) => {
+            const hasMapping = !!(columnDiff.mapping && columnDiff.mapping.length > 0)
+
+            // 旧列基準で一旦ヘッダセル配列を構築し、追加された列は positions を使って挿入する
+            // まずヘッダのメタ情報（descriptor）を作成し、追加列は positions で挿入する
+            type Hd = {
+              kind: 'deleted' | 'existing' | 'added'
+              key: string
+              dataCol: number
+              header: string
+              width: number
+              isSelected?: boolean
+              isFullySelected?: boolean
+              userResizedClass?: string
+              confidenceLabel?: string
+            }
+
+            const descriptors: Hd[] = []
+
+            for (let oldColIdx = 0; oldColIdx < columnDiff.oldColumnCount; oldColIdx++) {
               const isDeletedColumn = columnDiff.deletedColumns.includes(oldColIdx)
-              
+
               if (isDeletedColumn) {
-                // 削除された列の位置にはハッチングヘッダを表示
-                const columnLetter = getColumnLetter(oldColIdx)
                 const storedWidth = columnWidths[oldColIdx] || 150
-                const widthStyle = {
-                  width: `${storedWidth}px`,
-                  minWidth: `${storedWidth}px`,
-                  maxWidth: `${storedWidth}px`
-                }
                 const deletedHeaderName = columnDiff.oldHeaders && columnDiff.oldHeaders[oldColIdx]
                   ? columnDiff.oldHeaders[oldColIdx]
                   : '(Deleted)'
-                
-                return (
-                  <th
-                    key={`deleted-header-${oldColIdx}`}
-                    className="column-header git-diff-column-not-exist"
-                    data-col={oldColIdx}
-                    style={widthStyle}
-                    title={`Column ${columnLetter}: ${deletedHeaderName}`}
-                  >
-                    <div className="header-content">
-                      <div className="column-letter">{columnLetter}</div>
-                      <div className="column-title">{deletedHeaderName}</div>
-                    </div>
-                  </th>
+
+                const positionInfo = columnDiff.positions?.find(
+                  p => p.type === 'removed' && p.index === oldColIdx
                 )
+                const confidence = positionInfo?.confidence ?? 0.5
+                const confidenceLabel = confidence >= 0.85 ? '' : ' (推定)'
+
+                descriptors.push({
+                  kind: 'deleted',
+                  key: `deleted-${oldColIdx}`,
+                  dataCol: oldColIdx,
+                  header: deletedHeaderName,
+                  width: storedWidth,
+                  confidenceLabel
+                })
+                continue
               }
-              
-              // 削除されていない列：新テーブルのヘッダを取得
-              const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
-              const newColIdx = oldColIdx - deletedBeforeThisCol
+
+              // 削除されていない列：mapping または削除前考慮で新インデックスを算出してヘッダ名を取得
+              let newColIdx: number
+              if (hasMapping && columnDiff.mapping![oldColIdx] !== -1) {
+                newColIdx = columnDiff.mapping![oldColIdx]
+              } else {
+                const deletedBeforeThisCol = columnDiff.deletedColumns.filter(dc => dc < oldColIdx).length
+                newColIdx = oldColIdx - deletedBeforeThisCol
+              }
+
               const header = headers[newColIdx] || ''
-              const col = newColIdx
-              
-              const columnLetter = getColumnLetter(oldColIdx)
               const storedWidth = columnWidths[newColIdx] || 150
-              const widthStyle = {
-                width: `${storedWidth}px`,
-                minWidth: `${storedWidth}px`,
-                maxWidth: `${storedWidth}px`
-              }
               const userResizedClass = columnWidths[newColIdx] && columnWidths[newColIdx] !== 150 ? 'user-resized' : ''
               const isSelected = selectedCols?.has(newColIdx)
               const isFullySelected = fullySelectedCols?.has(newColIdx)
 
+              descriptors.push({
+                kind: 'existing',
+                key: `existing-${oldColIdx}`,
+                dataCol: newColIdx,
+                header,
+                width: storedWidth,
+                isSelected,
+                isFullySelected,
+                userResizedClass
+              })
+            }
+
+            // positions を使って追加列を descriptor に挿入（added の newIndex を優先）
+            if (columnDiff.positions && columnDiff.positions.length > 0) {
+              const addedPositions = columnDiff.positions.filter(p => p.type === 'added')
+              addedPositions.forEach(pos => {
+                const insertIdx = pos.newIndex ?? pos.index
+                const addedColWidth = columnWidths[insertIdx] || 150
+                const headerContent = headers[insertIdx] || ''
+                const userResizedClassAdded = columnWidths[insertIdx] && columnWidths[insertIdx] !== 150 ? 'user-resized' : ''
+                const isSelectedAdded = selectedCols?.has(insertIdx)
+                const isFullySelectedAdded = fullySelectedCols?.has(insertIdx)
+
+                const hd: Hd = {
+                  kind: 'added',
+                  key: `added-${insertIdx}-${Math.random().toString(36).slice(2,7)}`,
+                  dataCol: insertIdx,
+                  header: headerContent,
+                  width: addedColWidth,
+                  isSelected: isSelectedAdded,
+                  isFullySelected: isFullySelectedAdded,
+                  userResizedClass: userResizedClassAdded
+                }
+
+                // splice を使って descriptor を挿入
+                descriptors.splice(insertIdx, 0, hd)
+              })
+            }
+
+            // 最後に descriptor を表示用の JSX に変換
+            const displayHeaders = descriptors.map((d, displayIdx) => {
+              // 表示インデックスは削除された列を除外して数える
+              const visibleIndex = descriptors.slice(0, displayIdx).filter(x => x.kind !== 'deleted').length
+              const columnLetter = getColumnLetter(visibleIndex)
+              const widthStyle = {
+                width: `${d.width}px`,
+                minWidth: `${d.width}px`,
+                maxWidth: `${d.width}px`
+              }
+
+              if (d.kind === 'deleted') {
+                return (
+                  <th
+                    key={d.key}
+                    className="column-header git-diff-column-not-exist"
+                    data-col={d.dataCol}
+                    style={widthStyle}
+                    title={`${d.header}${d.confidenceLabel ?? ''}`}
+                  >
+                    <div className="header-content">
+                      <div className="column-title">{d.header}</div>
+                    </div>
+                  </th>
+                )
+              }
+
+              const col = d.dataCol
+              const userResized = d.userResizedClass || ''
+
               return (
                 <th
-                  key={col}
+                  key={d.key}
                   onClick={(e) => handleColumnHeaderClick(col, e)}
-                  onMouseDown={(_e) => {
-                    // Start column drag if needed
-                    if (getDragProps) {
-                      // Handle drag start
-                    }
-                  }}
                   onDoubleClick={() => handleHeaderDoubleClick(col)}
                   onContextMenu={(e) => {
                     e.preventDefault()
@@ -250,41 +324,32 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                       onShowColumnContextMenu(e, col)
                     }
                   }}
-                  className={`column-header ${userResizedClass} ${isFullySelected ? 'selected' : (isSelected ? 'highlighted' : '')}`}
+                  className={`column-header ${userResized} ${d.isFullySelected ? 'selected' : (d.isSelected ? 'highlighted' : '')}`}
                   data-col={col}
                   style={widthStyle}
-                  title={`Column ${columnLetter}: ${header}`}
+                  title={`Column ${columnLetter}: ${d.header}`}
                   {...(getDragProps ? getDragProps('column', col) : {})}
                   {...(getDropProps ? getDropProps('column', col) : {})}
                 >
                   <div className="header-content">
                     <div className="column-letter">{columnLetter}</div>
                     {headerConfig?.hasColumnHeaders !== false && (
-                      <>
-                        {editingHeader === col ? (
-                          <input
-                            className="header-input"
-                            type="text"
-                            defaultValue={header}
-                            autoFocus
-                            onBlur={(e) => handleHeaderBlur(col, e.target.value)}
-                            onKeyDown={(e) => handleHeaderKeyDown(e, col)}
-                          />
-                        ) : (
-                          <div className="column-title" title="Double-click to edit header">
-                            {header}
-                          </div>
-                        )}
-                      </>
+                      editingHeader === col ? (
+                        <input
+                          className="header-input"
+                          type="text"
+                          defaultValue={d.header}
+                          autoFocus
+                          onBlur={(e) => handleHeaderBlur(col, e.target.value)}
+                          onKeyDown={(e) => handleHeaderKeyDown(e, col)}
+                        />
+                      ) : (
+                        <div className="column-title" title="Double-click to edit header">{d.header}</div>
+                      )
                     )}
                     <div
                       className="sort-indicator"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        console.log('🔧 Sort icon clicked for column:', col)
-                        console.log('🔧 Current sortState:', sortState)
-                        onSort(col)
-                      }}
+                      onClick={(e) => { e.stopPropagation(); onSort(col) }}
                       title="Sort column"
                       style={{ visibility: columnDiff ? 'hidden' : 'visible' }}
                     >
@@ -296,18 +361,14 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   <div
                     className="resize-handle"
                     onClick={(e) => e.stopPropagation()}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation()
-                      handleAutoFit(col)
-                    }}
-                    onMouseDown={(e) => {
-                      e.stopPropagation()
-                      handleResizeStart(e, col)
-                    }}
+                    onDoubleClick={(e) => { e.stopPropagation(); handleAutoFit(col) }}
+                    onMouseDown={(e) => { e.stopPropagation(); handleResizeStart(e, col) }}
                   />
                 </th>
               )
             })
+
+            return displayHeaders
           }
           
           // 通常行：削除がない場合、既存ロジックでヘッダをレンダリング

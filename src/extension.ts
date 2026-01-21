@@ -374,7 +374,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 tbl.rows.length,
                                 tableMarkdown
                             );
-                            const columnDiff = detectColumnDiff(gitDiff, tbl.headers.length);
+                            const columnDiff = detectColumnDiff(gitDiff, tbl.headers.length, tbl.headers);
                             return {
                                 tableIndex: idx,
                                 gitDiff,
@@ -611,7 +611,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 tableMarkdown
                             );
                             debug(`[GitDiffDebug] Got diff for table ${index}:`, gitDiff.length > 0 ? gitDiff : 'No diff');
-                            const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
+                            const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length, tableData.headers);
                             return { ...tableData, gitDiff, columnDiff };
                         })
                     );
@@ -733,7 +733,7 @@ export function activate(context: vscode.ExtensionContext) {
                                     tableData.rows.length,
                                     tableMarkdown
                                 );
-                                const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
+                                const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length, tableData.headers);
                                 return { ...tableData, gitDiff, columnDiff };
                             })
                         );
@@ -1649,7 +1649,7 @@ export function activate(context: vscode.ExtensionContext) {
                         tableData.rows.length,
                         tableMarkdown
                     );
-                    const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length);
+                    const columnDiff = detectColumnDiff(gitDiff, tableData.headers.length, tableData.headers);
                     return { ...tableData, gitDiff, columnDiff };
                 })
             );

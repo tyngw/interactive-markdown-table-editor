@@ -590,6 +590,10 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
           background-color: var(--vscode-editorGroupHeader-tabsBackground, #1e1e1e) !important;
           border: 1px dashed var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
           position: relative;
+          /* ヘッダは上揃えにする（他のヘッダと一致させる） */
+          vertical-align: top;
+          padding: 10px 12px;
+          box-sizing: border-box;
         }
 
         th.git-diff-column-not-exist::before {
