@@ -6,8 +6,6 @@ export interface CellEditorProps {
   onCancel: () => void
   rowIndex?: number
   colIndex?: number
-  // 親からレイアウト情報を受け取る
-  originalHeight?: number
   // 行内の最大セル高さ（仕様上これに厳密に合わせる）
   rowMaxHeight?: number
 }
@@ -19,7 +17,6 @@ const CellEditor: React.FC<CellEditorProps> = ({
   // 位置情報は親が保持（ここでは使用しない）
   rowIndex: _rowIndex,
   colIndex: _colIndex,
-  originalHeight,
   rowMaxHeight
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -137,7 +134,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
       textarea.removeEventListener('input', handleInput)
       textarea.removeEventListener('heightUpdate', handleHeightUpdate as EventListener)
     }
-  }, [originalHeight, rowMaxHeight, isComposing, _rowIndex, _colIndex])
+  }, [rowMaxHeight, isComposing, _rowIndex, _colIndex])
 
   // 値が外部から変化した場合（通常は編集開始時のみ）、履歴を初期化
   useEffect(() => {
