@@ -225,9 +225,12 @@ const TableHeader: React.FC<TableHeaderProps> = ({
 
         {/* Column headers with enhanced styling */}
         {(() => {
-          // 列が削除された場合は、削除前の列構造に基づいてレンダリング
-          // 新しいmappingを活用して中間列の追加/削除を正確に処理
-          if (columnDiff && columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) {
+          // 列差分情報がある場合は mapping / positions を用いた表示を優先
+          if (columnDiff && (
+            (columnDiff.deletedColumns && columnDiff.deletedColumns.length > 0) ||
+            (columnDiff.positions && columnDiff.positions.length > 0) ||
+            (columnDiff.mapping && columnDiff.mapping.length > 0)
+          )) {
             const hasMapping = !!(columnDiff.mapping && columnDiff.mapping.length > 0)
 
             // 旧列基準で一旦ヘッダセル配列を構築し、追加された列は positions を使って挿入する
@@ -242,6 +245,8 @@ const TableHeader: React.FC<TableHeaderProps> = ({
               isFullySelected?: boolean
               userResizedClass?: string
               confidenceLabel?: string
+              oldHeader?: string
+              renamed?: boolean
             }
 
             const descriptors: Hd[] = []
@@ -282,6 +287,8 @@ const TableHeader: React.FC<TableHeaderProps> = ({
               }
 
               const header = headers[newColIdx] || ''
+              const oldHeaderName = columnDiff.oldHeaders && columnDiff.oldHeaders[oldColIdx]
+              const renamed = !!(oldHeaderName && header && oldHeaderName !== header)
               const storedWidth = columnWidths[newColIdx] || 150
               const userResizedClass = columnWidths[newColIdx] && columnWidths[newColIdx] !== 150 ? 'user-resized' : ''
               const isSelected = selectedCols?.has(newColIdx)
@@ -295,7 +302,9 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                 width: storedWidth,
                 isSelected,
                 isFullySelected,
-                userResizedClass
+                userResizedClass,
+                oldHeader: oldHeaderName,
+                renamed
               })
             }
 
@@ -356,6 +365,10 @@ const TableHeader: React.FC<TableHeaderProps> = ({
               const col = d.dataCol
               const userResized = d.userResizedClass || ''
 
+              const title = d.renamed && d.oldHeader
+                ? `Column ${columnLetter}: ${d.header} → ${d.oldHeader}`
+                : `Column ${columnLetter}: ${d.header}`
+
               return (
                 <th
                   key={d.key}
@@ -370,7 +383,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   className={`column-header ${userResized} ${d.isFullySelected ? 'selected' : (d.isSelected ? 'highlighted' : '')}`}
                   data-col={col}
                   style={widthStyle}
-                  title={`Column ${columnLetter}: ${d.header}`}
+                  title={title}
                   {...(getDragProps ? getDragProps('column', col) : {})}
                   {...(getDropProps ? getDropProps('column', col) : {})}
                 >
@@ -387,7 +400,14 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                           onKeyDown={(e) => handleHeaderKeyDown(e, col)}
                         />
                       ) : (
-                        <div className="column-title" title="Double-click to edit header">{d.header}</div>
+                        <div className="column-title" title="Double-click to edit header">
+                          {d.renamed && d.oldHeader ? (
+                            <>
+                              <span className="header-rename-new">{d.header}</span>
+                              <span className="header-rename-old">{d.oldHeader}</span>
+                            </>
+                          ) : d.header}
+                        </div>
                       )
                     )}
                     <div
