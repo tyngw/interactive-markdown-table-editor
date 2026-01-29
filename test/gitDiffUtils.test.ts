@@ -369,6 +369,30 @@ describe('detectColumnDiffWithPositions - 中間列検知', () => {
         assert.ok(result.heuristics!.some(h => h.includes('sampling')));
     });
 
+    it('ヘッダが変わってもデータ一致で同一列と判定する', () => {
+        const oldHeaders = ['Name', 'Amount'];
+        const newHeaders = ['Customer', 'Total'];
+        const oldDataRows = [
+            ['Alice', '100'],
+            ['Bob', '200']
+        ];
+        const newDataRows = [
+            ['Alice', '100'],
+            ['Bob', '200']
+        ];
+
+        const result = detectColumnDiffWithPositions(
+            oldHeaders,
+            newHeaders,
+            oldDataRows,
+            newDataRows
+        );
+
+        assert.strictEqual(result.changeType, 'none');
+        assert.deepStrictEqual(result.mapping, [0, 1]);
+        assert.ok(result.heuristics!.some(h => h.startsWith('data_match')));
+    });
+
     it('複数列の追加・削除を同時に検知する', () => {
         const result = detectColumnDiffWithPositions(
             ['A', 'B', 'C', 'D'],

@@ -416,6 +416,18 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
           line-height: 1.2;
         }
 
+        .header-rename-old {
+          margin-right: 6px;
+          color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39);
+          text-decoration: line-through;
+          opacity: 0.9;
+        }
+
+        .header-rename-new {
+          color: var(--vscode-editor-foreground, var(--vscode-foreground, #333333));
+          font-weight: 700;
+        }
+
         .header-text {
           font-size: 13px;
           font-weight: 600;

@@ -797,6 +797,87 @@ export function calculateSimilarity(s1: string, s2: string): number {
 }
 
 /**
+ * 列データのサンプルを均等抽出して正規化済みセル値の配列として返す
+ * データを列マッチングに活用するための前処理
+ */
+function buildColumnSamples(
+    dataRows: string[][] | undefined,
+    columnCount: number,
+    maxSamplesPerTable = 8,
+    maxSamplesPerColumn = 12
+): { samples: string[][]; sampledRowCount: number } {
+    const samples: string[][] = Array.from({ length: columnCount }, () => []);
+    if (!dataRows || dataRows.length === 0 || columnCount === 0) {
+        return { samples, sampledRowCount: 0 };
+    }
+
+    const rowCount = dataRows.length;
+    const k = Math.min(maxSamplesPerTable, rowCount);
+    const sampleIndices: number[] = [];
+
+    for (let i = 0; i < k; i++) {
+        sampleIndices.push(Math.floor((i * rowCount) / k));
+    }
+
+    const seenPerColumn: Array<Set<string>> = Array.from({ length: columnCount }, () => new Set<string>());
+
+    for (const sampleIdx of sampleIndices) {
+        const row = dataRows[sampleIdx] || [];
+        for (let col = 0; col < columnCount; col++) {
+            const cell = normalizeHeader(row[col] || '');
+            const seen = seenPerColumn[col];
+            if (cell && seen.size < maxSamplesPerColumn && !seen.has(cell)) {
+                seen.add(cell);
+                samples[col].push(cell);
+            }
+        }
+    }
+
+    return { samples, sampledRowCount: k };
+}
+
+/**
+ * 2列のサンプル集合の類似度（Jaccard）を計算
+ */
+function calculateDataOverlap(a: string[], b: string[]): number {
+    if (!a.length || !b.length) {
+        return 0;
+    }
+
+    const setA = new Set(a);
+    const setB = new Set(b);
+    let intersection = 0;
+
+    for (const v of setA) {
+        if (setB.has(v)) {
+            intersection++;
+        }
+    }
+
+    const union = setA.size + setB.size - intersection;
+    return union === 0 ? 0 : intersection / union;
+}
+
+/**
+ * ヘッダ類似度とデータ重複率を合成した列マッチスコアを算出
+ */
+function calculateColumnMatchScore(
+    oldHeaderNormalized: string,
+    newHeaderNormalized: string,
+    oldSamples: string[],
+    newSamples: string[]
+): { combined: number; headerScore: number; dataScore: number } {
+    const HEADER_WEIGHT = 0.55;
+    const DATA_WEIGHT = 0.45;
+
+    const headerScore = calculateSimilarity(oldHeaderNormalized, newHeaderNormalized);
+    const dataScore = calculateDataOverlap(oldSamples, newSamples);
+    const combined = headerScore * HEADER_WEIGHT + dataScore * DATA_WEIGHT;
+
+    return { combined, headerScore, dataScore };
+}
+
+/**
  * サンプリング+マッチ数最小列を使った中間列検知
  * ドキュメントで推奨されたアルゴリズム
  * 
@@ -876,7 +957,58 @@ export function detectColumnDiffWithPositions(
         }
     }
     
-    // 3. ファジーマッチ（残りの未マッチ要素）
+    // 3. データサンプルを使ったマッチング（ヘッダ変更をデータで補正）
+    const { samples: oldSamples, sampledRowCount: sampledOldRows } = buildColumnSamples(oldDataRows, oldN);
+    const { samples: newSamples, sampledRowCount: sampledNewRows } = buildColumnSamples(newDataRows, newN);
+    const samplingK = Math.min(sampledOldRows, sampledNewRows);
+    if (samplingK > 0) {
+        heuristics.push(`sampling:K=${samplingK}`);
+    }
+
+    const DATA_MATCH_THRESHOLD = 0.55;
+    if (samplingK > 0) {
+        const dataUnmatchedOld = normalizedOld.map((h, i) => ({ header: h, index: i })).filter(x => mapping[x.index] === -1);
+        const dataUnmatchedNew = normalizedNew.map((h, j) => ({ header: h, index: j })).filter(x => !usedNewIndices.has(x.index));
+
+        for (const oldItem of dataUnmatchedOld) {
+            let bestMatch: { index: number; combined: number; headerScore: number; dataScore: number } | null = null;
+
+            for (const newItem of dataUnmatchedNew) {
+                if (usedNewIndices.has(newItem.index)) {
+                    continue;
+                }
+
+                const scores = calculateColumnMatchScore(
+                    oldItem.header,
+                    newItem.header,
+                    oldSamples[oldItem.index] || [],
+                    newSamples[newItem.index] || []
+                );
+
+                if (scores.combined >= DATA_MATCH_THRESHOLD && (!bestMatch || scores.combined > bestMatch.combined)) {
+                    bestMatch = { index: newItem.index, ...scores };
+                }
+            }
+
+            if (bestMatch) {
+                mapping[oldItem.index] = bestMatch.index;
+                usedNewIndices.add(bestMatch.index);
+                heuristics.push(`data_match:${oldItem.index}->${bestMatch.index}(h=${bestMatch.headerScore.toFixed(2)},d=${bestMatch.dataScore.toFixed(2)},s=${bestMatch.combined.toFixed(2)})`);
+
+                // renamed として positions に追加
+                result.positions!.push({
+                    index: oldItem.index,
+                    type: 'renamed',
+                    header: oldHeaders[oldItem.index],
+                    confidence: bestMatch.combined,
+                    oldIndex: oldItem.index,
+                    newIndex: bestMatch.index
+                });
+            }
+        }
+    }
+
+    // 4. ファジーマッチ（残りの未マッチ要素）
     const FUZZY_THRESHOLD = 0.6;
     const stillUnmatchedOld = normalizedOld.map((h, i) => ({ header: h, index: i })).filter(x => mapping[x.index] === -1);
     const stillUnmatchedNew = normalizedNew.map((h, j) => ({ header: h, index: j })).filter(x => !usedNewIndices.has(x.index));
@@ -909,55 +1041,6 @@ export function detectColumnDiffWithPositions(
                 oldIndex: oldItem.index,
                 newIndex: bestMatch.index
             });
-        }
-    }
-    
-    // 4. サンプリングによる補正（データ行がある場合）
-    if (oldDataRows && newDataRows && oldDataRows.length > 0 && newDataRows.length > 0) {
-        const K = Math.min(8, oldDataRows.length, newDataRows.length);
-        const sampleIndices: number[] = [];
-        
-        // 均等にサンプリング
-        for (let i = 0; i < K; i++) {
-            sampleIndices.push(Math.floor(i * oldDataRows.length / K));
-        }
-        
-        const matchCountOld = new Array(oldN).fill(0);
-        const matchCountNew = new Array(newN).fill(0);
-        
-        for (const sampleIdx of sampleIndices) {
-            const oldRow = oldDataRows[sampleIdx] || [];
-            const newRow = newDataRows[sampleIdx] || [];
-            
-            for (let i = 0; i < oldN; i++) {
-                for (let j = 0; j < newN; j++) {
-                    const oldCell = normalizeHeader(oldRow[i] || '');
-                    const newCell = normalizeHeader(newRow[j] || '');
-                    if (oldCell && newCell && oldCell === newCell) {
-                        matchCountOld[i]++;
-                        matchCountNew[j]++;
-                    }
-                }
-            }
-        }
-        
-        heuristics.push(`sampling:K=${K}`);
-        
-        // マッチ数が少ない列を変更候補として特定
-        const unmappedOld = mapping.map((m, i) => ({ mapped: m !== -1, index: i, count: matchCountOld[i] }))
-            .filter(x => !x.mapped);
-        const unmappedNew = Array.from({ length: newN }, (_, j) => j)
-            .filter(j => !usedNewIndices.has(j))
-            .map(j => ({ index: j, count: matchCountNew[j] }));
-        
-        // マッチ数が最小の列を追加・削除候補に
-        if (unmappedOld.length > 0) {
-            unmappedOld.sort((a, b) => a.count - b.count);
-            heuristics.push(`low_match_old:${unmappedOld.map(x => x.index).join(',')}`);
-        }
-        if (unmappedNew.length > 0) {
-            unmappedNew.sort((a, b) => a.count - b.count);
-            heuristics.push(`low_match_new:${unmappedNew.map(x => x.index).join(',')}`);
         }
     }
     
