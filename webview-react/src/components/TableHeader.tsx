@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { SortState, ColumnWidths, HeaderConfig, ColumnDiffInfo } from '../types'
 import { getColumnLetter } from '../utils/tableUtils'
+import { isImeConfirmingEnter } from '../utils/imeUtils'
 
 interface TableHeaderProps {
   headers: string[]
@@ -67,12 +68,54 @@ const TableHeader: React.FC<TableHeaderProps> = ({
 
   // ヘッダーキー入力
   const handleHeaderKeyDown = useCallback((e: React.KeyboardEvent, col: number) => {
+    // キーイベントがテーブル全体に伝播しないようにする
+    e.stopPropagation()
+
     if (e.key === 'Enter') {
+      // IME（日本語入力など）確定中の場合は、Enterキーを入力の一部として処理
+      if (isImeConfirmingEnter(e)) {
+        return
+      }
       const target = e.target as HTMLInputElement
       onHeaderUpdate(col, target.value)
       setEditingHeader(null)
     } else if (e.key === 'Escape') {
       setEditingHeader(null)
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      // Ctrl+A (または Cmd+A on Mac)：テーブル全体の選択を防ぎ、入力フィールドのテキスト全選択を許可
+      e.preventDefault()
+      const target = e.target as HTMLInputElement
+      target.select()
+    } else if (e.key === 'Backspace' || e.key === 'Delete') {
+      // BackspaceやDeleteキー：テーブル全体の削除処理に伝播しないようにする
+      e.preventDefault()
+      // ブラウザのデフォルト動作を避けるため防止した後、手動で削除処理を実行
+      const target = e.target as HTMLInputElement
+      const start = target.selectionStart || 0
+      const end = target.selectionEnd || 0
+      const value = target.value
+
+      if (e.key === 'Backspace') {
+        if (start === end && start > 0) {
+          // カーソル位置で1文字削除
+          target.value = value.slice(0, start - 1) + value.slice(start)
+          target.setSelectionRange(start - 1, start - 1)
+        } else if (start !== end) {
+          // 選択範囲を削除
+          target.value = value.slice(0, start) + value.slice(end)
+          target.setSelectionRange(start, start)
+        }
+      } else if (e.key === 'Delete') {
+        if (start === end && start < value.length) {
+          // カーソル位置の次の文字を削除
+          target.value = value.slice(0, start) + value.slice(start + 1)
+          target.setSelectionRange(start, start)
+        } else if (start !== end) {
+          // 選択範囲を削除
+          target.value = value.slice(0, start) + value.slice(end)
+          target.setSelectionRange(start, start)
+        }
+      }
     }
   }, [onHeaderUpdate])
 
