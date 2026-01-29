@@ -16,6 +16,8 @@ export interface FileHandler {
         endLine: number;
         newContent: string;
     }>): Promise<boolean>;
+    // Returns true when table update by index was applied
+    updateTableByIndex(uri: vscode.Uri, tableIndex: number, newTableContent: string): Promise<boolean>;
 }
 
 /**
