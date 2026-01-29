@@ -26,7 +26,12 @@ export class PanelSessionManager {
 
         if (typeof value === 'string') {
             try {
-                return { uri: vscode.Uri.parse(value), uriString: value };
+                const parsed = vscode.Uri.parse(value);
+                // URI が妥当か確認（スキーム＆パスの存在を判定）
+                if (!parsed.scheme || (parsed.scheme === 'file' && !parsed.path) || value.includes('::')) {
+                    return { uri: null, uriString: value };
+                }
+                return { uri: parsed, uriString: value };
             } catch (error) {
                 return { uri: null, uriString: value };
             }
@@ -34,13 +39,21 @@ export class PanelSessionManager {
 
         if (value instanceof vscode.Uri) {
             const uriString = value.toString();
+            // URI インスタンスも妥当性チェック
+            if (!value.scheme || (value.scheme === 'file' && !value.path) || uriString.includes('::')) {
+                return { uri: null, uriString };
+            }
             return { uri: value, uriString };
         }
 
         if (typeof (value as any)?.toString === 'function') {
             const uriString = (value as any).toString();
             try {
-                return { uri: vscode.Uri.parse(uriString), uriString };
+                const parsed = vscode.Uri.parse(uriString);
+                if (!parsed.scheme || (parsed.scheme === 'file' && !parsed.path) || uriString.includes('::')) {
+                    return { uri: null, uriString };
+                }
+                return { uri: parsed, uriString };
             } catch (error) {
                 return { uri: null, uriString };
             }
