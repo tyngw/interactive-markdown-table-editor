@@ -38,6 +38,16 @@ export interface TableGitDiff {
 }
 
 /**
+ * Git関連の文脈をまとめて扱うためのコンテキスト
+ */
+interface GitContext {
+    git: any;
+    workspaceFolder: vscode.WorkspaceFolder;
+    repository: any;
+    fileStatus: 'added' | 'modified' | 'deleted';
+}
+
+/**
  * 列の位置変更情報
  * 中間列の追加・削除を検知した際の詳細情報
  */
@@ -138,33 +148,12 @@ export async function getGitDiffForTable(
     tableContent?: string
 ): Promise<RowGitDiff[]> {
     try {
-        // Git APIが利用可能になるまで待機
-        const git = await waitForGitApi();
-        if (!git) {
-            warn('[GitDiffDebug] Exiting getGitDiffForTable because Git API is not available.');
-            return []; // Git APIが利用できない場合は空の配列を返す
-        }
-
-        // ワークスペースフォルダを取得
-        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-        if (!workspaceFolder) {
-            debug('[GitDiff] No workspace folder found');
+        const context = await resolveGitContext(uri);
+        if (!context) {
             return [];
         }
 
-        // リポジトリを取得
-        const repository = git.getRepository(workspaceFolder.uri);
-        if (!repository) {
-            debug('[GitDiff] No repository found');
-            return [];
-        }
-
-        // ファイルの変更状態を取得
-        const fileStatus = getFileStatus(repository, uri);
-        if (!fileStatus) {
-            debug('[GitDiff] File not in git repository or no changes');
-            return [];
-        }
+        const { workspaceFolder, fileStatus } = context;
 
         // 詳細な行ごとの差分情報を取得（毎回新規に取得する）
         const lineDiffs = await getLineByLineDiff(uri, workspaceFolder.uri.fsPath, tableStartLine, tableEndLine);
@@ -172,14 +161,7 @@ export async function getGitDiffForTable(
         if (!lineDiffs || lineDiffs.length === 0) {
             // 差分情報が取得できない場合、ファイル全体の状態を使用
             if (fileStatus === 'added') {
-                const rowDiffs: RowGitDiff[] = [];
-                for (let i = 0; i < rowCount; i++) {
-                    rowDiffs.push({
-                        row: i,
-                        status: GitDiffStatus.ADDED
-                    });
-                }
-                return rowDiffs;
+                return buildAddedRowDiffs(rowCount);
             }
             return [];
         }
@@ -233,6 +215,52 @@ function getFileStatus(
         error('[GitDiff] Error getting file status:', err);
         return null;
     }
+}
+
+/**
+ * Gitコンテキストを解決するためのヘルパー
+ */
+async function resolveGitContext(uri: vscode.Uri): Promise<GitContext | null> {
+    // Git APIが利用可能になるまで待機
+    const git = await waitForGitApi();
+    if (!git) {
+        warn('[GitDiffDebug] Exiting getGitDiffForTable because Git API is not available.');
+        return null;
+    }
+
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!workspaceFolder) {
+        debug('[GitDiff] No workspace folder found');
+        return null;
+    }
+
+    const repository = git.getRepository(workspaceFolder.uri);
+    if (!repository) {
+        debug('[GitDiff] No repository found');
+        return null;
+    }
+
+    const fileStatus = getFileStatus(repository, uri);
+    if (!fileStatus) {
+        debug('[GitDiff] File not in git repository or no changes');
+        return null;
+    }
+
+    return { git, workspaceFolder, repository, fileStatus };
+}
+
+/**
+ * 新規ファイルの場合にテーブル全行を追加扱いで返す
+ */
+function buildAddedRowDiffs(rowCount: number): RowGitDiff[] {
+    const rowDiffs: RowGitDiff[] = [];
+    for (let i = 0; i < rowCount; i++) {
+        rowDiffs.push({
+            row: i,
+            status: GitDiffStatus.ADDED
+        });
+    }
+    return rowDiffs;
 }
 
 /**
@@ -418,130 +446,152 @@ function mapTableRowsToGitDiff(
     rowCount: number,
     _tableContent?: string
 ): RowGitDiff[] {
-    const result: RowGitDiff[] = [];
-    
     debug('[mapTableRowsToGitDiff] Input:', {
         tableStartLine,
         rowCount,
         lineDiffsLength: lineDiffs.length
     });
-    
-    // hunk ごとに削除行と追加行をグループ化
-    const hunkMap = new Map<number, { deleted: LineDiff[], added: LineDiff[] }>();
-    
+
+    const groupedByHunk = groupLineDiffsByHunk(lineDiffs, tableStartLine, rowCount);
+    const result: RowGitDiff[] = [];
+
+    for (const [, hunk] of groupedByHunk.entries()) {
+        appendHunkDiffs(result, hunk.deleted, hunk.added, tableStartLine, rowCount);
+    }
+
+    return dedupeRowDiffs(result);
+}
+
+function groupLineDiffsByHunk(
+    lineDiffs: LineDiff[],
+    tableStartLine: number,
+    rowCount: number
+): Map<number, { deleted: LineDiff[]; added: LineDiff[] }> {
+    const hunkMap = new Map<number, { deleted: LineDiff[]; added: LineDiff[] }>();
+
     for (const diff of lineDiffs) {
         const hunkId = diff.hunkId ?? 0;
         if (!hunkMap.has(hunkId)) {
             hunkMap.set(hunkId, { deleted: [], added: [] });
         }
         const hunk = hunkMap.get(hunkId)!;
-        
+
         if (diff.status === GitDiffStatus.DELETED) {
             hunk.deleted.push(diff);
         } else {
             hunk.added.push(diff);
         }
-        
-        const tableRow = diff.status === GitDiffStatus.DELETED
-            ? (diff.oldLineNumber ?? diff.lineNumber) - tableStartLine - 1 - 2
-            : diff.lineNumber - tableStartLine - 1 - 2;
-        
+
         debug('[mapTableRowsToGitDiff] Processing:', {
             status: diff.status,
             oldLineNumber: diff.oldLineNumber,
             lineNumber: diff.lineNumber,
-            calculated_tableRow: tableRow,
+            calculated_tableRow: toTableRow(diff, tableStartLine),
             hunkId: hunkId,
             rowCount
         });
     }
-    
-    // 各 hunk を処理
-    for (const [, hunk] of hunkMap.entries()) {
-        const { deleted, added } = hunk;
-        
-        // 削除行と追加行をペアリング
-        // 削除行数と追加行数の小さい方がペア数
-        const pairCount = Math.min(deleted.length, added.length);
-        
-        // 追加行のうち、最初の pairCount 個が変更後の行（削除行と対応）
-        // 最後の (added.length - pairCount) 個が純粋な新規追加行
-        // const pureAddedCount = added.length - pairCount; // not needed directly
-        
-        // 1. 削除行と対応する追加行をペアで出力（削除行が先）
-        for (let i = 0; i < pairCount; i++) {
-            const deletedDiff = deleted[i];
-            const addedDiff = added[i];  // 最初の pairCount 個が対応する追加行
-            const tableRow = addedDiff.lineNumber - tableStartLine - 1 - 2;
-            
-            // 削除行を先に出力
-            // ヘッダ行(row=-2)も含めてGit差分として扱う
-            if (tableRow >= -2 && tableRow < rowCount) {
-                result.push({
-                    row: tableRow,
-                    status: GitDiffStatus.DELETED,
-                    oldContent: deletedDiff.oldContent,
-                    isDeletedRow: true
-                });
-            }
-            
-            // 追加行を出力
-            if (tableRow >= -2 && tableRow < rowCount) {
-                result.push({
-                    row: tableRow,
-                    status: GitDiffStatus.ADDED,
-                    newContent: addedDiff.newContent
-                });
-            }
-        }
-        
-        // 2. 純粋な新規追加行を出力（最後の pureAddedCount 個）
-        for (let i = pairCount; i < added.length; i++) {
-            const addedDiff = added[i];
-            const tableRow = addedDiff.lineNumber - tableStartLine - 1 - 2;
-            if (tableRow >= -2 && tableRow < rowCount) {
-                result.push({
-                    row: tableRow,
-                    status: GitDiffStatus.ADDED,
-                    newContent: addedDiff.newContent
-                });
-            }
-        }
-        
-        // 3. 残りの削除行（対応する追加行がないもの）を出力
-        for (let i = pairCount; i < deleted.length; i++) {
-            const deletedDiff = deleted[i];
-            const tableRow = (deletedDiff.oldLineNumber ?? deletedDiff.lineNumber) - tableStartLine - 1 - 2;
-            if (tableRow >= -2 && tableRow < rowCount) {
-                result.push({
-                    row: tableRow,
-                    status: GitDiffStatus.DELETED,
-                    oldContent: deletedDiff.oldContent,
-                    isDeletedRow: true
-                });
-            }
-        }
+
+    return hunkMap;
+}
+
+function appendHunkDiffs(
+    accumulator: RowGitDiff[],
+    deleted: LineDiff[],
+    added: LineDiff[],
+    tableStartLine: number,
+    rowCount: number
+): void {
+    const pairCount = Math.min(deleted.length, added.length);
+
+    // 1. 削除行と対応する追加行をペアで出力（削除行が先）
+    for (let i = 0; i < pairCount; i++) {
+        const deletedDiff = deleted[i];
+        const addedDiff = added[i];
+        const tableRow = toTableRow(addedDiff, tableStartLine);
+
+        pushDeletedRow(accumulator, tableRow, rowCount, deletedDiff);
+        pushAddedRow(accumulator, tableRow, rowCount, addedDiff);
     }
-    
-    // 重複をフィルタリング
-    const uniqueDiffs = result.reduce((acc, current) => {
+
+    // 2. 純粋な新規追加行を出力
+    for (let i = pairCount; i < added.length; i++) {
+        const addedDiff = added[i];
+        const tableRow = toTableRow(addedDiff, tableStartLine);
+        pushAddedRow(accumulator, tableRow, rowCount, addedDiff);
+    }
+
+    // 3. 残りの削除行（対応する追加行がないもの）を出力
+    for (let i = pairCount; i < deleted.length; i++) {
+        const deletedDiff = deleted[i];
+        const tableRow = toTableRow(deletedDiff, tableStartLine);
+        pushDeletedRow(accumulator, tableRow, rowCount, deletedDiff);
+    }
+}
+
+function toTableRow(diff: LineDiff, tableStartLine: number): number {
+    const baseLine = diff.status === GitDiffStatus.DELETED
+        ? (diff.oldLineNumber ?? diff.lineNumber)
+        : diff.lineNumber;
+    return baseLine - tableStartLine - 3; // 1行目:ヘッダ、2行目:セパレータ、以降:データ
+}
+
+function shouldIncludeRow(tableRow: number, rowCount: number): boolean {
+    return tableRow >= -2 && tableRow < rowCount;
+}
+
+function pushDeletedRow(
+    accumulator: RowGitDiff[],
+    tableRow: number,
+    rowCount: number,
+    diff: LineDiff
+): void {
+    if (!shouldIncludeRow(tableRow, rowCount)) {
+        return;
+    }
+
+    accumulator.push({
+        row: tableRow,
+        status: GitDiffStatus.DELETED,
+        oldContent: diff.oldContent,
+        isDeletedRow: true
+    });
+}
+
+function pushAddedRow(
+    accumulator: RowGitDiff[],
+    tableRow: number,
+    rowCount: number,
+    diff: LineDiff
+): void {
+    if (!shouldIncludeRow(tableRow, rowCount)) {
+        return;
+    }
+
+    accumulator.push({
+        row: tableRow,
+        status: GitDiffStatus.ADDED,
+        newContent: diff.newContent
+    });
+}
+
+function dedupeRowDiffs(diffs: RowGitDiff[]): RowGitDiff[] {
+    return diffs.reduce((acc, current) => {
         const existing = acc.find(item => {
             if (item.row !== current.row || item.status !== current.status) {
                 return false;
             }
-            // DELETED行の場合、oldContentで区別
             if (current.status === GitDiffStatus.DELETED) {
                 return item.oldContent === current.oldContent;
             }
             return true;
         });
+
         if (!existing) {
             acc.push(current);
         }
         return acc;
     }, [] as RowGitDiff[]);
-
-    return uniqueDiffs;
 }
 
 // ============================================================
@@ -1172,4 +1222,10 @@ export function detectColumnDiff(
     debugLog('[detectColumnDiff] Final result:', result);
     return result;
 }
+
+// テスト専用のエクスポート（本番コードからは参照しない）
+export const __test__ = {
+    parseGitDiff,
+    mapTableRowsToGitDiff
+};
 
