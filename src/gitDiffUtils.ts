@@ -896,7 +896,9 @@ export function detectColumnDiffWithPositions(
     const heuristics: string[] = [];
     const oldN = oldHeaders.length;
     const newN = newHeaders.length;
-    
+    const normalizedOld = oldHeaders.map(normalizeHeader);
+    const normalizedNew = newHeaders.map(normalizeHeader);
+
     const result: ColumnDiffInfo = {
         oldColumnCount: oldN,
         newColumnCount: newN,
@@ -909,55 +911,14 @@ export function detectColumnDiffWithPositions(
         mapping: new Array(oldN).fill(-1),
         heuristics
     };
-    
-    // 列数が同じで変更がない場合
+
+    // 全列一致のショートサーキット
     if (oldN === newN && oldHeaders.every((h, i) => normalizeHeader(h) === normalizeHeader(newHeaders[i]))) {
         result.mapping = Array.from({ length: oldN }, (_, i) => i);
         heuristics.push('exact_match_all');
         return result;
     }
-    
-    // 正規化したヘッダを作成
-    const normalizedOld = oldHeaders.map(normalizeHeader);
-    const normalizedNew = newHeaders.map(normalizeHeader);
-    
-    // 1. 直接マッチングパス（完全一致）
-    const mapping = new Array(oldN).fill(-1);
-    const usedNewIndices = new Set<number>();
-    
-    for (let i = 0; i < oldN; i++) {
-        for (let j = 0; j < newN; j++) {
-            if (!usedNewIndices.has(j) && normalizedOld[i] === normalizedNew[j]) {
-                mapping[i] = j;
-                usedNewIndices.add(j);
-                heuristics.push(`exact_match:${i}->${j}`);
-                break;
-            }
-        }
-    }
-    
-    // 2. LCS による差分境界検出
-    const unmatchedOld = normalizedOld.map((h, i) => ({ header: h, index: i })).filter(x => mapping[x.index] === -1);
-    const unmatchedNew = normalizedNew.map((h, j) => ({ header: h, index: j })).filter(x => !usedNewIndices.has(x.index));
-    
-    if (unmatchedOld.length > 0 && unmatchedNew.length > 0) {
-        const lcs = computeLCS(
-            unmatchedOld.map(x => x.header),
-            unmatchedNew.map(x => x.header)
-        );
-        
-        for (const pair of lcs) {
-            const oldIdx = unmatchedOld[pair.i1].index;
-            const newIdx = unmatchedNew[pair.i2].index;
-            if (mapping[oldIdx] === -1 && !usedNewIndices.has(newIdx)) {
-                mapping[oldIdx] = newIdx;
-                usedNewIndices.add(newIdx);
-                heuristics.push(`lcs_match:${oldIdx}->${newIdx}`);
-            }
-        }
-    }
-    
-    // 3. データサンプルを使ったマッチング（ヘッダ変更をデータで補正）
+
     const { samples: oldSamples, sampledRowCount: sampledOldRows } = buildColumnSamples(oldDataRows, oldN);
     const { samples: newSamples, sampledRowCount: sampledNewRows } = buildColumnSamples(newDataRows, newN);
     const samplingK = Math.min(sampledOldRows, sampledNewRows);
@@ -965,87 +926,75 @@ export function detectColumnDiffWithPositions(
         heuristics.push(`sampling:K=${samplingK}`);
     }
 
-    const DATA_MATCH_THRESHOLD = 0.55;
-    if (samplingK > 0) {
-        const dataUnmatchedOld = normalizedOld.map((h, i) => ({ header: h, index: i })).filter(x => mapping[x.index] === -1);
-        const dataUnmatchedNew = normalizedNew.map((h, j) => ({ header: h, index: j })).filter(x => !usedNewIndices.has(x.index));
+    const MATCH_THRESHOLD = 0.55;
+    const POS_BONUS_WEIGHT = 0.08;
 
-        for (const oldItem of dataUnmatchedOld) {
-            let bestMatch: { index: number; combined: number; headerScore: number; dataScore: number } | null = null;
+    const scoreMatrix: Array<{ oldIndex: number; newIndex: number; combined: number; headerScore: number; dataScore: number; posBonus: number }> = [];
+    const maxDim = Math.max(1, Math.max(oldN, newN) - 1);
 
-            for (const newItem of dataUnmatchedNew) {
-                if (usedNewIndices.has(newItem.index)) {
-                    continue;
-                }
+    for (let i = 0; i < oldN; i++) {
+        for (let j = 0; j < newN; j++) {
+            const { combined, headerScore, dataScore } = calculateColumnMatchScore(
+                normalizedOld[i],
+                normalizedNew[j],
+                oldSamples[i] || [],
+                newSamples[j] || []
+            );
 
-                const scores = calculateColumnMatchScore(
-                    oldItem.header,
-                    newItem.header,
-                    oldSamples[oldItem.index] || [],
-                    newSamples[newItem.index] || []
-                );
+            // 位置近傍をわずかに優遇（行列サイズ差が大きい場合は効果が減少）
+            const distance = Math.abs(i - j);
+            const posBonus = 1 - Math.min(distance / maxDim, 1);
+            const adjusted = Math.min(1, combined + posBonus * POS_BONUS_WEIGHT);
 
-                if (scores.combined >= DATA_MATCH_THRESHOLD && (!bestMatch || scores.combined > bestMatch.combined)) {
-                    bestMatch = { index: newItem.index, ...scores };
-                }
-            }
-
-            if (bestMatch) {
-                mapping[oldItem.index] = bestMatch.index;
-                usedNewIndices.add(bestMatch.index);
-                heuristics.push(`data_match:${oldItem.index}->${bestMatch.index}(h=${bestMatch.headerScore.toFixed(2)},d=${bestMatch.dataScore.toFixed(2)},s=${bestMatch.combined.toFixed(2)})`);
-
-                // renamed として positions に追加
-                result.positions!.push({
-                    index: oldItem.index,
-                    type: 'renamed',
-                    header: oldHeaders[oldItem.index],
-                    confidence: bestMatch.combined,
-                    oldIndex: oldItem.index,
-                    newIndex: bestMatch.index
-                });
-            }
-        }
-    }
-
-    // 4. ファジーマッチ（残りの未マッチ要素）
-    const FUZZY_THRESHOLD = 0.6;
-    const stillUnmatchedOld = normalizedOld.map((h, i) => ({ header: h, index: i })).filter(x => mapping[x.index] === -1);
-    const stillUnmatchedNew = normalizedNew.map((h, j) => ({ header: h, index: j })).filter(x => !usedNewIndices.has(x.index));
-    
-    for (const oldItem of stillUnmatchedOld) {
-        let bestMatch: { index: number; similarity: number } | null = null;
-        
-        for (const newItem of stillUnmatchedNew) {
-            if (usedNewIndices.has(newItem.index)) {
-                continue;
-            }
-            
-            const similarity = calculateSimilarity(oldItem.header, newItem.header);
-            if (similarity >= FUZZY_THRESHOLD && (!bestMatch || similarity > bestMatch.similarity)) {
-                bestMatch = { index: newItem.index, similarity };
-            }
-        }
-        
-        if (bestMatch) {
-            mapping[oldItem.index] = bestMatch.index;
-            usedNewIndices.add(bestMatch.index);
-            heuristics.push(`fuzzy_match:${oldItem.index}->${bestMatch.index}(${bestMatch.similarity.toFixed(2)})`);
-            
-            // renamed として positions に追加
-            result.positions!.push({
-                index: oldItem.index,
-                type: 'renamed',
-                header: oldHeaders[oldItem.index],
-                confidence: bestMatch.similarity,
-                oldIndex: oldItem.index,
-                newIndex: bestMatch.index
+            scoreMatrix.push({
+                oldIndex: i,
+                newIndex: j,
+                combined: adjusted,
+                headerScore,
+                dataScore,
+                posBonus
             });
         }
     }
-    
-    // 5. 最終的な追加・削除列の決定
-    // mapping が -1 の列は削除された列
+
+    // スコアの高い順に貪欲に割り当て
+    scoreMatrix.sort((a, b) => b.combined - a.combined || Math.abs(a.oldIndex - a.newIndex) - Math.abs(b.oldIndex - b.newIndex));
+
+    const mapping = new Array(oldN).fill(-1);
+    const usedNew = new Set<number>();
+    const matchedDetails: Array<{ oldIndex: number; newIndex: number; combined: number; headerScore: number; dataScore: number; reason: 'score' | 'fallback' }> = [];
+
+    for (const entry of scoreMatrix) {
+        if (entry.combined < MATCH_THRESHOLD) {
+            break;
+        }
+        if (mapping[entry.oldIndex] !== -1 || usedNew.has(entry.newIndex)) {
+            continue;
+        }
+        mapping[entry.oldIndex] = entry.newIndex;
+        usedNew.add(entry.newIndex);
+        matchedDetails.push({ ...entry, reason: 'score' });
+        heuristics.push(`score_match:${entry.oldIndex}->${entry.newIndex}(h=${entry.headerScore.toFixed(2)},d=${entry.dataScore.toFixed(2)},s=${entry.combined.toFixed(2)})`);
+    }
+
+    // 列数が一致する場合、残りは最もスコアが高い組み合わせで埋める（閾値未満でも位置優先で穴埋め）
+    if (oldN === newN) {
+        const remainingOld = mapping.map((m, i) => ({ m, i })).filter(x => x.m === -1).map(x => x.i);
+        for (const oldIdx of remainingOld) {
+            const candidate = scoreMatrix
+                .filter(e => mapping[e.oldIndex] === -1 && !usedNew.has(e.newIndex) && e.oldIndex === oldIdx)
+                .sort((a, b) => b.combined - a.combined || Math.abs(a.oldIndex - a.newIndex) - Math.abs(b.oldIndex - b.newIndex))[0];
+
+            if (candidate) {
+                mapping[candidate.oldIndex] = candidate.newIndex;
+                usedNew.add(candidate.newIndex);
+                matchedDetails.push({ ...candidate, reason: 'fallback' });
+                heuristics.push(`fallback_match:${candidate.oldIndex}->${candidate.newIndex}(s=${candidate.combined.toFixed(2)})`);
+            }
+        }
+    }
+
+    // 追加・削除列の確定
     for (let i = 0; i < oldN; i++) {
         if (mapping[i] === -1) {
             result.deletedColumns.push(i);
@@ -1057,10 +1006,9 @@ export function detectColumnDiffWithPositions(
             });
         }
     }
-    
-    // usedNewIndices に含まれない新しい列は追加された列
+
     for (let j = 0; j < newN; j++) {
-        if (!usedNewIndices.has(j)) {
+        if (!usedNew.has(j)) {
             result.addedColumns.push(j);
             result.positions!.push({
                 index: j,
@@ -1070,8 +1018,26 @@ export function detectColumnDiffWithPositions(
             });
         }
     }
-    
-    // changeType を決定
+
+    // マッピング済み列のリネーム情報
+    for (const detail of matchedDetails) {
+        const oldIdx = detail.oldIndex;
+        const newIdx = detail.newIndex;
+        if (mapping[oldIdx] !== newIdx) {
+            continue;
+        }
+        if (normalizedOld[oldIdx] !== normalizedNew[newIdx]) {
+            result.positions!.push({
+                index: oldIdx,
+                type: 'renamed',
+                header: oldHeaders[oldIdx],
+                confidence: detail.combined,
+                oldIndex: oldIdx,
+                newIndex: newIdx
+            });
+        }
+    }
+
     if (result.addedColumns.length > 0 && result.deletedColumns.length > 0) {
         result.changeType = 'mixed';
     } else if (result.addedColumns.length > 0) {
@@ -1081,9 +1047,8 @@ export function detectColumnDiffWithPositions(
     } else {
         result.changeType = 'none';
     }
-    
+
     result.mapping = mapping;
-    
     return result;
 }
 

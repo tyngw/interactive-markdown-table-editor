@@ -325,10 +325,8 @@ describe('detectColumnDiffWithPositions - 中間列検知', () => {
         );
         // B -> NewB はファジーマッチで検出、X は追加
         assert.strictEqual(result.addedColumns.includes(2), true);
-        // heuristics に fuzzy_match が含まれる場合がある
-        assert.ok(result.heuristics!.some(h => 
-            h.includes('exact_match') || h.includes('lcs_match') || h.includes('fuzzy_match')
-        ));
+        // heuristics はスコアベースのマッチングを記録する
+        assert.ok(result.heuristics!.some(h => h.includes('score_match')));
     });
 
     it('positions に詳細情報が含まれる', () => {
@@ -390,7 +388,31 @@ describe('detectColumnDiffWithPositions - 中間列検知', () => {
 
         assert.strictEqual(result.changeType, 'none');
         assert.deepStrictEqual(result.mapping, [0, 1]);
-        assert.ok(result.heuristics!.some(h => h.startsWith('data_match')));
+        assert.ok(result.heuristics!.some(h => h.includes('score_match')));
+    });
+
+    it('ヘッダが大きく異なりデータも変わっていても同一列と判定する（位置フォールバック）', () => {
+        const oldHeaders = ['版番号', '内容', '改訂者', '改訂日'];
+        const newHeaders = ['1', '内容', '改訂者', '改訂日'];
+        const oldDataRows = [
+            ['1.0', '初版作成', '太郎', '2025/01/01']
+        ];
+        const newDataRows = [
+            ['1.1', '初版作成', '太郎', '2025/08/31']
+        ];
+
+        const result = detectColumnDiffWithPositions(
+            oldHeaders,
+            newHeaders,
+            oldDataRows,
+            newDataRows
+        );
+
+        assert.strictEqual(result.changeType, 'none');
+        assert.deepStrictEqual(result.addedColumns, []);
+        assert.deepStrictEqual(result.deletedColumns, []);
+        assert.deepStrictEqual(result.mapping, [0, 1, 2, 3]);
+        assert.ok(result.heuristics!.some(h => h.includes('fallback_match')));
     });
 
     it('複数列の追加・削除を同時に検知する', () => {
