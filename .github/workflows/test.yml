@@ -30,6 +30,6 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run tests (exclude Playwright)
-        run: npm run test
+        run: xvfb-run -a npm run test
         env:
           CI: true
