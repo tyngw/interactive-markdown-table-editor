@@ -417,7 +417,7 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
         }
 
         .header-rename-old {
-          margin-right: 6px;
+          margin-left: 6px;
           color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39);
           text-decoration: line-through;
           opacity: 0.9;

@@ -366,7 +366,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
               const userResized = d.userResizedClass || ''
 
               const title = d.renamed && d.oldHeader
-                ? `Column ${columnLetter}: ${d.oldHeader} → ${d.header}`
+                ? `Column ${columnLetter}: ${d.header} → ${d.oldHeader}`
                 : `Column ${columnLetter}: ${d.header}`
 
               return (
@@ -403,8 +403,8 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                         <div className="column-title" title="Double-click to edit header">
                           {d.renamed && d.oldHeader ? (
                             <>
-                              <span className="header-rename-old">{d.oldHeader}</span>
                               <span className="header-rename-new">{d.header}</span>
+                              <span className="header-rename-old">{d.oldHeader}</span>
                             </>
                           ) : d.header}
                         </div>
