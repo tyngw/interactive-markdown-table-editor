@@ -235,12 +235,12 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
         break;
       case 'moveRow':
         if (messageData) {
-          manager.moveRow(messageData.fromIndex, messageData.toIndex, messageData.tableIndex);
+          manager.moveRow(messageData.fromIndex, messageData.toIndex, messageData.tableIndex, messageData.indices);
         }
         break;
       case 'moveColumn':
         if (messageData) {
-          manager.moveColumn(messageData.fromIndex, messageData.toIndex, messageData.tableIndex);
+          manager.moveColumn(messageData.fromIndex, messageData.toIndex, messageData.tableIndex, messageData.indices);
         }
         break;
       case 'exportCSV':
@@ -333,16 +333,16 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     manager.sort(column, direction, tableIndex);
   }, []);
 
-  const moveRow = useCallback((fromIndex: number, toIndex: number, tableIndex?: number) => {
+  const moveRow = useCallback((fromIndex: number, toIndex: number, tableIndex?: number, indices?: number[]) => {
     const manager = commManagerRef.current;
     if (!manager) return;
-    manager.moveRow(fromIndex, toIndex, tableIndex);
+    manager.moveRow(fromIndex, toIndex, tableIndex, indices);
   }, []);
 
-  const moveColumn = useCallback((fromIndex: number, toIndex: number, tableIndex?: number) => {
+  const moveColumn = useCallback((fromIndex: number, toIndex: number, tableIndex?: number, indices?: number[]) => {
     const manager = commManagerRef.current;
     if (!manager) return;
-    manager.moveColumn(fromIndex, toIndex, tableIndex);
+    manager.moveColumn(fromIndex, toIndex, tableIndex, indices);
   }, []);
 
   const exportCSV = useCallback((csvContent: string, filename?: string, encoding?: string, tableIndex?: number) => {

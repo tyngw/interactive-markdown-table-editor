@@ -765,7 +765,7 @@ export class CommandRegistrar {
 
     private async handleMoveRow(data: any): Promise<void> {
         try {
-            const { uri: rawUri, panelId, fromIndex, toIndex, tableIndex } = data;
+            const { uri: rawUri, panelId, fromIndex, toIndex, indices, tableIndex } = data;
             const { uri, uriString, panel, tableManagersMap } = this.panelSessionManager.resolvePanelContext(rawUri, panelId);
 
             if (!uriString || !uri) {
@@ -788,7 +788,16 @@ export class CommandRegistrar {
                 return;
             }
 
-            tableDataManager.moveRow(fromIndex, toIndex);
+            const moveIndices = Array.isArray(indices) && indices.length > 0
+                ? Array.from(new Set(indices)).sort((a, b) => a - b)
+                : (typeof fromIndex === 'number' ? [fromIndex] : []);
+
+            if (moveIndices.length === 0) {
+                this.webviewManager.sendError(panel, 'No row indices provided for move');
+                return;
+            }
+
+            tableDataManager.moveRows(moveIndices, toIndex);
 
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
@@ -819,7 +828,7 @@ export class CommandRegistrar {
                 warn('[Extension] Diff calculation scheduling failed:', err);
             });
 
-            this.webviewManager.sendSuccess(panel, `Row moved from ${fromIndex} to ${toIndex}`);
+            this.webviewManager.sendSuccess(panel, `Row(s) moved to ${toIndex}`);
         } catch (error) {
             console.error('Error in moveRow:', error);
             const { panel } = this.panelSessionManager.resolvePanelContext(data?.uri, data?.panelId);
@@ -831,7 +840,7 @@ export class CommandRegistrar {
 
     private async handleMoveColumn(data: any): Promise<void> {
         try {
-            const { uri: rawUri, panelId, fromIndex, toIndex, tableIndex } = data;
+            const { uri: rawUri, panelId, fromIndex, toIndex, indices, tableIndex } = data;
             const { uri, uriString, panel, tableManagersMap } = this.panelSessionManager.resolvePanelContext(rawUri, panelId);
 
             if (!uriString || !uri) {
@@ -854,7 +863,16 @@ export class CommandRegistrar {
                 return;
             }
 
-            tableDataManager.moveColumn(fromIndex, toIndex);
+            const moveIndices = Array.isArray(indices) && indices.length > 0
+                ? Array.from(new Set(indices)).sort((a, b) => a - b)
+                : (typeof fromIndex === 'number' ? [fromIndex] : []);
+
+            if (moveIndices.length === 0) {
+                this.webviewManager.sendError(panel, 'No column indices provided for move');
+                return;
+            }
+
+            tableDataManager.moveColumns(moveIndices, toIndex);
 
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
@@ -885,7 +903,7 @@ export class CommandRegistrar {
                 warn('[Extension] Diff calculation scheduling failed:', err);
             });
 
-            this.webviewManager.sendSuccess(panel, `Column moved from ${fromIndex} to ${toIndex}`);
+            this.webviewManager.sendSuccess(panel, `Column(s) moved to ${toIndex}`);
         } catch (error) {
             console.error('Error in moveColumn:', error);
             const { panel } = this.panelSessionManager.resolvePanelContext(data?.uri, data?.panelId);

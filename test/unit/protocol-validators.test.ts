@@ -154,7 +154,7 @@ suite('Protocol and Validator Completeness Tests', () => {
                     break;
                 case 'moveRow':
                 case 'moveColumn':
-                    testMessage.data = { fromIndex: 0, toIndex: 1 };
+                    testMessage.data = { indices: [0], toIndex: 1 };
                     break;
                 case 'exportCSV':
                     testMessage.data = { csvContent: 'test' };

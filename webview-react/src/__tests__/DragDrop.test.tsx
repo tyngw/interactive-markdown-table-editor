@@ -99,7 +99,7 @@ describe('TableEditor - Drag and Drop', () => {
         expect(mockSendMessage).toHaveBeenCalledWith({
           command: 'moveRow',
           data: {
-            fromIndex: 0,
+            indices: [0],
             toIndex: 2
           }
         })
@@ -187,7 +187,7 @@ describe('TableEditor - Drag and Drop', () => {
         expect(mockSendMessage).toHaveBeenCalledWith({
           command: 'moveColumn',
           data: {
-            fromIndex: 0,
+            indices: [0],
             toIndex: 2
           }
         })

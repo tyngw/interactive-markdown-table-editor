@@ -733,6 +733,19 @@ suite('TableDataManager Test Suite', () => {
         assert.deepStrictEqual(tableData.rows[2], originalRows[2]);
     });
 
+    test('should move multiple rows preserving order', () => {
+        const originalRows = manager.getTableData().rows.map(row => [...row]);
+
+        // Select rows 0 and 2 and drop to index 1 (between original 0 and 1)
+        manager.moveRows([0, 2], 1);
+
+        const tableData = manager.getTableData();
+        // Expected order: row0, row2 moved before original row1
+        assert.deepStrictEqual(tableData.rows[0], originalRows[0]);
+        assert.deepStrictEqual(tableData.rows[1], originalRows[2]);
+        assert.deepStrictEqual(tableData.rows[2], originalRows[1]);
+    });
+
     test('should move column via drag and drop - forward movement', () => {
         // Test moving first column to last position
         const originalHeaders = [...manager.getTableData().headers];
@@ -771,6 +784,25 @@ suite('TableDataManager Test Suite', () => {
         
         // Check data reordering
         assert.deepStrictEqual(tableData.rows[0], [originalRows[0][2], originalRows[0][0], originalRows[0][1]]);
+    });
+
+    test('should move multiple columns preserving order and separator line', () => {
+        const originalHeaders = [...manager.getTableData().headers];
+        const originalRows = manager.getTableData().rows.map(row => [...row]);
+
+        // Move columns 0 and 2 to position 1
+        manager.moveColumns([0, 2], 1);
+
+        const tableData = manager.getTableData();
+
+        // Headers should be [Age, Name, City]
+        assert.deepStrictEqual(tableData.headers, [originalHeaders[1], originalHeaders[0], originalHeaders[2]]);
+        // Rows should follow header order
+        assert.deepStrictEqual(tableData.rows[0], [originalRows[0][1], originalRows[0][0], originalRows[0][2]]);
+
+        if (tableData.separatorLine) {
+            assert.ok(tableData.separatorLine.includes('---'), 'separator line should be kept');
+        }
     });
 
     test('should move column to middle position', () => {

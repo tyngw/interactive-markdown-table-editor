@@ -16,7 +16,7 @@ interface TableHeaderProps {
   // 旧仕様ではヘッダークリック=ソートのため未使用
   onColumnSelect?: (col: number, event: React.MouseEvent) => void
   onShowColumnContextMenu?: (event: React.MouseEvent, col: number) => void
-  getDragProps?: (type: 'row' | 'column', index: number) => any
+  getDragProps?: (type: 'row' | 'column', index: number, selectedIndices?: number[]) => any
   getDropProps?: (type: 'row' | 'column', index: number) => any
   selectedCols?: Set<number>
   fullySelectedCols?: Set<number>
@@ -384,7 +384,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                   data-col={col}
                   style={widthStyle}
                   title={title}
-                  {...(getDragProps ? getDragProps('column', col) : {})}
+                  {...(getDragProps ? getDragProps('column', col, selectedCols ? Array.from(selectedCols) : undefined) : {})}
                   {...(getDropProps ? getDropProps('column', col) : {})}
                 >
                   <div className="header-content">
@@ -468,7 +468,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                 data-col={col}
                 style={widthStyle}
                 title={`Column ${columnLetter}: ${header}`}
-                {...(getDragProps ? getDragProps('column', col) : {})}
+                {...(getDragProps ? getDragProps('column', col, selectedCols ? Array.from(selectedCols) : undefined) : {})}
                 {...(getDropProps ? getDropProps('column', col) : {})}
               >
                 <div className="header-content">

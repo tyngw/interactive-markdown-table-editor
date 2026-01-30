@@ -285,6 +285,46 @@ export class TableDataManager {
     }
 
     /**
+     * Move multiple rows preserving their relative order.
+     */
+    moveRows(indices: number[], dropIndex: number): void {
+        if (!Array.isArray(indices) || indices.length === 0) {
+            return;
+        }
+
+        const rowCount = this.tableData.rows.length;
+        const unique = Array.from(new Set(indices.filter(i => i >= 0 && i < rowCount))).sort((a, b) => a - b);
+        if (unique.length === 0) {
+            return;
+        }
+
+        if (dropIndex < 0 || dropIndex > rowCount) {
+            throw new Error(`Invalid target row index: ${dropIndex}`);
+        }
+
+        const selectedSet = new Set(unique);
+        const picked = unique.map(i => this.tableData.rows[i]);
+        const remaining: string[][] = [];
+        this.tableData.rows.forEach((row, idx) => {
+            if (!selectedSet.has(idx)) {
+                remaining.push(row);
+            }
+        });
+
+        const removedBeforeDrop = unique.filter(i => i < dropIndex).length;
+        const insertIndex = Math.min(Math.max(dropIndex - removedBeforeDrop, 0), remaining.length);
+
+        const newRows = [...remaining];
+        newRows.splice(insertIndex, 0, ...picked);
+
+        this.tableData.rows = newRows;
+
+        this.tableData.rawLines = undefined;
+        this.updateMetadata();
+        this.notifyChange();
+    }
+
+    /**
      * Move column to different position
      */
     moveColumn(fromIndex: number, toIndex: number): void {
@@ -308,6 +348,52 @@ export class TableDataManager {
         // 列移動により rawLines は無効化
         this.tableData.rawLines = undefined;
 
+        this.updateMetadata();
+        this.notifyChange();
+    }
+
+    /**
+     * Move multiple columns preserving their relative order and separator line.
+     */
+    moveColumns(indices: number[], dropIndex: number): void {
+        if (!Array.isArray(indices) || indices.length === 0) {
+            return;
+        }
+
+        const colCount = this.tableData.headers.length;
+        const unique = Array.from(new Set(indices.filter(i => i >= 0 && i < colCount))).sort((a, b) => a - b);
+        if (unique.length === 0) {
+            return;
+        }
+
+        if (dropIndex < 0 || dropIndex > colCount) {
+            throw new Error(`Invalid target column index: ${dropIndex}`);
+        }
+
+        const selectedSet = new Set(unique);
+        const pickedHeaders = unique.map(i => this.tableData.headers[i]);
+        const remainingHeaders = this.tableData.headers.filter((_, idx) => !selectedSet.has(idx));
+
+        // ドロップ位置は元のインデックスをそのまま利用し、残存列の範囲内にクランプする
+        const insertIndex = Math.min(Math.max(dropIndex, 0), remainingHeaders.length);
+
+        const newHeaders = [...remainingHeaders];
+        newHeaders.splice(insertIndex, 0, ...pickedHeaders);
+
+        const newRows = this.tableData.rows.map(row => {
+            const picked = unique.map(i => row[i]);
+            const remaining = row.filter((_, idx) => !selectedSet.has(idx));
+            const next = [...remaining];
+            next.splice(insertIndex, 0, ...picked);
+            return next;
+        });
+
+        this.tableData.headers = newHeaders;
+        this.tableData.rows = newRows;
+
+        this.updateSeparatorLineForColumnMoveMultiple(unique, insertIndex);
+
+        this.tableData.rawLines = undefined;
         this.updateMetadata();
         this.notifyChange();
     }
@@ -1010,6 +1096,40 @@ export class TableDataManager {
 
         // 区切り線を再構築
         this.tableData.separatorLine = '|' + parts.join('|') + '|';
+    }
+
+    /**
+     * Update separator line when multiple columns are moved together.
+     */
+    private updateSeparatorLineForColumnMoveMultiple(indices: number[], insertIndex: number): void {
+        if (!this.tableData.separatorLine) {
+            return;
+        }
+
+        const separatorLine = this.tableData.separatorLine.trim();
+        if (!separatorLine.startsWith('|') || !separatorLine.endsWith('|')) {
+            this.tableData.separatorLine = undefined;
+            return;
+        }
+
+        const parts = separatorLine.slice(1, -1).split('|');
+        const unique = Array.from(new Set(indices)).sort((a, b) => a - b);
+        const selectedSet = new Set(unique);
+        const picked: string[] = [];
+        const remaining: string[] = [];
+
+        parts.forEach((part, idx) => {
+            if (selectedSet.has(idx)) {
+                picked.push(part);
+            } else {
+                remaining.push(part);
+            }
+        });
+
+        const nextParts = [...remaining];
+        const safeInsert = Math.min(Math.max(insertIndex, 0), nextParts.length);
+        nextParts.splice(safeInsert, 0, ...picked);
+        this.tableData.separatorLine = '|' + nextParts.join('|') + '|';
     }
 
     // Advanced CRUD Operations

@@ -251,6 +251,129 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     selectionAnchorRef.current = { row: 0, col: 0 }
   }, [tableRowCount, tableColCount])
 
+  // ドラッグ後に選択状態を更新（行の移動）
+  const updateSelectedRowsAfterMove = useCallback((movedIndices: number[], dropIndex: number) => {
+    if (!Array.isArray(movedIndices) || movedIndices.length === 0) return
+
+    const totalRows = tableRowCount
+    const uniqueMoved = Array.from(new Set(movedIndices.filter(i => i >= 0 && i < totalRows))).sort((a, b) => a - b)
+    if (uniqueMoved.length === 0) return
+    if (dropIndex < 0 || dropIndex > totalRows) return
+
+    const movedSet = new Set(uniqueMoved)
+    const allRowsBefore = Array.from({ length: totalRows }, (_, i) => i)
+    const remaining = allRowsBefore.filter(i => !movedSet.has(i))
+
+    const removedBeforeDrop = uniqueMoved.filter(i => i < dropIndex).length
+    const insertIndex = Math.min(Math.max(dropIndex - removedBeforeDrop, 0), remaining.length)
+
+    const finalOrder = [...remaining]
+    finalOrder.splice(insertIndex, 0, ...uniqueMoved)
+
+    const mapOldToNew = new Map<number, number>()
+    finalOrder.forEach((oldIdx, newIdx) => {
+      mapOldToNew.set(oldIdx, newIdx)
+    })
+
+    // selectedCells を再マッピング
+    const remappedSelectedCells = new Set<string>()
+    selectedCells.forEach(key => {
+      const [rowStr, colStr] = key.split('-')
+      const row = parseInt(rowStr, 10)
+      const col = parseInt(colStr, 10)
+      const newRow = mapOldToNew.get(row)
+      if (newRow !== undefined) {
+        remappedSelectedCells.add(`${newRow}-${col}`)
+      }
+    })
+
+    // fullySelectedRows を再マッピング
+    const remappedFullyRows = new Set<number>()
+    fullySelectedRows.forEach(row => {
+      const newRow = mapOldToNew.get(row)
+      if (newRow !== undefined) {
+        remappedFullyRows.add(newRow)
+      }
+    })
+
+    // selectionRange / anchor を再マッピング
+    const remapRow = (row: number | undefined) => row !== undefined ? (mapOldToNew.get(row) ?? row) : row
+    const remappedRange = selectionRange ? {
+      start: { row: remapRow(selectionRange.start.row) as number, col: selectionRange.start.col },
+      end: { row: remapRow(selectionRange.end.row) as number, col: selectionRange.end.col }
+    } : null
+    const remappedAnchor = selectionAnchor ? {
+      row: remapRow(selectionAnchor.row) as number,
+      col: selectionAnchor.col
+    } : null
+
+    setSelectedCells(remappedSelectedCells)
+    setFullySelectedRows(remappedFullyRows)
+    setSelectionRange(remappedRange)
+    setSelectionAnchor(remappedAnchor)
+    selectionAnchorRef.current = remappedAnchor
+  }, [fullySelectedRows, selectedCells, selectionRange, selectionAnchor, tableRowCount])
+
+  // ドラッグ後に選択状態を更新（列の移動）
+  const updateSelectedColsAfterMove = useCallback((movedIndices: number[], dropIndex: number) => {
+    if (!Array.isArray(movedIndices) || movedIndices.length === 0) return
+
+    const totalCols = tableColCount
+    const uniqueMoved = Array.from(new Set(movedIndices.filter(i => i >= 0 && i < totalCols))).sort((a, b) => a - b)
+    if (uniqueMoved.length === 0) return
+    if (dropIndex < 0 || dropIndex > totalCols) return
+
+    const movedSet = new Set(uniqueMoved)
+    const allColsBefore = Array.from({ length: totalCols }, (_, i) => i)
+    const remaining = allColsBefore.filter(i => !movedSet.has(i))
+
+    const removedBeforeDrop = uniqueMoved.filter(i => i < dropIndex).length
+    const insertIndex = Math.min(Math.max(dropIndex - removedBeforeDrop, 0), remaining.length)
+
+    const finalOrder = [...remaining]
+    finalOrder.splice(insertIndex, 0, ...uniqueMoved)
+
+    const mapOldToNew = new Map<number, number>()
+    finalOrder.forEach((oldIdx, newIdx) => {
+      mapOldToNew.set(oldIdx, newIdx)
+    })
+
+    const remappedSelectedCells = new Set<string>()
+    selectedCells.forEach(key => {
+      const [rowStr, colStr] = key.split('-')
+      const row = parseInt(rowStr, 10)
+      const col = parseInt(colStr, 10)
+      const newCol = mapOldToNew.get(col)
+      if (newCol !== undefined) {
+        remappedSelectedCells.add(`${row}-${newCol}`)
+      }
+    })
+
+    const remappedFullyCols = new Set<number>()
+    fullySelectedCols.forEach(col => {
+      const newCol = mapOldToNew.get(col)
+      if (newCol !== undefined) {
+        remappedFullyCols.add(newCol)
+      }
+    })
+
+    const remapCol = (col: number | undefined) => col !== undefined ? (mapOldToNew.get(col) ?? col) : col
+    const remappedRange = selectionRange ? {
+      start: { row: selectionRange.start.row, col: remapCol(selectionRange.start.col) as number },
+      end: { row: selectionRange.end.row, col: remapCol(selectionRange.end.col) as number }
+    } : null
+    const remappedAnchor = selectionAnchor ? {
+      row: selectionAnchor.row,
+      col: remapCol(selectionAnchor.col) as number
+    } : null
+
+    setSelectedCells(remappedSelectedCells)
+    setFullySelectedCols(remappedFullyCols)
+    setSelectionRange(remappedRange)
+    setSelectionAnchor(remappedAnchor)
+    selectionAnchorRef.current = remappedAnchor
+  }, [fullySelectedCols, selectedCells, selectionRange, selectionAnchor, tableColCount])
+
   // ドラッグ選択関連
   // isMouseDraggingRef: マウスが押されているかどうか（ドラッグ中か）
   const isMouseDraggingRef = useRef(false)
@@ -294,6 +417,9 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     // ドラッグ選択関数
     onDragStart,
     onDragEnter,
-    onDragEnd
+    onDragEnd,
+    // ドラッグ後の選択更新
+    updateSelectedRowsAfterMove,
+    updateSelectedColsAfterMove
   }
 }
