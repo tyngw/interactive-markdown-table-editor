@@ -25,7 +25,6 @@ suite('GitDiffCoordinator', () => {
         id: 'tbl-1',
         headers: ['A'],
         rows: [['1']],
-        alignment: ['left'],
         metadata: {
             sourceUri: fileUri.toString(),
             startLine: 1,

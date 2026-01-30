@@ -3,7 +3,37 @@
  * WebviewとVSCode Extension間の確実なメッセージング
  */
 
-// メッセージID生成
+import type { TableData } from '../tableDataManager';
+import type {
+  UpdateCellData,
+  BulkUpdateCellsData,
+  UpdateHeaderData,
+  AddRowData,
+  DeleteRowsData,
+  AddColumnData,
+  DeleteColumnsData,
+  SortData,
+  MoveData,
+  ExportCSVData,
+  ImportCSVData,
+  SwitchTableData
+} from '../messages/types';
+
+export type {
+  UpdateCellData,
+  BulkUpdateCellsData,
+  UpdateHeaderData,
+  AddRowData,
+  DeleteRowsData,
+  AddColumnData,
+  DeleteColumnsData,
+  SortData,
+  MoveData,
+  ExportCSVData,
+  ImportCSVData,
+  SwitchTableData
+} from '../messages/types';
+
 export function generateMessageId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
@@ -107,81 +137,6 @@ export enum WebviewCommand {
   PONG = 'pong',
   REQUEST_SYNC = 'requestSync',
   STATE_UPDATE = 'stateUpdate'
-}
-
-// データ型定義
-export interface UpdateCellData {
-  row: number;
-  col: number;
-  value: string;
-  tableIndex?: number;
-}
-
-export interface BulkUpdateCellsData {
-  updates: Array<{ row: number; col: number; value: string }>;
-  tableIndex?: number;
-}
-
-export interface UpdateHeaderData {
-  col: number;
-  value: string;
-  tableIndex?: number;
-}
-
-export interface AddRowData {
-  index?: number;
-  count?: number; // Number of rows to add (default: 1)
-  tableIndex?: number;
-}
-
-export interface DeleteRowsData {
-  indices: number[];
-  tableIndex?: number;
-}
-
-export interface AddColumnData {
-  index?: number;
-  count?: number; // Number of columns to add (default: 1)
-  header?: string;
-  tableIndex?: number;
-}
-
-export interface DeleteColumnsData {
-  indices: number[];
-  tableIndex?: number;
-}
-
-export interface SortData {
-  column: number;
-  direction: 'asc' | 'desc' | 'none';
-  tableIndex?: number;
-}
-
-export interface MoveData {
-  fromIndex: number;
-  toIndex: number;
-  tableIndex?: number;
-}
-
-export interface ExportCSVData {
-  csvContent: string;
-  filename?: string;
-  encoding?: string;
-  tableIndex?: number;
-}
-
-export interface ImportCSVData {
-  tableIndex?: number;
-}
-
-export interface SwitchTableData {
-  index: number;
-}
-
-export interface TableData {
-  headers: string[];
-  rows: string[][];
-  alignment?: string[];
 }
 
 /**

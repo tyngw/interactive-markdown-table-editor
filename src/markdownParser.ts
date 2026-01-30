@@ -33,7 +33,6 @@ export interface TableNode {
     endLine: number;
     headers: string[];
     rows: string[][];
-    alignment: ('left' | 'center' | 'right')[];
     separatorLine?: string; // オリジナルの区切り線を保持
     rawLines?: string[]; // 元のテーブル行を保持（ヘッダーと各データ行）
 }
@@ -176,7 +175,6 @@ export class MarkdownParser {
             let currentIndex = startIndex;
             let headers: string[] = [];
             let rows: string[][] = [];
-            let alignment: ('left' | 'center' | 'right')[] = [];
             let startLine = 0;
             let endLine = 0;
 
@@ -208,7 +206,6 @@ export class MarkdownParser {
                     try {
                         const headerData = this.parseTableHead(tokens, currentIndex);
                         headers = headerData.headers;
-                        alignment = headerData.alignment;
                         currentIndex = headerData.nextIndex;
                         continue;
                     } catch (error) {
@@ -250,8 +247,7 @@ export class MarkdownParser {
                 endLine,
                 headers,
                 rows,
-                alignment,
-                separatorLine: this.extractSeparatorLine(content, { startLine, endLine, headers, rows, alignment })
+                separatorLine: this.extractSeparatorLine(content, { startLine, endLine, headers, rows })
             };
 
             // 元のテーブル行を抽出
@@ -263,7 +259,6 @@ export class MarkdownParser {
                 endLine,
                 headers,
                 rows,
-                alignment,
                 separatorLine: tempTableNode.separatorLine,
                 rawLines
             };
@@ -283,12 +278,10 @@ export class MarkdownParser {
      */
     private parseTableHead(tokens: any[], startIndex: number): {
         headers: string[];
-        alignment: ('left' | 'center' | 'right')[];
         nextIndex: number;
     } {
         let currentIndex = startIndex;
         const headers: string[] = [];
-        const alignment: ('left' | 'center' | 'right')[] = [];
 
         while (currentIndex < tokens.length) {
             const token = tokens[currentIndex];
@@ -304,10 +297,6 @@ export class MarkdownParser {
             }
 
             if (token.type === 'th_open') {
-                // Extract alignment from token attributes
-                const align = this.extractAlignment(token);
-                alignment.push(align);
-
                 // Find the content of this header cell
                 const headerContent = this.extractCellContent(tokens, currentIndex);
                 headers.push(headerContent.content);
@@ -318,7 +307,7 @@ export class MarkdownParser {
             currentIndex++;
         }
 
-        return { headers, alignment, nextIndex: currentIndex };
+        return { headers, nextIndex: currentIndex };
     }
 
     /**
@@ -400,22 +389,6 @@ export class MarkdownParser {
     }
 
     /**
-     * Extract alignment from token attributes
-     */
-    private extractAlignment(token: any): 'left' | 'center' | 'right' {
-        if (token.attrGet && token.attrGet('style')) {
-            const style = token.attrGet('style');
-            if (style.includes('text-align: center')) {
-                return 'center';
-            }
-            if (style.includes('text-align: right')) {
-                return 'right';
-            }
-        }
-        return 'left';
-    }
-
-    /**
      * Validate table structure and detect issues
      */
     validateTableStructure(table: TableNode): {
@@ -435,11 +408,6 @@ export class MarkdownParser {
             if (table.rows[i].length !== expectedColumns) {
                 issues.push(`Row ${i + 1} has ${table.rows[i].length} columns, expected ${expectedColumns}`);
             }
-        }
-
-        // Check alignment array length
-        if (table.alignment.length !== expectedColumns) {
-            issues.push(`Alignment array length (${table.alignment.length}) doesn't match column count (${expectedColumns})`);
         }
 
         return {
@@ -548,7 +516,7 @@ export class MarkdownParser {
         table: TableNode;
         validation: { isValid: boolean; issues: string[] };
         boundaries: { startLine: number; endLine: number; actualContent: string[] };
-        columnInfo: { index: number; header: string; alignment: string; width: number }[];
+        columnInfo: { index: number; header: string; width: number }[];
     } {
         const validation = this.validateTableStructure(tableNode);
         const boundaries = this.getTableBoundaries(ast.content, tableNode);
@@ -557,7 +525,6 @@ export class MarkdownParser {
         const columnInfo = tableNode.headers.map((header, index) => ({
             index,
             header,
-            alignment: tableNode.alignment[index] || 'left',
             width: this.calculateColumnWidth(tableNode, index)
         }));
 
@@ -591,7 +558,7 @@ export class MarkdownParser {
         table: TableNode;
         validation: { isValid: boolean; issues: string[] };
         boundaries: { startLine: number; endLine: number; actualContent: string[] };
-        columnInfo: { index: number; header: string; alignment: string; width: number }[];
+        columnInfo: { index: number; header: string; width: number }[];
     }> {
         const tables = this.findTablesInDocument(ast);
         return tables.map(table => this.getTableMetadata(ast, table));

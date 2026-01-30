@@ -7,7 +7,6 @@ export interface TableData {
     id: string;
     headers: string[];
     rows: string[][];
-    alignment: ('left' | 'center' | 'right')[];
     separatorLine?: string; // オリジナルの区切り線を保持
     rawLines?: string[]; // 元のテーブル行（ヘッダー＋区切り線＋データ行）
     editedCells?: Set<string>; // 編集されたセルの位置 ("row,col" 形式)
@@ -60,7 +59,6 @@ export class TableDataManager {
             id,
             headers: [...tableNode.headers],
             rows: tableNode.rows.map(row => [...row]),
-            alignment: [...tableNode.alignment],
             separatorLine: tableNode.separatorLine, // オリジナルの区切り線を保持
             rawLines: tableNode.rawLines ? [...tableNode.rawLines] : undefined, // 元のテーブル行を保持
             editedCells: new Set(), // 初期状態では編集なし
@@ -185,18 +183,13 @@ export class TableDataManager {
 
         // Add multiple columns at once
         const headersToAdd: string[] = [];
-        const alignmentsToAdd: ('left' | 'center' | 'right')[] = [];
         for (let i = 0; i < count; i++) {
             const columnHeader = header || `Column ${insertIndex + i + 1}`;
             headersToAdd.push(columnHeader);
-            alignmentsToAdd.push('left');
         }
 
         // Add headers
         this.tableData.headers.splice(insertIndex, 0, ...headersToAdd);
-
-        // Add alignments
-        this.tableData.alignment.splice(insertIndex, 0, ...alignmentsToAdd);
 
         // Add empty cells to all rows
         for (const row of this.tableData.rows) {
@@ -228,9 +221,6 @@ export class TableDataManager {
 
         // Remove header
         this.tableData.headers.splice(index, 1);
-
-        // Remove alignment
-        this.tableData.alignment.splice(index, 1);
 
         // Remove cells from all rows
         for (const row of this.tableData.rows) {
@@ -305,10 +295,6 @@ export class TableDataManager {
         // Move header
         const header = this.tableData.headers.splice(fromIndex, 1)[0];
         this.tableData.headers.splice(toIndex, 0, header);
-
-        // Move alignment
-        const alignment = this.tableData.alignment.splice(fromIndex, 1)[0];
-        this.tableData.alignment.splice(toIndex, 0, alignment);
 
         // Move cells in all rows
         for (const row of this.tableData.rows) {
@@ -508,8 +494,7 @@ export class TableDataManager {
             startLine: this.tableData.metadata.startLine,
             endLine: this.tableData.metadata.endLine,
             headers: [...this.dragDropState.previewData.headers],
-            rows: this.dragDropState.previewData.rows.map(row => [...row]),
-            alignment: [...this.dragDropState.previewData.alignment]
+            rows: this.dragDropState.previewData.rows.map(row => [...row])
         }, this.tableData.metadata.sourceUri);
 
         try {
@@ -799,20 +784,8 @@ export class TableDataManager {
         } else {
             // Fallback to generated separator if original is not available
             markdown += '|';
-            for (const alignment of this.tableData.alignment) {
-                let separator = '';
-                switch (alignment) {
-                    case 'left':
-                        separator = ' :--- ';
-                        break;
-                    case 'center':
-                        separator = ' :---: ';
-                        break;
-                    case 'right':
-                        separator = ' ---: ';
-                        break;
-                }
-                markdown += separator + '|';
+            for (let i = 0; i < this.tableData.headers.length; i++) {
+                markdown += ' :--- |';
             }
             markdown += '\n';
         }
@@ -853,11 +826,6 @@ export class TableDataManager {
                 issues.push(`Row ${rowIndex + 1} has ${row.length} columns, expected ${expectedColumns}`);
             }
         });
-
-        // Check alignment array
-        if (tableNode.alignment.length !== expectedColumns) {
-            issues.push(`Alignment array length (${tableNode.alignment.length}) doesn't match column count (${expectedColumns})`);
-        }
 
         return {
             isValid: issues.length === 0,
@@ -931,8 +899,7 @@ export class TableDataManager {
             startLine: this.tableData.metadata.startLine,
             endLine: this.tableData.metadata.endLine,
             headers: [...this.tableData.headers],
-            rows: this.tableData.rows.map(row => [...row]),
-            alignment: [...this.tableData.alignment]
+            rows: this.tableData.rows.map(row => [...row])
         };
 
         return new TableDataManager(clonedTableNode, this.tableData.metadata.sourceUri);
@@ -966,8 +933,7 @@ export class TableDataManager {
             startLine: this.tableData.metadata.startLine,
             endLine: this.tableData.metadata.endLine,
             headers: this.tableData.headers,
-            rows: this.tableData.rows,
-            alignment: this.tableData.alignment
+            rows: this.tableData.rows
         };
 
         const validation = this.validateTableStructure(tableNode);
@@ -1093,9 +1059,8 @@ export class TableDataManager {
 
     /**
      * CSVインポート等でヘッダ・行を丸ごと置換
-     * - alignment は未指定時すべて 'left'
      */
-    replaceContents(headers: string[], rows: string[][], alignment?: ('left' | 'center' | 'right')[]): void {
+    replaceContents(headers: string[], rows: string[][]): void {
         if (!Array.isArray(headers) || headers.length === 0) {
             throw new Error('Headers must not be empty');
         }
@@ -1104,10 +1069,8 @@ export class TableDataManager {
             if (!Array.isArray(r)) {throw new Error('Invalid row in rows');}
             if (r.length !== colCount) {throw new Error('Row length mismatch in imported data');}
         }
-        const align = alignment && alignment.length === colCount ? alignment.slice() : new Array(colCount).fill('left') as ('left'|'center'|'right')[];
         this.tableData.headers = headers.slice();
         this.tableData.rows = rows.map(r => r.slice());
-        this.tableData.alignment = align;
         // CSVインポート等で内容を置換する場合は、区切り線をクリア
         this.tableData.separatorLine = undefined;
         // 構造が変わったため rawLines を無効化
@@ -1188,10 +1151,6 @@ export class TableDataManager {
         // Insert headers
         this.tableData.headers.splice(startIndex, 0, ...columnHeaders);
 
-        // Insert alignments
-        const newAlignments = Array(count).fill('left');
-        this.tableData.alignment.splice(startIndex, 0, ...newAlignments);
-
         // Insert cells in all rows
         for (const row of this.tableData.rows) {
             const newCells = Array(count).fill('');
@@ -1228,9 +1187,6 @@ export class TableDataManager {
         for (const index of sortedIndices) {
             // Remove header
             this.tableData.headers.splice(index, 1);
-
-            // Remove alignment
-            this.tableData.alignment.splice(index, 1);
 
             // Remove cells from all rows
             for (const row of this.tableData.rows) {
@@ -1370,10 +1326,6 @@ export class TableDataManager {
         const duplicatedHeader = this.tableData.headers[colIndex] + ' Copy';
         this.tableData.headers.splice(targetIndex, 0, duplicatedHeader);
 
-        // Duplicate alignment
-        const duplicatedAlignment = this.tableData.alignment[colIndex];
-        this.tableData.alignment.splice(targetIndex, 0, duplicatedAlignment);
-
         // Duplicate cells in all rows
         for (const row of this.tableData.rows) {
             const duplicatedCell = row[colIndex];
@@ -1465,15 +1417,14 @@ export class TableDataManager {
     /**
      * Get column data
      */
-    getColumn(colIndex: number): { header: string; values: string[]; alignment: string } {
+    getColumn(colIndex: number): { header: string; values: string[] } {
         if (!this.isValidColumnIndex(colIndex)) {
             throw new Error(`Invalid column index: ${colIndex}`);
         }
 
         return {
             header: this.tableData.headers[colIndex],
-            values: this.tableData.rows.map(row => row[colIndex]),
-            alignment: this.tableData.alignment[colIndex]
+            values: this.tableData.rows.map(row => row[colIndex])
         };
     }
 

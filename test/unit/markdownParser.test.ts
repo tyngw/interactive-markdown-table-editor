@@ -31,7 +31,7 @@ Some text after table.`;
         assert.deepStrictEqual(table.rows[1], ['Cell 4', 'Cell 5', 'Cell 6']);
     });
 
-    test('should parse table with alignment', () => {
+    test('should parse table', () => {
         const markdown = `| Left | Center | Right |
 |:-----|:------:|------:|
 | L1   | C1     | R1    |
@@ -44,7 +44,7 @@ Some text after table.`;
         
         const table = tables[0];
         assert.deepStrictEqual(table.headers, ['Left', 'Center', 'Right']);
-        // Note: markdown-it may not preserve alignment info in the way we expect
+        // Note: markdown-it may not preserve all table info in the way we expect
         // This test verifies the basic structure is parsed correctly
         assert.strictEqual(table.rows.length, 2);
     });
@@ -149,8 +149,7 @@ Some text after table.`;
             startLine: 0,
             endLine: 3,
             headers: ['Header 1', 'Header 2'],
-            rows: [['Cell 1', 'Cell 2'], ['Cell 3', 'Cell 4']],
-            alignment: ['left', 'left']
+            rows: [['Cell 1', 'Cell 2'], ['Cell 3', 'Cell 4']]
         };
 
         const validation = parser.validateTableStructure(validTable);
@@ -163,8 +162,7 @@ Some text after table.`;
             startLine: 0,
             endLine: 3,
             headers: ['Header 1', 'Header 2'],
-            rows: [['Cell 1'], ['Cell 3', 'Cell 4', 'Cell 5']], // Inconsistent column count
-            alignment: ['left'] // Wrong alignment array length
+            rows: [['Cell 1'], ['Cell 3', 'Cell 4', 'Cell 5']] // Inconsistent column count
         };
 
         const validation = parser.validateTableStructure(invalidTable);
@@ -463,8 +461,7 @@ Another good table:
                 ['1', '2'],
                 ['3'], // Missing cell
                 ['4', '5', '6'] // Extra cell
-            ],
-            alignment: ['left'] // Missing alignment
+            ]
         };
 
         const validation = parser.validateTableStructure(tableNode);
@@ -472,7 +469,6 @@ Another good table:
         assert.ok(validation.issues.length > 0);
         assert.ok(validation.issues.some(issue => issue.includes('Row 2 has 1 columns')));
         assert.ok(validation.issues.some(issue => issue.includes('Row 3 has 3 columns')));
-        assert.ok(validation.issues.some(issue => issue.includes('Alignment array length')));
     });
 
     test('should handle table with no headers gracefully', () => {
@@ -480,8 +476,7 @@ Another good table:
             startLine: 0,
             endLine: 1,
             headers: [],
-            rows: [['A', 'B']],
-            alignment: []
+            rows: [['A', 'B']]
         };
 
         const validation = parser.validateTableStructure(tableNode);
