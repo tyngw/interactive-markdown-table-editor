@@ -690,6 +690,7 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
           background-color: rgba(120, 160, 255, 0.3);
           color: var(--vscode-editor-foreground);
           box-shadow: none;
+          border-color: var(--vscode-panel-border);
           box-sizing: border-box;
           min-height: 32px;
           height: auto;
