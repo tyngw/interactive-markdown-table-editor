@@ -1,3 +1,11 @@
+/**
+ * messages・通信型定義
+ * 
+ * Webviewからの各種コマンドとそのデータ型、メッセージ構造を集約定義
+ * protocol.ts もこれらの型を import して使用
+ */
+
+// Webviewからのコマンド（protocol.ts のenumに加えて、診断・内部コマンドも含む）
 export type WebviewCommand =
   | 'requestTableData'
   | 'updateCell'
@@ -24,13 +32,7 @@ export type WebviewCommand =
   | 'webviewUnhandledRejection'
   | 'diag';
 
-export interface BaseMessage {
-  command: WebviewCommand;
-  data?: any;
-  timestamp?: number;
-  responseTime?: number;
-}
-
+// データ型定義
 export interface UpdateCellData {
   row: number;
   col: number;
@@ -51,6 +53,7 @@ export interface UpdateHeaderData {
 
 export interface AddRowData {
   index?: number;
+  count?: number; // Number of rows to add (default: 1)
   tableIndex?: number;
 }
 
@@ -61,6 +64,7 @@ export interface DeleteRowsData {
 
 export interface AddColumnData {
   index?: number;
+  count?: number; // Number of columns to add (default: 1)
   header?: string;
   tableIndex?: number;
 }
@@ -86,12 +90,25 @@ export interface ExportCSVData {
   csvContent: string;
   filename?: string;
   encoding?: string;
+  tableIndex?: number;
 }
 
 export interface ImportCSVData {
   tableIndex?: number;
 }
 
-export interface SwitchTableData { index: number }
+export interface SwitchTableData {
+  index: number;
+}
+
+export interface BaseMessage {
+  command: WebviewCommand;
+  data?: any;
+  timestamp?: number;
+  responseTime?: number;
+}
 
 export type WebviewMessage = BaseMessage;
+
+
+
