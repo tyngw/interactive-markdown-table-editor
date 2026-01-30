@@ -3,7 +3,8 @@
  * WebviewとVSCode Extension間の確実なメッセージング
  */
 
-// メッセージID生成
+import type { TableData } from '../tableDataManager';
+
 export function generateMessageId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
@@ -176,11 +177,6 @@ export interface ImportCSVData {
 
 export interface SwitchTableData {
   index: number;
-}
-
-export interface TableData {
-  headers: string[];
-  rows: string[][];
 }
 
 /**
