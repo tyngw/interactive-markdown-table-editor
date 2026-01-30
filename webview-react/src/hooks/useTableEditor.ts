@@ -299,32 +299,80 @@ export function useTableEditor(
     })
   }, [])
 
-  const moveRow = useCallback((fromIndex: number, toIndex: number) => {
+  const moveRows = useCallback((indices: number[], dropIndex: number) => {
     markInternalUpdate()
     if (sortState?.direction !== 'none') return;
+    
+    // 選択状態を更新
+    selection.updateSelectedRowsAfterMove(indices, dropIndex)
+    
     setTableData(prev => {
-      const newRows = [...prev.rows]
-      const [movedRow] = newRows.splice(fromIndex, 1)
-      newRows.splice(toIndex, 0, movedRow)
+      const total = prev.rows.length
+      const selected = [...new Set(indices.filter(i => i >= 0 && i < total))].sort((a, b) => a - b)
+      if (selected.length === 0) {
+        return prev
+      }
+
+      const selectedSet = new Set(selected)
+      const picked = selected.map(i => prev.rows[i])
+      const remaining: string[][] = []
+      prev.rows.forEach((row, idx) => {
+        if (!selectedSet.has(idx)) {
+          remaining.push(row)
+        }
+      })
+
+      const removedBeforeDrop = selected.filter(i => i < dropIndex).length
+      const insertIndex = Math.min(Math.max(dropIndex - removedBeforeDrop, 0), remaining.length)
+
+      const newRows = [...remaining]
+      newRows.splice(insertIndex, 0, ...picked)
       return { ...prev, rows: newRows }
     })
-  }, [sortState?.direction])
+  }, [sortState?.direction, selection])
 
-  const moveColumn = useCallback((fromIndex: number, toIndex: number) => {
+  const moveRow = useCallback((fromIndex: number, toIndex: number) => {
+    moveRows([fromIndex], toIndex)
+  }, [moveRows])
+
+  const moveColumns = useCallback((indices: number[], dropIndex: number) => {
     markInternalUpdate()
+    
+    // 選択状態を更新
+    selection.updateSelectedColsAfterMove(indices, dropIndex)
+    
     setTableData(prev => {
-      const newHeaders = [...prev.headers]
-      const [movedHeader] = newHeaders.splice(fromIndex, 1)
-      newHeaders.splice(toIndex, 0, movedHeader)
+      const total = prev.headers.length
+      const selected = [...new Set(indices.filter(i => i >= 0 && i < total))].sort((a, b) => a - b)
+      if (selected.length === 0) {
+        return prev
+      }
+
+      const selectedSet = new Set(selected)
+      const pickedHeaders = selected.map(i => prev.headers[i])
+      const remainingHeaders = prev.headers.filter((_, idx) => !selectedSet.has(idx))
+
+      // ドロップ先は元のインデックスを基準にし、残存列の範囲内にクランプ
+      const insertIndex = Math.min(Math.max(dropIndex, 0), remainingHeaders.length)
+
+      const newHeaders = [...remainingHeaders]
+      newHeaders.splice(insertIndex, 0, ...pickedHeaders)
+
       const newRows = prev.rows.map(row => {
-        const newRow = [...row]
-        const [movedCell] = newRow.splice(fromIndex, 1)
-        newRow.splice(toIndex, 0, movedCell)
-        return newRow
+        const pickedCells = selected.map(i => row[i])
+        const remainingCells = row.filter((_, idx) => !selectedSet.has(idx))
+        const nextRow = [...remainingCells]
+        nextRow.splice(insertIndex, 0, ...pickedCells)
+        return nextRow
       })
+
       return { ...prev, headers: newHeaders, rows: newRows }
     })
-  }, [])
+  }, [selection])
+
+  const moveColumn = useCallback((fromIndex: number, toIndex: number) => {
+    moveColumns([fromIndex], toIndex)
+  }, [moveColumns])
 
   const setColumnWidth = useCallback((col: number, width: number) => {
     setColumnWidths(prev => ({ ...prev, [col]: width }))
@@ -393,6 +441,8 @@ export function useTableEditor(
     setColumnWidth,
     moveRow,
     moveColumn,
+    moveRows,
+    moveColumns,
     sortColumn,
     commitSort,
     resetSort: resetSortState,

@@ -462,16 +462,16 @@ export class WebviewCommunicationManager {
   /**
    * 行を移動
    */
-  public moveRow(fromIndex: number, toIndex: number, tableIndex?: number): void {
-    const data: MoveData = { fromIndex, toIndex, tableIndex };
+  public moveRow(fromIndex: number, toIndex: number, tableIndex?: number, indices?: number[]): void {
+    const data: MoveData = { fromIndex, toIndex, tableIndex, indices };
     this.sendNotification(WebviewCommand.MOVE_ROW, data);
   }
 
   /**
    * 列を移動
    */
-  public moveColumn(fromIndex: number, toIndex: number, tableIndex?: number): void {
-    const data: MoveData = { fromIndex, toIndex, tableIndex };
+  public moveColumn(fromIndex: number, toIndex: number, tableIndex?: number, indices?: number[]): void {
+    const data: MoveData = { fromIndex, toIndex, tableIndex, indices };
     this.sendNotification(WebviewCommand.MOVE_COLUMN, data);
   }
 

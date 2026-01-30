@@ -113,6 +113,89 @@ describe('useTableEditor', () => {
     })
   })
 
+  test('moves multiple rows preserving order', () => {
+    const mockTableData = createMockTableData()
+    const { result } = renderHook(() => useTableEditor(mockTableData))
+
+    act(() => {
+      result.current.moveRows([0, 2], 1)
+    })
+
+    expect(result.current.tableData.rows).toEqual([
+      ['Alice', '25', 'Tokyo'],
+      ['Charlie', '35', 'Kyoto'],
+      ['Bob', '30', 'Osaka']
+    ])
+  })
+
+  test('moves multiple columns preserving order', () => {
+    const mockTableData = createMockTableData()
+    const { result } = renderHook(() => useTableEditor(mockTableData))
+
+    act(() => {
+      result.current.moveColumns([0, 2], 1)
+    })
+
+    expect(result.current.tableData.headers).toEqual(['Age', 'Name', 'City'])
+    expect(result.current.tableData.rows[0]).toEqual(['25', 'Alice', 'Tokyo'])
+  })
+
+  test('keeps row selection aligned when moving multiple rows downward', () => {
+    const tableData: TableData = {
+      headers: ['Name'],
+      rows: [
+        ['R1'],
+        ['R2'],
+        ['R3'],
+        ['R4']
+      ]
+    }
+
+    const { result } = renderHook(() => useTableEditor(tableData))
+
+    act(() => {
+      result.current.selectRow(1)
+      result.current.selectRow(2, true) // extend selection to rows 1-2
+    })
+
+    act(() => {
+      // Drop after the last row (index 4) so R2,R3 move to the bottom
+      result.current.moveRows([1, 2], 4)
+    })
+
+    expect(result.current.tableData.rows.map(r => r[0])).toEqual(['R1', 'R4', 'R2', 'R3'])
+    expect(Array.from(result.current.editorState.fullySelectedRows).sort()).toEqual([2, 3])
+    expect(result.current.editorState.selectionRange?.start.row).toBe(2)
+    expect(result.current.editorState.selectionRange?.end.row).toBe(3)
+  })
+
+  test('keeps column selection aligned when moving multiple columns rightward', () => {
+    const tableData: TableData = {
+      headers: ['A', 'B', 'C', 'D'],
+      rows: [
+        ['r1a', 'r1b', 'r1c', 'r1d'],
+        ['r2a', 'r2b', 'r2c', 'r2d']
+      ]
+    }
+
+    const { result } = renderHook(() => useTableEditor(tableData))
+
+    act(() => {
+      result.current.selectColumn(1)
+      result.current.selectColumn(2, true)
+    })
+
+    act(() => {
+      // Drop after the last column (index 4) so B,C move to the far right
+      result.current.moveColumns([1, 2], 4)
+    })
+
+    expect(result.current.tableData.headers).toEqual(['A', 'D', 'B', 'C'])
+    expect(Array.from(result.current.editorState.fullySelectedCols).sort()).toEqual([2, 3])
+    expect(result.current.editorState.selectionRange?.start.col).toBe(2)
+    expect(result.current.editorState.selectionRange?.end.col).toBe(3)
+  })
+
   test('selects range correctly', () => {
     const mockTableData = createMockTableData()
     const { result } = renderHook(() => useTableEditor(mockTableData))

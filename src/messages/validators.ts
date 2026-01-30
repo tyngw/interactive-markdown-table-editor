@@ -68,7 +68,11 @@ export function validateMessageData(message: WebviewMessage): boolean {
     }
     case 'moveRow':
     case 'moveColumn': {
-      const v = d as MoveData; return isObject(v) && typeof v.fromIndex === 'number' && typeof v.toIndex === 'number' && v.fromIndex >= 0 && v.toIndex >= 0;
+      const v = d as MoveData;
+      if (!isObject(v) || typeof v.toIndex !== 'number' || v.toIndex < 0) { return false; }
+      const hasIndices = Array.isArray((v as any).indices) && (v as any).indices.length > 0 && (v as any).indices.every((i: any) => typeof i === 'number' && i >= 0);
+      const hasFrom = typeof (v as any).fromIndex === 'number' && (v as any).fromIndex >= 0;
+      return hasIndices || hasFrom;
     }
     case 'exportCSV': {
       const v = d as ExportCSVData;

@@ -4,14 +4,15 @@ interface DragState {
   isDragging: boolean
   dragType: 'row' | 'column' | null
   dragIndex: number
+  selectedIndices: number[]
   dropIndex: number
   startX: number
   startY: number
 }
 
 interface DragDropCallbacks {
-  onMoveRow: (fromIndex: number, toIndex: number) => void
-  onMoveColumn: (fromIndex: number, toIndex: number) => void
+  onMoveRow: (indices: number[], toIndex: number) => void
+  onMoveColumn: (indices: number[], toIndex: number) => void
 }
 
 export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
@@ -19,6 +20,7 @@ export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
     isDragging: false,
     dragType: null,
     dragIndex: -1,
+    selectedIndices: [],
     dropIndex: -1,
     startX: 0,
     startY: 0
@@ -130,7 +132,8 @@ export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
   const handleDragStart = useCallback((
     event: React.DragEvent,
     type: 'row' | 'column',
-    index: number
+    index: number,
+    selectedIndices?: number[]
   ) => {
     console.log(`Drag start: ${type} ${index}`)
     
@@ -139,10 +142,15 @@ export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
       return
     }
     
+    const effectiveSelected = selectedIndices && selectedIndices.includes(index)
+      ? Array.from(new Set(selectedIndices)).sort((a, b) => a - b)
+      : [index]
+
     setDragState({
       isDragging: true,
       dragType: type,
       dragIndex: index,
+      selectedIndices: effectiveSelected,
       dropIndex: -1,
       startX: event.clientX,
       startY: event.clientY
@@ -242,28 +250,40 @@ export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
       return
     }
     
-    // どちらからもドラッグインデックスを取得できない場合はエラー
     const effectiveDragIndex = dragState.dragIndex !== -1 ? dragState.dragIndex : dragIndexFromDataTransfer
-    
-    if (effectiveDragIndex === index) {
-      console.log(`Same index: dragIndex=${effectiveDragIndex}, dropIndex=${index}`)
+    const effectiveSelected = dragState.selectedIndices.length > 0
+      ? dragState.selectedIndices
+      : (effectiveDragIndex !== -1 ? [effectiveDragIndex] : [])
+
+    if (effectiveSelected.length === 0) {
+      console.error(`Invalid drag selection: dragState=${dragState.dragIndex}, dataTransfer=${dragIndexFromDataTransfer}`)
       return
     }
 
-    if (effectiveDragIndex === -1) {
-      console.error(`Invalid dragIndex: dragState=${dragState.dragIndex}, dataTransfer=${dragIndexFromDataTransfer}`)
+    if (effectiveSelected.length === 1 && effectiveSelected[0] === index) {
+      console.log(`Same index: dragIndex=${effectiveSelected[0]}, dropIndex=${index}`)
       return
     }
 
-    console.log(`Drop: ${type} from ${effectiveDragIndex} to ${index}`)
+    console.log(`Drop: ${type} from [${effectiveSelected.join(', ')}] to ${index}`)
 
-    // 移動を実行
+    // ドロップ位置を選択範囲と方向に合わせて補正
+    const maxSelected = Math.max(...effectiveSelected)
+    let targetIndex = index
+
     if (type === 'row') {
-      console.log(`Calling onMoveRow(${effectiveDragIndex}, ${index})`)
-      onMoveRow(effectiveDragIndex, index)
+      // 下方向へドラッグ中は「行の後ろ」に挿入できるよう +1 する
+      if (index > maxSelected) {
+        targetIndex = index + 1
+      }
+      console.log(`Calling onMoveRow([${effectiveSelected.join(', ')}], ${targetIndex})`)
+      onMoveRow(effectiveSelected, targetIndex)
     } else if (type === 'column') {
-      console.log(`Calling onMoveColumn(${effectiveDragIndex}, ${index})`)
-      onMoveColumn(effectiveDragIndex, index)
+      if (index > maxSelected) {
+        targetIndex = index + 1
+      }
+      console.log(`Calling onMoveColumn([${effectiveSelected.join(', ')}], ${targetIndex})`)
+      onMoveColumn(effectiveSelected, targetIndex)
     }
 
     // ドロップゾーンのハイライトを削除
@@ -279,6 +299,7 @@ export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
       isDragging: false,
       dragType: null,
       dragIndex: -1,
+      selectedIndices: [],
       dropIndex: -1,
       startX: 0,
       startY: 0
@@ -307,6 +328,7 @@ export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
       isDragging: false,
       dragType: null,
       dragIndex: -1,
+      selectedIndices: [],
       dropIndex: -1,
       startX: 0,
       startY: 0
@@ -316,11 +338,12 @@ export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
   // ドラッグ可能な属性を取得
   const getDragProps = useCallback((
     type: 'row' | 'column',
-    index: number
+    index: number,
+    selectedIndices?: number[]
   ) => {
     return {
       draggable: true,
-      onDragStart: (e: React.DragEvent) => handleDragStart(e, type, index),
+      onDragStart: (e: React.DragEvent) => handleDragStart(e, type, index, selectedIndices),
       onDragEnd: handleDragEnd
     }
   }, [handleDragStart, handleDragEnd])

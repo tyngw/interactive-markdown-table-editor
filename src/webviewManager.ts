@@ -988,20 +988,13 @@ export class WebviewManager {
     /**
      * Handle move row
      */
-    private async handleMoveRow(data: { fromIndex: number; toIndex: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        // Validate indices
-        if (typeof data.fromIndex !== 'number' || typeof data.toIndex !== 'number') {
-            const error = `Failed to move row: Invalid row indices: from ${data.fromIndex}, to ${data.toIndex}`;
-            console.error(error);
-            panel.webview.postMessage({
-                command: 'error',
-                message: error
-            });
-            return;
-        }
+    private async handleMoveRow(data: { fromIndex?: number; toIndex: number; indices?: number[]; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        const indices = Array.isArray(data.indices) && data.indices.length > 0
+            ? Array.from(new Set(data.indices.filter(i => typeof i === 'number' && i >= 0)))
+            : (typeof data.fromIndex === 'number' ? [data.fromIndex] : []);
 
-        if (data.fromIndex < 0 || data.toIndex < 0) {
-            const error = `Failed to move row: Invalid row indices (negative): from ${data.fromIndex}, to ${data.toIndex}`;
+        if (indices.length === 0 || typeof data.toIndex !== 'number' || data.toIndex < 0) {
+            const error = `Failed to move row: Invalid row indices: from ${data.fromIndex}, to ${data.toIndex}, indices=${JSON.stringify(data.indices)}`;
             console.error(error);
             panel.webview.postMessage({
                 command: 'error',
@@ -1018,6 +1011,7 @@ export class WebviewManager {
                 panelId: actualPanelId,
                 fromIndex: data.fromIndex,
                 toIndex: data.toIndex,
+                indices,
                 tableIndex: data?.tableIndex
             });
         } catch (error) {
@@ -1033,20 +1027,13 @@ export class WebviewManager {
     /**
      * Handle move column
      */
-    private async handleMoveColumn(data: { fromIndex: number; toIndex: number; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
-        // Validate indices
-        if (typeof data.fromIndex !== 'number' || typeof data.toIndex !== 'number') {
-            const error = `Failed to move column: Invalid column indices: from ${data.fromIndex}, to ${data.toIndex}`;
-            console.error(error);
-            panel.webview.postMessage({
-                command: 'error',
-                message: error
-            });
-            return;
-        }
+    private async handleMoveColumn(data: { fromIndex?: number; toIndex: number; indices?: number[]; tableIndex?: number }, panel: vscode.WebviewPanel, uri: vscode.Uri): Promise<void> {
+        const indices = Array.isArray(data.indices) && data.indices.length > 0
+            ? Array.from(new Set(data.indices.filter(i => typeof i === 'number' && i >= 0)))
+            : (typeof data.fromIndex === 'number' ? [data.fromIndex] : []);
 
-        if (data.fromIndex < 0 || data.toIndex < 0) {
-            const error = `Failed to move column: Invalid column indices (negative): from ${data.fromIndex}, to ${data.toIndex}`;
+        if (indices.length === 0 || typeof data.toIndex !== 'number' || data.toIndex < 0) {
+            const error = `Failed to move column: Invalid column indices: from ${data.fromIndex}, to ${data.toIndex}, indices=${JSON.stringify(data.indices)}`;
             console.error(error);
             panel.webview.postMessage({
                 command: 'error',
@@ -1063,6 +1050,7 @@ export class WebviewManager {
                 panelId: actualPanelId,
                 fromIndex: data.fromIndex,
                 toIndex: data.toIndex,
+                indices,
                 tableIndex: data?.tableIndex
             });
         } catch (error) {

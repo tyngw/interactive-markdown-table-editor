@@ -81,8 +81,9 @@ export interface SortData {
 }
 
 export interface MoveData {
-  fromIndex: number;
+  fromIndex?: number;
   toIndex: number;
+  indices?: number[];
   tableIndex?: number;
 }
 

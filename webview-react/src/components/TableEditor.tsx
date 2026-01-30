@@ -113,8 +113,8 @@ const TableEditor: React.FC<TableEditorProps> = ({
     setSelectionAnchor,
     setColumnWidth,
     sortColumn,
-    moveRow,
-    moveColumn,
+    moveRows,
+    moveColumns,
     commitSort,
     resetSort,
     viewToModelMap,
@@ -188,6 +188,14 @@ const TableEditor: React.FC<TableEditorProps> = ({
       rows.add(parseInt(cellKey.split('-')[0], 10));
     });
     return rows;
+  }, [editorState.selectedCells]);
+
+  const selectedColumns = useMemo(() => {
+    const cols = new Set<number>();
+    editorState.selectedCells.forEach(cellKey => {
+      cols.add(parseInt(cellKey.split('-')[1], 10));
+    });
+    return cols;
   }, [editorState.selectedCells]);
 
   useEffect(() => {
@@ -266,25 +274,27 @@ const TableEditor: React.FC<TableEditorProps> = ({
   })
 
   const { getDragProps, getDropProps } = useDragDrop({
-    onMoveRow: (fromIndex: number, toIndex: number) => {
-      console.log(`TableEditor: onMoveRow called with fromIndex=${fromIndex}, toIndex=${toIndex}`)
-      if (typeof fromIndex !== 'number' || typeof toIndex !== 'number') {
-        console.error(`Invalid indices in onMoveRow: fromIndex=${fromIndex} (${typeof fromIndex}), toIndex=${toIndex} (${typeof toIndex})`)
+    onMoveRow: (indices: number[], toIndex: number) => {
+      const validIndices = indices.filter(i => typeof i === 'number')
+      console.log(`TableEditor: onMoveRow called with indices=[${validIndices.join(', ')}], toIndex=${toIndex}`)
+      if (validIndices.length === 0 || typeof toIndex !== 'number') {
+        console.error(`Invalid indices in onMoveRow: indices=[${indices}], toIndex=${toIndex} (${typeof toIndex})`)
         return
       }
-      moveRow(fromIndex, toIndex)
-      const messageData = withTableIndex({ fromIndex, toIndex })
+      moveRows(validIndices, toIndex)
+      const messageData = withTableIndex({ indices: validIndices, toIndex })
       console.log(`Sending moveRow message:`, messageData)
       onSendMessage({ command: 'moveRow', data: messageData })
     },
-    onMoveColumn: (fromIndex: number, toIndex: number) => {
-      console.log(`TableEditor: onMoveColumn called with fromIndex=${fromIndex}, toIndex=${toIndex}`)
-      if (typeof fromIndex !== 'number' || typeof toIndex !== 'number') {
-        console.error(`Invalid indices in onMoveColumn: fromIndex=${fromIndex} (${typeof fromIndex}), toIndex=${toIndex} (${typeof toIndex})`)
+    onMoveColumn: (indices: number[], toIndex: number) => {
+      const validIndices = indices.filter(i => typeof i === 'number')
+      console.log(`TableEditor: onMoveColumn called with indices=[${validIndices.join(', ')}], toIndex=${toIndex}`)
+      if (validIndices.length === 0 || typeof toIndex !== 'number') {
+        console.error(`Invalid indices in onMoveColumn: indices=[${indices}], toIndex=${toIndex} (${typeof toIndex})`)
         return
       }
-      moveColumn(fromIndex, toIndex)
-      const messageData = withTableIndex({ fromIndex, toIndex })
+      moveColumns(validIndices, toIndex)
+      const messageData = withTableIndex({ indices: validIndices, toIndex })
       console.log(`Sending moveColumn message:`, messageData)
       onSendMessage({ command: 'moveColumn', data: messageData })
     }

@@ -33,7 +33,7 @@ interface TableBodyProps {
   onShowRowContextMenu?: (event: React.MouseEvent, row: number) => void
   onDragStart?: (row: number, col: number) => void
   onDragEnter?: (row: number, col: number) => void
-  getDragProps?: (type: 'row' | 'column', index: number) => any
+  getDragProps?: (type: 'row' | 'column', index: number, selectedIndices?: number[]) => any
   getDropProps?: (type: 'row' | 'column', index: number) => any
   selectedRows?: Set<number>
   fullySelectedRows?: Set<number>
@@ -626,7 +626,7 @@ const TableBody: React.FC<TableBodyProps> = ({
                   }}
                   onContextMenu={(e) => handleRowContextMenu(e, rowIndex)}
                   title={headerConfig?.hasRowHeaders ? `Row ${displayRowNumber}: ${rowHeaderValue}` : `Row ${displayRowNumber}`}
-                  {...(getDragProps ? getDragProps('row', rowIndex) : {})}
+                  {...(getDragProps ? getDragProps('row', rowIndex, selectedRows ? Array.from(selectedRows) : undefined) : {})}
                   {...(getDropProps ? getDropProps('row', rowIndex) : {})}
                 >
                   {headerConfig?.hasRowHeaders ? (
