@@ -15,8 +15,7 @@ suite('TableDataManager Test Suite', () => {
                 ['John', '25', 'NYC'],
                 ['Jane', '30', 'LA'],
                 ['Bob', '35', 'Chicago']
-            ],
-            alignment: ['left', 'center', 'right']
+            ]
         };
         
         manager = new TableDataManager(sampleTableNode, 'test.md');
@@ -28,7 +27,6 @@ suite('TableDataManager Test Suite', () => {
         assert.deepStrictEqual(tableData.headers, ['Name', 'Age', 'City']);
         assert.strictEqual(tableData.rows.length, 3);
         assert.deepStrictEqual(tableData.rows[0], ['John', '25', 'NYC']);
-        assert.deepStrictEqual(tableData.alignment, ['left', 'center', 'right']);
         assert.strictEqual(tableData.metadata.sourceUri, 'test.md');
         assert.strictEqual(tableData.metadata.columnCount, 3);
         assert.strictEqual(tableData.metadata.rowCount, 3);
@@ -90,7 +88,6 @@ suite('TableDataManager Test Suite', () => {
         const tableData = manager.getTableData();
         assert.strictEqual(tableData.headers.length, 4);
         assert.strictEqual(tableData.headers[3], 'Country');
-        assert.strictEqual(tableData.alignment[3], 'left');
         assert.strictEqual(tableData.rows[0].length, 4);
         assert.strictEqual(tableData.rows[0][3], '');
     });
@@ -113,7 +110,6 @@ suite('TableDataManager Test Suite', () => {
         assert.strictEqual(tableData.headers.length, 2);
         assert.deepStrictEqual(tableData.headers, ['Name', 'City']);
         assert.deepStrictEqual(tableData.rows[0], ['John', 'NYC']);
-        assert.deepStrictEqual(tableData.alignment, ['left', 'right']);
     });
 
     test('should not delete last column', () => {
@@ -160,7 +156,6 @@ suite('TableDataManager Test Suite', () => {
         const tableData = manager.getTableData();
         assert.deepStrictEqual(tableData.headers, ['Age', 'City', 'Name']);
         assert.deepStrictEqual(tableData.rows[0], ['25', 'NYC', 'John']);
-        assert.deepStrictEqual(tableData.alignment, ['center', 'right', 'left']);
     });
 
     test('should serialize to markdown', () => {
@@ -182,8 +177,7 @@ suite('TableDataManager Test Suite', () => {
             rows: [
                 ['Value | with | pipes', 'Normal value'],
                 ['Another | pipe', 'Test']
-            ],
-            alignment: ['left', 'left']
+            ]
         };
         
         const pipeManager = new TableDataManager(tableNode);
@@ -201,8 +195,7 @@ suite('TableDataManager Test Suite', () => {
             startLine: 0,
             endLine: 1,
             headers: ['Header'],
-            rows: [['Already \\| escaped']],
-            alignment: ['left']
+            rows: [['Already \\| escaped']]
         };
         
         const pipeManager = new TableDataManager(tableNode);
@@ -218,8 +211,7 @@ suite('TableDataManager Test Suite', () => {
             startLine: 0,
             endLine: 2,
             headers: ['A', 'B'],
-            rows: [['1', '2'], ['3', '4']],
-            alignment: ['left', 'left']
+            rows: [['1', '2'], ['3', '4']]
         };
         
         const validManager = new TableDataManager(validTableNode);
@@ -234,8 +226,7 @@ suite('TableDataManager Test Suite', () => {
             startLine: 0,
             endLine: 2,
             headers: ['A', 'B'],
-            rows: [['1'], ['3', '4', '5']], // Inconsistent column count
-            alignment: ['left'] // Wrong alignment count
+            rows: [['1'], ['3', '4', '5']] // Inconsistent column count
         };
         
         const invalidManager = new TableDataManager(invalidTableNode);
@@ -285,7 +276,6 @@ suite('TableDataManager Test Suite', () => {
         assert.notStrictEqual(cloned, manager);
         assert.deepStrictEqual(clonedData.headers, originalData.headers);
         assert.deepStrictEqual(clonedData.rows, originalData.rows);
-        assert.deepStrictEqual(clonedData.alignment, originalData.alignment);
         
         // Modify cloned data and ensure original is unchanged
         cloned.updateCell(0, 0, 'Modified');
@@ -449,7 +439,6 @@ suite('TableDataManager Test Suite', () => {
         const columnData = manager.getColumn(0);
         assert.strictEqual(columnData.header, 'Name');
         assert.deepStrictEqual(columnData.values, ['John', 'Jane', 'Bob']);
-        assert.strictEqual(columnData.alignment, 'left');
     });
 
     test('should get cell value', () => {
@@ -465,8 +454,7 @@ suite('TableDataManager Test Suite', () => {
             startLine: 0,
             endLine: 1,
             headers: ['A', 'B'],
-            rows: [],
-            alignment: ['left', 'left']
+            rows: []
         };
         const emptyManager = new TableDataManager(emptyTableNode);
         assert.strictEqual(emptyManager.isEmpty(), true);
@@ -582,8 +570,7 @@ suite('TableDataManager Test Suite', () => {
                 ['John', '25', '85.5'],
                 ['Jane', '30', '92.0'],
                 ['Bob', '35', '78.5']
-            ],
-            alignment: ['left', 'left', 'left']
+            ]
         };
         
         const mixedManager = new TableDataManager(mixedTableNode);
@@ -609,8 +596,7 @@ suite('TableDataManager Test Suite', () => {
                 ['Item2'],
                 ['Item1'],
                 ['Item20']
-            ],
-            alignment: ['left']
+            ]
         };
         
         const naturalManager = new TableDataManager(naturalTableNode);
@@ -664,8 +650,7 @@ suite('TableDataManager Test Suite', () => {
                 ['alice'],
                 ['Bob'],
                 ['CHARLIE']
-            ],
-            alignment: ['left']
+            ]
         };
         
         const caseManager = new TableDataManager(caseTableNode);
@@ -687,8 +672,7 @@ suite('TableDataManager Test Suite', () => {
                 ['2023-12-01'],
                 ['2023-01-15'],
                 ['2023-06-30']
-            ],
-            alignment: ['left']
+            ]
         };
         
         const dateManager = new TableDataManager(dateTableNode);
@@ -751,7 +735,6 @@ suite('TableDataManager Test Suite', () => {
     test('should move column via drag and drop - forward movement', () => {
         // Test moving first column to last position
         const originalHeaders = [...manager.getTableData().headers];
-        const originalAlignment = [...manager.getTableData().alignment];
         const originalRows = manager.getTableData().rows.map(row => [...row]);
         
         manager.moveColumn(0, 2); // Drag Name column to third position
@@ -760,9 +743,6 @@ suite('TableDataManager Test Suite', () => {
         
         // Check headers reordering
         assert.deepStrictEqual(tableData.headers, [originalHeaders[1], originalHeaders[2], originalHeaders[0]]);
-        
-        // Check alignment reordering
-        assert.deepStrictEqual(tableData.alignment, [originalAlignment[1], originalAlignment[2], originalAlignment[0]]);
         
         // Check data reordering
         assert.deepStrictEqual(tableData.rows[0], [originalRows[0][1], originalRows[0][2], originalRows[0][0]]);
@@ -779,7 +759,6 @@ suite('TableDataManager Test Suite', () => {
     test('should move column via drag and drop - backward movement', () => {
         // Test moving last column to first position
         const originalHeaders = [...manager.getTableData().headers];
-        const originalAlignment = [...manager.getTableData().alignment];
         const originalRows = manager.getTableData().rows.map(row => [...row]);
         
         manager.moveColumn(2, 0); // Drag City column to first position
@@ -789,9 +768,6 @@ suite('TableDataManager Test Suite', () => {
         // Check headers reordering
         assert.deepStrictEqual(tableData.headers, [originalHeaders[2], originalHeaders[0], originalHeaders[1]]);
         
-        // Check alignment reordering  
-        assert.deepStrictEqual(tableData.alignment, [originalAlignment[2], originalAlignment[0], originalAlignment[1]]);
-        
         // Check data reordering
         assert.deepStrictEqual(tableData.rows[0], [originalRows[0][2], originalRows[0][0], originalRows[0][1]]);
     });
@@ -799,7 +775,6 @@ suite('TableDataManager Test Suite', () => {
     test('should move column to middle position', () => {
         // Test moving first column to middle position
         const originalHeaders = [...manager.getTableData().headers];
-        const originalAlignment = [...manager.getTableData().alignment];
         const originalRows = manager.getTableData().rows.map(row => [...row]);
         
         manager.moveColumn(0, 1); // Drag Name column to second position
@@ -808,9 +783,6 @@ suite('TableDataManager Test Suite', () => {
         
         // Check headers reordering
         assert.deepStrictEqual(tableData.headers, [originalHeaders[1], originalHeaders[0], originalHeaders[2]]);
-        
-        // Check alignment reordering
-        assert.deepStrictEqual(tableData.alignment, [originalAlignment[1], originalAlignment[0], originalAlignment[2]]);
         
         // Check data reordering
         assert.deepStrictEqual(tableData.rows[0], [originalRows[0][1], originalRows[0][0], originalRows[0][2]]);
@@ -858,7 +830,6 @@ suite('TableDataManager Test Suite', () => {
         
         const afterColumnMove = manager.getTableData();
         assert.deepStrictEqual(afterColumnMove.headers, originalData.headers);
-        assert.deepStrictEqual(afterColumnMove.alignment, originalData.alignment);
         assert.deepStrictEqual(afterColumnMove.rows, originalData.rows);
     });
 
@@ -943,7 +914,7 @@ suite('TableDataManager Test Suite', () => {
         // Verify header order
         assert.ok(lines[0].includes('City | Name | Age'));
         
-        // Verify separator alignment (City was right-aligned, now first)
+        // Verify separator (City was right-aligned, now first)
         assert.ok(lines[1].includes('---: | :--- | :---:'));
         
         // Verify data order (Jane should be first row, John last)
@@ -958,8 +929,7 @@ suite('TableDataManager Test Suite', () => {
             startLine: 0,
             endLine: 2,
             headers: ['A', 'B'],
-            rows: [['1', '2']],
-            alignment: ['left', 'left']
+            rows: [['1', '2']]
         };
         
         const singleRowManager = new TableDataManager(singleRowNode);
@@ -978,8 +948,7 @@ suite('TableDataManager Test Suite', () => {
             startLine: 0,
             endLine: 3,
             headers: ['A'],
-            rows: [['1'], ['2'], ['3']],
-            alignment: ['left']
+            rows: [['1'], ['2'], ['3']]
         };
         
         const singleColManager = new TableDataManager(singleColNode);
@@ -1184,7 +1153,6 @@ suite('TableDataManager Test Suite', () => {
         // Verify data integrity
         assert.strictEqual(finalData.headers.length, originalData.headers.length);
         assert.strictEqual(finalData.rows.length, originalData.rows.length);
-        assert.strictEqual(finalData.alignment.length, originalData.alignment.length);
         
         // Verify all original data is still present (just reordered)
         const originalCells = originalData.rows.flat();
@@ -1202,8 +1170,7 @@ suite('TableDataManager Test Suite', () => {
             rows: [
                 ['Laptop', '$999'],
                 ['Phone', '$599']
-            ],
-            alignment: ['left', 'right']
+            ]
         };
         
         const managerWithIndex = new TableDataManager(tableNode, 'multi-table.md', 2);
@@ -1225,8 +1192,7 @@ suite('TableDataManager Test Suite', () => {
             startLine: 5,
             endLine: 10,
             headers: ['A', 'B'],
-            rows: [['1', '2']],
-            alignment: ['left', 'left']
+            rows: [['1', '2']]
         };
         
         const indexedManager = new TableDataManager(tableNode, 'test.md', 3);
@@ -1246,8 +1212,7 @@ suite('TableDataManager Test Suite', () => {
             startLine: 0,
             endLine: 5,
             headers: ['Name', 'Age'],
-            rows: [['John', '25']],
-            alignment: ['left', 'left']
+            rows: [['John', '25']]
         }, 'multi.md', 0);
 
         // Second table
@@ -1255,8 +1220,7 @@ suite('TableDataManager Test Suite', () => {
             startLine: 10,
             endLine: 15,
             headers: ['Product', 'Price'],
-            rows: [['Laptop', '$999']],
-            alignment: ['left', 'right']
+            rows: [['Laptop', '$999']]
         }, 'multi.md', 1);
 
         // Third table
@@ -1264,8 +1228,7 @@ suite('TableDataManager Test Suite', () => {
             startLine: 20,
             endLine: 25,
             headers: ['ID', 'Status'],
-            rows: [['001', 'Active']],
-            alignment: ['left', 'center']
+            rows: [['001', 'Active']]
         }, 'multi.md', 2);
 
         assert.strictEqual(firstTable.getTableData().metadata.tableIndex, 0);
@@ -1315,8 +1278,8 @@ suite('TableDataManager Test Suite', () => {
         assert.strictEqual(tableData.rows[2][2], 'Updated3');
     });
 
-    test('should handle cell editing alignment and wrapping', () => {
-        // Test that cell editing maintains proper alignment and wrapping
+    test('should handle cell editing and wrapping', () => {
+        // Test that cell editing maintains proper wrapping
         const longText = 'This is a very long text that should wrap properly when editing in a cell input field';
         manager.updateCell(0, 0, longText);
         

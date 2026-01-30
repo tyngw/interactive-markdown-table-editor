@@ -197,7 +197,6 @@ suite('WebviewManager Test Suite', () => {
             id: 'test-id',
             headers: ['Col1', 'Col2'],
             rows: [['A', 'B'], ['C', 'D']],
-            alignment: ['left', 'left'],
             metadata: {
                 sourceUri: testUri.toString(),
                 startLine: 0,

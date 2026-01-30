@@ -97,7 +97,6 @@ suite('Webview-Extension Interface Tests', () => {
                 ['John', '25', 'NYC'],
                 ['Jane', '30', 'LA']
             ],
-            alignment: ['left', 'center', 'right'],
             metadata: {
                 sourceUri: testUri.toString(),
                 startLine: 5,

@@ -181,7 +181,6 @@ export interface SwitchTableData {
 export interface TableData {
   headers: string[];
   rows: string[][];
-  alignment?: string[];
 }
 
 /**
