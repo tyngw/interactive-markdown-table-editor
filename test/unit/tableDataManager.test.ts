@@ -162,7 +162,8 @@ suite('TableDataManager Test Suite', () => {
         const markdown = manager.serializeToMarkdown();
         
         assert.ok(markdown.includes('| Name | Age | City |'));
-        assert.ok(markdown.includes('| :--- | :---: | ---: |'));
+        // After alignment removal, separator line is always left-aligned
+        assert.ok(markdown.includes('| :--- | :--- | :--- |'));
         assert.ok(markdown.includes('| John | 25 | NYC |'));
         assert.ok(markdown.includes('| Jane | 30 | LA |'));
         assert.ok(markdown.includes('| Bob | 35 | Chicago |'));
