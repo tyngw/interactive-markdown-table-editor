@@ -914,8 +914,8 @@ suite('TableDataManager Test Suite', () => {
         // Verify header order
         assert.ok(lines[0].includes('City | Name | Age'));
         
-        // Verify separator (City was right-aligned, now first)
-        assert.ok(lines[1].includes('---: | :--- | :---:'));
+        // Verify separator (alignment was removed, so always left-aligned)
+        assert.ok(lines[1].includes(':--- | :--- | :---'));
         
         // Verify data order (Jane should be first row, John last)
         assert.ok(lines[2].includes('LA | Jane | 30'));
