@@ -281,3 +281,28 @@ export const elevation = (level: 1 | 2 | 3 | 4 = 1): SerializedStyles => {
     box-shadow: ${shadows[level]};
   `
 }
+
+/**
+ * ヘッダー・行番号の基本スタイル
+ */
+export const baseHeaderRowStyles = (theme: VSCodeTheme): SerializedStyles => css`
+  background-color: ${theme.editorBackground === '#1e1e1e'
+    ? 'var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-sideBar-background, var(--vscode-activityBar-background)))'
+    : 'var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-sideBar-background, var(--vscode-activityBar-background)))'};
+  border: 1px solid var(--vscode-panel-border);
+  color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
+  box-sizing: border-box;
+  user-select: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+`
+
+/**
+ * ヘッダー・行番号の選択状態スタイル
+ */
+export const selectedHeaderRowStyles = (theme: VSCodeTheme): SerializedStyles => css`
+  background: rgb(192, 192, 255);
+  color: ${theme.editorForeground};
+  box-sizing: border-box;
+  font-weight: 700;
+`
