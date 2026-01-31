@@ -13,6 +13,7 @@
 
 import { Global, css } from '@emotion/react'
 import { VSCodeTheme } from './styles/theme'
+import { selectedHeaderRowStyles, baseHeaderRowStyles } from './styles/mixins'
 
 interface GlobalStylesProps {
   theme: VSCodeTheme
@@ -303,19 +304,13 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
 
         /* ====== テーブルヘッダー ====== */
         table.table-editor thead th {
-          background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-sideBar-background, var(--vscode-activityBar-background)));
+          ${baseHeaderRowStyles(theme)}
           
-          border: 1px solid var(--vscode-panel-border);
           padding: 10px 12px;
           text-align: left;
           position: sticky;
           top: 0;
           font-weight: 600;
-          cursor: pointer;
-          user-select: none;
-          color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
-          transition: background-color 0.15s ease;
-          box-sizing: border-box;
           z-index: 50;
           opacity: 1;
           background-clip: padding-box;
@@ -440,9 +435,8 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
 
         /* ====== 行番号セル ====== */
         table.table-editor tbody tr td.row-number {
-          background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-sideBar-background, var(--vscode-activityBar-background)));
+          ${baseHeaderRowStyles(theme)}
           
-          border: 1px solid var(--vscode-panel-border);
           font-weight: 700;
           text-align: left;
           vertical-align: top;
@@ -450,13 +444,9 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
           width: 60px;
           min-width: 60px;
           max-width: 60px;
-          user-select: none;
-          color: var(--vscode-sideBar-foreground, var(--vscode-foreground));
-          cursor: pointer;
           position: sticky;
           left: 0;
           z-index: 100;
-          box-sizing: border-box;
           opacity: 1;
           background-clip: padding-box;
           transform: translateZ(0);
@@ -465,10 +455,7 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
 
         table.table-editor tbody tr td.row-number.selected,
         table.table-editor thead th.column-header.selected {
-          background: rgba(120, 160, 255, 0.3);
-          color: var(--vscode-editor-foreground);
-          box-sizing: border-box;
-          font-weight: 700;
+          ${selectedHeaderRowStyles(theme)}
         }
 
         /* ====== データセル ====== */
