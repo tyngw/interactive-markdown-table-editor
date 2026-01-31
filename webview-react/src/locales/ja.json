@@ -51,7 +51,9 @@
     "error": "エラー",
     "saved": "自動保存済み",
     "sorted": "表示順序はソートされています",
-    "rowsColumns": "{{rows}} 行 × {{columns}} 列"
+    "rowsColumns": "{{rows}} 行 × {{columns}} 列",
+    "toggleGitDiff": "Git Diffを切り替え",
+    "toggleAutoSave": "自動保存を切り替え"
   },
   "tableTabs": {
     "tableLabel": "表 {{index}}"

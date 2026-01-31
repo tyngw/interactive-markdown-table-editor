@@ -18,7 +18,7 @@ import {
 export const validCommands: WebviewCommand[] = [
   'requestTableData', 'updateCell', 'bulkUpdateCells', 'updateHeader', 'addRow', 'deleteRows',
   'addColumn', 'deleteColumns', 'sort', 'moveRow', 'moveColumn', 'exportCSV', 'importCSV', 'pong', 'switchTable', 'requestThemeVariables', 'requestFontSettings', 'undo', 'redo', 'requestSync', 'stateUpdate',
-  'webviewError', 'webviewUnhandledRejection', 'diag'
+  'webviewError', 'webviewUnhandledRejection', 'diag', 'toggleAutoSave', 'manualSave'
 ];
 
 export function isObject(v: unknown): v is Record<string, unknown> {
@@ -36,7 +36,7 @@ export function validateMessageCommand(message: WebviewMessage): boolean {
 // 柔らかいデータ検証: 安全側（許容）に倒す
 export function validateMessageData(message: WebviewMessage): boolean {
   // 診断・ヘルス系は素通し
-  if (message.command === 'diag' || message.command === 'webviewError' || message.command === 'webviewUnhandledRejection' || message.command === 'pong' || message.command === 'requestThemeVariables' || message.command === 'requestFontSettings' || message.command === 'undo' || message.command === 'redo' || message.command === 'requestTableData') {
+  if (message.command === 'diag' || message.command === 'webviewError' || message.command === 'webviewUnhandledRejection' || message.command === 'pong' || message.command === 'requestThemeVariables' || message.command === 'requestFontSettings' || message.command === 'undo' || message.command === 'redo' || message.command === 'requestTableData' || message.command === 'toggleAutoSave' || message.command === 'manualSave') {
     return true;
   }
 

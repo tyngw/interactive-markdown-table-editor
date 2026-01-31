@@ -207,6 +207,10 @@ export class CommandRegistrar {
             await this.handleImportCSV(data);
         });
 
+        const forceFileSaveCommand = vscode.commands.registerCommand('markdownTableEditor.internal.forceFileSave', async (data: any) => {
+            await this.handleForceFileSave(data);
+        });
+
         this.context.subscriptions.push(
             requestTableDataCommand,
             updateCellCommand,
@@ -222,7 +226,8 @@ export class CommandRegistrar {
             moveRowCommand,
             moveColumnCommand,
             exportCSVCommand,
-            importCSVCommand
+            importCSVCommand,
+            forceFileSaveCommand
         );
     }
 
@@ -462,26 +467,34 @@ export class CommandRegistrar {
 
             const fileUri = vscode.Uri.parse(uriString);
 
-            try {
-                this.webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
-            } catch (e) {
-                // 非致命なので握りつぶす
-            }
+            // Check if auto save is enabled for this panel
+            const isAutoSaveEnabled = this.webviewManager.isAutoSaveEnabled(actualPanelId);
 
-            const applied = await this.fileHandler.updateTableByIndex(
-                fileUri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
-
-            try {
-                if (applied) {
-                    this.webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
-                } else {
-                    this.webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+            if (isAutoSaveEnabled) {
+                try {
+                    this.webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+                } catch (e) {
+                    // 非致命なので握りつぶす
                 }
-            } catch (e) {
-                // 非致命なので握りつぶす
+
+                const applied = await this.fileHandler.updateTableByIndex(
+                    fileUri,
+                    tableData.metadata.tableIndex,
+                    updatedMarkdown
+                );
+
+                try {
+                    if (applied) {
+                        this.webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+                    } else {
+                        this.webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                    }
+                } catch (e) {
+                    // 非致命なので握りつぶす
+                }
+            } else {
+                // Auto save is disabled, mark as dirty
+                this.webviewManager.setDirtyState(actualPanelId, true);
             }
 
             this.gitDiffCoordinator.scheduleGitDiffCalculation(fileUri, panel, tableManagersMap).catch(err => {
@@ -570,26 +583,34 @@ export class CommandRegistrar {
 
             const fileUri = vscode.Uri.parse(uriString);
 
-            try {
-                this.webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
-            } catch (e) {
-                // 非致命なので握りつぶす
-            }
+            // Check if auto save is enabled for this panel
+            const isAutoSaveEnabled = this.webviewManager.isAutoSaveEnabled(actualPanelId);
 
-            const applied = await this.fileHandler.updateTableByIndex(
-                fileUri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
-
-            try {
-                if (applied) {
-                    this.webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
-                } else {
-                    this.webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+            if (isAutoSaveEnabled) {
+                try {
+                    this.webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+                } catch (e) {
+                    // 非致命なので握りつぶす
                 }
-            } catch (e) {
-                // 非致命なので握りつぶす
+
+                const applied = await this.fileHandler.updateTableByIndex(
+                    fileUri,
+                    tableData.metadata.tableIndex,
+                    updatedMarkdown
+                );
+
+                try {
+                    if (applied) {
+                        this.webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+                    } else {
+                        this.webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                    }
+                } catch (e) {
+                    // 非致命なので握りつぶす
+                }
+            } else {
+                // Auto save is disabled, mark as dirty
+                this.webviewManager.setDirtyState(actualPanelId, true);
             }
 
             this.gitDiffCoordinator.scheduleGitDiffCalculation(fileUri, panel, tableManagersMap).catch(err => {
@@ -674,11 +695,20 @@ export class CommandRegistrar {
             const tableData = tableDataManager.getTableData();
 
             const fileUri = vscode.Uri.parse(uriString);
-            await this.fileHandler.updateTableByIndex(
-                fileUri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
+
+            // Check if auto save is enabled for this panel
+            const isAutoSaveEnabled = this.webviewManager.isAutoSaveEnabled(actualPanelId);
+
+            if (isAutoSaveEnabled) {
+                await this.fileHandler.updateTableByIndex(
+                    fileUri,
+                    tableData.metadata.tableIndex,
+                    updatedMarkdown
+                );
+            } else {
+                // Auto save is disabled, mark as dirty
+                this.webviewManager.setDirtyState(actualPanelId, true);
+            }
 
             this.gitDiffCoordinator.scheduleGitDiffCalculation(fileUri, panel, tableManagersMap).catch(err => {
                 warn('[Extension] Diff calculation scheduling failed:', err);
@@ -700,7 +730,7 @@ export class CommandRegistrar {
     private async handleSort(data: any): Promise<void> {
         try {
             const { uri: rawUri, panelId, column, direction, tableIndex } = data;
-            const { uri, uriString, panel, tableManagersMap } = this.panelSessionManager.resolvePanelContext(rawUri, panelId);
+            const { uri, uriString, panel, panelKey, tableManagersMap } = this.panelSessionManager.resolvePanelContext(rawUri, panelId);
 
             if (!uriString || !uri) {
                 return;
@@ -727,26 +757,35 @@ export class CommandRegistrar {
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
 
-            try {
-                this.webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
-            } catch (e) {
-                // 非致命なので握りつぶす
-            }
+            // Check if auto save is enabled for this panel
+            const actualPanelId = panelKey || uriString;
+            const isAutoSaveEnabled = this.webviewManager.isAutoSaveEnabled(actualPanelId);
 
-            const applied = await this.fileHandler.updateTableByIndex(
-                uri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
-
-            try {
-                if (applied) {
-                    this.webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
-                } else {
-                    this.webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+            if (isAutoSaveEnabled) {
+                try {
+                    this.webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+                } catch (e) {
+                    // 非致命なので握りつぶす
                 }
-            } catch (e) {
-                // 非致命なので握りつぶす
+
+                const applied = await this.fileHandler.updateTableByIndex(
+                    uri,
+                    tableData.metadata.tableIndex,
+                    updatedMarkdown
+                );
+
+                try {
+                    if (applied) {
+                        this.webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+                    } else {
+                        this.webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                    }
+                } catch (e) {
+                    // 非致命なので握りつぶす
+                }
+            } else {
+                // Auto save is disabled, mark as dirty
+                this.webviewManager.setDirtyState(actualPanelId, true);
             }
 
             this.gitDiffCoordinator.scheduleGitDiffCalculation(uri, panel, tableManagersMap).catch(err => {
@@ -1188,6 +1227,64 @@ export class CommandRegistrar {
             console.error('Error updating panels after file change:', error);
             for (const panel of filePanels.values()) {
                 this.webviewManager.sendError(panel, `Failed to update from file change: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+        }
+    }
+
+    /**
+     * Handle force file save (manual save when auto save is disabled)
+     */
+    private async handleForceFileSave(data: any): Promise<void> {
+        const { uri: uriString, panelId } = data;
+
+        if (!uriString || !panelId) {
+            console.error('[CommandRegistrar] handleForceFileSave: Missing uri or panelId');
+            return;
+        }
+
+        const tableManagersMap = this.panelSessionManager.getManagers(panelId);
+        if (!tableManagersMap) {
+            console.error('[CommandRegistrar] handleForceFileSave: No table managers found');
+            return;
+        }
+
+        const uri = vscode.Uri.parse(uriString);
+        const panel = this.webviewManager.getPanel(panelId);
+
+        try {
+            if (panel) {
+                this.webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+            }
+
+            // Save all tables in this panel
+            for (const [, tableDataManager] of tableManagersMap.entries()) {
+                const updatedMarkdown = tableDataManager.serializeToMarkdown();
+                const tableData = tableDataManager.getTableData();
+
+                await this.fileHandler.updateTableByIndex(
+                    uri,
+                    tableData.metadata.tableIndex,
+                    updatedMarkdown
+                );
+            }
+
+            // Clear dirty state after successful save
+            this.webviewManager.setDirtyState(panelId, false);
+
+            if (panel) {
+                this.webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+            }
+
+            // Schedule git diff calculation after save
+            if (panel) {
+                this.gitDiffCoordinator.scheduleGitDiffCalculation(uri, panel, tableManagersMap).catch(err => {
+                    console.error('[CommandRegistrar] handleForceFileSave: Git diff calculation failed:', err);
+                });
+            }
+        } catch (error) {
+            console.error('[CommandRegistrar] handleForceFileSave failed:', error);
+            if (panel) {
+                this.webviewManager.sendError(panel, `Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
         }
     }
