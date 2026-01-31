@@ -38,16 +38,6 @@ export interface TableGitDiff {
 }
 
 /**
- * Git関連の文脈をまとめて扱うためのコンテキスト
- */
-interface GitContext {
-    git: any;
-    workspaceFolder: vscode.WorkspaceFolder;
-    repository: any;
-    fileStatus: 'added' | 'modified' | 'deleted';
-}
-
-/**
  * 列の位置変更情報
  * 中間列の追加・削除を検知した際の詳細情報
  */
@@ -78,55 +68,49 @@ export interface ColumnDiffInfo {
 }
 
 /**
- * Git APIが初期化されるまで待機する
- * @param timeoutMs タイムアウト（ミリ秒）
- * @returns 初期化されたGit API。タイムアウトした場合はnull
+ * VS Code Git APIを使用してリポジトリを取得し、状態を更新する
+ * ファイル保存直後でも最新の差分を取得できるよう、status()を呼び出して更新を強制する
  */
-async function waitForGitApi(timeoutMs: number = 5000): Promise<any | null> {
-    debug('[GitDiffDebug] Starting waitForGitApi');
+async function getGitRepository(uri: vscode.Uri): Promise<{ repository: any; relativePath: string } | null> {
     try {
         const gitExtension = vscode.extensions.getExtension('vscode.git');
         if (!gitExtension) {
-            debug('[GitDiffDebug] Git extension not found.');
+            debug('[GitDiff] Git extension not found');
             return null;
         }
-        debug(`[GitDiffDebug] Git extension found. isActive: ${gitExtension.isActive}`);
 
-        // 拡張機能が有効でない場合は有効化
         if (!gitExtension.isActive) {
-            debug('[GitDiffDebug] Activating Git extension...');
             await gitExtension.activate();
-            debug('[GitDiffDebug] Git extension activated.');
         }
 
         const git = gitExtension.exports.getAPI(1);
-        if (!git) {
-            debug('[GitDiffDebug] Git API not available');
+        if (!git || git.state !== 'initialized') {
+            debug('[GitDiff] Git API not initialized');
             return null;
         }
-        debug(`[GitDiffDebug] Git API obtained. Initial state: ${git.state}`);
 
-        // 既に初期化済み
-        if (git.state === 'initialized') {
-            debug('[GitDiffDebug] Git API is already initialized.');
-            return git;
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+        if (!workspaceFolder) {
+            debug('[GitDiff] No workspace folder found');
+            return null;
         }
 
-        // 初期化を待機（ポーリング）
-        debug('[GitDiffDebug] Waiting for Git API to initialize...');
-        const startTime = Date.now();
-        while (Date.now() - startTime < timeoutMs) {
-            if (git.state === 'initialized') {
-                debug('[GitDiffDebug] Git API has been initialized.');
-                return git;
-            }
-            debug(`[GitDiffDebug] Polling: git.state is ${git.state}`);
-            await new Promise(resolve => setTimeout(resolve, 200)); // 200ms待機
+        const repository = git.getRepository(workspaceFolder.uri);
+        if (!repository) {
+            debug('[GitDiff] No repository found');
+            return null;
         }
-        warn(`[GitDiffDebug] Git API did not initialize within ${timeoutMs}ms.`);
-        return null;
+
+        // ファイル保存直後でも最新の状態を取得するため、status()を呼び出す
+        // これによりworkingTreeChangesが更新される
+        await repository.status();
+
+        const path = require('path');
+        const relativePath = path.relative(repository.rootUri.fsPath, uri.fsPath).replace(/\\/g, '/');
+
+        return { repository, relativePath };
     } catch (err) {
-        error('[GitDiffDebug] Error while waiting for Git API:', err);
+        error('[GitDiff] Error getting git repository:', err);
         return null;
     }
 }
@@ -148,26 +132,52 @@ export async function getGitDiffForTable(
     tableContent?: string
 ): Promise<RowGitDiff[]> {
     try {
-        const context = await resolveGitContext(uri);
-        if (!context) {
-            return [];
+        // VS Code Git APIを使用してリポジトリを取得
+        const repoInfo = await getGitRepository(uri);
+        
+        if (!repoInfo) {
+            // Git APIが利用できない場合はフォールバック（直接gitコマンド）
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+            if (!workspaceFolder) {
+                return [];
+            }
+            return await getGitDiffFallback(uri, workspaceFolder.uri.fsPath, tableStartLine, tableEndLine, rowCount, tableContent);
         }
 
-        const { workspaceFolder, fileStatus } = context;
+        const { repository, relativePath } = repoInfo;
 
-        // 詳細な行ごとの差分情報を取得（毎回新規に取得する）
-        const lineDiffs = await getLineByLineDiff(uri, workspaceFolder.uri.fsPath, tableStartLine, tableEndLine);
-        
-        if (!lineDiffs || lineDiffs.length === 0) {
-            // 差分情報が取得できない場合、ファイル全体の状態を使用
-            if (fileStatus === 'added') {
+        // VS Code Git APIのdiffWithHEADを使用して差分を取得
+        // このメソッドはworkingTreeChangesに依存せず、直接diffを計算する
+        let diffOutput: string;
+        try {
+            diffOutput = await repository.diffWithHEAD(relativePath);
+        } catch (diffError) {
+            debug('[GitDiff] diffWithHEAD failed, trying fallback:', diffError);
+            // diffWithHEADが失敗した場合（新規ファイルなど）
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+            if (!workspaceFolder) {
+                return [];
+            }
+            return await getGitDiffFallback(uri, workspaceFolder.uri.fsPath, tableStartLine, tableEndLine, rowCount, tableContent);
+        }
+
+        if (!diffOutput || diffOutput.trim().length === 0) {
+            // 差分がない場合、新規ファイルかどうかを確認
+            const isNewFile = await checkIfNewFileViaApi(repository, relativePath);
+            if (isNewFile) {
                 return buildAddedRowDiffs(rowCount);
             }
             return [];
         }
 
+        // 差分を解析
+        const lineDiffs = parseGitDiff(diffOutput, tableStartLine, tableEndLine);
+        
+        if (!lineDiffs || lineDiffs.length === 0) {
+            return [];
+        }
+
         // テーブルの行とGit diffの行をマッピング
-        // テーブル内容が提供されている場合は、より正確なマッピングを行う
         return mapTableRowsToGitDiff(lineDiffs, tableStartLine, rowCount, tableContent);
     } catch (err) {
         error('[GitDiff] Error getting git diff:', err);
@@ -176,77 +186,88 @@ export async function getGitDiffForTable(
 }
 
 /**
- * ファイルのGit変更状態を取得
+ * VS Code Git APIでファイルが新規（未追跡）かどうかを確認
  */
-function getFileStatus(
-    repository: any,
-    uri: vscode.Uri
-): 'added' | 'modified' | 'deleted' | null {
+async function checkIfNewFileViaApi(repository: any, relativePath: string): Promise<boolean> {
     try {
-        // 作業ツリーの変更を確認
-        const workingTreeChange = repository.state.workingTreeChanges.find(
-            (change: any) => change.uri.toString() === uri.toString()
-        );
-
-        if (workingTreeChange) {
-            // ステータスを判定
-            const status = workingTreeChange.status;
-            if (status === 1) {return 'added';}      // Status.INDEX_ADDED
-            if (status === 2) {return 'deleted';}    // Status.DELETED
-            if (status === 3) {return 'modified';}   // Status.MODIFIED
-            return 'modified'; // デフォルト
+        // untrackedChangesにファイルが含まれているか確認
+        const untrackedChanges = repository.state?.untrackedChanges || [];
+        for (const change of untrackedChanges) {
+            const changePath = change.uri?.fsPath || '';
+            if (changePath.endsWith(relativePath) || changePath.includes(relativePath)) {
+                return true;
+            }
         }
-
-        // ステージングエリアの変更を確認
-        const indexChange = repository.state.indexChanges.find(
-            (change: any) => change.uri.toString() === uri.toString()
-        );
-
-        if (indexChange) {
-            const status = indexChange.status;
-            if (status === 1) {return 'added';}
-            if (status === 2) {return 'deleted';}
-            if (status === 3) {return 'modified';}
-            return 'modified';
-        }
-
-        return null;
+        return false;
     } catch (err) {
-        error('[GitDiff] Error getting file status:', err);
-        return null;
+        debug('[GitDiff] Error checking if file is new via API:', err);
+        return false;
     }
 }
 
 /**
- * Gitコンテキストを解決するためのヘルパー
+ * Git APIが利用できない場合のフォールバック（直接gitコマンドを使用）
  */
-async function resolveGitContext(uri: vscode.Uri): Promise<GitContext | null> {
-    // Git APIが利用可能になるまで待機
-    const git = await waitForGitApi();
-    if (!git) {
-        warn('[GitDiffDebug] Exiting getGitDiffForTable because Git API is not available.');
-        return null;
+async function getGitDiffFallback(
+    uri: vscode.Uri,
+    workspaceRoot: string,
+    tableStartLine: number,
+    tableEndLine: number,
+    rowCount: number,
+    tableContent?: string
+): Promise<RowGitDiff[]> {
+    // 詳細な行ごとの差分情報を取得
+    const lineDiffs = await getLineByLineDiff(uri, workspaceRoot, tableStartLine, tableEndLine);
+    
+    if (!lineDiffs || lineDiffs.length === 0) {
+        // 差分情報が取得できない場合、ファイルが新規追加かどうかを確認
+        const isNewFile = await checkIfNewFile(uri, workspaceRoot);
+        if (isNewFile) {
+            return buildAddedRowDiffs(rowCount);
+        }
+        return [];
     }
 
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-    if (!workspaceFolder) {
-        debug('[GitDiff] No workspace folder found');
-        return null;
-    }
+    // テーブルの行とGit diffの行をマッピング
+    return mapTableRowsToGitDiff(lineDiffs, tableStartLine, rowCount, tableContent);
+}
 
-    const repository = git.getRepository(workspaceFolder.uri);
-    if (!repository) {
-        debug('[GitDiff] No repository found');
-        return null;
-    }
+/**
+ * ファイルがGitで追跡されていない（新規追加）かどうかを確認
+ * git ls-files コマンドを使用して、ファイルが追跡されているかを確認
+ */
+async function checkIfNewFile(uri: vscode.Uri, workspaceRoot: string): Promise<boolean> {
+    try {
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const execAsync = promisify(exec);
+        const path = require('path');
 
-    const fileStatus = getFileStatus(repository, uri);
-    if (!fileStatus) {
-        debug('[GitDiff] File not in git repository or no changes');
-        return null;
+        const relativePath = path.relative(workspaceRoot, uri.fsPath).replace(/\\/g, '/');
+        
+        // git ls-files でファイルが追跡されているか確認
+        const command = `git ls-files --error-unmatch "${relativePath}"`;
+        
+        try {
+            await execAsync(command, {
+                cwd: workspaceRoot,
+                encoding: 'utf8',
+                timeout: 5000
+            });
+            // コマンドが成功した場合、ファイルは追跡されている（新規ではない）
+            return false;
+        } catch (error: any) {
+            // エラーコード1は「ファイルが追跡されていない」ことを意味する
+            if (error.code === 1) {
+                return true;
+            }
+            // その他のエラーの場合は新規ファイルではないと仮定
+            return false;
+        }
+    } catch (err) {
+        debug('[GitDiff] Error checking if file is new:', err);
+        return false;
     }
-
-    return { git, workspaceFolder, repository, fileStatus };
 }
 
 /**

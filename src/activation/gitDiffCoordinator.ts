@@ -1,5 +1,6 @@
 // このモジュールは Git 差分計算の順序付けと送信制御を担当する。
 // ファイル単位の並行計算を抑制し、不要な再送を避けるためのキャッシュも管理する。
+// VS Code Git APIのrepository.status()を使用して最新の状態を取得するため、遅延は不要。
 import * as vscode from 'vscode';
 import { TableDataManager, TableData } from '../tableDataManager';
 import { WebviewManager } from '../webviewManager';
