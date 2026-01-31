@@ -462,4 +462,18 @@ export class ExtensionCommunicationManager {
   public sendHeaderUpdateError(col: number, error: string): void {
     this.sendNotification(ExtensionCommand.HEADER_UPDATE_ERROR, { col, error });
   }
+
+  /**
+   * 自動保存状態変更の送信
+   */
+  public sendAutoSaveStateChanged(enabled: boolean): void {
+    this.sendNotification(ExtensionCommand.AUTO_SAVE_STATE_CHANGED, { enabled });
+  }
+
+  /**
+   * 未保存状態変更の送信
+   */
+  public sendDirtyStateChanged(isDirty: boolean): void {
+    this.sendNotification(ExtensionCommand.DIRTY_STATE_CHANGED, { isDirty });
+  }
 }

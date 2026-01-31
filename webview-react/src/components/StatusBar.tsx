@@ -5,7 +5,6 @@ import {
   StatusBarContainer,
   StatusSection,
   StatusItem,
-  SaveIndicator,
   GitDiffButton,
   GitDiffIcon,
   GitDiffLabel,
@@ -17,9 +16,19 @@ interface StatusBarProps {
   showGitDiff?: boolean
   sortState?: { column: number; direction: 'asc' | 'desc' | 'none' }
   onGitDiffToggle?: (show: boolean) => void
+  autoSaveEnabled?: boolean
+  onAutoSaveToggle?: (enabled: boolean) => void
+  isDirty?: boolean
 }
 
-const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, sortState: propSortState, onGitDiffToggle }) => {
+const StatusBar: React.FC<StatusBarProps> = ({ 
+  showGitDiff = false, 
+  sortState: propSortState, 
+  onGitDiffToggle,
+  autoSaveEnabled = true,
+  onAutoSaveToggle,
+  isDirty = false
+}) => {
   const { t } = useTranslation()
   const { status, tableInfo, saveStatus, sortState: contextSortState } = useStatus()
   const { theme } = useDynamicTheme() // DynamicThemeContext から theme を直接取得
@@ -30,6 +39,8 @@ const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, sortState: p
     propSortState,
     saveStatus,
     displaySortState,
+    autoSaveEnabled,
+    isDirty,
     themeStatusBarBackground: theme?.statusBarBackground,
     themeStatusBarForeground: theme?.statusBarForeground,
   })
@@ -41,10 +52,6 @@ const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, sortState: p
     borderTopColor: theme?.statusBarBorder || 'transparent',
   }
 
-  const saveIndicatorStyle = {
-    color: theme?.statusBarForeground || '#ffffff',
-  }
-
   const gitDiffButtonStyle = {
     color: theme?.statusBarForeground || '#ffffff',
     backgroundColor: 'transparent',
@@ -54,9 +61,24 @@ const StatusBar: React.FC<StatusBarProps> = ({ showGitDiff = false, sortState: p
     <StatusBarContainer data-testid="mte-status-bar" style={statusBarStyle}>
       <StatusSection align="left">
         <StatusItem id="statusSelection">
-          <SaveIndicator status={saveStatus ?? 'saved'} style={saveIndicatorStyle} isLoading={saveStatus === 'saving'}>
-            {saveStatus === 'saving' ? <span className="mte-loading-spinner" style={{ color: theme?.statusBarForeground || '#ffffff' }} /> : ''}
-          </SaveIndicator>
+          <GitDiffButton
+            active={autoSaveEnabled}
+            onClick={() => onAutoSaveToggle?.(!autoSaveEnabled)}
+            title={t('statusBar.toggleAutoSave') || 'Toggle Auto Save'}
+            aria-label="Auto Save"
+            style={gitDiffButtonStyle}
+          >
+            <GitDiffIcon>
+              {saveStatus === 'saving' ? (
+                <span className="mte-loading-spinner" style={{ color: theme?.statusBarForeground || '#ffffff' }} />
+              ) : (
+                autoSaveEnabled ? '✓' : '⊘'
+              )}
+            </GitDiffIcon>
+            <GitDiffLabel>
+              {isDirty && !autoSaveEnabled ? 'Save*' : 'Save'}
+            </GitDiffLabel>
+          </GitDiffButton>
           <GitDiffButton
             active={showGitDiff}
             onClick={() => onGitDiffToggle?.(!showGitDiff)}

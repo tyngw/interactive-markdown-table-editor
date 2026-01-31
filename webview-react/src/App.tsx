@@ -36,6 +36,10 @@ function AppContent() {
   const isInitializing = useRef(false)
   // Git差分表示フラグ
   const [showGitDiff, setShowGitDiff] = useState(false)
+  // 自動保存ON/OFF状態
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true)
+  // 未保存の変更があるかどうか
+  const [isDirty, setIsDirty] = useState(false)
 
   // refを最新の値で同期
   useEffect(() => {
@@ -183,6 +187,8 @@ function AppContent() {
             updateSaveStatus('saving')
           } else if (phase === 'completed') {
             updateSaveStatus('saved')
+            // 保存完了時にdirtyフラグをクリア
+            setIsDirty(false)
           } else if (phase === 'skipped') {
             // No save occurred; ensure indicator not shown
             updateSaveStatus(null)
@@ -192,6 +198,14 @@ function AppContent() {
         console.error('[MTE][React] onSuccess handler error', e)
       }
     }, [updateSaveStatus]),
+    onAutoSaveStateChanged: useCallback((enabled: boolean) => {
+      console.log('[MTE][React] Auto save state changed:', enabled)
+      setAutoSaveEnabled(enabled)
+    }, []),
+    onDirtyStateChanged: useCallback((dirty: boolean) => {
+      console.log('[MTE][React] Dirty state changed:', dirty)
+      setIsDirty(dirty)
+    }, []),
     onThemeVariables: useCallback((data: any) => {
       // テーマ変数を受け取り、DynamicThemeContext 経由で更新
       console.log('[MTE][React] onThemeVariables received:', data);
@@ -381,6 +395,23 @@ function AppContent() {
     }
   }, [fontSettings])
 
+  // Ctrl+S (Cmd+S on Mac) キーボードショートカットで手動保存
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        // autoSaveがOFFで未保存の変更がある場合のみ手動保存を実行
+        if (!autoSaveEnabled && isDirty) {
+          communication.manualSave()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [autoSaveEnabled, isDirty, communication])
+
   // onTableUpdateコールバックを安定化して無限ループを防ぐ
   const handleTableUpdate = useCallback((updatedData: TableData) => {
     // 初期化フェーズ中は呼び出しを無視
@@ -471,6 +502,11 @@ function AppContent() {
             }
             setShowGitDiff(show)
           }}
+          autoSaveEnabled={autoSaveEnabled}
+          onAutoSaveToggle={(enabled) => {
+            communication.toggleAutoSave(enabled)
+          }}
+          isDirty={isDirty}
         />
       </div>
       </div>

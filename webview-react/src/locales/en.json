@@ -51,7 +51,9 @@
     "error": "Error",
     "saved": "Auto-saved",
     "sorted": "Display order is sorted",
-    "rowsColumns": "{{rows}} rows × {{columns}} columns"
+    "rowsColumns": "{{rows}} rows × {{columns}} columns",
+    "toggleGitDiff": "Toggle Git Diff",
+    "toggleAutoSave": "Toggle Auto Save"
   },
   "tableTabs": {
     "tableLabel": "Table {{index}}"

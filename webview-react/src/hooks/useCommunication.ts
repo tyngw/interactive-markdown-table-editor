@@ -16,10 +16,12 @@ interface CommunicationCallbacks {
   onThemeVariables?: (data: any) => void;
   onFontSettings?: (data: any) => void;
   onSetActiveTable?: (index: number) => void;
+  onAutoSaveStateChanged?: (enabled: boolean) => void;
+  onDirtyStateChanged?: (isDirty: boolean) => void;
 }
 
 export function useCommunication(callbacks: CommunicationCallbacks) {
-  const { onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable } = callbacks;
+  const { onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable, onAutoSaveStateChanged, onDirtyStateChanged } = callbacks;
   const commManagerRef = useRef<WebviewCommunicationManager | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   
@@ -35,9 +37,11 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
       onSuccess,
       onThemeVariables,
       onFontSettings,
-      onSetActiveTable
+      onSetActiveTable,
+      onAutoSaveStateChanged,
+      onDirtyStateChanged
     };
-  }, [onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable]);
+  }, [onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable, onAutoSaveStateChanged, onDirtyStateChanged]);
 
   // 通信マネージャーの初期化
   useEffect(() => {
@@ -156,6 +160,22 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
       }
     });
 
+    manager.registerNotificationHandler(ExtensionCommand.AUTO_SAVE_STATE_CHANGED, (data) => {
+      console.log('[useCommunication] Received auto save state changed:', data);
+      const cb = callbacksRef.current;
+      if (cb.onAutoSaveStateChanged && typeof data.enabled === 'boolean') {
+        cb.onAutoSaveStateChanged(data.enabled);
+      }
+    });
+
+    manager.registerNotificationHandler(ExtensionCommand.DIRTY_STATE_CHANGED, (data) => {
+      console.log('[useCommunication] Received dirty state changed:', data);
+      const cb = callbacksRef.current;
+      if (cb.onDirtyStateChanged && typeof data.isDirty === 'boolean') {
+        cb.onDirtyStateChanged(data.isDirty);
+      }
+    });
+
     console.log('[useCommunication] Communication manager initialized');
 
     // 接続確認タイマー
@@ -267,6 +287,12 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
         break;
       case 'requestThemeVariables':
         manager.requestThemeVariables();
+        break;
+      case 'toggleAutoSave':
+        manager.toggleAutoSave(messageData?.enabled);
+        break;
+      case 'manualSave':
+        manager.manualSave();
         break;
       default:
         // その他のコマンドは通知として送信
@@ -403,6 +429,18 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     manager.requestSync();
   }, []);
 
+  const toggleAutoSave = useCallback((enabled: boolean) => {
+    const manager = commManagerRef.current;
+    if (!manager) return;
+    manager.toggleAutoSave(enabled);
+  }, []);
+
+  const manualSave = useCallback(() => {
+    const manager = commManagerRef.current;
+    if (!manager) return;
+    manager.manualSave();
+  }, []);
+
   return {
     sendMessage,
     isConnected,
@@ -425,7 +463,9 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     requestFontSettings,
     undo,
     redo,
-    requestSync
-    , notifyReady
+    requestSync,
+    toggleAutoSave,
+    manualSave,
+    notifyReady
   };
 }

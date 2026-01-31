@@ -540,4 +540,18 @@ export class WebviewCommunicationManager {
   public requestSync(): void {
     this.sendNotification(WebviewCommand.REQUEST_SYNC);
   }
+
+  /**
+   * 自動保存のON/OFFを切り替え
+   */
+  public toggleAutoSave(enabled: boolean): void {
+    this.sendNotification(WebviewCommand.TOGGLE_AUTO_SAVE, { enabled });
+  }
+
+  /**
+   * 手動保存を実行
+   */
+  public manualSave(): void {
+    this.sendNotification(WebviewCommand.MANUAL_SAVE);
+  }
 }

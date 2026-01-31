@@ -22,6 +22,10 @@ export class WebviewManager {
     private undoRedoManager: UndoRedoManager;
     private isInitialized: boolean = false;
     private initializationPromise: Promise<void> | null = null;
+    // パネルごとの自動保存設定 (default: true)
+    private autoSaveSettings: Map<string, boolean> = new Map();
+    // パネルごとの未保存状態 (dirty flag)
+    private dirtyStates: Map<string, boolean> = new Map();
     // Legacy webview modular scripts (for tests and backward compatibility)
     private readonly legacyScriptFiles: string[] = [
         'js/core.js',
@@ -225,6 +229,32 @@ export class WebviewManager {
     }
 
     /**
+     * Update panel title with dirty indicator (*)
+     */
+    private updatePanelTitle(panel: vscode.WebviewPanel, uri: vscode.Uri): void {
+        const panelId = this.findPanelId(panel);
+        const isDirty = this.dirtyStates.get(panelId) ?? false;
+        const autoSaveEnabled = this.autoSaveSettings.get(panelId) ?? true;
+        
+        // Get base title
+        let baseTitle = `${path.basename(uri.fsPath)} - Table Editor`;
+        
+        // Check if this is a numbered panel (multiple panels for same file)
+        const existingPanelsForFile = Array.from(this.panels.keys()).filter(id => id.startsWith(uri.toString()));
+        const panelIndex = existingPanelsForFile.indexOf(panelId);
+        if (existingPanelsForFile.length > 1 && panelIndex > 0) {
+            baseTitle = `${path.basename(uri.fsPath)} - Table Editor (${panelIndex + 1})`;
+        }
+        
+        // Add dirty indicator if auto save is off and there are unsaved changes
+        if (!autoSaveEnabled && isDirty) {
+            panel.title = `${baseTitle} *`;
+        } else {
+            panel.title = baseTitle;
+        }
+    }
+
+    /**
      * Get all panels for a specific file URI
      */
     public getPanelsForFile(fileUri: string): Map<string, vscode.WebviewPanel> {
@@ -249,6 +279,36 @@ export class WebviewManager {
      */
     private getCommunicationManagers(): Map<string, ExtensionCommunicationManager> {
         return this.communicationManagers;
+    }
+
+    /**
+     * Check if auto save is enabled for a panel
+     */
+    public isAutoSaveEnabled(panelId: string): boolean {
+        return this.autoSaveSettings.get(panelId) ?? true;
+    }
+
+    /**
+     * Set dirty state for a panel and update title
+     */
+    public setDirtyState(panelId: string, isDirty: boolean): void {
+        this.dirtyStates.set(panelId, isDirty);
+        const panel = this.panels.get(panelId);
+        if (panel) {
+            // Get URI from panelId
+            try {
+                const uri = vscode.Uri.parse(panelId);
+                this.updatePanelTitle(panel, uri);
+            } catch (e) {
+                // If URI parsing fails, just update the dirty state
+                console.warn('[WebviewManager] Could not parse panel URI for title update:', e);
+            }
+        }
+        // Notify webview of dirty state change
+        const commManager = this.communicationManagers.get(panelId);
+        if (commManager) {
+            commManager.sendDirtyStateChanged(isDirty);
+        }
     }
 
     /**
@@ -1637,6 +1697,38 @@ export class WebviewManager {
                 }
             } catch (e) {
                 warn('[MTE][Ext] Error handling STATE_UPDATE:', e);
+            }
+            return { success: true };
+        });
+
+        // Handle auto save toggle
+        commManager.registerHandler(WebviewCommand.TOGGLE_AUTO_SAVE, async (data) => {
+            debug('[MTE][Ext] Handler: TOGGLE_AUTO_SAVE', data);
+            const panelId = this.findPanelId(panel);
+            const enabled = data?.enabled ?? true;
+            this.autoSaveSettings.set(panelId, enabled);
+            // Notify webview of the change
+            commManager.sendAutoSaveStateChanged(enabled);
+            // Update panel title based on dirty state
+            this.updatePanelTitle(panel, uri);
+            return { success: true };
+        });
+
+        // Handle manual save request
+        commManager.registerHandler(WebviewCommand.MANUAL_SAVE, async (_data) => {
+            debug('[MTE][Ext] Handler: MANUAL_SAVE');
+            const panelId = this.findPanelId(panel);
+            const isDirty = this.dirtyStates.get(panelId) ?? false;
+            if (isDirty) {
+                // Trigger save operation using the existing command infrastructure
+                await vscode.commands.executeCommand('markdownTableEditor.internal.forceFileSave', {
+                    uri: uri.toString(),
+                    panelId
+                });
+                // Clear dirty state after save
+                this.dirtyStates.set(panelId, false);
+                commManager.sendDirtyStateChanged(false);
+                this.updatePanelTitle(panel, uri);
             }
             return { success: true };
         });

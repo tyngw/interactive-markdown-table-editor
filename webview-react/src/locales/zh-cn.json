@@ -51,7 +51,9 @@
     "error": "错误",
     "saved": "已自动保存",
     "sorted": "显示顺序已排序",
-    "rowsColumns": "{{rows}} 行 × {{columns}} 列"
+    "rowsColumns": "{{rows}} 行 × {{columns}} 列",
+    "toggleGitDiff": "切换Git差异",
+    "toggleAutoSave": "切换自动保存"
   },
   "tableTabs": {
     "tableLabel": "表 {{index}}"

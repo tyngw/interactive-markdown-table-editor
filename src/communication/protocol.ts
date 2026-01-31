@@ -111,7 +111,9 @@ export enum ExtensionCommand {
   OPERATION_SUCCESS = 'operationSuccess',
   OPERATION_ERROR = 'operationError',
   PING = 'ping',
-  SYNC_STATE = 'syncState'
+  SYNC_STATE = 'syncState',
+  AUTO_SAVE_STATE_CHANGED = 'autoSaveStateChanged',
+  DIRTY_STATE_CHANGED = 'dirtyStateChanged'
 }
 
 // コマンド定義（Webview -> Extension）
@@ -136,7 +138,9 @@ export enum WebviewCommand {
   REDO = 'redo',
   PONG = 'pong',
   REQUEST_SYNC = 'requestSync',
-  STATE_UPDATE = 'stateUpdate'
+  STATE_UPDATE = 'stateUpdate',
+  TOGGLE_AUTO_SAVE = 'toggleAutoSave',
+  MANUAL_SAVE = 'manualSave'
 }
 
 /**
@@ -173,6 +177,8 @@ export type WebviewCommandDataMap = {
   [WebviewCommand.PONG]: { timestamp: number };
   [WebviewCommand.REQUEST_SYNC]: void;
   [WebviewCommand.STATE_UPDATE]: any;
+  [WebviewCommand.TOGGLE_AUTO_SAVE]: { enabled: boolean };
+  [WebviewCommand.MANUAL_SAVE]: void;
 };
 
 export interface SyncStateData {

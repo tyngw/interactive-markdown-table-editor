@@ -82,26 +82,41 @@ export class TableEditRunner {
             const updatedMarkdown = tableDataManager.serializeToMarkdown();
             const tableData = tableDataManager.getTableData();
 
-            try {
-                this.webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
-            } catch (e) {
-                // 非致命的なので握りつぶす
-            }
+            // Check if auto save is enabled for this panel
+            const actualPanelId = panelId || uriString;
+            const isAutoSaveEnabled = this.webviewManager.isAutoSaveEnabled(actualPanelId);
 
-            const applied = await this.fileHandler.updateTableByIndex(
-                uri,
-                tableData.metadata.tableIndex,
-                updatedMarkdown
-            );
-
-            try {
-                if (applied) {
-                    this.webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
-                } else {
-                    this.webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+            if (isAutoSaveEnabled) {
+                // Auto save is ON - proceed with automatic file saving
+                try {
+                    this.webviewManager.sendOperationSuccess(panel, 'save-started', { kind: 'save', phase: 'started' });
+                } catch (e) {
+                    // 非致命的なので握りつぶす
                 }
-            } catch (e) {
-                // 非致命的なので握りつぶす
+
+                const applied = await this.fileHandler.updateTableByIndex(
+                    uri,
+                    tableData.metadata.tableIndex,
+                    updatedMarkdown
+                );
+
+                try {
+                    if (applied) {
+                        this.webviewManager.sendOperationSuccess(panel, 'save-completed', { kind: 'save', phase: 'completed', applied: true });
+                    } else {
+                        this.webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                    }
+                } catch (e) {
+                    // 非致命的なので握りつぶす
+                }
+            } else {
+                // Auto save is OFF - set dirty state instead of saving
+                this.webviewManager.setDirtyState(actualPanelId, true);
+                try {
+                    this.webviewManager.sendOperationSuccess(panel, 'save-skipped', { kind: 'save', phase: 'skipped', applied: false });
+                } catch (e) {
+                    // 非致命的なので握りつぶす
+                }
             }
 
             this.gitDiffCoordinator.scheduleGitDiffCalculation(uri, panel, tableManagersMap).catch(err => {

@@ -28,6 +28,8 @@ export type WebviewCommand =
   | 'redo'
   | 'requestSync'
   | 'stateUpdate'
+  | 'toggleAutoSave'
+  | 'manualSave'
   | 'webviewError'
   | 'webviewUnhandledRejection'
   | 'diag';
