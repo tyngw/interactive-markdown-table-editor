@@ -220,7 +220,6 @@ const TableHeader: React.FC<TableHeaderProps> = ({
           onClick={onSelectAll}
           title="Select All"
         >
-          ⚏
         </th>
 
         {/* Column headers with enhanced styling */}
