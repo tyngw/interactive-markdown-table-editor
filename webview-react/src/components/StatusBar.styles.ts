@@ -48,27 +48,6 @@ export const StatusItem = styled.div<{}>`
   /* 色は親コンポーネントで設定される */
 `
 
-export const SaveIndicator = styled.span<{ status: 'saved' | 'saving' | 'error' | 'failed'; isLoading?: boolean }>`
-  font-size: 12px;
-  padding: 2px 0px;
-  border-radius: 12px;
-  font-weight: 500;
-  line-height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  min-height: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  white-space: nowrap;
-  /* 色は親コンポーネントで inline style で設定される */
-  /* isLoading が true の場合のみ表示、それ以外も領域は常に確保（min-height で確保） */
-  opacity: ${props => props.isLoading ? '1' : '0'};
-  visibility: ${props => props.isLoading ? 'visible' : 'hidden'};
-  transition: opacity 0.2s ease;
-`;
-
 export const GitDiffButton = styled.button<{ active: boolean; disabled?: boolean }>`
   font-size: 12px;
   padding: 0;
