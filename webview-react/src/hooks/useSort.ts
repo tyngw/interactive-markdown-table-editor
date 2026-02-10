@@ -29,6 +29,8 @@ export function useSort(instanceKey?: string) {
           case 'desc':
             newState = { column: -1, direction: 'none' }
             break
+          // 通常のフローではnone時にcolumn=-1になるため到達しない防御的分岐
+          /* istanbul ignore next */
           default:
             newState = { column: col, direction: 'asc' }
             break

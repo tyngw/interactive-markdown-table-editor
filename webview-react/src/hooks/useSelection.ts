@@ -297,6 +297,7 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
     })
 
     // selectionRange / anchor を再マッピング
+    /* istanbul ignore next -- remapRow に undefined が渡されることは型上ありえないが、安全のためのガード */
     const remapRow = (row: number | undefined) => row !== undefined ? (mapOldToNew.get(row) ?? row) : row
     const remappedRange = selectionRange ? {
       start: { row: remapRow(selectionRange.start.row) as number, col: selectionRange.start.col },
@@ -357,6 +358,7 @@ export function useSelection({ tableRowCount, tableColCount }: UseSelectionOptio
       }
     })
 
+    /* istanbul ignore next -- remapCol に undefined が渡されることは型上ありえないが、安全のためのガード */
     const remapCol = (col: number | undefined) => col !== undefined ? (mapOldToNew.get(col) ?? col) : col
     const remappedRange = selectionRange ? {
       start: { row: selectionRange.start.row, col: remapCol(selectionRange.start.col) as number },

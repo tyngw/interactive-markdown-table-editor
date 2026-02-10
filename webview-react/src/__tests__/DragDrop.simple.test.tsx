@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import TableEditor from '../components/TableEditor'
 import { StatusProvider } from '../contexts/StatusContext'
+import { DynamicThemeProvider } from '../contexts/DynamicThemeContext'
 import { TableData } from '../types'
 
 const mockSendMessage = jest.fn()
@@ -18,13 +19,15 @@ if (!window.acquireVsCodeApi) {
 
 // テスト用のコンポーネント
 const MockTableEditor = ({ tableData }: { tableData: TableData }) => (
-  <StatusProvider>
-    <TableEditor
-      tableData={tableData}
-      onTableUpdate={() => {}}
-      onSendMessage={mockSendMessage}
-    />
-  </StatusProvider>
+  <DynamicThemeProvider>
+    <StatusProvider>
+      <TableEditor
+        tableData={tableData}
+        onTableUpdate={() => {}}
+        onSendMessage={mockSendMessage}
+      />
+    </StatusProvider>
+  </DynamicThemeProvider>
 )
 
 const sampleTableData: TableData = {

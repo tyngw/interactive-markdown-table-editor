@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import TableEditor from '../components/TableEditor'
 import { StatusProvider } from '../contexts/StatusContext'
+import { DynamicThemeProvider } from '../contexts/DynamicThemeContext'
 import { TableData } from '../types'
 
 const mockTableData: TableData = {
@@ -17,13 +18,15 @@ describe('Edit mode textbox dynamic height', () => {
   const mockOnSendMessage = jest.fn()
 
   const setup = () => render(
-    <StatusProvider>
-      <TableEditor
-        tableData={mockTableData}
-        onTableUpdate={mockOnTableUpdate}
-        onSendMessage={mockOnSendMessage}
-      />
-    </StatusProvider>
+    <DynamicThemeProvider>
+      <StatusProvider>
+        <TableEditor
+          tableData={mockTableData}
+          onTableUpdate={mockOnTableUpdate}
+          onSendMessage={mockOnSendMessage}
+        />
+      </StatusProvider>
+    </DynamicThemeProvider>
   )
 
   test('height grows to match edited content if it becomes the max', async () => {
@@ -49,7 +52,8 @@ describe('Edit mode textbox dynamic height', () => {
     // 疑似的に contentHeight がより大きくなったケースを heightUpdate で再通知
     textarea.dispatchEvent(new CustomEvent('heightUpdate', { detail: { rowMaxHeight: 120 } }))
 
-    // 高さが120px以上に更新されていること（数値比較の代わりに文字列比較）
-    expect(parseInt(textarea.style.height || '0', 10)).toBeGreaterThanOrEqual(120)
+    // CellEditor は td.style.height を設定する（textarea.style.height ではない）
+    // jsdom では scrollHeight=0 なので finalHeight = max(32, 120, 0) = 120
+    expect(parseInt(td.style.height || '0', 10)).toBeGreaterThanOrEqual(120)
   })
 })

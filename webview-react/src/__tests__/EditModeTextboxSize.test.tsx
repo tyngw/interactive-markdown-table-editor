@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import TableEditor from '../components/TableEditor'
 import { StatusProvider } from '../contexts/StatusContext'
+import { DynamicThemeProvider } from '../contexts/DynamicThemeContext'
 import { TableData } from '../types'
 
 const mockTableData: TableData = {
@@ -18,13 +19,15 @@ describe('Edit mode textbox height spec', () => {
   const mockOnSendMessage = jest.fn()
 
   const setup = () => render(
-    <StatusProvider>
-      <TableEditor
-        tableData={mockTableData}
-        onTableUpdate={mockOnTableUpdate}
-        onSendMessage={mockOnSendMessage}
-      />
-    </StatusProvider>
+    <DynamicThemeProvider>
+      <StatusProvider>
+        <TableEditor
+          tableData={mockTableData}
+          onTableUpdate={mockOnTableUpdate}
+          onSendMessage={mockOnSendMessage}
+        />
+      </StatusProvider>
+    </DynamicThemeProvider>
   )
 
   test('textarea height matches row max height during edit', async () => {
@@ -40,16 +43,17 @@ describe('Edit mode textbox height spec', () => {
 
     // 親 <td> へ rowMaxHeight を模擬的に付与し、heightUpdate を発火
     const td = textarea.closest('td') as HTMLElement
-    td.dataset.rowMaxHeight = '64' // 例: 64px
+    td.dataset.rowMaxHeight = '64'
     td.dataset.originalHeight = '20'
 
     const event = new CustomEvent('heightUpdate', { detail: { originalHeight: 20, rowMaxHeight: 64 } })
     textarea.dispatchEvent(event)
 
-    // スタイルが反映されていること
-    expect(textarea.style.height).toBe('64px')
-    // 行最大より大きいコンテンツではスクロール許可
-    // 値を長くして scrollHeight が超えることを模擬（jsdom では scrollHeight は 0 のこともあるため属性で判断）
-    expect(textarea.getAttribute('data-multiline') === 'true' || textarea.getAttribute('data-multiline') === null).toBeTruthy()
+    // CellEditor は textarea.style.height ではなく td.style.height / td.style.minHeight を設定する
+    // jsdom では scrollHeight が 0 のため finalHeight = max(32, 64, 0) = 64
+    expect(td.style.height).toBe('64px')
+    expect(td.style.minHeight).toBe('64px')
+    // 行最大より大きいコンテンツではスクロール許可（jsdom では scrollHeight は 0 なので multiline にはならない）
+    expect(textarea.getAttribute('data-multiline')).toBeNull()
   })
 })

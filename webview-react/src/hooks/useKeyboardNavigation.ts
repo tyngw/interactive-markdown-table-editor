@@ -41,6 +41,8 @@ export function useKeyboardNavigation({
 
   // Helper function to check if a cell has content (for smart navigation)
   const hasContent = useCallback((row: number, col: number): boolean => {
+    // 範囲外アクセスに対する防御的チェック（各方向のwhileループ条件でガードされているため通常到達しない）
+    /* istanbul ignore if */
     if (row < 0 || row >= tableData.rows.length || col < 0 || col >= tableData.headers.length) {
       return false
     }

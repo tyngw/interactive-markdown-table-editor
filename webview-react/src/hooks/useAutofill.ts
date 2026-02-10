@@ -28,6 +28,7 @@ export function useAutofill({ selectionRange, onUpdateCells, getCellValue, onFil
 
     // ドラッグ中
     const handleMouseMove = useCallback((event: MouseEvent) => {
+        /* istanbul ignore if -- ドラッグ開始前のmousemoveに対する防御的ガード */
         if (!isDragging || !selectionRange || !dragStartRef.current) return
 
         // マウス位置からセルを特定

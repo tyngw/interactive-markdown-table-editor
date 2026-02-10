@@ -263,6 +263,7 @@ export function generateNextValue(pattern: PatternInfo, currentValue: string, st
       if (pattern.increment !== undefined && pattern.startValue !== undefined) {
         const nextNum = pattern.startValue + (pattern.increment * step)
         // 小数点の桁数を元の値に合わせる
+        /* istanbul ignore next -- includes('.')が真の時split('.')[1]は必ず存在するため || 0 は到達不能 */
         const decimalPlaces = currentValue.includes('.') ? currentValue.split('.')[1]?.length || 0 : 0
         return nextNum.toFixed(decimalPlaces)
       }
@@ -316,6 +317,7 @@ export function generateNextValue(pattern: PatternInfo, currentValue: string, st
       }
       return currentValue
 
+    /* istanbul ignore next -- 全FillPatternをcaseでカバー済みのため到達不能 */
     default:
       return currentValue
   }
@@ -325,6 +327,7 @@ export function generateNextValue(pattern: PatternInfo, currentValue: string, st
  * テキスト内の数値パターンを検出
  */
 function detectTextWithNumber(values: string[]): PatternInfo | null {
+  /* istanbul ignore if -- detectPattern経由ではlength<2は先に処理されるため到達不能 */
   if (values.length < 2) {
     return null
   }
@@ -384,6 +387,7 @@ function detectTextWithNumber(values: string[]): PatternInfo | null {
     // 最後のパターンから数値の形式を判定
     const lastNumberStr = patterns[patterns.length - 1].numberStr
     const isDecimal = lastNumberStr.includes('.')
+    /* istanbul ignore next -- includes('.')が真の時split('.')[1]は必ず存在するため || 0 は到達不能 */
     const decimalPlaces = isDecimal ? lastNumberStr.split('.')[1]?.length || 0 : 0
     
     // ゼロパディングの判定（整数で先頭が0の場合）

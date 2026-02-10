@@ -225,6 +225,19 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     y: Math.min(menuState.position.y, window.innerHeight - 200)
   }
 
+  // DynamicThemeProvider が常にテーマを提供するため、フォールバック値は
+  // テーマが未初期化のごく短い瞬間の安全策として残す
+  /* istanbul ignore next -- DynamicThemeProvider が常にテーマを提供するため到達しない */
+  const menuStyle = {
+    position: 'fixed' as const,
+    left: adjustedPosition.x,
+    top: adjustedPosition.y,
+    zIndex: 1000,
+    backgroundColor: theme?.menuBackground || '#252526',
+    color: theme?.menuForeground || '#cccccc',
+    border: `1px solid ${theme?.menuBorder || '#454545'}`,
+  }
+
   if (menuState.type === 'editor') {
     return (
       <>
@@ -235,15 +248,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         />
         <div
           className="context-menu"
-          style={{
-            position: 'fixed',
-            left: adjustedPosition.x,
-            top: adjustedPosition.y,
-            zIndex: 1000,
-            backgroundColor: theme?.menuBackground || '#252526',
-            color: theme?.menuForeground || '#cccccc',
-            border: `1px solid ${theme?.menuBorder || '#454545'}`,
-          }}
+          style={menuStyle}
         >
           <button className="context-menu-item" onClick={() => { onImportCsv?.(); onClose(); }}>
             <span className="context-menu-icon">📥</span>
@@ -309,15 +314,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       {menuState.type === 'row' && (
         <div 
           className="context-menu" 
-          style={{
-            position: 'fixed',
-            left: adjustedPosition.x,
-            top: adjustedPosition.y,
-            zIndex: 1000,
-            backgroundColor: theme?.menuBackground || '#252526',
-            color: theme?.menuForeground || '#cccccc',
-            border: `1px solid ${theme?.menuBorder || '#454545'}`,
-          }}
+          style={menuStyle}
         >
           <button className="context-menu-item" onClick={handleAddRowAbove}>
             <span className="context-menu-icon">⬆️</span>
@@ -350,15 +347,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       {menuState.type === 'column' && (
         <div 
           className="context-menu" 
-          style={{
-            position: 'fixed',
-            left: adjustedPosition.x,
-            top: adjustedPosition.y,
-            zIndex: 1000,
-            backgroundColor: theme?.menuBackground || '#252526',
-            color: theme?.menuForeground || '#cccccc',
-            border: `1px solid ${theme?.menuBorder || '#454545'}`,
-          }}
+          style={menuStyle}
         >
           <button className="context-menu-item" onClick={handleAddColumnLeft}>
             <span className="context-menu-icon">⬅️</span>

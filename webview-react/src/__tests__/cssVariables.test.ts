@@ -17,4 +17,29 @@ describe('applyCssVariablesInline', () => {
     const applied = applyCssVariablesInline('', el)
     expect(applied).toBe(0)
   })
+
+  it('returns 0 when target is null/undefined', () => {
+    const applied = applyCssVariablesInline('some text', null as any)
+    expect(applied).toBe(0)
+  })
+
+  it('skips variables with empty values', () => {
+    const el = document.createElement('div')
+    // 空の値を持つ変数はスキップされる
+    const cssText = '--vscode-editor-background:;--vscode-foreground:#000;--vscode-empty:   ;'
+
+    const applied = applyCssVariablesInline(cssText, el)
+
+    // 空値の2つはスキップ、#000 のみ適用
+    expect(applied).toBe(1)
+    expect(el.style.getPropertyValue('--vscode-foreground')).toBe('#000')
+  })
+
+  it('handles css with no vscode variables', () => {
+    const el = document.createElement('div')
+    const cssText = ':root{color:red;background:blue;}'
+
+    const applied = applyCssVariablesInline(cssText, el)
+    expect(applied).toBe(0)
+  })
 })

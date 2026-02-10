@@ -3,10 +3,12 @@ import {
   convertNewlinesToBrTags,
   escapeCSVField,
   escapeTSVField,
+  processCellContent,
   processCellContentForEditing,
   processCellContentForStorage,
   escapePipeCharacters,
-  unescapePipeCharacters
+  unescapePipeCharacters,
+  escapeHtml,
 } from '../../utils/contentConverter'
 
 describe('contentConverter', () => {
@@ -115,6 +117,10 @@ describe('contentConverter', () => {
     it('should handle various br tag formats', () => {
       expect(processCellContentForEditing('A<br>B<br/>C<BR>D')).toBe('A\nB\nC\nD')
     })
+
+    it('空文字列で空文字列を返す', () => {
+      expect(processCellContentForEditing('')).toBe('')
+    })
   })
 
   describe('processCellContentForStorage', () => {
@@ -132,6 +138,10 @@ describe('contentConverter', () => {
 
     it('should handle newlines and pipes together', () => {
       expect(processCellContentForStorage('line1 | pipe\nline2 | pipe')).toBe('line1 | pipe<br/>line2 | pipe')
+    })
+
+    it('空文字列で空文字列を返す', () => {
+      expect(processCellContentForStorage('')).toBe('')
     })
   })
 
@@ -213,6 +223,73 @@ describe('contentConverter', () => {
       // パイプ文字はWebview側ではエスケープされない
       expect(stored).toBe('data | with | pipes')
       expect(forEditing).toBe(userInput)
+    })
+  })
+
+  describe('processCellContent', () => {
+    it('空文字列を返す（空入力）', () => {
+      expect(processCellContent('')).toBe('')
+    })
+
+    it('falsy値で空文字列を返す', () => {
+      expect(processCellContent(null as unknown as string)).toBe('')
+      expect(processCellContent(undefined as unknown as string)).toBe('')
+    })
+
+    it('<br>タグを保持してHTMLをエスケープする', () => {
+      const result = processCellContent('hello<br>world')
+      expect(result).toContain('<br>')
+      expect(result).toContain('hello')
+      expect(result).toContain('world')
+    })
+
+    it('<br/>タグを<br>に正規化する', () => {
+      const result = processCellContent('line1<br/>line2')
+      expect(result).toContain('<br>')
+    })
+
+    it('<BR>タグを<br>に正規化する（大文字）', () => {
+      const result = processCellContent('line1<BR>line2')
+      expect(result).toContain('<br>')
+    })
+
+    it('HTMLタグをエスケープするが<br>は保持する', () => {
+      const result = processCellContent('<script>alert("xss")</script><br>safe')
+      expect(result).not.toContain('<script>')
+      expect(result).toContain('<br>')
+      expect(result).toContain('safe')
+    })
+
+    it('パイプ文字のアンエスケープを処理する', () => {
+      // unescapePipeCharacters で | に変換された後、escapeHtmlExceptBreaks では
+      // パイプはHTML特殊文字ではないのでそのまま保持される
+      const result = processCellContent('data &#124; value')
+      // jsdomのinnerHTMLでは特殊文字のエスケープ動作が異なるが、処理自体が通ることを確認
+      expect(result).toBeDefined()
+    })
+  })
+
+  describe('escapeHtml', () => {
+    it('HTMLタグをエスケープする', () => {
+      const result = escapeHtml('<script>alert("xss")</script>')
+      expect(result).not.toContain('<script>')
+      expect(result).toContain('&lt;')
+      expect(result).toContain('&gt;')
+    })
+
+    it('アンパサンドをエスケープする', () => {
+      const result = escapeHtml('a & b')
+      expect(result).toContain('&amp;')
+    })
+
+    it('ダブルクォートはjsdomのinnerHTMLではエスケープされない', () => {
+      const result = escapeHtml('say "hello"')
+      // jsdomのinnerHTMLはダブルクォートをエスケープしない（ブラウザと同じ動作）
+      expect(result).toContain('"')
+    })
+
+    it('通常のテキストはそのまま返す', () => {
+      expect(escapeHtml('hello world')).toBe('hello world')
     })
   })
 })

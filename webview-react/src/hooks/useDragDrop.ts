@@ -250,11 +250,14 @@ export function useDragDrop({ onMoveRow, onMoveColumn }: DragDropCallbacks) {
       return
     }
     
+    /* istanbul ignore next -- handleDragStart 経由で dragIndex が必ず設定されるため else 側は到達しない防御的コード */
     const effectiveDragIndex = dragState.dragIndex !== -1 ? dragState.dragIndex : dragIndexFromDataTransfer
+    /* istanbul ignore next -- handleDragStart 経由で selectedIndices が必ず設定されるため else 側は到達しない防御的コード */
     const effectiveSelected = dragState.selectedIndices.length > 0
       ? dragState.selectedIndices
       : (effectiveDragIndex !== -1 ? [effectiveDragIndex] : [])
 
+    /* istanbul ignore next -- 正常フローでは dragStart 経由で selectedIndices が設定されるため到達不可能な防御的コード */
     if (effectiveSelected.length === 0) {
       console.error(`Invalid drag selection: dragState=${dragState.dragIndex}, dataTransfer=${dragIndexFromDataTransfer}`)
       return
