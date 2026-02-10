@@ -54,19 +54,65 @@ function generateCoverageReport() {
         report += `| Functions  | ${functions}% |\n`;
         report += `| Lines      | ${lines}% |\n\n`;
 
-        // 詳細ファイルへのリンク
-        report += '### 詳細\n\n';
-        report += `[カバレッジ詳細レポートを表示](../../actions/runs/${process.env.GITHUB_RUN_ID})\n\n`;
-
         // カバレッジ率の判定
         const avgCoverage = (lines + statements + functions + branches) / 4;
-        if (avgCoverage >= 80) {
-          report = '✅ ' + report;
-        } else if (avgCoverage >= 60) {
-          report = '⚠️ ' + report;
-        } else {
-          report = '❌ ' + report;
+        let statusIcon = '✅';
+        if (avgCoverage < 80) {
+          statusIcon = '⚠️';
         }
+        if (avgCoverage < 60) {
+          statusIcon = '❌';
+        }
+
+        // ファイル別カバレッジの詳細
+        report += '### ファイル別カバレッジ詳細\n\n';
+        
+        // ファイル情報を収集してソート
+        const fileDetails = [];
+        for (const [filePath, coverage] of Object.entries(coverageSummary)) {
+          if (filePath === 'total') continue;
+          
+          const linesCov = coverage.lines.pct || 0;
+          const statementsCov = coverage.statements.pct || 0;
+          const functionsCov = coverage.functions.pct || 0;
+          const branchesCov = coverage.branches.pct || 0;
+          const avgFileCov = (linesCov + statementsCov + functionsCov + branchesCov) / 4;
+          
+          fileDetails.push({
+            path: filePath,
+            avgCov: avgFileCov,
+            lines: linesCov,
+            statements: statementsCov,
+            functions: functionsCov,
+            branches: branchesCov
+          });
+        }
+
+        // 平均カバレッジでソート（低い順）
+        fileDetails.sort((a, b) => a.avgCov - b.avgCov);
+
+        // カバレッジが100%未満のファイルを表示
+        const lowCoverageFiles = fileDetails.filter(f => f.avgCov < 100);
+        
+        if (lowCoverageFiles.length > 0) {
+          report += `#### カバレッジが100%未満のファイル (${lowCoverageFiles.length}個)\n\n`;
+          report += `| ファイル | Lines | Statements | Functions | Branches | 平均 |\n`;
+          report += `|---------|-------|-----------|-----------|----------|------|\n`;
+          
+          lowCoverageFiles.forEach(file => {
+            const displayPath = file.path.replace(/^\/.*\/webview-react\//, '');
+            const avg = file.avgCov.toFixed(1);
+            const icon = file.avgCov >= 80 ? '✅' : file.avgCov >= 60 ? '⚠️' : '❌';
+            report += `| ${icon} ${displayPath} | ${file.lines.toFixed(1)}% | ${file.statements.toFixed(1)}% | ${file.functions.toFixed(1)}% | ${file.branches.toFixed(1)}% | ${avg}% |\n`;
+          });
+          report += '\n';
+        } else {
+          report += '#### 🎉 すべてのファイルで100%のカバレッジを達成しています！\n\n';
+        }
+
+        // サマリー — 見出し行が先頭に来るよう、ステータスアイコンは見出しの直下に挿入する
+        const statusLine = `\n${statusIcon} 平均カバレッジ: ${avgCoverage.toFixed(1)}%\n\n`;
+        report = report + statusLine;
       } else {
         console.error('[ERROR] No "total" field found in coverage summary');
         report += '⚠️ カバレッジサマリーの解析に失敗しました（totalフィールドなし）\n\n';
