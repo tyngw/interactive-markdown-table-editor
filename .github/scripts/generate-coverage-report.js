@@ -1,11 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * カバレッジレポート生成スクリプト
- * Webview React側のカバレッジデータを読み込み、
- * PRコメント用のマークダウンレポートを生成します
- */
-
 const fs = require('fs');
 const path = require('path');
 
@@ -25,7 +19,7 @@ function generateCoverageReport() {
     console.error(`[ERROR] Coverage directory does not exist at: ${coverageDir}`);
   }
 
-  let report = '## 📊 カバレッジレポート\n\n';
+  let report = '## 📊 Coverage Report\n\n';
 
   if (fs.existsSync(coverageSummaryPath)) {
     try {
@@ -46,15 +40,15 @@ function generateCoverageReport() {
 
         console.log(`[DEBUG] Coverage rates - Lines: ${lines}%, Statements: ${statements}%, Functions: ${functions}%, Branches: ${branches}%`);
 
-        report += '### 全体のカバレッジ率\n\n';
-        report += `| 種別 | カバレッジ率 |\n`;
+        report += '### Overall Coverage Rates\n\n';
+        report += `| Type | Coverage Rate |\n`;
         report += `|------|----------|\n`;
         report += `| Statements | ${statements}% |\n`;
         report += `| Branches   | ${branches}% |\n`;
         report += `| Functions  | ${functions}% |\n`;
         report += `| Lines      | ${lines}% |\n\n`;
 
-        // カバレッジ率の判定
+        // Coverage rate evaluation
         const avgCoverage = (lines + statements + functions + branches) / 4;
         let statusIcon = '✅';
         if (avgCoverage < 80) {
@@ -64,10 +58,10 @@ function generateCoverageReport() {
           statusIcon = '❌';
         }
 
-        // ファイル別カバレッジの詳細
-        report += '### ファイル別カバレッジ詳細\n\n';
-        
-        // ファイル情報を収集してソート
+        // File-wise coverage details
+        report += '### File-wise Coverage Details\n\n';
+
+        // Collect and sort file information
         const fileDetails = [];
         for (const [filePath, coverage] of Object.entries(coverageSummary)) {
           if (filePath === 'total') continue;
@@ -88,51 +82,60 @@ function generateCoverageReport() {
           });
         }
 
-        // 平均カバレッジでソート（低い順）
+        // Sort by average coverage (ascending)
         fileDetails.sort((a, b) => a.avgCov - b.avgCov);
 
-        // カバレッジが100%未満のファイルを表示
-        const lowCoverageFiles = fileDetails.filter(f => f.avgCov < 100);
-        
-        if (lowCoverageFiles.length > 0) {
-          report += `#### カバレッジが100%未満のファイル (${lowCoverageFiles.length}個)\n\n`;
-          report += `| ファイル | Lines | Statements | Functions | Branches | 平均 |\n`;
-          report += `|---------|-------|-----------|-----------|----------|------|\n`;
-          
-          lowCoverageFiles.forEach(file => {
-            const displayPath = file.path.replace(/^\/.*\/webview-react\//, '');
-            const avg = file.avgCov.toFixed(1);
-            const icon = file.avgCov >= 80 ? '✅' : file.avgCov >= 60 ? '⚠️' : '❌';
-            report += `| ${icon} ${displayPath} | ${file.lines.toFixed(1)}% | ${file.statements.toFixed(1)}% | ${file.functions.toFixed(1)}% | ${file.branches.toFixed(1)}% | ${avg}% |\n`;
-          });
-          report += '\n';
-        } else {
-          report += '#### 🎉 すべてのファイルで100%のカバレッジを達成しています！\n\n';
-        }
+        // Always show per-file results as collapsible sections. Also provide a compact summary table.
+        report += `| File | Avg | Lines | Statements | Functions | Branches |\n`;
+        report += `|------|-----:|-----:|---------:|---------:|--------:|\n`;
+        fileDetails.forEach(file => {
+          const displayPath = file.path.replace(/^.*?webview-react\//, '') || file.path;
+          const avg = file.avgCov.toFixed(1);
+          const icon = file.avgCov >= 80 ? '✅' : file.avgCov >= 60 ? '⚠️' : '❌';
+          report += `| ${icon} ${displayPath} | ${avg}% | ${file.lines.toFixed(1)}% | ${file.statements.toFixed(1)}% | ${file.functions.toFixed(1)}% | ${file.branches.toFixed(1)}% |\n`;
+        });
 
-        // サマリー — 見出し行が先頭に来るよう、ステータスアイコンは見出しの直下に挿入する
-        const statusLine = `\n${statusIcon} 平均カバレッジ: ${avgCoverage.toFixed(1)}%\n\n`;
+        report += '\n';
+
+        // Detailed collapsible sections for each file
+        fileDetails.forEach(file => {
+          const displayPath = file.path.replace(/^.*?webview-react\//, '') || file.path;
+          const avg = file.avgCov.toFixed(1);
+          const icon = file.avgCov >= 80 ? '✅' : file.avgCov >= 60 ? '⚠️' : '❌';
+          report += `<details>\n`;
+          report += `<summary>${icon} ${displayPath} — Average: ${avg}%</summary>\n\n`;
+          report += `| Metric | Coverage |\n`;
+          report += `|--------|---------:|\n`;
+          report += `| Lines | ${file.lines.toFixed(1)}% |\n`;
+          report += `| Statements | ${file.statements.toFixed(1)}% |\n`;
+          report += `| Functions | ${file.functions.toFixed(1)}% |\n`;
+          report += `| Branches | ${file.branches.toFixed(1)}% |\n\n`;
+          report += `</details>\n\n`;
+        });
+
+        // Append overall status line
+        const statusLine = `\n${statusIcon} Average Coverage: ${avgCoverage.toFixed(1)}%\n\n`;
         report = report + statusLine;
       } else {
         console.error('[ERROR] No "total" field found in coverage summary');
-        report += '⚠️ カバレッジサマリーの解析に失敗しました（totalフィールドなし）\n\n';
+        report += '❌ Failed to parse coverage summary (no "total" field)\n\n';
       }
     } catch (e) {
-      console.error('カバレッジサマリーの解析に失敗しました:', e.message);
+      console.error('Failed to parse coverage summary:', e.message);
       console.error('Stack:', e.stack);
-      report += '⚠️ カバレッジレポートの解析に失敗しました\n\n';
-      report += `エラー: ${e.message}\n\n`;
+      report += '❌ Failed to parse coverage report\n\n';
+      report += `Error: ${e.message}\n\n`;
     }
   } else {
     console.error(`[ERROR] Coverage summary file not found at: ${coverageSummaryPath}`);
-    report += '⚠️ カバレッジレポートが見つかりません\n\n';
-    report += 'テストが正常に実行されているか確認してください。\n\n';
+    report += '⚠️ Coverage report not found\n\n';
+    report += 'Please ensure that the tests are running correctly.\n\n';
   }
 
-  // レポートをファイルに保存
+  // Save the report to a file
   const outputPath = path.join(__dirname, '../coverage-report.md');
   fs.writeFileSync(outputPath, report);
-  console.log(`[SUCCESS] カバレッジレポートを生成しました: ${outputPath}`);
+  console.log(`[SUCCESS] Coverage report generated: ${outputPath}`);
 }
 
 generateCoverageReport();
