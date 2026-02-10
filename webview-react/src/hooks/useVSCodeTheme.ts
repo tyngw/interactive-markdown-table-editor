@@ -119,6 +119,7 @@ export function useVSCodeTheme() {
   const getThemeColors = useCallback(() => {
     try {
       // Wait a bit for DOM to be ready
+      /* istanbul ignore if -- jsdomでは常にdocumentElementが存在するため到達不能 */
       if (!document.documentElement) {
         setTimeout(getThemeColors, 50)
         return

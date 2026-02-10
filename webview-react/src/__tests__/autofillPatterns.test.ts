@@ -84,6 +84,113 @@ describe('autofillPatterns', () => {
       expect(pattern.increment).toBe(1)
       expect(pattern.dateFormat).toBe('2025年01月01日')
     })
+
+    it('空配列の場合はコピーパターンを返す', () => {
+      const pattern = detectPattern([])
+      expect(pattern.type).toBe('copy')
+    })
+
+    it('全パターン不一致の場合はデフォルトのコピーパターンを返す', () => {
+      const pattern = detectPattern(['abc', 'xyz'])
+      expect(pattern.type).toBe('copy')
+      expect(pattern.startValue).toBe('xyz')
+    })
+
+    it('差分が一定でない数値列はnullを返す', () => {
+      // 1, 3, 10 → 差分が2, 7で一定でない → 数値パターン不成立 → コピーにフォールバック
+      const pattern = detectPattern(['1', '3', '10'])
+      expect(pattern.type).toBe('copy')
+    })
+
+    it('日本語日付の形式が不正な場合はnullを返す', () => {
+      // 最初の値は日本語形式だが、2番目の値がフォーマット不一致
+      const pattern = detectPattern(['2025年1月1日', '2025-01-02', '2025年1月3日'])
+      expect(pattern.type).not.toBe('date')
+    })
+
+    it('日付の差分が一定でない場合はnullを返す', () => {
+      const pattern = detectPattern(['2024/01/01', '2024/01/03', '2024/01/10'])
+      expect(pattern.type).not.toBe('date')
+    })
+
+    it('曜日パターンの差分が一定でない場合はnullを返す', () => {
+      // 月→水→土: 差分が2, 3で一定でない
+      const pattern = detectPattern(['月', '水', '土'])
+      expect(pattern.type).not.toBe('weekday')
+    })
+
+    it('同じ曜日が繰り返される場合（差分0）はnullを返す', () => {
+      const pattern = detectPattern(['月', '月', '月'])
+      expect(pattern.type).not.toBe('weekday')
+    })
+
+    it('月パターンの差分が一定でない場合はnullを返す', () => {
+      const pattern = detectPattern(['1月', '3月', '8月'])
+      expect(pattern.type).not.toBe('month')
+    })
+
+    it('同じ月が繰り返される場合（差分0）はnullを返す', () => {
+      const pattern = detectPattern(['1月', '1月', '1月'])
+      expect(pattern.type).not.toBe('month')
+    })
+
+    it('テキスト内の数値のprefix/suffixが一致しない場合はコピーを返す', () => {
+      const pattern = detectPattern(['Item 1', 'Thing 2', 'Item 3'])
+      expect(pattern.type).toBe('copy')
+    })
+
+    it('テキストに数値が含まれない場合はコピーを返す', () => {
+      const pattern = detectPattern(['abc', 'def', 'ghi'])
+      expect(pattern.type).toBe('copy')
+    })
+
+    it('テキスト内の数値の差分が一定でない場合はコピーを返す', () => {
+      const pattern = detectPattern(['Item 1', 'Item 3', 'Item 10'])
+      expect(pattern.type).toBe('copy')
+    })
+
+    it('テキスト内の小数パターンを検出する', () => {
+      const pattern = detectPattern(['v1.0', 'v1.5', 'v2.0'])
+      expect(pattern.type).toBe('text-with-number')
+      expect(pattern.increment).toBeCloseTo(0.5)
+      expect(pattern.isDecimal).toBe(true)
+      expect(pattern.decimalPlaces).toBe(1)
+    })
+
+    it('英語の短縮曜日パターンを検出する', () => {
+      const pattern = detectPattern(['Mon', 'Tue', 'Wed'])
+      expect(pattern.type).toBe('weekday')
+      expect(pattern.increment).toBe(1)
+    })
+
+    it('英語のフル曜日パターンを検出する', () => {
+      const pattern = detectPattern(['Monday', 'Tuesday', 'Wednesday'])
+      expect(pattern.type).toBe('weekday')
+      expect(pattern.increment).toBe(1)
+    })
+
+    it('英語の短縮月パターンを検出する', () => {
+      const pattern = detectPattern(['Jan', 'Feb', 'Mar'])
+      expect(pattern.type).toBe('month')
+      expect(pattern.increment).toBe(1)
+    })
+
+    it('英語のフル月パターンを検出する', () => {
+      const pattern = detectPattern(['January', 'February', 'March'])
+      expect(pattern.type).toBe('month')
+      expect(pattern.increment).toBe(1)
+    })
+
+    it('ハイフン区切りの日付パターンを検出する', () => {
+      const pattern = detectPattern(['2024-01-01', '2024-01-02', '2024-01-03'])
+      expect(pattern.type).toBe('date')
+      expect(pattern.increment).toBe(1)
+    })
+
+    it('年あり形式で無効な日付の場合は日付パターンとして検出しない', () => {
+      const pattern = detectPattern(['2024/99/99', '2024/99/98', '2024/99/97'])
+      expect(pattern.type).not.toBe('date')
+    })
   })
 
   describe('generateNextValue', () => {
@@ -260,6 +367,72 @@ describe('autofillPatterns', () => {
       }
       const result = generateNextValue(pattern, '2025年01月01日', 1)
       expect(result).toBe('2025年01月02日')
+    })
+
+    it('seriesでincrement/startValueがundefinedの場合はcurrentValueを返す', () => {
+      const pattern = { type: 'series' as const }
+      const result = generateNextValue(pattern, '5', 1)
+      expect(result).toBe('5')
+    })
+
+    it('dateでincrement/startValueがundefinedの場合はcurrentValueを返す', () => {
+      const pattern = { type: 'date' as const }
+      const result = generateNextValue(pattern, '2024/01/01', 1)
+      expect(result).toBe('2024/01/01')
+    })
+
+    it('weekdayでincrement/startValueがundefinedの場合はcurrentValueを返す', () => {
+      const pattern = { type: 'weekday' as const }
+      const result = generateNextValue(pattern, '月', 1)
+      expect(result).toBe('月')
+    })
+
+    it('monthでincrement/startValueがundefinedの場合はcurrentValueを返す', () => {
+      const pattern = { type: 'month' as const }
+      const result = generateNextValue(pattern, '1月', 1)
+      expect(result).toBe('1月')
+    })
+
+    it('text-with-numberでincrement/startValue/textPatternがundefinedの場合はcurrentValueを返す', () => {
+      const pattern = { type: 'text-with-number' as const }
+      const result = generateNextValue(pattern, 'Item 1', 1)
+      expect(result).toBe('Item 1')
+    })
+
+    it('テキスト内の小数を生成する', () => {
+      const pattern = { 
+        type: 'text-with-number' as const, 
+        increment: 0.5, 
+        startValue: 2.0,
+        textPattern: 'v{number}',
+        isDecimal: true,
+        decimalPlaces: 1
+      }
+      const result = generateNextValue(pattern, 'v2.0', 1)
+      expect(result).toBe('v2.5')
+    })
+
+    it('日付を生成する（ハイフン区切り）', () => {
+      const startDate = new Date(2024, 0, 1) // 2024年1月1日
+      const pattern = { 
+        type: 'date' as const, 
+        increment: 1, 
+        startValue: startDate,
+        dateFormat: '2024-01-01'
+      }
+      const result = generateNextValue(pattern, '2024-01-01', 1)
+      expect(result).toBe('2024-01-02')
+    })
+
+    it('日付を生成する（dateFormatなし）', () => {
+      const startDate = new Date(2024, 0, 1) // 2024年1月1日
+      const pattern = { 
+        type: 'date' as const, 
+        increment: 1, 
+        startValue: startDate
+      }
+      const result = generateNextValue(pattern, '2024/01/01', 1)
+      expect(result).toBe('2024/01/02')
     })
   })
 })

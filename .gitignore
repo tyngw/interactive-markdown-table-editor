@@ -9,3 +9,6 @@ test_*.js
 test_*.html
 playwright-report/
 test-results/
+
+# Test coverage reports
+webview-react/coverage/

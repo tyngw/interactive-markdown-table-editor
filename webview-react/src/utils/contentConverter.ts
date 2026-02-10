@@ -122,6 +122,7 @@ export function escapeTSVField(field: string): string {
 
 // Escape HTML content while preserving <br> tags
 function escapeHtmlExceptBreaks(text: string): string {
+  /* istanbul ignore if -- 呼び出し元のprocessCellContentが先にガードするため到達しない */
   if (!text) return ''
   
   // First, temporarily replace <br> tags with a placeholder

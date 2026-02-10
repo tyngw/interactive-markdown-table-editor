@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import ContextMenu from '../components/ContextMenu'
+import { DynamicThemeProvider } from '../contexts/DynamicThemeContext'
 
 /**
  * Import CSV Context Menu Integration Tests
@@ -53,6 +54,7 @@ describe('ContextMenu - Import CSV Integration', () => {
       }
 
       render(
+        <DynamicThemeProvider>
         <ContextMenu
           menuState={menuState}
           onAddRow={mockOnAddRow}
@@ -75,6 +77,7 @@ describe('ContextMenu - Import CSV Integration', () => {
           onToggleColumnHeaders={mockOnToggleColumnHeaders}
           onToggleRowHeaders={mockOnToggleRowHeaders}
         />
+        </DynamicThemeProvider>
       )
 
       // Import CSV menu item should be present
@@ -92,6 +95,7 @@ describe('ContextMenu - Import CSV Integration', () => {
       }
 
       render(
+        <DynamicThemeProvider>
         <ContextMenu
           menuState={menuState}
           onAddRow={mockOnAddRow}
@@ -114,6 +118,7 @@ describe('ContextMenu - Import CSV Integration', () => {
           onToggleColumnHeaders={mockOnToggleColumnHeaders}
           onToggleRowHeaders={mockOnToggleRowHeaders}
         />
+        </DynamicThemeProvider>
       )
 
       // Click Import CSV
@@ -135,6 +140,7 @@ describe('ContextMenu - Import CSV Integration', () => {
       }
 
       render(
+        <DynamicThemeProvider>
         <ContextMenu
           menuState={menuState}
           onAddRow={mockOnAddRow}
@@ -147,6 +153,7 @@ describe('ContextMenu - Import CSV Integration', () => {
           tableData={mockTableData}
           onImportCsv={mockOnImportCsv}
         />
+        </DynamicThemeProvider>
       )
 
       // Import CSV should NOT be in row context menu
@@ -161,6 +168,7 @@ describe('ContextMenu - Import CSV Integration', () => {
       }
 
       render(
+        <DynamicThemeProvider>
         <ContextMenu
           menuState={menuState}
           onAddRow={mockOnAddRow}
@@ -173,6 +181,7 @@ describe('ContextMenu - Import CSV Integration', () => {
           tableData={mockTableData}
           onImportCsv={mockOnImportCsv}
         />
+        </DynamicThemeProvider>
       )
 
       // Import CSV should NOT be in column context menu
@@ -190,6 +199,7 @@ describe('ContextMenu - Import CSV Integration', () => {
 
       // Render without onImportCsv callback
       render(
+        <DynamicThemeProvider>
         <ContextMenu
           menuState={menuState}
           onAddRow={mockOnAddRow}
@@ -211,6 +221,7 @@ describe('ContextMenu - Import CSV Integration', () => {
           onToggleColumnHeaders={mockOnToggleColumnHeaders}
           onToggleRowHeaders={mockOnToggleRowHeaders}
         />
+        </DynamicThemeProvider>
       )
 
       const importCsvButton = screen.getByText(/Import CSV/i)
@@ -232,6 +243,7 @@ describe('ContextMenu - Import CSV Integration', () => {
       }
 
       const { container } = render(
+        <DynamicThemeProvider>
         <ContextMenu
           menuState={menuState}
           onAddRow={mockOnAddRow}
@@ -254,6 +266,7 @@ describe('ContextMenu - Import CSV Integration', () => {
           onToggleColumnHeaders={mockOnToggleColumnHeaders}
           onToggleRowHeaders={mockOnToggleRowHeaders}
         />
+        </DynamicThemeProvider>
       )
 
       const menuItems = container.querySelectorAll('.context-menu-item')
@@ -275,6 +288,7 @@ describe('ContextMenu - Import CSV Integration', () => {
       }
 
       render(
+        <DynamicThemeProvider>
         <ContextMenu
           menuState={menuState}
           onAddRow={mockOnAddRow}
@@ -297,6 +311,7 @@ describe('ContextMenu - Import CSV Integration', () => {
           onToggleColumnHeaders={mockOnToggleColumnHeaders}
           onToggleRowHeaders={mockOnToggleRowHeaders}
         />
+        </DynamicThemeProvider>
       )
 
       // Click Export CSV

@@ -73,6 +73,18 @@ describe('useCSVExport', () => {
       expect(tsvContent).not.toContain('<br>')
     })
 
+    it('null/undefinedセルを空文字列として処理する', () => {
+      const tableData: TableData = {
+        headers: ['A', 'B'],
+        rows: [[null as unknown as string, undefined as unknown as string]]
+      }
+      const { result } = renderHook(() => useCSVExport())
+      const tsvContent = result.current.generateTSVContent(tableData)
+
+      // null/undefinedは空文字列に変換される
+      expect(tsvContent).toContain('\t')
+    })
+
     it('should use tabs as delimiters', () => {
       const { result } = renderHook(() => useCSVExport())
       const tsvContent = result.current.generateTSVContent(mockTableData)
@@ -122,6 +134,13 @@ describe('useCSVExport', () => {
       
       expect(filename).toMatch(/^table_export_\d{8}T\d{6}\.csv$/)
     })
+
+    it('引数なしでデフォルトのCSVファイル名を生成する', () => {
+      const { result } = renderHook(() => useCSVExport())
+      const filename = result.current.generateFileName()
+      
+      expect(filename).toMatch(/^table_export_\d{8}T\d{6}\.csv$/)
+    })
   })
 
   describe('exportToCSV', () => {
@@ -163,6 +182,76 @@ describe('useCSVExport', () => {
       expect(messages[0].data.filename).toBe('test.tsv')
       expect(messages[0].data.csvContent).toContain('\t')
       expect(messages[0].data.csvContent).toContain('Multi\nline\ntext')
+    })
+  })
+
+  describe('exportToCSV - エラーハンドリング', () => {
+    it('エラーが発生した場合はfalseを返す', () => {
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation()
+      const mockSendMessage = jest.fn().mockImplementation(() => {
+        throw new Error('Send failed')
+      })
+
+      const { result } = renderHook(() => useCSVExport())
+      const ret = result.current.exportToCSV(mockTableData, mockSendMessage)
+
+      expect(ret).toBe(false)
+      expect(errorSpy).toHaveBeenCalledWith('CSV export failed:', expect.any(Error))
+      errorSpy.mockRestore()
+    })
+  })
+
+  describe('exportToTSV - エラーハンドリング', () => {
+    it('エラーが発生した場合はfalseを返す', () => {
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation()
+      const mockSendMessage = jest.fn().mockImplementation(() => {
+        throw new Error('Send failed')
+      })
+
+      const { result } = renderHook(() => useCSVExport())
+      const ret = result.current.exportToTSV(mockTableData, mockSendMessage)
+
+      expect(ret).toBe(false)
+      expect(errorSpy).toHaveBeenCalledWith('TSV export failed:', expect.any(Error))
+      errorSpy.mockRestore()
+    })
+  })
+
+  describe('downloadAsFile', () => {
+    it('ファイルをダウンロードしてtrueを返す', () => {
+      // URL.createObjectURL と revokeObjectURL のモック
+      const mockUrl = 'blob:mock-url'
+      const originalCreateObjectURL = URL.createObjectURL
+      const originalRevokeObjectURL = URL.revokeObjectURL
+      URL.createObjectURL = jest.fn().mockReturnValue(mockUrl)
+      URL.revokeObjectURL = jest.fn()
+
+      const { result } = renderHook(() => useCSVExport())
+      const ret = result.current.downloadAsFile('csv,content', 'test.csv', 'text/csv')
+
+      expect(ret).toBe(true)
+      expect(URL.createObjectURL).toHaveBeenCalled()
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith(mockUrl)
+
+      URL.createObjectURL = originalCreateObjectURL
+      URL.revokeObjectURL = originalRevokeObjectURL
+    })
+
+    it('エラーが発生した場合はfalseを返す', () => {
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation()
+      const originalCreateObjectURL = URL.createObjectURL
+      URL.createObjectURL = jest.fn().mockImplementation(() => {
+        throw new Error('createObjectURL failed')
+      })
+
+      const { result } = renderHook(() => useCSVExport())
+      const ret = result.current.downloadAsFile('content', 'test.csv')
+
+      expect(ret).toBe(false)
+      expect(errorSpy).toHaveBeenCalledWith('File download failed:', expect.any(Error))
+
+      URL.createObjectURL = originalCreateObjectURL
+      errorSpy.mockRestore()
     })
   })
 })

@@ -10,6 +10,7 @@ interface ClipboardDependencies {
   selectCell?: (row: number, col: number, extend?: boolean, toggle?: boolean) => void
 }
 
+/* istanbul ignore next -- テーブル拡張はExtension側で行われるためデフォルトでは呼ばれないダミー関数群 */
 const defaultDeps: ClipboardDependencies = {
   addRow: () => {},
   addColumn: () => {},
@@ -206,6 +207,7 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
       }
 
       const pastedData = parseTSV(clipboardText)
+      /* istanbul ignore next -- 空のTSVデータはL204の空文字列チェックで先に弾かれるため到達不能な防御コード */
       if (pastedData.length === 0) {
         return { success: false, message: 'ペーストデータが無効です' }
       }
@@ -222,6 +224,7 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
 
       // ペーストデータが単一セルの場合と複数セルの場合で処理を分岐
       const pasteRows = pastedData.length
+      /* istanbul ignore next -- pastedData[0]がparseTSVのフィルタを通過した時点で常に1列以上あるため到達不能 */
       const pasteCols = pastedData[0]?.length || 0
       const isSingleCellPaste = pasteRows === 1 && pasteCols === 1
 
@@ -289,6 +292,7 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
             updates
           }
         }
+        /* istanbul ignore next -- sortedCellsからの座標計算でupdatesが空になることはないため到達不能な防御コード */
         return { success: false, message: 'ペーストするデータがありません' }
       }
 
@@ -315,6 +319,7 @@ export function useClipboard(deps: ClipboardDependencies = defaultDeps) {
           const targetCol = startPos.col + colOffset
           
           // 基本的な座標検証のみ（row=-1は列ヘッダーOFF時のヘッダー行なので許可）
+          /* istanbul ignore else -- startPosの行列が最小-1/0でオフセットが非負のため到達不能な防御コード */
           if (targetRow >= -1 && targetCol >= 0) {
             updates.push({ row: targetRow, col: targetCol, value: cellValue })
           } else {

@@ -64,7 +64,7 @@ const StatusBar: React.FC<StatusBarProps> = ({
           <GitDiffButton
             active={autoSaveEnabled}
             onClick={() => onAutoSaveToggle?.(!autoSaveEnabled)}
-            title={t('statusBar.toggleAutoSave') || 'Toggle Auto Save'}
+            title={t('statusBar.toggleAutoSave', { defaultValue: 'Toggle Auto Save' })}
             aria-label="Auto Save"
             style={gitDiffButtonStyle}
           >
@@ -82,7 +82,7 @@ const StatusBar: React.FC<StatusBarProps> = ({
           <GitDiffButton
             active={showGitDiff}
             onClick={() => onGitDiffToggle?.(!showGitDiff)}
-            title={t('statusBar.toggleGitDiff') || 'Toggle Git Diff'}
+            title={t('statusBar.toggleGitDiff', { defaultValue: 'Toggle Git Diff' })}
             aria-label="Git Diff"
             style={gitDiffButtonStyle}
           >

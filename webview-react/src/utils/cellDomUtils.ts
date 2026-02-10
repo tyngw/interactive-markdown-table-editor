@@ -27,6 +27,8 @@ export function clearCellTemporaryMarker(position: CellPosition): void {
 }
 
 function cleanupRowVisualState(rowElement: HTMLElement | null): void {
+  // cleanupCellVisualArtifacts経由で呼ばれるため、セルがDOMにある限りnullにならない防御的チェック
+  /* istanbul ignore if */
   if (!rowElement) {
     return
   }

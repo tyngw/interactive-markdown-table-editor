@@ -125,7 +125,8 @@ export interface VSCodeTheme {
  * CSS変数からVSCodeテーマを取得
  */
 export const getVSCodeTheme = (): VSCodeTheme => {
-  const getVar = (name: string, fallback: string = ''): string => {
+  const getVar = (name: string, /* istanbul ignore next -- 全呼び出しで明示的にfallbackを指定 */ fallback: string = ''): string => {
+    /* istanbul ignore if -- SSR環境でのみ到達するガード */
     if (typeof window === 'undefined') return fallback
     // #mte-root があればそこから取得（テーマスコープが優先），なければ#rootまたはdocumentElementから取得
     // これにより、extension から注入されたテーマ CSS が正確に読み込まれる

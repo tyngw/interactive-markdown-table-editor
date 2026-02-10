@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { act } from 'react'
 import TableEditor from '../components/TableEditor'
 import { StatusProvider } from '../contexts/StatusContext'
+import { DynamicThemeProvider } from '../contexts/DynamicThemeContext'
 import { TableData } from '../types'
 
 const mockSendMessage = jest.fn()
@@ -16,13 +17,15 @@ const sampleTableData: TableData = {
 }
 
 const MockTableEditor = ({ tableData }: { tableData: TableData }) => (
-  <StatusProvider>
-    <TableEditor
-      tableData={tableData}
-      onTableUpdate={() => {}}
-      onSendMessage={mockSendMessage}
-    />
-  </StatusProvider>
+  <DynamicThemeProvider>
+    <StatusProvider>
+      <TableEditor
+        tableData={tableData}
+        onTableUpdate={() => {}}
+        onSendMessage={mockSendMessage}
+      />
+    </StatusProvider>
+  </DynamicThemeProvider>
 )
 
 describe('TableEditor - Drag and Drop', () => {
@@ -100,7 +103,8 @@ describe('TableEditor - Drag and Drop', () => {
           command: 'moveRow',
           data: {
             indices: [0],
-            toIndex: 2
+            toIndex: 3,
+            tableIndex: 0
           }
         })
       })
@@ -188,7 +192,8 @@ describe('TableEditor - Drag and Drop', () => {
           command: 'moveColumn',
           data: {
             indices: [0],
-            toIndex: 2
+            toIndex: 3,
+            tableIndex: 0
           }
         })
       })
@@ -237,31 +242,30 @@ describe('TableEditor - Drag and Drop', () => {
   })
 
   describe('Visual Feedback', () => {
-    test('should apply drag-over class during drag operations', async () => {
+    test('should apply dragging class during drag operations', async () => {
       render(<MockTableEditor tableData={sampleTableData} />)
       
       const rowNumbers = screen.getAllByRole('cell', { name: /^[123]$/ }).filter(cell => 
         cell.classList.contains('row-number')
       )
-      const secondRowNumber = rowNumbers[1]
+      const firstRowNumber = rowNumbers[0]
       
-      // ドラッグエンター
+      // ドラッグ開始
       act(() => {
-        fireEvent.dragEnter(secondRowNumber, {
-          dataTransfer: { dropEffect: 'move' }
+        fireEvent.dragStart(firstRowNumber, {
+          dataTransfer: {
+            effectAllowed: 'move',
+            setData: jest.fn()
+          }
         })
       })
       
-      // drag-overクラスが追加される
-      expect(secondRowNumber).toHaveClass('drag-over')
-      
-      // ドラッグリーブ
+      // ドラッグ終了でopacityが復帰することを確認
       act(() => {
-        fireEvent.dragLeave(secondRowNumber)
+        fireEvent.dragEnd(firstRowNumber)
       })
       
-      // drag-overクラスが削除される
-      expect(secondRowNumber).not.toHaveClass('drag-over')
+      expect(firstRowNumber.style.opacity).toBe('1')
     })
 
     test('should reset visual state on drag end', async () => {

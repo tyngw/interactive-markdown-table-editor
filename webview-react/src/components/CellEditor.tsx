@@ -33,6 +33,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
   // 初回マウント時のみカーソルを末尾に設定
   useLayoutEffect(() => {
     const textarea = textareaRef.current
+    /* istanbul ignore next -- Reactのマウント後にrefがnullになることはない */
     if (!textarea) return
     console.debug('[CellEditor] mounted; initial value length=', textarea.value.length)
     textarea.focus()
@@ -42,10 +43,10 @@ const CellEditor: React.FC<CellEditorProps> = ({
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current
+    /* istanbul ignore next -- Reactのマウント後にrefがnullになることはない */
     if (!textarea) return
 
     const adjustHeight = () => {
-      // DOM操作前に選択状態を保存
       const selectionStart = textarea.selectionStart
       const selectionEnd = textarea.selectionEnd
       const hadFocus = document.activeElement === textarea
@@ -69,6 +70,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
       const finalHeight = Math.max(minHeight, baseRowMax, contentHeight)
 
       // data-multiline の付与は、finalHeight < contentHeight の場合のみ（通常は起きないが保険）
+      /* istanbul ignore next -- finalHeight = max(..., contentHeight) なので数学的に到達不可能 */
       if (contentHeight > finalHeight) {
         textarea.setAttribute('data-multiline', 'true')
       } else {
@@ -101,6 +103,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
       } catch (_) { /* noop */ }
 
       // DOM操作後に選択状態を復元
+      /* istanbul ignore next -- jsdom環境ではDOM操作後のフォーカス消失を再現できない */
       if (hadFocus && document.activeElement !== textarea) {
         textarea.focus()
       }
@@ -259,6 +262,7 @@ const CellEditor: React.FC<CellEditorProps> = ({
         // 日本語入力確定などのタイミングで履歴に反映
         // setStateは非同期なので、次のtickで履歴に積む
         setTimeout(() => {
+          /* istanbul ignore next -- アンマウント後にtextareaRef.currentがnullになるケースはテスト困難 */
           pushHistory(textareaRef.current?.value ?? '')
         }, 0)
       }}

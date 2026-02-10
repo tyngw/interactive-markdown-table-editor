@@ -17,7 +17,8 @@ module.exports = {
   ],
   coverageReporters: ['text', 'lcov', 'html'],
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest'
+    // import.meta を処理するカスタムトランスフォーマー（ts-jest をラップ）
+    '^.+\\.(ts|tsx)$': '<rootDir>/import-meta-transformer.js'
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transformIgnorePatterns: [
