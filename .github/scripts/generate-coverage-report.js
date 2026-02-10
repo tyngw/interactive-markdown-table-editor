@@ -13,6 +13,16 @@ function generateCoverageReport() {
   const coverageDir = path.join(__dirname, '../../webview-react/coverage');
   const coverageSummaryPath = path.join(coverageDir, 'coverage-summary.json');
 
+  console.log(`[DEBUG] Current directory: ${process.cwd()}`);
+  console.log(`[DEBUG] Coverage directory: ${coverageDir}`);
+  console.log(`[DEBUG] Coverage summary path: ${coverageSummaryPath}`);
+  console.log(`[DEBUG] Coverage directory exists: ${fs.existsSync(coverageDir)}`);
+  
+  if (fs.existsSync(coverageDir)) {
+    const files = fs.readdirSync(coverageDir).slice(0, 10);
+    console.log(`[DEBUG] Files in coverage directory: ${files.join(', ')}`);
+  }
+
   let report = '## 📊 カバレッジレポート\n\n';
 
   if (fs.existsSync(coverageSummaryPath)) {
@@ -54,6 +64,7 @@ function generateCoverageReport() {
       report += '⚠️ カバレッジレポートの解析に失敗しました\n\n';
     }
   } else {
+    console.error(`[ERROR] Coverage summary file not found: ${coverageSummaryPath}`);
     report += '⚠️ カバレッジレポートが見つかりません\n\n';
     report += 'テストが正常に実行されているか確認してください。\n\n';
   }
