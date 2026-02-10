@@ -28,8 +28,29 @@ jobs:
       - name: Run Webview tests with coverage
         run: |
           cd webview-react
-          timeout 10m npm test -- --coverage --watchAll=false --maxWorkers=1 --forceExit 2>&1 || true
+          npm test -- --coverage --watchAll=false 2>&1 | tee test-output.log
         continue-on-error: true
+
+      - name: Verify coverage files
+        run: |
+          echo "=== Checking if coverage directory exists ==="
+          if [ -d "webview-react/coverage" ]; then
+            echo "✓ Coverage directory found"
+            ls -la webview-react/coverage/ | head -20
+          else
+            echo "✗ Coverage directory NOT found"
+          fi
+          
+          echo ""
+          echo "=== Checking for coverage-summary.json ==="
+          if [ -f "webview-react/coverage/coverage-summary.json" ]; then
+            echo "✓ coverage-summary.json found"
+            wc -c webview-react/coverage/coverage-summary.json
+          else
+            echo "✗ coverage-summary.json NOT found"
+            echo "=== Full test output ==="
+            tail -100 webview-react/test-output.log
+          fi
 
       - name: Generate coverage report
         run: |
