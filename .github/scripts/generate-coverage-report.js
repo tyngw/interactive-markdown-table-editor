@@ -19,16 +19,23 @@ function generateCoverageReport() {
   console.log(`[DEBUG] Coverage directory exists: ${fs.existsSync(coverageDir)}`);
   
   if (fs.existsSync(coverageDir)) {
-    const files = fs.readdirSync(coverageDir).slice(0, 10);
-    console.log(`[DEBUG] Files in coverage directory: ${files.join(', ')}`);
+    const files = fs.readdirSync(coverageDir).filter(f => !f.startsWith('.')).slice(0, 20);
+    console.log(`[DEBUG] Files in coverage directory (first 20): ${files.join(', ')}`);
+  } else {
+    console.error(`[ERROR] Coverage directory does not exist at: ${coverageDir}`);
   }
 
   let report = '## 📊 カバレッジレポート\n\n';
 
   if (fs.existsSync(coverageSummaryPath)) {
     try {
-      const coverageSummary = JSON.parse(fs.readFileSync(coverageSummaryPath, 'utf8'));
+      const fileContent = fs.readFileSync(coverageSummaryPath, 'utf8');
+      console.log(`[DEBUG] Coverage summary file size: ${fileContent.length} bytes`);
+      
+      const coverageSummary = JSON.parse(fileContent);
       const total = coverageSummary.total;
+
+      console.log(`[DEBUG] Total coverage data found: ${!!total}`);
 
       if (total) {
         // カバレッジ率の表示
@@ -36,6 +43,8 @@ function generateCoverageReport() {
         const statements = total.statements.pct || 0;
         const functions = total.functions.pct || 0;
         const branches = total.branches.pct || 0;
+
+        console.log(`[DEBUG] Coverage rates - Lines: ${lines}%, Statements: ${statements}%, Functions: ${functions}%, Branches: ${branches}%`);
 
         report += '### 全体のカバレッジ率\n\n';
         report += `| 種別 | カバレッジ率 |\n`;
@@ -58,13 +67,18 @@ function generateCoverageReport() {
         } else {
           report = '❌ ' + report;
         }
+      } else {
+        console.error('[ERROR] No "total" field found in coverage summary');
+        report += '⚠️ カバレッジサマリーの解析に失敗しました（totalフィールドなし）\n\n';
       }
     } catch (e) {
       console.error('カバレッジサマリーの解析に失敗しました:', e.message);
+      console.error('Stack:', e.stack);
       report += '⚠️ カバレッジレポートの解析に失敗しました\n\n';
+      report += `エラー: ${e.message}\n\n`;
     }
   } else {
-    console.error(`[ERROR] Coverage summary file not found: ${coverageSummaryPath}`);
+    console.error(`[ERROR] Coverage summary file not found at: ${coverageSummaryPath}`);
     report += '⚠️ カバレッジレポートが見つかりません\n\n';
     report += 'テストが正常に実行されているか確認してください。\n\n';
   }
@@ -72,7 +86,7 @@ function generateCoverageReport() {
   // レポートをファイルに保存
   const outputPath = path.join(__dirname, '../coverage-report.md');
   fs.writeFileSync(outputPath, report);
-  console.log(`カバレッジレポートを生成しました: ${outputPath}`);
+  console.log(`[SUCCESS] カバレッジレポートを生成しました: ${outputPath}`);
 }
 
 generateCoverageReport();

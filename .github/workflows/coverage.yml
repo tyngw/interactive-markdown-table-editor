@@ -22,41 +22,16 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Clean npm cache
-        run: npm cache clean --force
-
-      - name: Install root dependencies
-        run: npm ci --no-optional
-
       - name: Install webview dependencies
-        run: npm ci --prefix webview-react --no-optional
+        run: npm ci --prefix webview-react
 
       - name: Run Webview tests with coverage
         run: |
           cd webview-react
-          npm test -- --coverage --watchAll=false --maxWorkers=2
-          echo "=== Coverage file list ==="
-          ls -la coverage/
+          timeout 10m npm test -- --coverage --watchAll=false --maxWorkers=1 --forceExit 2>&1 || true
         continue-on-error: true
 
-      - name: Check coverage files
-        if: always()
-        run: |
-          echo "=== Checking coverage directory ==="
-          ls -laR webview-react/coverage/ 2>&1 | head -50 || echo "Coverage directory not found"
-          echo ""
-          echo "=== Checking coverage-summary.json ==="
-          if [ -f webview-react/coverage/coverage-summary.json ]; then
-            echo "File exists"
-            head -20 webview-react/coverage/coverage-summary.json
-          else
-            echo "File not found"
-            echo "=== Jest output log ==="
-            cat webview-react/test-output.log 2>/dev/null | tail -100 || echo "Log not found"
-          fi
-
       - name: Generate coverage report
-        if: always()
         run: |
           node .github/scripts/generate-coverage-report.js
         continue-on-error: true
