@@ -5,6 +5,10 @@ on:
     types: [opened, synchronize, reopened]
     branches: [ main ]
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   coverage:
     name: Generate and report coverage
