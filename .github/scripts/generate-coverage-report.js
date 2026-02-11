@@ -3,128 +3,147 @@
 const fs = require('fs');
 const path = require('path');
 
+function getStatusIcon(coverage) {
+  if (coverage >= 80) return '✅';
+  if (coverage >= 60) return '⚠️';
+  return '❌';
+}
+
+function normalizeFilePath(filePath) {
+  return filePath.replace(/^.*?(?:webview-react\/|out\/)/, '');
+}
+
+function formatCoverageSection(title, coverageSummary) {
+  if (!coverageSummary || !coverageSummary.total) {
+    return `\n### ${title}\n❌ Coverage data not available\n\n`;
+  }
+
+  const total = coverageSummary.total;
+  const lines = total.lines.pct || 0;
+  const statements = total.statements.pct || 0;
+  const functions = total.functions.pct || 0;
+  const branches = total.branches.pct || 0;
+
+  let section = `\n### ${title}\n\n`;
+  section += `| Type | Coverage Rate |\n`;
+  section += `|------|--------:|\n`;
+  section += `| Statements | ${statements}% |\n`;
+  section += `| Branches   | ${branches}% |\n`;
+  section += `| Functions  | ${functions}% |\n`;
+  section += `| Lines      | ${lines}% |\n\n`;
+
+  const fileDetails = [];
+  for (const [filePath, coverage] of Object.entries(coverageSummary)) {
+    if (filePath === 'total') continue;
+    
+    const linesCov = coverage.lines.pct || 0;
+    const statementsCov = coverage.statements.pct || 0;
+    const functionsCov = coverage.functions.pct || 0;
+    const branchesCov = coverage.branches.pct || 0;
+    const avgFileCov = (linesCov + statementsCov + functionsCov + branchesCov) / 4;
+    
+    fileDetails.push({
+      path: normalizeFilePath(filePath),
+      avgCov: avgFileCov,
+      lines: linesCov,
+      statements: statementsCov,
+      functions: functionsCov,
+      branches: branchesCov
+    });
+  }
+
+  if (fileDetails.length > 0) {
+    section += '<details>\n';
+    section += '<summary>File-wise Details (click to expand)</summary>\n\n';
+    
+    fileDetails.sort((a, b) => a.avgCov - b.avgCov);
+
+    section += `| File | Avg | Lines | Statements | Functions | Branches |\n`;
+    section += `|------|-----:|-----:|----------:|----------:|----------:|\n`;
+    fileDetails.forEach(file => {
+      const avg = file.avgCov.toFixed(1);
+      const icon = getStatusIcon(file.avgCov);
+      section += `| ${icon} ${file.path || 'Unknown'} | ${avg}% | ${file.lines.toFixed(1)}% | ${file.statements.toFixed(1)}% | ${file.functions.toFixed(1)}% | ${file.branches.toFixed(1)}% |\n`;
+    });
+
+    section += '\n</details>\n';
+  }
+
+  const avgCoverage = (lines + statements + functions + branches) / 4;
+  const statusIcon = getStatusIcon(avgCoverage);
+  section += `\n${statusIcon} Average Coverage: ${avgCoverage.toFixed(1)}%\n`;
+
+  return {
+    section,
+    avgCoverage
+  };
+}
+
+function readCoverageJson(filePath) {
+  if (!fs.existsSync(filePath)) {
+    console.warn(`[WARN] Coverage file missing at: ${filePath}`);
+    return null;
+  }
+
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(content);
+  } catch (error) {
+    console.error(`Failed to parse coverage JSON at ${filePath}:`, error.message);
+    return null;
+  }
+}
+
 function generateCoverageReport() {
-  const coverageDir = path.join(__dirname, '../../webview-react/coverage');
-  const coverageSummaryPath = path.join(coverageDir, 'coverage-summary.json');
+  console.log('[DEBUG] Starting coverage report generation');
 
-  console.log(`[DEBUG] Current directory: ${process.cwd()}`);
-  console.log(`[DEBUG] Coverage directory: ${coverageDir}`);
-  console.log(`[DEBUG] Coverage summary path: ${coverageSummaryPath}`);
-  console.log(`[DEBUG] Coverage directory exists: ${fs.existsSync(coverageDir)}`);
-  
-  if (fs.existsSync(coverageDir)) {
-    const files = fs.readdirSync(coverageDir).filter(f => !f.startsWith('.')).slice(0, 20);
-    console.log(`[DEBUG] Files in coverage directory (first 20): ${files.join(', ')}`);
+  const extensionCoveragePath = path.join(__dirname, '../../coverage/coverage-summary.json');
+  const webviewCoveragePath = path.join(__dirname, '../../webview-react/coverage/coverage-summary.json');
+
+  const extensionCoverage = readCoverageJson(extensionCoveragePath);
+  const webviewCoverage = readCoverageJson(webviewCoveragePath);
+
+  let report = '## 📊 Coverage Report\n';
+
+  const sections = [];
+  const averages = [];
+
+  if (extensionCoverage) {
+    const { section, avgCoverage } = formatCoverageSection('Extension Coverage', extensionCoverage);
+    sections.push(section);
+    averages.push({ name: 'Extension', value: avgCoverage });
   } else {
-    console.error(`[ERROR] Coverage directory does not exist at: ${coverageDir}`);
+    sections.push('\n### Extension Coverage\n❌ Coverage data not available\n\n');
   }
 
-  let report = '## 📊 Coverage Report\n\n';
-
-  if (fs.existsSync(coverageSummaryPath)) {
-    try {
-      const fileContent = fs.readFileSync(coverageSummaryPath, 'utf8');
-      console.log(`[DEBUG] Coverage summary file size: ${fileContent.length} bytes`);
-      
-      const coverageSummary = JSON.parse(fileContent);
-      const total = coverageSummary.total;
-
-      console.log(`[DEBUG] Total coverage data found: ${!!total}`);
-
-      if (total) {
-        // カバレッジ率の表示
-        const lines = total.lines.pct || 0;
-        const statements = total.statements.pct || 0;
-        const functions = total.functions.pct || 0;
-        const branches = total.branches.pct || 0;
-
-        console.log(`[DEBUG] Coverage rates - Lines: ${lines}%, Statements: ${statements}%, Functions: ${functions}%, Branches: ${branches}%`);
-
-        report += '### Overall Coverage Rates\n\n';
-        report += `| Type | Coverage Rate |\n`;
-        report += `|------|----------|\n`;
-        report += `| Statements | ${statements}% |\n`;
-        report += `| Branches   | ${branches}% |\n`;
-        report += `| Functions  | ${functions}% |\n`;
-        report += `| Lines      | ${lines}% |\n\n`;
-
-        // Coverage rate evaluation
-        const avgCoverage = (lines + statements + functions + branches) / 4;
-        let statusIcon = '✅';
-        if (avgCoverage < 80) {
-          statusIcon = '⚠️';
-        }
-        if (avgCoverage < 60) {
-          statusIcon = '❌';
-        }
-
-        // File-wise coverage details (foldable)
-        report += '### File-wise Coverage Details\n\n';
-        report += '<details>\n';
-        report += '<summary>Details (click to expand)</summary>\n\n';
-
-        // Collect and sort file information
-        const fileDetails = [];
-        for (const [filePath, coverage] of Object.entries(coverageSummary)) {
-          if (filePath === 'total') continue;
-          
-          const linesCov = coverage.lines.pct || 0;
-          const statementsCov = coverage.statements.pct || 0;
-          const functionsCov = coverage.functions.pct || 0;
-          const branchesCov = coverage.branches.pct || 0;
-          const avgFileCov = (linesCov + statementsCov + functionsCov + branchesCov) / 4;
-          
-          fileDetails.push({
-            path: filePath,
-            avgCov: avgFileCov,
-            lines: linesCov,
-            statements: statementsCov,
-            functions: functionsCov,
-            branches: branchesCov
-          });
-        }
-
-        // Sort by average coverage (ascending)
-        fileDetails.sort((a, b) => a.avgCov - b.avgCov);
-
-        // Always show per-file results as collapsible sections. Also provide a compact summary table.
-        report += `| File | Avg | Lines | Statements | Functions | Branches |\n`;
-        report += `|------|-----:|-----:|---------:|---------:|--------:|\n`;
-        fileDetails.forEach(file => {
-          const displayPath = file.path.replace(/^.*?webview-react\//, '') || file.path;
-          const avg = file.avgCov.toFixed(1);
-          const icon = file.avgCov >= 80 ? '✅' : file.avgCov >= 60 ? '⚠️' : '❌';
-          report += `| ${icon} ${displayPath} | ${avg}% | ${file.lines.toFixed(1)}% | ${file.statements.toFixed(1)}% | ${file.functions.toFixed(1)}% | ${file.branches.toFixed(1)}% |\n`;
-        });
-
-        report += '\n';
-
-        // Close foldable section
-        report += '</details>\n\n';
-
-        // Append overall status line
-        const statusLine = `\n${statusIcon} Average Coverage: ${avgCoverage.toFixed(1)}%\n\n`;
-        report = report + statusLine;
-      } else {
-        console.error('[ERROR] No "total" field found in coverage summary');
-        report += '❌ Failed to parse coverage summary (no "total" field)\n\n';
-      }
-    } catch (e) {
-      console.error('Failed to parse coverage summary:', e.message);
-      console.error('Stack:', e.stack);
-      report += '❌ Failed to parse coverage report\n\n';
-      report += `Error: ${e.message}\n\n`;
-    }
+  if (webviewCoverage) {
+    const { section, avgCoverage } = formatCoverageSection('Webview Coverage', webviewCoverage);
+    sections.push(section);
+    averages.push({ name: 'Webview', value: avgCoverage });
   } else {
-    console.error(`[ERROR] Coverage summary file not found at: ${coverageSummaryPath}`);
-    report += '⚠️ Coverage report not found\n\n';
-    report += 'Please ensure that the tests are running correctly.\n\n';
+    sections.push('\n### Webview Coverage\n❌ Coverage data not available\n\n');
   }
 
-  // Save the report to a file
+  report += sections.join('\n');
+
+  if (averages.length === 2) {
+    const overall = (averages[0].value + averages[1].value) / 2;
+    const statusIcon = getStatusIcon(overall);
+
+    report += '\n---\n\n';
+    report += '### Overall Combined Coverage\n\n';
+    report += `| Area | Average Coverage |\n`;
+    report += `|------|--------:|\n`;
+    averages.forEach(entry => {
+      report += `| ${entry.name} | ${entry.value.toFixed(1)}% |\n`;
+    });
+    report += `| **Overall** | **${overall.toFixed(1)}%** |\n\n`;
+    report += `${statusIcon} **Combined Status**: ${overall.toFixed(1)}%\n`;
+  }
+
   const outputPath = path.join(__dirname, '../coverage-report.md');
   fs.writeFileSync(outputPath, report);
-  console.log(`[SUCCESS] Coverage report generated: ${outputPath}`);
+  console.log(`[SUCCESS] Coverage report generated at ${outputPath}`);
 }
 
 generateCoverageReport();

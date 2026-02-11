@@ -22,8 +22,15 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Install root dependencies
+        run: npm ci
+
       - name: Install webview dependencies
         run: npm ci --prefix webview-react
+
+      - name: Run Extension coverage
+        run: npm run coverage:extension
+        continue-on-error: true
 
       - name: Run Webview tests with coverage
         run: |
@@ -33,23 +40,21 @@ jobs:
 
       - name: Verify coverage files
         run: |
-          echo "=== Checking if coverage directory exists ==="
+          echo "=== Checking Extension coverage ==="
+          if [ -d "coverage" ]; then
+            echo "✓ Extension coverage directory found"
+            ls -la coverage/ | head -20
+          else
+            echo "✗ Extension coverage directory NOT found"
+          fi
+
+          echo ""
+          echo "=== Checking Webview coverage ==="
           if [ -d "webview-react/coverage" ]; then
-            echo "✓ Coverage directory found"
+            echo "✓ Webview coverage directory found"
             ls -la webview-react/coverage/ | head -20
           else
-            echo "✗ Coverage directory NOT found"
-          fi
-          
-          echo ""
-          echo "=== Checking for coverage-summary.json ==="
-          if [ -f "webview-react/coverage/coverage-summary.json" ]; then
-            echo "✓ coverage-summary.json found"
-            wc -c webview-react/coverage/coverage-summary.json
-          else
-            echo "✗ coverage-summary.json NOT found"
-            echo "=== Full test output ==="
-            tail -100 webview-react/test-output.log
+            echo "✗ Webview coverage directory NOT found"
           fi
 
       - name: Generate coverage report
