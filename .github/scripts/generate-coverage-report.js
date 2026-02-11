@@ -58,8 +58,10 @@ function generateCoverageReport() {
           statusIcon = '❌';
         }
 
-        // File-wise coverage details
+        // File-wise coverage details (foldable)
         report += '### File-wise Coverage Details\n\n';
+        report += '<details>\n';
+        report += '<summary>Details (click to expand)</summary>\n\n';
 
         // Collect and sort file information
         const fileDetails = [];
@@ -97,21 +99,8 @@ function generateCoverageReport() {
 
         report += '\n';
 
-        // Detailed collapsible sections for each file
-        fileDetails.forEach(file => {
-          const displayPath = file.path.replace(/^.*?webview-react\//, '') || file.path;
-          const avg = file.avgCov.toFixed(1);
-          const icon = file.avgCov >= 80 ? '✅' : file.avgCov >= 60 ? '⚠️' : '❌';
-          report += `<details>\n`;
-          report += `<summary>${icon} ${displayPath} — Average: ${avg}%</summary>\n\n`;
-          report += `| Metric | Coverage |\n`;
-          report += `|--------|---------:|\n`;
-          report += `| Lines | ${file.lines.toFixed(1)}% |\n`;
-          report += `| Statements | ${file.statements.toFixed(1)}% |\n`;
-          report += `| Functions | ${file.functions.toFixed(1)}% |\n`;
-          report += `| Branches | ${file.branches.toFixed(1)}% |\n\n`;
-          report += `</details>\n\n`;
-        });
+        // Close foldable section
+        report += '</details>\n\n';
 
         // Append overall status line
         const statusLine = `\n${statusIcon} Average Coverage: ${avgCoverage.toFixed(1)}%\n\n`;
