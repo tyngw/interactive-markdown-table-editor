@@ -15,7 +15,7 @@ module.exports = {
     '!src/main.tsx',
     '!src/setupTests.ts'
   ],
-  coverageReporters: ['text', 'lcov', 'html'],
+  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
   transform: {
     // import.meta を処理するカスタムトランスフォーマー（ts-jest をラップ）
     '^.+\\.(ts|tsx)$': '<rootDir>/import-meta-transformer.js'

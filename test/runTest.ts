@@ -12,6 +12,14 @@ async function main() {
 
         // Minimal launch args for testing
         const launchArgs = ['--disable-extensions'];
+        const nycWrapPath = path.resolve(__dirname, '../../node_modules/nyc/lib/wrap.js');
+        const extensionTestsEnv = process.env.NYC_CONFIG
+            ? {
+                  NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require ${nycWrapPath}`]
+                      .filter(Boolean)
+                      .join(' ')
+              }
+            : undefined;
 
         // Download VS Code, unzip it and run the integration test
         // Note: VS Code test runtime will be cached in ~/.vscode-test/ by default
@@ -20,6 +28,7 @@ async function main() {
             extensionTestsPath: path.resolve(__dirname, '../test/vscode-tests'),
             launchArgs,
             version: 'stable',
+            extensionTestsEnv
         });
     } catch (err) {
         console.error('Failed to run tests:', err);

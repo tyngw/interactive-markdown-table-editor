@@ -12,3 +12,5 @@ test-results/
 
 # Test coverage reports
 webview-react/coverage/
+coverage/
+.nyc_output/

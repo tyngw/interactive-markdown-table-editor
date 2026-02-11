@@ -1,0 +1,24 @@
+{
+  "all": true,
+  "include": [
+    "out/src/**/*.js"
+  ],
+  "exclude": [
+    "out/src/test/**",
+    "out/test/**",
+    "out/src/activation/**",
+    "out/src/communication/**",
+    "out/src/**/*.test.js",
+    "node_modules/**",
+    "**/*.d.ts",
+    "**/mock/**"
+  ],
+  "reporter": [
+    "text",
+    "lcov",
+    "json-summary"
+  ],
+  "report-dir": "./coverage",
+  "temp-dir": "./.nyc_output",
+  "sourceMap": false
+}

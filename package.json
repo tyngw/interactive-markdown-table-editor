@@ -93,6 +93,8 @@
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
     "test": "npm run compile && npm run lint && node ./out/test/runTest.js",
+    "test:unit": "npm run compile && node -e \"require('./out/test/unit/index.js').run().then(() => process.exit(0), err => { console.error(err); process.exit(1); })\"",
+    "coverage:extension": "npm run compile && nyc node ./out/test/runTest.js",
     "test:all": "npm run test && npm run test:playwright",
     "test:playwright": "playwright test",
     "test:playwright:debug": "playwright test --debug"
@@ -111,6 +113,7 @@
     "eslint": "^8.57.1",
     "glob": "^8.1.0",
     "mocha": "^10.8.2",
+    "nyc": "^15.1.0",
     "typescript": "^4.9.5"
   },
   "dependencies": {
