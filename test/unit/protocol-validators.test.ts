@@ -195,4 +195,93 @@ suite('Protocol and Validator Completeness Tests', () => {
             'Validator should be lenient with importCSV data format'
         );
     });
+
+    test('validateMessageData should return false for unknown command (default branch)', () => {
+        const message = { command: 'unknownCommand' as any, data: {} };
+        const isValid = validateMessageData(message);
+        assert.strictEqual(isValid, false);
+    });
+
+    test('validateMessageData should return false for requestSync (default branch)', () => {
+        // requestSync is in validCommands but not in the pass-through list nor switch cases
+        const message = { command: 'requestSync' as any, data: {} };
+        const isValid = validateMessageData(message);
+        assert.strictEqual(isValid, false);
+    });
+
+    test('validateMessageData should return false for stateUpdate (default branch)', () => {
+        const message = { command: 'stateUpdate' as any, data: {} };
+        const isValid = validateMessageData(message);
+        assert.strictEqual(isValid, false);
+    });
+
+    test('validateMessageData addRow with undefined data should pass', () => {
+        const message = { command: 'addRow' as any, data: undefined };
+        assert.strictEqual(validateMessageData(message), true);
+    });
+
+    test('validateMessageData addColumn with undefined data should pass', () => {
+        const message = { command: 'addColumn' as any, data: undefined };
+        assert.strictEqual(validateMessageData(message), true);
+    });
+
+    test('validateMessageData moveRow with fromIndex should pass', () => {
+        const message = { command: 'moveRow' as any, data: { fromIndex: 0, toIndex: 1 } };
+        assert.strictEqual(validateMessageData(message), true);
+    });
+
+    test('validateMessageData moveColumn without indices or fromIndex should fail', () => {
+        const message = { command: 'moveColumn' as any, data: { toIndex: 1 } };
+        assert.strictEqual(validateMessageData(message), false);
+    });
+
+    test('validateMessageData exportCSV with empty csvContent should fail', () => {
+        const message = { command: 'exportCSV' as any, data: { csvContent: '   ' } };
+        assert.strictEqual(validateMessageData(message), false);
+    });
+
+    test('validateMessageData exportCSV with empty filename should fail', () => {
+        const message = { command: 'exportCSV' as any, data: { csvContent: 'data', filename: '' } };
+        assert.strictEqual(validateMessageData(message), false);
+    });
+
+    test('validateMessageData switchTable with negative index should fail', () => {
+        const message = { command: 'switchTable' as any, data: { index: -1 } };
+        assert.strictEqual(validateMessageData(message), false);
+    });
+
+    test('validateMessageData should pass through manualSave command', () => {
+        const message = { command: 'manualSave' as any };
+        assert.strictEqual(validateMessageData(message), true);
+    });
+
+    test('validateMessageData should pass through toggleAutoSave command', () => {
+        const message = { command: 'toggleAutoSave' as any };
+        assert.strictEqual(validateMessageData(message), true);
+    });
+
+    test('validateMessageData should return false for completely unknown command', () => {
+        const message = { command: 'totallyFakeCommand' as any, data: {} };
+        assert.strictEqual(validateMessageData(message), false);
+    });
+
+    test('validateMessageData exportCSV with valid filename should pass', () => {
+        const message = { command: 'exportCSV' as any, data: { csvContent: 'a,b', filename: 'test.csv' } };
+        assert.strictEqual(validateMessageData(message), true);
+    });
+
+    test('validateMessageData updateCell with negative row should fail', () => {
+        const message = { command: 'updateCell' as any, data: { row: -1, col: 0, value: 'x' } };
+        assert.strictEqual(validateMessageData(message), false);
+    });
+
+    test('validateMessageData deleteRows with negative index should fail', () => {
+        const message = { command: 'deleteRows' as any, data: { indices: [-1] } };
+        assert.strictEqual(validateMessageData(message), false);
+    });
+
+    test('validateMessageData sort with invalid direction should fail', () => {
+        const message = { command: 'sort' as any, data: { column: 0, direction: 'invalid' } };
+        assert.strictEqual(validateMessageData(message), false);
+    });
 });

@@ -546,6 +546,7 @@ export class WebviewManager {
             }
         }
         
+        /* istanbul ignore next -- リトライ最終試行でthrowされるため実質到達不能な防御コード */
         if (!buildReady || !html) {
             throw new Error('Failed to load React build after all retry attempts');
         }
