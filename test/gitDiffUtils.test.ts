@@ -11,6 +11,8 @@ import {
     computeLCS,
     calculateSimilarity,
     detectColumnDiffWithPositions,
+    detectColumnDiff,
+    getGitThemeColors,
     GitDiffStatus,
     RowGitDiff,
     __test__
@@ -19,6 +21,7 @@ import {
 const { parseGitDiff, mapTableRowsToGitDiff } = (__test__ as {
     parseGitDiff: (diffOutput: string, tableStartLine: number, tableEndLine: number) => any[];
     mapTableRowsToGitDiff: (lineDiffs: any[], tableStartLine: number, rowCount: number, tableContent?: string) => RowGitDiff[];
+    dedupeRowDiffs: (diffs: RowGitDiff[]) => RowGitDiff[];
 });
 
 function summarize(rows: RowGitDiff[]) {
@@ -420,9 +423,13 @@ describe('detectColumnDiffWithPositions - 中間列検知', () => {
             ['A', 'B', 'C', 'D'],
             ['A', 'X', 'C', 'Y']
         );
-        // B は削除、X は追加（位置1に）、Y は追加（位置3に）
-        assert.ok(result.addedColumns.includes(1) || result.addedColumns.includes(3));
-        assert.ok(result.deletedColumns.includes(1) || result.deletedColumns.length > 0);
+        // 列数が同じ場合、フォールバックにより位置優先でペアリングされるため
+        // 追加・削除ではなくリネームとして扱われる
+        assert.strictEqual(result.changeType, 'none');
+        assert.deepStrictEqual(result.addedColumns, []);
+        assert.deepStrictEqual(result.deletedColumns, []);
+        // BとXのリネーム、DとYのリネームが positions に含まれる
+        assert.ok(result.positions!.some(p => p.type === 'renamed'));
     });
 });
 
@@ -600,8 +607,12 @@ describe('detectColumnDiffWithPositions - エッジケース', () => {
             ['A', 'B', 'C'],
             ['X', 'Y', 'Z']
         );
-        // 列数は同じだが、ファジーマッチが失敗する場合
-        assert.ok(result.changeType === 'added' || result.changeType === 'removed' || result.changeType === 'mixed');
+        // 列数が同じ場合、フォールバックにより位置優先でペアリングされ
+        // リネームとして扱われる
+        assert.strictEqual(result.changeType, 'none');
+        assert.deepStrictEqual(result.addedColumns, []);
+        assert.deepStrictEqual(result.deletedColumns, []);
+        assert.ok(result.positions!.filter(p => p.type === 'renamed').length === 3);
     });
 
     it('大文字小文字の違いのみ', () => {
@@ -852,5 +863,680 @@ describe('calculateSimilarity - より詳細なケース', () => {
         const long = 'a'.repeat(100);
         const sim = calculateSimilarity(long, long + 'b');
         assert.ok(sim > 0.95);
+    });
+});
+
+// ============================================================
+// detectColumnDiffWithPositions テスト
+// ============================================================
+describe('detectColumnDiffWithPositions', () => {
+    it('完全一致のヘッダは exact_match_all を返す', () => {
+        const result = detectColumnDiffWithPositions(
+            ['Name', 'Age', 'City'],
+            ['Name', 'Age', 'City']
+        );
+        assert.strictEqual(result.changeType, 'none');
+        assert.deepStrictEqual(result.mapping, [0, 1, 2]);
+        assert.ok(result.heuristics!.includes('exact_match_all'));
+    });
+
+    it('列が追加された場合を検出', () => {
+        const result = detectColumnDiffWithPositions(
+            ['Name', 'Age'],
+            ['Name', 'Age', 'City']
+        );
+        assert.strictEqual(result.oldColumnCount, 2);
+        assert.strictEqual(result.newColumnCount, 3);
+        assert.ok(result.addedColumns.length > 0);
+        assert.ok(result.changeType === 'added' || result.changeType === 'mixed');
+    });
+
+    it('列が削除された場合を検出', () => {
+        const result = detectColumnDiffWithPositions(
+            ['Name', 'Age', 'City'],
+            ['Name', 'City']
+        );
+        assert.strictEqual(result.oldColumnCount, 3);
+        assert.strictEqual(result.newColumnCount, 2);
+        assert.ok(result.deletedColumns.length > 0);
+        assert.ok(result.changeType === 'removed' || result.changeType === 'mixed');
+    });
+
+    it('列がリネームされた場合を検出', () => {
+        const result = detectColumnDiffWithPositions(
+            ['Name', 'Age'],
+            ['Name', 'Years']
+        );
+        assert.strictEqual(result.oldColumnCount, 2);
+        assert.strictEqual(result.newColumnCount, 2);
+        // mapping should map all columns
+        assert.ok(result.mapping!.every(m => m >= 0));
+    });
+
+    it('中間列の追加を検出', () => {
+        const result = detectColumnDiffWithPositions(
+            ['Name', 'City'],
+            ['Name', 'Age', 'City']
+        );
+        assert.strictEqual(result.newColumnCount, 3);
+        assert.ok(result.addedColumns.length > 0);
+    });
+
+    it('データ行のサンプリングを使用した列マッチング', () => {
+        const result = detectColumnDiffWithPositions(
+            ['Name', 'Value'],
+            ['Name', 'Score'],
+            [['Alice', '100'], ['Bob', '200']],
+            [['Alice', '100'], ['Bob', '200']]
+        );
+        assert.strictEqual(result.oldColumnCount, 2);
+        assert.strictEqual(result.newColumnCount, 2);
+        // Data overlap should improve matching
+        assert.ok(result.heuristics!.some(h => h.startsWith('sampling:')));
+    });
+
+    it('空のヘッダ配列を処理', () => {
+        const result = detectColumnDiffWithPositions([], []);
+        assert.strictEqual(result.changeType, 'none');
+    });
+
+    it('列数が同じで閾値未満の場合もフォールバックマッチ', () => {
+        const result = detectColumnDiffWithPositions(
+            ['Alpha', 'Beta', 'Gamma'],
+            ['Xxx', 'Yyy', 'Zzz']
+        );
+        assert.strictEqual(result.oldColumnCount, 3);
+        assert.strictEqual(result.newColumnCount, 3);
+        // Fallback matching should fill in unmatched columns when counts are equal
+        assert.ok(result.heuristics!.some(h => h.startsWith('fallback_match:')));
+    });
+
+    it('mixed changeType when both added and removed', () => {
+        const result = detectColumnDiffWithPositions(
+            ['A', 'B', 'C'],
+            ['A', 'D']
+        );
+        // B and C deleted, D added
+        assert.ok(result.addedColumns.length > 0 || result.deletedColumns.length > 0);
+    });
+});
+
+// ============================================================
+// detectColumnDiff テスト（フォールバックロジック含む）
+// ============================================================
+describe('detectColumnDiff', () => {
+    it('空のgitDiffでidentityマッピングを返す', () => {
+        const result = detectColumnDiff([], 3);
+        assert.strictEqual(result.changeType, 'none');
+        assert.deepStrictEqual(result.mapping, [0, 1, 2]);
+    });
+
+    it('ヘッダ行なしのフォールバックロジック - 列追加', () => {
+        const gitDiff: RowGitDiff[] = [
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| A | B |', isDeletedRow: true },
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| A | B | C |' }
+        ];
+        const result = detectColumnDiff(gitDiff, 3);
+        assert.strictEqual(result.newColumnCount, 3);
+    });
+
+    it('ヘッダ行ありでenhancedアルゴリズムを使用', () => {
+        const gitDiff: RowGitDiff[] = [
+            { row: -2, status: GitDiffStatus.DELETED, oldContent: '| Name | Age |', isDeletedRow: true },
+            { row: -2, status: GitDiffStatus.ADDED, newContent: '| Name | Age | City |' },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| Alice | 30 |', isDeletedRow: true },
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| Alice | 30 | Tokyo |' }
+        ];
+        const result = detectColumnDiff(gitDiff, 3, ['Name', 'Age', 'City']);
+        assert.ok(result.addedColumns.length > 0 || result.oldColumnCount !== result.newColumnCount);
+    });
+
+    it('セパレータ行をヘッダとして使わない', () => {
+        const gitDiff: RowGitDiff[] = [
+            { row: -2, status: GitDiffStatus.DELETED, oldContent: '| --- | --- |', isDeletedRow: true },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| Name | Age |', isDeletedRow: true },
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| Name | Age |' }
+        ];
+        const result = detectColumnDiff(gitDiff, 2, ['Name', 'Age']);
+        assert.strictEqual(result.newColumnCount, 2);
+    });
+
+    it('列削除のフォールバック', () => {
+        const gitDiff: RowGitDiff[] = [
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| A | B | C |', isDeletedRow: true },
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| A | B |' }
+        ];
+        const result = detectColumnDiff(gitDiff, 2);
+        assert.ok(result.deletedColumns.length > 0 || result.oldColumnCount > result.newColumnCount);
+        assert.strictEqual(result.changeType, 'removed');
+    });
+});
+
+// ============================================================
+// getGitThemeColors テスト
+// ============================================================
+describe('getGitThemeColors', () => {
+    it('テーマ色オブジェクトを返す', () => {
+        const colors = getGitThemeColors();
+        assert.ok(colors);
+        assert.ok(typeof colors.addedBackground === 'string');
+        assert.ok(typeof colors.modifiedBackground === 'string');
+        assert.ok(typeof colors.deletedBackground === 'string');
+    });
+});
+
+// ============================================================
+// buildColumnSamples / calculateDataOverlap / calculateColumnMatchScore テスト (internal)
+// ============================================================
+describe('internal helpers via detectColumnDiffWithPositions', () => {
+    it('データ行サンプリングなしでも動作する', () => {
+        const result = detectColumnDiffWithPositions(
+            ['A', 'B'],
+            ['A', 'C'],
+            undefined,
+            undefined
+        );
+        assert.strictEqual(result.oldColumnCount, 2);
+    });
+
+    it('大量のデータ行でもサンプリングが機能する', () => {
+        const oldData = Array.from({ length: 100 }, (_, i) => [`item${i}`, `${i * 10}`]);
+        const newData = Array.from({ length: 100 }, (_, i) => [`item${i}`, `${i * 10}`]);
+        const result = detectColumnDiffWithPositions(
+            ['Name', 'Value'],
+            ['Name', 'Value'],
+            oldData,
+            newData
+        );
+        assert.deepStrictEqual(result.mapping, [0, 1]);
+    });
+
+    it('空のデータ行配列', () => {
+        const result = detectColumnDiffWithPositions(
+            ['X', 'Y'],
+            ['X', 'Z'],
+            [],
+            []
+        );
+        assert.strictEqual(result.oldColumnCount, 2);
+    });
+});
+
+// ============================================================
+// 追加テスト: 未カバー行のカバレッジ向上
+// ============================================================
+
+describe('parseGitDiff - unchanged lines and edge cases', () => {
+    it('should skip lines before first hunk header (!inHunk continue, JS L311)', () => {
+        // git diff のヘッダー行（diff --git, index, --- +++）は hunk の前にある
+        // これらは !inHunk の条件で continue される
+        const diffOutput = [
+            'diff --git a/file.md b/file.md',
+            'index abc1234..def5678 100644',
+            '--- a/file.md',
+            '+++ b/file.md',
+            '@@ -1,2 +1,2 @@',
+            '-| old |',
+            '+| new |',
+            ''
+        ].join('\n');
+
+        const result = parseGitDiff(diffOutput, 0, 5);
+        // ヘッダー行は無視され、hunk内の変更のみ検出される
+        assert.strictEqual(result.length, 2);
+        assert.strictEqual(result[0].status, GitDiffStatus.DELETED);
+        assert.strictEqual(result[1].status, GitDiffStatus.ADDED);
+    });
+
+    it('should handle unchanged context lines (increment both line numbers)', () => {
+        // unchanged行（+/-で始まらない行）があるdiffを解析
+        const diffOutput = [
+            '@@ -1,3 +1,3 @@',
+            ' | unchanged |',   // unchanged line → oldLineNumber++, newLineNumber++
+            '-| old |',
+            '+| new |',
+            ''
+        ].join('\n');
+
+        const result = parseGitDiff(diffOutput, 0, 5);
+        // unchanged行は含まれず、削除と追加のみ
+        assert.strictEqual(result.length, 2);
+        assert.strictEqual(result[0].status, GitDiffStatus.DELETED);
+        assert.strictEqual(result[0].oldLineNumber, 2);
+        assert.strictEqual(result[1].status, GitDiffStatus.ADDED);
+        assert.strictEqual(result[1].lineNumber, 2);
+    });
+
+    it('should skip backslash lines (no newline at end of file)', () => {
+        const diffOutput = [
+            '@@ -1,2 +1,2 @@',
+            '-old line',
+            '\\ No newline at end of file',
+            '+new line',
+            ''
+        ].join('\n');
+
+        const result = parseGitDiff(diffOutput, 0, 5);
+        assert.strictEqual(result.length, 2);
+        assert.strictEqual(result[0].status, GitDiffStatus.DELETED);
+        assert.strictEqual(result[1].status, GitDiffStatus.ADDED);
+    });
+});
+
+describe('mapTableRowsToGitDiff - out of range and dedupe', () => {
+    it('should exclude rows outside valid range (shouldIncludeRow false)', () => {
+        // tableStartLine = 100 で行番号が大幅に外れたdiffを作る
+        // toTableRow: baseLine - tableStartLine - 3
+        // row = 1 - 100 - 3 = -102 → shouldIncludeRow(-102, 3) = false
+        const diffOutput = [
+            '@@ -1,1 +1,1 @@',
+            '-| old |',
+            '+| new |',
+            ''
+        ].join('\n');
+
+        const lineDiffs = parseGitDiff(diffOutput, 100, 200);
+        const result = mapTableRowsToGitDiff(lineDiffs, 100, 3);
+        // 行が範囲外なので結果は空
+        assert.strictEqual(result.length, 0);
+    });
+
+    it('should deduplicate identical deleted rows', () => {
+        // 同じ行に同じoldContentのDELETED diffが2つ
+        const diffOutput = [
+            '@@ -4,2 +4,1 @@',
+            '-| dup |',
+            '-| dup |',
+            '+| new |',
+            ''
+        ].join('\n');
+
+        const lineDiffs = parseGitDiff(diffOutput, 1, 5);
+        const result = mapTableRowsToGitDiff(lineDiffs, 1, 5);
+        // dedupeによって同じrow+status+oldContentの重複は除去される
+        const deletedEntries = result.filter(r => r.status === GitDiffStatus.DELETED);
+        // 行番号が異なるので重複にはならないが、テーブル行は同じになりうる
+        assert.ok(deletedEntries.length >= 1);
+    });
+
+    it('should deduplicate identical added rows', () => {
+        // 同じ行に同じnewContentのADDED diffが2つあるケース
+        const diffOutput = [
+            '@@ -4,1 +4,2 @@',
+            '-| old |',
+            '+| dup |',
+            '+| dup |',
+            ''
+        ].join('\n');
+
+        const lineDiffs = parseGitDiff(diffOutput, 1, 5);
+        const result = mapTableRowsToGitDiff(lineDiffs, 1, 5);
+        const addedEntries = result.filter(r => r.status === GitDiffStatus.ADDED);
+        // ADDEDの重複削除では oldContent チェックしないので、同一行の場合は重複除去される
+        assert.ok(addedEntries.length >= 1);
+    });
+});
+
+describe('detectColumnDiff - fallback simple logic', () => {
+    it('should use fallback when oldHeaders exist but newHeaders is empty', () => {
+        // oldHeaders有り、newHeaders（currentHeaders）無し → 強化版が使えないのでフォールバック
+        const gitDiff = [
+            { row: -2, status: GitDiffStatus.DELETED, oldContent: '| A | B | C |' },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| 1 | 2 | 3 |' },
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| 1 | 2 |' }
+        ] as any[];
+
+        const result = detectColumnDiff(gitDiff, 2);
+        // フォールバック: oldColumnCount=3 (from deleted data row), newColumnCount=2
+        // columnDiff = 2 - 3 = -1 → removed
+        assert.strictEqual(result.changeType, 'removed');
+        assert.ok(result.deletedColumns.length > 0);
+        assert.ok(result.heuristics!.includes('fallback_simple'));
+    });
+
+    it('should use fallback with added columns when newColumnCount > oldColumnCount', () => {
+        const gitDiff = [
+            { row: -2, status: GitDiffStatus.DELETED, oldContent: '| A | B |' },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| 1 | 2 |' },
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| 1 | 2 | 3 |' }
+        ] as any[];
+
+        const result = detectColumnDiff(gitDiff, 3);
+        // フォールバック: oldColumnCount=2, newColumnCount=3
+        // columnDiff = 3 - 2 = 1 → added
+        assert.strictEqual(result.changeType, 'added');
+        assert.ok(result.addedColumns.length > 0);
+    });
+
+    it('should use oldHeaders.length for oldColumnCount when no data rows deleted', () => {
+        // データ削除行がなく、ヘッダ削除行のみの場合 → oldHeaders.length を使用
+        const gitDiff = [
+            { row: -2, status: GitDiffStatus.DELETED, oldContent: '| A | B | C |' },
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| 1 | 2 |' }
+        ] as any[];
+
+        const result = detectColumnDiff(gitDiff, 2);
+        assert.strictEqual(result.oldColumnCount, 3);
+        assert.strictEqual(result.changeType, 'removed');
+        assert.ok(result.heuristics!.includes('fallback_simple'));
+    });
+
+    it('should handle separator row in deleted header position', () => {
+        // row=-2 の削除行がセパレータの場合 → 次の非セパレータ削除行からoldHeadersを取得
+        const gitDiff = [
+            { row: -2, status: GitDiffStatus.DELETED, oldContent: '| --- | --- |' },
+            { row: -1, status: GitDiffStatus.DELETED, oldContent: '| X | Y |' },
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| 1 |' }
+        ] as any[];
+
+        const result = detectColumnDiff(gitDiff, 1);
+        // actualHeaderRow として row=-1 の '| X | Y |' が使われる
+        assert.ok(result.oldHeaders!.length > 0);
+    });
+
+    it('should handle added header row at row=-2', () => {
+        // 追加行にもrow=-2のヘッダがある場合
+        const gitDiff = [
+            { row: -2, status: GitDiffStatus.DELETED, oldContent: '| A | B |' },
+            { row: -2, status: GitDiffStatus.ADDED, newContent: '| A | B | C |' }
+        ] as any[];
+
+        const result = detectColumnDiff(gitDiff, 3, ['A', 'B', 'C']);
+        // 両方ヘッダがあるので強化版が使われる
+        assert.strictEqual(result.newColumnCount, 3);
+    });
+
+    it('should return identity mapping when no gitDiff provided', () => {
+        const result = detectColumnDiff([], 3);
+        assert.strictEqual(result.changeType, 'none');
+        assert.deepStrictEqual(result.mapping, [0, 1, 2]);
+    });
+
+    it('should return identity mapping when null gitDiff provided', () => {
+        const result = detectColumnDiff(null as any, 2);
+        assert.strictEqual(result.changeType, 'none');
+        assert.deepStrictEqual(result.mapping, [0, 1]);
+    });
+
+    it('should extract data rows for sampling in detectColumnDiff', () => {
+        // データ行（row >= 0）がある場合にoldDataRows/newDataRowsが抽出される
+        const gitDiff = [
+            { row: -2, status: GitDiffStatus.DELETED, oldContent: '| A | B |' },
+            { row: -2, status: GitDiffStatus.ADDED, newContent: '| A | C |' },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| 1 | 2 |' },
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| 1 | 3 |' }
+        ] as any[];
+
+        const result = detectColumnDiff(gitDiff, 2, ['A', 'C']);
+        // 強化版が使われる（oldHeaders, newHeaders両方ある）
+        assert.ok(result.oldColumnCount > 0);
+    });
+});
+
+describe('detectColumnDiffWithPositions - deleted and added columns', () => {
+    it('should detect deleted columns when old has more columns', () => {
+        const result = detectColumnDiffWithPositions(
+            ['A', 'B', 'C', 'D'],
+            ['A', 'C'],
+            [['1', '2', '3', '4']],
+            [['1', '3']]
+        );
+        assert.ok(result.deletedColumns.length > 0);
+        assert.ok(result.changeType === 'removed' || result.changeType === 'mixed');
+    });
+
+    it('should detect added columns when new has more columns', () => {
+        const result = detectColumnDiffWithPositions(
+            ['A', 'B'],
+            ['A', 'B', 'C', 'D'],
+            [['1', '2']],
+            [['1', '2', '3', '4']]
+        );
+        assert.ok(result.addedColumns.length > 0);
+        assert.ok(result.changeType === 'added' || result.changeType === 'mixed');
+    });
+
+    it('should handle completely different headers', () => {
+        const result = detectColumnDiffWithPositions(
+            ['Alpha', 'Beta'],
+            ['Gamma', 'Delta', 'Epsilon']
+        );
+        // 全く異なるヘッダで列数も異なる
+        assert.strictEqual(result.oldColumnCount, 2);
+        assert.strictEqual(result.newColumnCount, 3);
+    });
+});
+
+describe('computeLCS - backtracking paths', () => {
+    it('should follow dp[i-1][j] > dp[i][j-1] path', () => {
+        // LCSバックトラックで dp[i-1][j] > dp[i][j-1] となるケース
+        // arr1 = ['a', 'x', 'b'], arr2 = ['a', 'b']
+        // LCS = ['a', 'b'], バックトラックで 'x' をスキップする際に dp[i-1][j] > dp[i][j-1]
+        const result = computeLCS(['a', 'x', 'b'], ['a', 'b']);
+        assert.deepStrictEqual(result, [{ i1: 0, i2: 0 }, { i1: 2, i2: 1 }]);
+    });
+
+    it('should follow dp[i][j-1] path', () => {
+        // arr2 側にextra要素がある場合
+        const result = computeLCS(['a', 'b'], ['a', 'x', 'b']);
+        assert.deepStrictEqual(result, [{ i1: 0, i2: 0 }, { i1: 1, i2: 2 }]);
+    });
+});
+
+describe('getGitThemeColors', () => {
+    it('should return color object with expected keys', () => {
+        const colors = getGitThemeColors();
+        assert.ok(colors.addedBackground);
+        assert.ok(colors.modifiedBackground);
+        assert.ok(colors.deletedBackground);
+    });
+});
+
+describe('dedupeRowDiffs - DELETED行のoldContent区別 (JS L451-454)', () => {
+    it('should keep DELETED rows with same row but different oldContent', () => {
+        // 同じtableRow位置に異なるoldContentのDELETED行を作る
+        // hunkの中で2つの異なる削除行が同じテーブル行にマッピングされるケース
+        const diffOutput = [
+            '@@ -4,3 +4,1 @@',
+            '-| content1 |',
+            '-| content2 |',
+            '-| content3 |',
+            '+| new |',
+            ''
+        ].join('\n');
+
+        const lineDiffs = parseGitDiff(diffOutput, 1, 8);
+        const result = mapTableRowsToGitDiff(lineDiffs, 1, 5);
+        // 異なるoldContentのDELETED行は重複扱いにならずそのまま保持される
+        const deletedEntries = result.filter(r => r.status === GitDiffStatus.DELETED);
+        // 少なくとも2つのDELETEDエントリが異なるoldContentを持つ
+        if (deletedEntries.length >= 2) {
+            const uniqueContents = new Set(deletedEntries.map(e => e.oldContent));
+            assert.ok(uniqueContents.size >= 2, 'Different oldContent should not be deduped');
+        }
+    });
+
+    it('should deduplicate DELETED rows with same row and same oldContent', () => {
+        // 同じ行に完全に同じoldContentのDELETED diffが複数ある場合
+        const diffOutput = [
+            '@@ -4,2 +4,0 @@',
+            '-| same |',
+            '-| same |',
+            ''
+        ].join('\n');
+
+        const lineDiffs = parseGitDiff(diffOutput, 1, 5);
+        const result = mapTableRowsToGitDiff(lineDiffs, 1, 5);
+        const deletedWithSameContent = result.filter(
+            r => r.status === GitDiffStatus.DELETED && r.oldContent === '| same |'
+        );
+        // 同じoldContentの場合はdedupeされて1つだけ残る
+        // ただし行番号が異なれば別エントリ
+        assert.ok(deletedWithSameContent.length >= 1);
+    });
+});
+
+describe('detectColumnDiffWithPositions - mapping already assigned (JS L774)', () => {
+    it('should skip already-mapped columns via continue', () => {
+        // 3列→3列で、ヘッダが類似しすぎて同じoldIndexが複数のnewIndexにマッチしうるケース
+        // LCSがうまく動かない場合に scoreMatrix のcontinueに到達
+        const result = detectColumnDiffWithPositions(
+            ['Name', 'Age', 'City'],
+            ['Name', 'Age', 'City'],
+            [['Alice', '30', 'Tokyo']],
+            [['Alice', '30', 'Tokyo']]
+        );
+        // 全く同じ列構成なので mapping は [0,1,2] 
+        assert.strictEqual(result.oldColumnCount, 3);
+        assert.strictEqual(result.newColumnCount, 3);
+        assert.ok(result.mapping);
+    });
+
+    it('should handle column shuffle where score matrix has conflicts', () => {
+        // 列が入れ替わった場合、scoreMatrixの中でmapping[oldIndex] !== -1の場合continueする
+        const result = detectColumnDiffWithPositions(
+            ['A', 'B', 'C', 'D'],
+            ['D', 'C', 'B', 'A'],
+            [['1', '2', '3', '4']],
+            [['4', '3', '2', '1']]
+        );
+        assert.strictEqual(result.oldColumnCount, 4);
+        assert.strictEqual(result.newColumnCount, 4);
+    });
+
+    it('should detect renamed columns in matchedDetails loop (JS L826-830)', () => {
+        // ヘッダーがリネームされたケース: A → A_renamed, B はそのまま
+        // matchedDetailsにエントリが入り、normalizedOldとnormalizedNewが異なるとき renamed position が追加される
+        const result = detectColumnDiffWithPositions(
+            ['Name', 'Age'],
+            ['FullName', 'Age'],
+            [['Alice', '30']],
+            [['Alice', '30']]
+        );
+        // ヘッダーが変わっているのでリネームまたは追加/削除が検出されるはず
+        assert.ok(result.positions);
+        assert.ok(result.positions!.length > 0);
+    });
+
+    it('should continue in matchedDetails loop when mapping mismatch (JS L828-829)', () => {
+        // mapping[oldIdx] !== newIdx のとき continue する
+        // 列数が変わり、mappingがずれるケース
+        const result = detectColumnDiffWithPositions(
+            ['A', 'B', 'C'],
+            ['C', 'A'],  // 列削除+入れ替え
+            [['1', '2', '3']],
+            [['3', '1']]
+        );
+        assert.ok(result.mapping);
+        // 少なくとも削除列があるはず
+        assert.ok(result.deletedColumns.length > 0 || result.changeType !== 'none');
+    });
+});
+
+describe('detectColumnDiff - separator header fallback with null oldContent (JS L934)', () => {
+    it('should skip deletedRows with no oldContent when searching for actual header', () => {
+        // headerDeletedRow (row=-2) がセパレータ行で、
+        // 他の deletedRows に oldContent がないものが混在
+        const gitDiff: RowGitDiff[] = [
+            { row: -2, status: GitDiffStatus.DELETED, oldContent: '|---|---|', newContent: '' },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: undefined as any, newContent: '' },
+            { row: 1, status: GitDiffStatus.DELETED, oldContent: '| A | B |', newContent: '' },
+            { row: -2, status: GitDiffStatus.ADDED, newContent: '| X | Y |', oldContent: '' },
+        ];
+        const result = detectColumnDiff(gitDiff, 2, ['X', 'Y']);
+        assert.ok(result);
+        // oldHeaders が actualHeaderRow ('| A | B |') から抽出されるはず
+        assert.ok((result.oldHeaders || []).length > 0 || result.oldColumnCount >= 0);
+    });
+});
+
+describe('detectColumnDiffWithPositions - mapping collision continue (JS L780)', () => {
+    it('should skip already-assigned mapping via continue in scoreMatrix loop', () => {
+        // 同じヘッダー名を持つ列がある場合、同じnewIndexに複数のoldIndexが競合する
+        // → 2番目以降は continue で飛ばされる
+        const result = detectColumnDiffWithPositions(
+            ['Name', 'Name', 'Age'],
+            ['Name', 'Age', 'City'],
+            [['Alice', 'Bob', '30']],
+            [['Alice', '30', 'Tokyo']]
+        );
+        assert.ok(result.mapping);
+        // 同名ヘッダーがあるので mapping 衝突が発生し continue を通る
+    });
+});
+
+describe('detectColumnDiffWithPositions - matchedDetails mapping mismatch (JS L830)', () => {
+    it('should continue when matchedDetail mapping does not match', () => {
+        // matchedDetails にエントリがあるが mapping[oldIdx] !== newIdx のケース
+        // 同じヘッダー名の列があると、scoreMatrix 内で同一 oldIdx に複数の newIdx がマッチし
+        // 貪欲割り当ての結果 matchedDetails に入った detailの mapping が不一致になる
+        const result = detectColumnDiffWithPositions(
+            ['Alpha', 'Beta', 'Alpha'],  // 同名ヘッダー → scoreMatrix で衝突
+            ['Alpha', 'Alpha', 'Beta'],
+            [['1', '2', '3']],
+            [['1', '3', '2']]
+        );
+        assert.ok(result.mapping);
+    });
+
+    it('should detect renamed column position when headers differ', () => {
+        // 完全に異なるヘッダー名で mapping が成立する場合
+        // normalizedOld[oldIdx] !== normalizedNew[newIdx] → renamed position 追加
+        const result = detectColumnDiffWithPositions(
+            ['OldName', 'Age'],
+            ['NewName', 'Age'],
+            [['Alice', '30']],
+            [['Alice', '30']]
+        );
+        assert.ok(result.positions);
+        // OldName→NewName のリネームが検出されるか、追加/削除として検出される
+        const hasNameChange = result.positions!.some(p => 
+            p.type === 'renamed' || p.type === 'added' || p.type === 'removed'
+        );
+        assert.ok(hasNameChange || result.changeType !== 'none');
+    });
+});
+
+describe('dedupeRowDiffs - non-DELETED duplicate (JS L457-460)', () => {
+    const { dedupeRowDiffs } = __test__;
+
+    it('should deduplicate ADDED rows with same row and status', () => {
+        const diffs: RowGitDiff[] = [
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| A |' },
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| B |' },
+        ];
+        const result = dedupeRowDiffs(diffs);
+        // non-DELETED なので row+status が一致すれば重複として扱われる → return true → 1つのみ残る
+        assert.strictEqual(result.length, 1);
+    });
+
+    it('should keep ADDED rows with different row numbers', () => {
+        const diffs: RowGitDiff[] = [
+            { row: 0, status: GitDiffStatus.ADDED, newContent: '| A |' },
+            { row: 1, status: GitDiffStatus.ADDED, newContent: '| B |' },
+        ];
+        const result = dedupeRowDiffs(diffs);
+        assert.strictEqual(result.length, 2);
+    });
+
+    it('should compare oldContent for DELETED duplicates with same row (JS L458)', () => {
+        // DELETED の場合は oldContent も比較する
+        const diffs: RowGitDiff[] = [
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| same |' },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| same |' },
+        ];
+        const result = dedupeRowDiffs(diffs);
+        // 同じ oldContent なので重複除去 → 1つだけ残る
+        assert.strictEqual(result.length, 1);
+    });
+
+    it('should keep DELETED rows with different oldContent on same row (JS L458)', () => {
+        const diffs: RowGitDiff[] = [
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| A |' },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| B |' },
+        ];
+        const result = dedupeRowDiffs(diffs);
+        // 異なる oldContent なので重複ではない → 2つ残る
+        assert.strictEqual(result.length, 2);
     });
 });

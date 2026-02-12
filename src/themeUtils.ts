@@ -231,6 +231,7 @@ function buildEnsureOverrides(colors: Record<string, string>): string {
   const parts: string[] = [];
   for (const k of Object.keys(ensure)) {
     const v = ensure[k];
+    /* istanbul ignore next -- ensureの全エントリにフォールバック値があるため到達不可 */
     if (!v) {continue;}
     parts.push(`--vscode-${k.replace(/\./g, '-')}:${v}`);
   }

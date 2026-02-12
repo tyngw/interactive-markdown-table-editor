@@ -6,9 +6,8 @@
   "exclude": [
     "out/src/test/**",
     "out/test/**",
-    "out/src/activation/**",
-    "out/src/communication/**",
     "out/src/**/*.test.js",
+    "out/src/messages/types.js",
     "node_modules/**",
     "**/*.d.ts",
     "**/mock/**"
