@@ -33,3 +33,37 @@ jobs:
         run: xvfb-run -a npm run test
         env:
           CI: true
+
+      - name: Generate webview coverage
+        run: |
+          cd webview-react
+          npm test -- --coverage --watchAll=false
+        continue-on-error: true
+        env:
+          SUPPRESS_LOGS: 'true'
+
+      - name: Generate coverage report
+        if: github.event_name == 'pull_request'
+        run: |
+          node .github/scripts/generate-coverage-report.js
+        continue-on-error: true
+
+      - name: Post coverage comment to PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = '.github/coverage-report.md';
+            
+            if (fs.existsSync(path)) {
+              const report = fs.readFileSync(path, 'utf8');
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: report
+              });
+            }
+        continue-on-error: true
