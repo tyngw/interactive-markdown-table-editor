@@ -34,12 +34,6 @@ jobs:
         env:
           CI: true
 
-      - name: Generate unit test coverage
-        run: npm run test:coverage
-        continue-on-error: true
-        env:
-          SUPPRESS_LOGS: 'true'
-
       - name: Generate webview coverage
         run: |
           cd webview-react
