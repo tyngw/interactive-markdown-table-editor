@@ -7,9 +7,9 @@ import { debug, info, warn, error } from '../../src/logging';
 import loggingDefault from '../../src/logging';
 
 suite('logging Test Suite', () => {
-    let originalLog: typeof console.log;
-    let originalWarn: typeof console.warn;
-    let originalError: typeof console.error;
+    let originalLogDescriptor: PropertyDescriptor | undefined;
+    let originalWarnDescriptor: PropertyDescriptor | undefined;
+    let originalErrorDescriptor: PropertyDescriptor | undefined;
     let logOutput: any[][];
     let warnOutput: any[][];
     let errorOutput: any[][];
@@ -18,18 +18,39 @@ suite('logging Test Suite', () => {
         logOutput = [];
         warnOutput = [];
         errorOutput = [];
-        originalLog = console.log;
-        originalWarn = console.warn;
-        originalError = console.error;
-        console.log = (...args: any[]) => { logOutput.push(args); };
-        console.warn = (...args: any[]) => { warnOutput.push(args); };
-        console.error = (...args: any[]) => { errorOutput.push(args); };
+        // VS Code テスト環境では console メソッドが configurable: false の場合があるため
+        // Object.defineProperty を使ってスタブする
+        originalLogDescriptor = Object.getOwnPropertyDescriptor(console, 'log');
+        originalWarnDescriptor = Object.getOwnPropertyDescriptor(console, 'warn');
+        originalErrorDescriptor = Object.getOwnPropertyDescriptor(console, 'error');
+        Object.defineProperty(console, 'log', {
+            value: (...args: any[]) => { logOutput.push(args); },
+            writable: true,
+            configurable: true
+        });
+        Object.defineProperty(console, 'warn', {
+            value: (...args: any[]) => { warnOutput.push(args); },
+            writable: true,
+            configurable: true
+        });
+        Object.defineProperty(console, 'error', {
+            value: (...args: any[]) => { errorOutput.push(args); },
+            writable: true,
+            configurable: true
+        });
     });
 
     teardown(() => {
-        console.log = originalLog;
-        console.warn = originalWarn;
-        console.error = originalError;
+        // 元の descriptor を復元する
+        if (originalLogDescriptor) {
+            Object.defineProperty(console, 'log', originalLogDescriptor);
+        }
+        if (originalWarnDescriptor) {
+            Object.defineProperty(console, 'warn', originalWarnDescriptor);
+        }
+        if (originalErrorDescriptor) {
+            Object.defineProperty(console, 'error', originalErrorDescriptor);
+        }
     });
 
     test('info should output to console.log', () => {

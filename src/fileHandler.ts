@@ -560,52 +560,66 @@ export class MarkdownFileHandler implements FileHandler {
     }
 
     /**
-     * Show error notification to user with appropriate actions
+     * Show error notification to user with appropriate actions.
+     * showErrorMessage の戻り値が Thenable でない場合（テスト環境など）でも安全に動作するよう、
+     * 戻り値の存在を確認してから .then() を呼ぶ。
      */
     private showErrorNotification(error: FileSystemError): void {
         const message = `File operation failed: ${error.message}`;
         
         switch (error.operation) {
-            case 'read':
-                vscode.window.showErrorMessage(
+            case 'read': {
+                const result = vscode.window.showErrorMessage(
                     message,
                     'Retry',
                     'Show Details'
-                ).then(action => {
-                    if (action === 'Show Details') {
-                        this.outputChannel.show();
-                    }
-                });
+                );
+                if (result && typeof result.then === 'function') {
+                    result.then(action => {
+                        if (action === 'Show Details') {
+                            this.outputChannel.show();
+                        }
+                    });
+                }
                 break;
+            }
                 
             case 'write':
-            case 'update':
-                vscode.window.showErrorMessage(
+            case 'update': {
+                const result = vscode.window.showErrorMessage(
                     message,
                     'Retry',
                     'Save As...',
                     'Show Details'
-                ).then(action => {
-                    if (action === 'Show Details') {
-                        this.outputChannel.show();
-                    } else if (action === 'Save As...') {
-                        vscode.window.showSaveDialog({
-                            defaultUri: error.uri,
-                            filters: {
-                                'Markdown': ['md'],
-                                'All Files': ['*']
-                            }
-                        });
-                    }
-                });
+                );
+                if (result && typeof result.then === 'function') {
+                    result.then(action => {
+                        if (action === 'Show Details') {
+                            this.outputChannel.show();
+                        } else if (action === 'Save As...') {
+                            vscode.window.showSaveDialog({
+                                defaultUri: error.uri,
+                                filters: {
+                                    'Markdown': ['md'],
+                                    'All Files': ['*']
+                                }
+                            });
+                        }
+                    });
+                }
                 break;
+            }
                 
-            default:
-                vscode.window.showErrorMessage(message, 'Show Details').then(action => {
-                    if (action === 'Show Details') {
-                        this.outputChannel.show();
-                    }
-                });
+            default: {
+                const result = vscode.window.showErrorMessage(message, 'Show Details');
+                if (result && typeof result.then === 'function') {
+                    result.then(action => {
+                        if (action === 'Show Details') {
+                            this.outputChannel.show();
+                        }
+                    });
+                }
+            }
         }
     }
 

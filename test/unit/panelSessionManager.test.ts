@@ -224,11 +224,13 @@ suite('PanelSessionManager Test Suite', () => {
         assert.ok(result.uriString.includes('path.md'));
     });
 
-    test('normalizeUri with Uri instance containing :: returns null', () => {
-        // Cover branch: uri instance with :: in toString
+    test('normalizeUri with Uri instance containing :: returns valid URI', () => {
+        // Cover branch: uri instance with :: in path
+        // Uri.parse はパスの :: をパーセントエンコードするため、
+        // toString() には '::' が含まれず、normalizeUri は有効な URI を返す
         const uri = vscode.Uri.parse('file:///some/pa::th.md');
         const result = manager.normalizeUri(uri);
-        assert.strictEqual(result.uri, null);
+        assert.ok(result.uri !== null, 'percent-encoded :: should not trigger null');
     });
 
     test('normalizeUri with object toString returning unparseable', () => {
@@ -244,7 +246,9 @@ suite('PanelSessionManager Test Suite', () => {
         // The code doesn't have try-catch around toString() call itself,
         // so if toString throws, the entire normalizeUri would throw.
         // Instead, test with an object that produces a valid string but invalid URI
-        const obj2 = { toString: () => '' };
+        // VS Code の Uri.parse('') は scheme:'file', path:'/' の有効な URI を返すため、
+        // 空文字列でも null にはならない。:: を含む文字列なら null になる。
+        const obj2 = { toString: () => '::invalid::' };
         const result2 = manager.normalizeUri(obj2);
         assert.strictEqual(result2.uri, null);
     });

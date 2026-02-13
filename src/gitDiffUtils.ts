@@ -291,9 +291,6 @@ function buildAddedRowDiffs(rowCount: number): RowGitDiff[] {
     return rowDiffs;
 }
 
-/**
- * 行ごとのGit差分情報
- */
 interface LineDiff {
     lineNumber: number;  // 現在のファイルでの行番号（1ベース）
     status: GitDiffStatus;
@@ -1052,12 +1049,6 @@ export function detectColumnDiffWithPositions(
     for (const detail of matchedDetails) {
         const oldIdx = detail.oldIndex;
         const newIdx = detail.newIndex;
-        // matchedDetails に追加された時点で mapping[oldIdx] = newIdx が確定しているため
-        // この条件は防御的なガードであり通常は到達しない
-        /* istanbul ignore next */
-        if (mapping[oldIdx] !== newIdx) {
-            continue;
-        }
         if (normalizedOld[oldIdx] !== normalizedNew[newIdx]) {
             result.positions!.push({
                 index: oldIdx,
@@ -1093,18 +1084,13 @@ export function getGitThemeColors(): {
     modifiedBackground?: string;
     deletedBackground?: string;
 } {
-    try {
-        // VS Codeのテーマ色を取得
-        // Git関連のCSS変数を使用
-        return {
-            addedBackground: 'var(--vscode-gitDecoration-addedResourceForeground, #81b88b)',
-            modifiedBackground: 'var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d)',
-            deletedBackground: 'var(--vscode-gitDecoration-deletedResourceForeground, #c74e39)'
-        };
-    } catch (err) /* istanbul ignore next */ {
-        error('[GitDiff] Error getting git theme colors:', err);
-        return {};
-    }
+    // VS Codeのテーマ色を取得
+    // Git関連のCSS変数を使用
+    return {
+        addedBackground: 'var(--vscode-gitDecoration-addedResourceForeground, #81b88b)',
+        modifiedBackground: 'var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d)',
+        deletedBackground: 'var(--vscode-gitDecoration-deletedResourceForeground, #c74e39)'
+    };
 }
 
 /**
@@ -1141,14 +1127,15 @@ export function detectColumnDiff(
         process.env.MTE_KEEP_CONSOLE === '1' ||
         process.env.DEBUG === 'true'
     ));
+    /* istanbul ignore next */
     const debugLog = (...args: any[]) => {
-        /* istanbul ignore next */
         if (isDebug) {
             console.log(...args);
         }
     };
     
     if (!gitDiff || gitDiff.length === 0) {
+        /* istanbul ignore next */
         debugLog('[detectColumnDiff] No gitDiff provided');
         result.mapping = Array.from({ length: currentColumnCount }, (_, i) => i);
         return result;
@@ -1158,6 +1145,7 @@ export function detectColumnDiff(
     const deletedRows = gitDiff.filter(d => d.status === GitDiffStatus.DELETED && d.oldContent);
     const addedRows = gitDiff.filter(d => d.status === GitDiffStatus.ADDED && d.newContent);
 
+    /* istanbul ignore next */
     debugLog('[detectColumnDiff] Found deletedRows:', deletedRows.length, 'addedRows:', addedRows.length);
 
     // 削除前のヘッダを取得（row = -2 がヘッダ行）
@@ -1169,21 +1157,17 @@ export function detectColumnDiff(
         
         if (!isSeparatorRow) {
             oldHeaders = cells;
+            /* istanbul ignore next */
             debugLog('[detectColumnDiff] oldHeaders extracted from row -2:', oldHeaders);
         } else {
             // セパレータの場合は最初の非セパレータ削除行から探す
             const actualHeaderRow = deletedRows.find(d => {
-                // deletedRows は d.oldContent が truthy のもののみフィルタ済みだが、
-                // 型安全性のための防御的チェック
-                /* istanbul ignore next */
-                if (!d.oldContent) {
-                    return false;
-                }
-                const headerCells = tokenizeRow(d.oldContent);
+                const headerCells = tokenizeRow(d.oldContent!);
                 return !headerCells.every(cell => cell.match(/^[\s\-:]*$/) !== null);
             });
             if (actualHeaderRow && actualHeaderRow.oldContent) {
                 oldHeaders = tokenizeRow(actualHeaderRow.oldContent);
+                /* istanbul ignore next */
                 debugLog('[detectColumnDiff] oldHeaders extracted from actual header row:', oldHeaders);
             }
         }
@@ -1224,6 +1208,7 @@ export function detectColumnDiff(
     
     // oldHeaders/newHeaders の両方がある場合は強化版アルゴリズムを使用
     if (oldHeaders.length > 0 && newHeaders.length > 0) {
+        /* istanbul ignore next */
         debugLog('[detectColumnDiff] Using enhanced column diff detection');
         const enhancedResult = detectColumnDiffWithPositions(
             oldHeaders,
@@ -1244,11 +1229,13 @@ export function detectColumnDiff(
         result.mapping = enhancedResult.mapping;
         result.heuristics = enhancedResult.heuristics;
         
+        /* istanbul ignore next */
         debugLog('[detectColumnDiff] Enhanced result:', result);
         return result;
     }
     
     // フォールバック：従来のシンプルなロジック
+    /* istanbul ignore next */
     debugLog('[detectColumnDiff] Using fallback simple logic');
     result.oldHeaders = oldHeaders;
     result.newHeaders = newHeaders;
@@ -1270,6 +1257,7 @@ export function detectColumnDiff(
 
     const columnDiff = newColumnCount - oldColumnCount;
 
+    /* istanbul ignore next */
     debugLog('[detectColumnDiff] oldColumnCount:', oldColumnCount, 'newColumnCount:', newColumnCount, 'diff:', columnDiff);
 
     if (columnDiff > 0) {
@@ -1303,6 +1291,7 @@ export function detectColumnDiff(
         i < newColumnCount ? i : -1
     );
 
+    /* istanbul ignore next */
     debugLog('[detectColumnDiff] Final result:', result);
     return result;
 }

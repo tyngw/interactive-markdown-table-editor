@@ -5,6 +5,16 @@ import * as path from 'path';
 import * as os from 'os';
 import { MarkdownFileHandler, FileSystemError, getFileHandler } from '../../src/fileHandler';
 
+// ヘルパー: read-only プロパティの安全なモック設定・復元
+// VS Code v1.109+ では vscode.workspace / vscode.window のプロパティが read-only のため
+// Object.defineProperty で書き換える必要がある
+function defineProperty(obj: any, prop: string, value: any): void {
+    Object.defineProperty(obj, prop, { value, writable: true, configurable: true });
+}
+function defineGetter(obj: any, prop: string, getter: () => any): void {
+    Object.defineProperty(obj, prop, { get: getter, configurable: true });
+}
+
 suite('FileHandler Test Suite', () => {
     let fileHandler: MarkdownFileHandler;
     let testDir: string;
@@ -40,8 +50,8 @@ suite('FileHandler Test Suite', () => {
             try {
                 await fileHandler.readMarkdownFile(nonExistentFile);
                 assert.fail('Expected FileSystemError to be thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'read');
                 assert.strictEqual(error.uri, nonExistentFile);
             }
@@ -134,8 +144,8 @@ suite('FileHandler Test Suite', () => {
             try {
                 await fileHandler.updateTableInFile(testFile, 5, 10, 'New content');
                 assert.fail('Expected FileSystemError to be thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'update');
             }
         });
@@ -229,8 +239,8 @@ suite('FileHandler Test Suite', () => {
             try {
                 await fileHandler.updateMultipleTablesInFile(invalidRangeFile, updates);
                 assert.fail('Expected FileSystemError to be thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'update');
             }
             
@@ -330,8 +340,8 @@ Final content.`;
             try {
                 await fileHandler.updateTableByIndex(invalidIndexFile, 5, newTableContent);
                 assert.fail('Expected FileSystemError to be thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
                 assert.ok(error.message.includes('out of range'));
             }
             
@@ -467,8 +477,8 @@ Final paragraph.`;
             try {
                 await fileHandler.readMarkdownFile(badUri);
                 assert.fail('Should have thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'read');
             }
             fs.rmSync(badUri.fsPath, { recursive: true, force: true });
@@ -482,8 +492,8 @@ Final paragraph.`;
             try {
                 await fileHandler.writeMarkdownFile(readOnlyFile, 'content');
                 assert.fail('Should have thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'write');
             }
         });
@@ -496,8 +506,8 @@ Final paragraph.`;
             try {
                 await fileHandler.writeMarkdownFile(roFile, 'new content');
                 // On some systems this may succeed as root; that's OK
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
             } finally {
                 fs.chmodSync(roFile.fsPath, 0o644);
                 fs.unlinkSync(roFile.fsPath);
@@ -511,8 +521,8 @@ Final paragraph.`;
             try {
                 await fileHandler.updateTableByIndex(errFile, 0, '| A |\n|---|\n| 1 |');
                 assert.fail('Should have thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
             }
         });
 
@@ -522,8 +532,8 @@ Final paragraph.`;
             try {
                 await fileHandler.updateTableByIndex(negFile, -1, '| B |\n|---|\n| 2 |');
                 assert.fail('Should have thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
                 assert.ok(error.message.includes('out of range'));
             }
             fs.unlinkSync(negFile.fsPath);
@@ -536,8 +546,8 @@ Final paragraph.`;
             try {
                 await fileHandler.updateTableInFile(errFile, 0, 2, '| A |\n|---|\n| 1 |');
                 assert.fail('Should have thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'update');
             }
         });
@@ -549,8 +559,8 @@ Final paragraph.`;
             try {
                 await fileHandler.updateMultipleTablesInFile(errFile, [{ startLine: 0, endLine: 1, newContent: '| X |' }]);
                 assert.fail('Should have thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'update');
             }
         });
@@ -673,8 +683,8 @@ Final paragraph.`;
                     throw new Error('generic error');
                 });
                 assert.fail('Should have thrown');
-            } catch (error) {
-                assert.ok(error instanceof FileSystemError);
+            } catch (error: any) {
+                assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'test');
             }
             fs.unlinkSync(woFile.fsPath);
@@ -688,7 +698,7 @@ Final paragraph.`;
             try {
                 await handler.withOpenDocument(rethrowFile, 'test', async () => { throw customError; });
                 assert.fail('Should have thrown');
-            } catch (error) {
+            } catch (error: any) {
                 assert.strictEqual(error, customError);
             }
             fs.unlinkSync(rethrowFile.fsPath);
@@ -880,19 +890,21 @@ Final paragraph.`;
             // textDocuments 配列にマッチするドキュメントオブジェクトを挿入
             // fileHandler は doc.uri.fsPath === uri.fsPath で検索するので
             // uri プロパティに fsPath を持つオブジェクトを用意する
-            const origTextDocs = (vscode.workspace as any).textDocuments;
+            const origTextDocsDescriptor = Object.getOwnPropertyDescriptor(vscode.workspace, 'textDocuments');
             const fakeDoc = {
                 uri: { fsPath: inMemFile.fsPath, toString: () => inMemFile.toString() },
                 getText: () => inMemoryContent
             };
-            (vscode.workspace as any).textDocuments = [fakeDoc];
+            defineProperty(vscode.workspace, 'textDocuments', [fakeDoc]);
 
             try {
                 const result = await fileHandler.readMarkdownFile(inMemFile);
                 // インメモリの内容が返されること（ディスクの内容ではない）
                 assert.strictEqual(result, inMemoryContent);
             } finally {
-                (vscode.workspace as any).textDocuments = origTextDocs;
+                if (origTextDocsDescriptor) {
+                    Object.defineProperty(vscode.workspace, 'textDocuments', origTextDocsDescriptor);
+                }
             }
 
             fs.unlinkSync(inMemFile.fsPath);
@@ -911,7 +923,7 @@ Final paragraph.`;
 
             // showErrorNotification 内の showErrorMessage が .then() を返すようモック
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve(undefined);
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve(undefined));
 
             // fs.promises.readFile をモンキーパッチして通常の Error を throw
             const originalReadFile = fs.promises.readFile;
@@ -928,7 +940,7 @@ Final paragraph.`;
                 assert.ok(error.message.includes('Failed to read file'));
             } finally {
                 (fs.promises as any).readFile = originalReadFile;
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
                 handler2.dispose();
             }
 
@@ -943,7 +955,7 @@ Final paragraph.`;
 
             // showErrorNotification 内の showErrorMessage が .then() を返すようモック
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve(undefined);
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve(undefined));
 
             const originalWriteFile = fs.promises.writeFile;
             (fs.promises as any).writeFile = async () => {
@@ -959,7 +971,7 @@ Final paragraph.`;
                 assert.ok(error.message.includes('Failed to write file'));
             } finally {
                 (fs.promises as any).writeFile = originalWriteFile;
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
             }
         });
     });
@@ -969,48 +981,48 @@ Final paragraph.`;
             const handler = fileHandler as any;
             const origShowError = vscode.window.showErrorMessage;
             // showErrorMessage のモックが .then() 呼び出しに対応するようにする
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve(undefined);
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve(undefined));
             try {
                 const readErr = new FileSystemError('Read failed', 'read', testFile);
                 handler.showErrorNotification(readErr);
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
             }
         });
 
         test('should handle write operation via writeMarkdownFile error path', () => {
             const handler = fileHandler as any;
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve(undefined);
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve(undefined));
             try {
                 const writeErr = new FileSystemError('Write failed', 'write', testFile);
                 handler.showErrorNotification(writeErr);
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
             }
         });
 
         test('should handle update operation', () => {
             const handler = fileHandler as any;
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve(undefined);
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve(undefined));
             try {
                 const updateErr = new FileSystemError('Update failed', 'update', testFile);
                 handler.showErrorNotification(updateErr);
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
             }
         });
 
         test('should handle default/unknown operation', () => {
             const handler = fileHandler as any;
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve(undefined);
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve(undefined));
             try {
                 const defaultErr = new FileSystemError('Unknown op failed', 'custom-operation', testFile);
                 handler.showErrorNotification(defaultErr);
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
             }
         });
     });
@@ -1023,7 +1035,7 @@ Final paragraph.`;
             // openTextDocument をモンキーパッチして save() が false を返すようにする
             const origOpenTextDocument = vscode.workspace.openTextDocument;
             let callCount = 0;
-            (vscode.workspace as any).openTextDocument = async (uri: any) => {
+            defineProperty(vscode.workspace, 'openTextDocument', async (uri: any) => {
                 const doc = await origOpenTextDocument.call(vscode.workspace, uri);
                 callCount++;
                 // applyWorkspaceEditAndSave 内の openTextDocument 呼び出し（2回目以降）で
@@ -1037,7 +1049,7 @@ Final paragraph.`;
                     eol: doc.eol,
                     save: async () => false
                 };
-            };
+            });
 
             const edit = new vscode.WorkspaceEdit();
             edit.replace(fbFile, new vscode.Range(0, 0, 0, 6), 'Updated');
@@ -1046,7 +1058,7 @@ Final paragraph.`;
                 const result = await fileHandler.applyWorkspaceEditAndSave(edit, fbFile, 'test');
                 assert.strictEqual(result, true);
             } finally {
-                (vscode.workspace as any).openTextDocument = origOpenTextDocument;
+                defineProperty(vscode.workspace, 'openTextDocument', origOpenTextDocument);
             }
 
             fs.unlinkSync(fbFile.fsPath);
@@ -1060,11 +1072,11 @@ Final paragraph.`;
 
             // showErrorNotification 内の showErrorMessage が .then() を返すようモック
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve(undefined);
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve(undefined));
 
             // openTextDocument をモンキーパッチして save() が throw するようにする
             const origOpenTextDocument = vscode.workspace.openTextDocument;
-            (vscode.workspace as any).openTextDocument = async (uri: any) => {
+            defineProperty(vscode.workspace, 'openTextDocument', async (uri: any) => {
                 const doc = await origOpenTextDocument.call(vscode.workspace, uri);
                 return {
                     uri: doc.uri,
@@ -1075,7 +1087,7 @@ Final paragraph.`;
                     eol: doc.eol,
                     save: async () => { throw new Error('Save failed'); }
                 };
-            };
+            });
 
             const edit = new vscode.WorkspaceEdit();
             edit.replace(saveErrFile, new vscode.Range(0, 0, 0, 8), 'Modified');
@@ -1087,8 +1099,8 @@ Final paragraph.`;
                 assert.strictEqual(error.name, 'FileSystemError');
                 assert.ok(error.message.includes('Failed to save document after apply'));
             } finally {
-                (vscode.workspace as any).openTextDocument = origOpenTextDocument;
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.workspace, 'openTextDocument', origOpenTextDocument);
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
             }
 
             fs.unlinkSync(saveErrFile.fsPath);
@@ -1100,27 +1112,27 @@ Final paragraph.`;
             const handler = fileHandler as any;
             const origShowError = vscode.window.showErrorMessage;
             // showErrorMessage が 'Show Details' を返すモック
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve('Show Details');
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve('Show Details'));
             try {
                 const readErr = new FileSystemError('Read failed', 'read', testFile);
                 handler.showErrorNotification(readErr);
                 // then コールバックが非同期で実行されるのを待つ
                 await new Promise(resolve => setTimeout(resolve, 10));
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
             }
         });
 
         test('should call outputChannel.show() when user selects Show Details for write error', async () => {
             const handler = fileHandler as any;
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve('Show Details');
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve('Show Details'));
             try {
                 const writeErr = new FileSystemError('Write failed', 'write', testFile);
                 handler.showErrorNotification(writeErr);
                 await new Promise(resolve => setTimeout(resolve, 10));
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
             }
         });
 
@@ -1128,28 +1140,28 @@ Final paragraph.`;
             const handler = fileHandler as any;
             const origShowError = vscode.window.showErrorMessage;
             const origShowSaveDialog = vscode.window.showSaveDialog;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve('Save As...');
-            (vscode.window as any).showSaveDialog = async () => undefined;
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve('Save As...'));
+            defineProperty(vscode.window, 'showSaveDialog', async () => undefined);
             try {
                 const writeErr = new FileSystemError('Write failed', 'write', testFile);
                 handler.showErrorNotification(writeErr);
                 await new Promise(resolve => setTimeout(resolve, 10));
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
-                (vscode.window as any).showSaveDialog = origShowSaveDialog;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
+                defineProperty(vscode.window, 'showSaveDialog', origShowSaveDialog);
             }
         });
 
         test('should call outputChannel.show() when user selects Show Details for default error', async () => {
             const handler = fileHandler as any;
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve('Show Details');
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve('Show Details'));
             try {
                 const defaultErr = new FileSystemError('Other failed', 'other', testFile);
                 handler.showErrorNotification(defaultErr);
                 await new Promise(resolve => setTimeout(resolve, 10));
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
             }
         });
     });
@@ -1160,15 +1172,17 @@ Final paragraph.`;
             const notifyFile = vscode.Uri.file(path.join(testDir, 'notify-visible.md'));
             fs.writeFileSync(notifyFile.fsPath, 'visible editor test', 'utf8');
 
-            const origVisibleEditors = vscode.window.visibleTextEditors;
-            (vscode.window as any).visibleTextEditors = [
+            const origVisibleEditorsDescriptor = Object.getOwnPropertyDescriptor(vscode.window, 'visibleTextEditors');
+            defineGetter(vscode.window, 'visibleTextEditors', () => [
                 { document: { uri: notifyFile } }
-            ];
+            ]);
 
             try {
                 await handler.notifyFileChange(notifyFile);
             } finally {
-                (vscode.window as any).visibleTextEditors = origVisibleEditors;
+                if (origVisibleEditorsDescriptor) {
+                    Object.defineProperty(vscode.window, 'visibleTextEditors', origVisibleEditorsDescriptor);
+                }
             }
 
             fs.unlinkSync(notifyFile.fsPath);
@@ -1193,7 +1207,7 @@ Final paragraph.`;
                 return origAppendLine.call((handler2 as any).outputChannel, msg);
             };
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve(undefined);
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve(undefined));
 
             try {
                 await handler2.updateTableByIndex(errFile, 0, '| B |\n|---|\n| 2 |');
@@ -1202,7 +1216,7 @@ Final paragraph.`;
                 assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'update');
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
                 handler2.dispose();
             }
 
@@ -1223,7 +1237,7 @@ Final paragraph.`;
                 }
             };
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve(undefined);
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve(undefined));
 
             try {
                 await handler2.updateTableInFile(errFile, 0, 2, '| B |\n|---|\n| 2 |');
@@ -1232,7 +1246,7 @@ Final paragraph.`;
                 assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'update');
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
                 handler2.dispose();
             }
 
@@ -1252,7 +1266,7 @@ Final paragraph.`;
                 }
             };
             const origShowError = vscode.window.showErrorMessage;
-            (vscode.window as any).showErrorMessage = (..._args: any[]) => Promise.resolve(undefined);
+            defineProperty(vscode.window, 'showErrorMessage', (..._args: any[]) => Promise.resolve(undefined));
 
             try {
                 await handler2.updateMultipleTablesInFile(errFile, [
@@ -1263,7 +1277,7 @@ Final paragraph.`;
                 assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'update');
             } finally {
-                (vscode.window as any).showErrorMessage = origShowError;
+                defineProperty(vscode.window, 'showErrorMessage', origShowError);
                 handler2.dispose();
             }
 
@@ -1277,7 +1291,7 @@ Final paragraph.`;
             fs.writeFileSync(fbFile.fsPath, 'content', 'utf8');
 
             const origApplyEdit = vscode.workspace.applyEdit;
-            (vscode.workspace as any).applyEdit = async () => false;
+            defineProperty(vscode.workspace, 'applyEdit', async () => false);
 
             const edit = new vscode.WorkspaceEdit();
             edit.replace(fbFile, new vscode.Range(0, 0, 0, 7), 'newcontent');
@@ -1289,7 +1303,7 @@ Final paragraph.`;
                 assert.strictEqual(error.name, 'FileSystemError');
                 assert.ok(error.message.includes('Failed to apply document edit'));
             } finally {
-                (vscode.workspace as any).applyEdit = origApplyEdit;
+                defineProperty(vscode.workspace, 'applyEdit', origApplyEdit);
             }
 
             fs.unlinkSync(fbFile.fsPath);

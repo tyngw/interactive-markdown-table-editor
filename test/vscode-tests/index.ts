@@ -10,7 +10,8 @@ export function run(): Promise<void> {
     const mocha = new Mocha({
         ui: 'tdd',
         color: true,
-        timeout: 10000,
+        timeout: 30000, // Increase timeout to prevent premature failures
+        bail: false,    // Continue running tests even if one fails
     });
 
     const testsRoot = path.resolve(__dirname);

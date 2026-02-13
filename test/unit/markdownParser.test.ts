@@ -1215,15 +1215,21 @@ suite('MarkdownParser Additional Coverage', () => {
             rows: [['1']] // カラム数不一致 → validateTableStructure で isValid: false
         });
         const ast = { tokens: [{ type: 'table_open' }], content: '| A | B |\n|---|---|\n| 1 |\n' };
-        const origWarn = console.warn;
+        const origWarnDescriptor = Object.getOwnPropertyDescriptor(console, 'warn');
         let warnCalled = false;
-        console.warn = (...args: any[]) => { warnCalled = true; };
+        Object.defineProperty(console, 'warn', {
+            value: (...args: any[]) => { warnCalled = true; },
+            writable: true,
+            configurable: true
+        });
         try {
             const tables = parser.findTablesInDocument(ast);
             assert.ok(warnCalled, 'console.warn should have been called for validation issues');
             assert.strictEqual(tables.length, 1, 'table with issues should still be included');
         } finally {
-            console.warn = origWarn;
+            if (origWarnDescriptor) {
+                Object.defineProperty(console, 'warn', origWarnDescriptor);
+            }
             (parser as any).parseTableToken = origParseTable;
         }
     });

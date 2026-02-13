@@ -534,8 +534,12 @@ suite('ExtensionCommunicationManager Test Suite', () => {
 
     test('syncInterval fires periodically', () => {
         const logs: string[] = [];
-        const origLog = console.log;
-        console.log = (...args: any[]) => { logs.push(args.join(' ')); };
+        const origLogDescriptor = Object.getOwnPropertyDescriptor(console, 'log');
+        Object.defineProperty(console, 'log', {
+            value: (...args: any[]) => { logs.push(args.join(' ')); },
+            writable: true,
+            configurable: true
+        });
 
         const shortManager = new ExtensionCommunicationManager(mockPanel, {
             heartbeatInterval: 60000,
@@ -545,7 +549,9 @@ suite('ExtensionCommunicationManager Test Suite', () => {
 
         return new Promise<void>(resolve => {
             setTimeout(() => {
-                console.log = origLog;
+                if (origLogDescriptor) {
+                    Object.defineProperty(console, 'log', origLogDescriptor);
+                }
                 const syncLogs = logs.filter(l => l.includes('Sync interval'));
                 assert.ok(syncLogs.length > 0, 'sync interval should have logged');
                 shortManager.dispose();
@@ -578,8 +584,12 @@ suite('ExtensionCommunicationManager Test Suite', () => {
 
     test('handleResponse for unknown request logs warning', async () => {
         const warns: string[] = [];
-        const origWarn = console.warn;
-        console.warn = (...args: any[]) => { warns.push(args.join(' ')); };
+        const origWarnDescriptor = Object.getOwnPropertyDescriptor(console, 'warn');
+        Object.defineProperty(console, 'warn', {
+            value: (...args: any[]) => { warns.push(args.join(' ')); },
+            writable: true,
+            configurable: true
+        });
 
         if (messageListener) {
             messageListener({
@@ -593,7 +603,9 @@ suite('ExtensionCommunicationManager Test Suite', () => {
         }
 
         await new Promise(resolve => setTimeout(resolve, 50));
-        console.warn = origWarn;
+        if (origWarnDescriptor) {
+            Object.defineProperty(console, 'warn', origWarnDescriptor);
+        }
 
         assert.ok(warns.some(w => w.includes('unknown request')));
     });
