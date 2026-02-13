@@ -28,8 +28,10 @@ jobs:
       - name: Install webview dependencies
         run: npm ci --prefix webview-react
 
-      - name: Run Unit tests with coverage
-        run: npm run test:coverage
+      - name: Run coverage analysis
+        run: |
+          npm run compile
+          npm run test:coverage
         continue-on-error: true
 
       - name: Run Webview tests with coverage
@@ -40,42 +42,12 @@ jobs:
 
       - name: Verify coverage files
         run: |
-          echo "=== Checking Extension coverage ==="
+          echo "=== Checking Unit tests coverage ==="
           if [ -d "coverage" ]; then
-            echo "✓ Extension coverage directory found"
+            echo "✓ Unit tests coverage directory found"
             ls -la coverage/ | head -20
           else
-            echo "✗ Extension coverage directory NOT found"
-          fi
-
-          echo ""
-          echo "=== Checking Webview coverage ==="
-          if [ -d "webview-react/coverage" ]; then
-            echo "✓ Webview coverage directory found"
-            ls -la webview-react/coverage/ | head -20
-          else
-            echo "✗ Webview coverage directory NOT found"
-          fi
-
-      - name: Generate coverage report
-        run: |
-          node .github/scripts/generate-coverage-report.js
-        continue-on-error: true
-
-      - name: Post coverage comment to PR
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const path = '.github/coverage-report.md';
-            
-            if (fs.existsSync(path)) {
-              const report = fs.readFileSync(path, 'utf8');
-              
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
+            echo "✗ Unit tests coverage directory NOT found"
                 repo: context.repo.repo,
                 body: report
               });
