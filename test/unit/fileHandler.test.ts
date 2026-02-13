@@ -487,14 +487,23 @@ Final paragraph.`;
 
     suite('writeMarkdownFile - error branches', () => {
         test('should wrap generic write error into FileSystemError', async () => {
-            // Try to write to a read-only path (/ on macOS is not writable)
-            const readOnlyFile = vscode.Uri.file('/proc/nonexistent/file.md');
+            // Create a directory with no write permissions and try to write a file in it
+            const readOnlyDir = path.join(testDir, 'readonly-dir');
+            const readOnlyFile = vscode.Uri.file(path.join(readOnlyDir, 'file.md'));
+            
+            // Create directory with no write permissions
+            fs.mkdirSync(readOnlyDir, { recursive: true });
+            fs.chmodSync(readOnlyDir, 0o555); // read-only directory
+            
             try {
                 await fileHandler.writeMarkdownFile(readOnlyFile, 'content');
                 assert.fail('Should have thrown');
             } catch (error: any) {
                 assert.strictEqual(error.name, 'FileSystemError');
                 assert.strictEqual(error.operation, 'write');
+            } finally {
+                // Restore permissions for cleanup
+                fs.chmodSync(readOnlyDir, 0o755);
             }
         });
 
