@@ -11,7 +11,10 @@ export function run(): Promise<void> {
     const isCI = process.env.CI === 'true' || process.env.CI === 'github';
     if (isCI) {
         console.log('[vscode-tests] Starting test runner, CI env detected');
+        console.log('[vscode-tests] Current process.pid:', process.pid);
         console.log('[vscode-tests] NODE_OPTIONS:', process.env.NODE_OPTIONS);
+        console.log('[vscode-tests] NODE_OPTIONS type:', typeof process.env.NODE_OPTIONS);
+        console.log('[vscode-tests] All NODE_* env vars:', Object.keys(process.env).filter(k => k.startsWith('NODE')).map(k => `${k}=${process.env[k]}`).join(', '));
     }
     
     // Try to load NYC instrumentation if running under coverage
@@ -21,6 +24,7 @@ export function run(): Promise<void> {
     
     if (isCI) {
         console.log('[vscode-tests] NODE_OPTIONS contains wrap.js:', hasnycInNodeOptions);
+        console.log('[vscode-tests] NODE_OPTIONS value (length=' + nodeOptions.length + '):', nodeOptions);
     }
     
     if (hasnycInNodeOptions) {

@@ -18,9 +18,13 @@ async function main() {
         );
         
         // Debug: Log coverage instrumentation status
-        if (process.env.CI === 'true' || process.env.CI === 'github') {
+        const isCI = process.env.CI === 'true' || process.env.CI === 'github';
+        if (isCI) {
+            console.log('[runTest] Current process.pid:', process.pid);
             console.log('[runTest] NYC coverage enabled:', isNYCEnabled);
             console.log('[runTest] NODE_OPTIONS:', process.env.NODE_OPTIONS);
+            console.log('[runTest] process.env.NODE_OPTIONS type:', typeof process.env.NODE_OPTIONS);
+            console.log('[runTest] All process.env keys with NODE:', Object.keys(process.env).filter(k => k.includes('NODE')));
         }
         
         // If NYC is enabled, we need to ensure the Electron extension-host
@@ -35,8 +39,8 @@ async function main() {
             }
             : undefined;
         
-        if (process.env.CI === 'true' || process.env.CI === 'github') {
-            console.log('[runTest] extensionTestsEnv:', extensionTestsEnv);
+        if (isCI) {
+            console.log('[runTest] extensionTestsEnv:', JSON.stringify(extensionTestsEnv, null, 2));
         }
 
         // Download VS Code, unzip it and run the integration test

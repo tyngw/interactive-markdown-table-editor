@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
 
 // Get the path to nyc's wrap.js
 const nycWrapPath = require.resolve('nyc/lib/wrap.js');
@@ -15,6 +15,8 @@ env.NODE_OPTIONS = `${env.NODE_OPTIONS || ''} --require ${nycWrapPath}`.trim();
 console.log('CI-COVERAGE-DEBUG: nycWrapPath=', nycWrapPath);
 console.log('CI-COVERAGE-DEBUG: NODE_OPTIONS (before exec)=', env.NODE_OPTIONS);
 console.log('CI-COVERAGE-DEBUG: spawning node to run out/test/runTest.js (pid=', process.pid, ')');
+console.log('CI-COVERAGE-DEBUG: env.CI=', env.CI);
+console.log('CI-COVERAGE-DEBUG: All NODE_* env vars:', Object.keys(env).filter(k => k.startsWith('NODE')).map(k => `${k}=${env[k]}`).join(', '));
 
 try {
     execSync('node ./out/test/runTest.js', {
