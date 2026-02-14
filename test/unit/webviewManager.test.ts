@@ -69,6 +69,42 @@ suite('WebviewManager Test Suite', () => {
         }
     });
 
+    // Clean up after each test to prevent resource leaks
+    teardown(() => {
+        if (webviewManager) {
+            try {
+                // Clean up all panels
+                const panels = (webviewManager as any).panels as Map<string, any>;
+                if (panels && panels.size > 0) {
+                    for (const [key, panel] of Array.from(panels.entries())) {
+                        try {
+                            if (panel && typeof panel.dispose === 'function') {
+                                panel.dispose();
+                            }
+                        } catch (e) {
+                            // Ignore disposal errors during cleanup
+                        }
+                    }
+                    panels.clear();
+                }
+                
+                // Clean up communication managers
+                const commManagers = (webviewManager as any).communicationManagers;
+                if (commManagers) {
+                    commManagers.clear();
+                }
+                
+                // Clean up health map
+                const healthMap = (webviewManager as any).connectionHealthMap;
+                if (healthMap) {
+                    healthMap.clear();
+                }
+            } catch (e) {
+                // Ignore cleanup errors
+            }
+        }
+    });
+
     test('should create singleton instance', () => {
         const instance1 = WebviewManager.getInstance(mockContext);
         const instance2 = WebviewManager.getInstance();
@@ -2671,13 +2707,25 @@ suite('WebviewManager Test Suite', () => {
         });
     });
 
-    // --- getSafeUriString: Uri.fromも失敗し、最終フォールバックも失敗 (JS L73-74) ---
-    // NOTE: このテストは削除されました。vscode.Uri API をモックするテストは
-    // フレームワークレベルの例外を引き起こし、他のテストに影響を与えるため危険です。
-    // 代わりに、以下のテストで最終フォールバック時に空文字が返るロジックは保証されています：
-    // 1. getSafeUriString Uri.file fallback success: フォールバック2の成功ケース
-    // 2. getSafeUriString all fallbacks fail empty path: フォールバック2がスキップされるケース
-    // これらの組み合わせにより、例外時の適切なハンドリングが確認されます。
+// --- getSafeUriString: Uri.fromも失敗し、最終フォールバックも失敗 (JS L73-74) ---
+    // Note: Directly mocking vscode.Uri APIs in unit tests can destabilize the test harness.
+    // We rely on other tests to cover fallback behavior. A conservative smoke test is
+    // provided below to ensure getSafeUriString handles a toString thrower without crashing.
+    suite('getSafeUriString final fallback smoke', () => {
+        test('does not throw when uri.toString throws', () => {
+            const fakeUri = {
+                scheme: 'file',
+                path: '/final/fail.md',
+                query: '',
+                fragment: '',
+                fsPath: '/final/fail.md',
+                toString: () => { throw new Error('toString failed'); }
+            } as any;
+
+            const result = (webviewManager as any).getSafeUriString(fakeUri);
+            assert.ok(typeof result === 'string');
+        });
+    });
 
     // --- initializeAsync 失敗パス (JS L129) ---
     suite('initializeAsync failure path', () => {
@@ -3313,6 +3361,34 @@ suite('WebviewManager Test Suite', () => {
                 executedCommands.push(cmd);
             };
 
+            // createWebviewPanel をモックして _triggerViewStateChange を持つパネルを返す
+            const originalCreate = vscode.window.createWebviewPanel;
+            const _viewStateListeners: Function[] = [];
+            const _disposeListeners: Function[] = [];
+            (vscode.window as any).createWebviewPanel = (_viewType: string, _title: string) => {
+                let _html = '';
+                return {
+                    webview: {
+                        get html() { return _html; },
+                        set html(v: string) { _html = v; },
+                        cspSource: 'test-csp',
+                        asWebviewUri: (uri: any) => uri,
+                        onDidReceiveMessage: () => ({ dispose: () => {} }),
+                        postMessage: async () => true
+                    },
+                    title: _title,
+                    visible: true,
+                    active: true,
+                    viewColumn: 2,
+                    iconPath: undefined,
+                    onDidDispose: (listener: Function) => { _disposeListeners.push(listener); return { dispose: () => {} }; },
+                    onDidChangeViewState: (listener: Function) => { _viewStateListeners.push(listener); return { dispose: () => {} }; },
+                    reveal: () => {},
+                    dispose: () => { for (const l of _disposeListeners) { try { l(); } catch(_){} } },
+                    _triggerViewStateChange: (e: any) => { for (const l of _viewStateListeners) { try { l(e); } catch(_){} } }
+                };
+            };
+
             const tableData: TableData = {
                 id: 'viewstate-active-test',
                 headers: ['A'],
@@ -3326,7 +3402,7 @@ suite('WebviewManager Test Suite', () => {
             // _triggerViewStateChange を使ってアクティブ状態をシミュレート
             if (typeof (panel as any)._triggerViewStateChange === 'function') {
                 (panel as any)._triggerViewStateChange({
-                    webviewPanel: panel
+                    webviewPanel: Object.assign(panel, { active: true, visible: true })
                 });
             }
 
@@ -3334,6 +3410,7 @@ suite('WebviewManager Test Suite', () => {
             assert.ok(executedCommands.some((c: string) => c.includes('requestTableData')));
 
             (vscode.commands as any).executeCommand = original;
+            (vscode.window as any).createWebviewPanel = originalCreate;
         });
 
         test('should log inactive state when panel becomes inactive', async () => {

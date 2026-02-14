@@ -19,5 +19,10 @@
   ],
   "report-dir": "./coverage",
   "temp-dir": "./.nyc_output",
-  "sourceMap": false
+  "sourceMap": false,
+  "produce-source-map": true,
+  "instrument": true,
+  "cache": false,
+  "report-on-exit": true,
+  "per-file": true
 }

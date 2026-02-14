@@ -109,11 +109,12 @@ function generateCoverageReport() {
   const averages = [];
 
   if (extensionCoverage) {
-    const { section, avgCoverage } = formatCoverageSection('Extension Coverage', extensionCoverage);
+    // extensionCoverage is actually from unit tests (test:coverage)
+    const { section, avgCoverage } = formatCoverageSection('Unit Tests Coverage', extensionCoverage);
     sections.push(section);
-    averages.push({ name: 'Extension', value: avgCoverage });
+    averages.push({ name: 'Unit Tests', value: avgCoverage });
   } else {
-    sections.push('\n### Extension Coverage\n❌ Coverage data not available\n\n');
+    sections.push('\n### Unit Tests Coverage\n❌ Coverage data not available\n\n');
   }
 
   if (webviewCoverage) {
@@ -126,8 +127,8 @@ function generateCoverageReport() {
 
   report += sections.join('\n');
 
-  if (averages.length === 2) {
-    const overall = (averages[0].value + averages[1].value) / 2;
+  if (averages.length >= 1) {
+    const overall = averages.reduce((sum, item) => sum + item.value, 0) / averages.length;
     const statusIcon = getStatusIcon(overall);
 
     report += '\n---\n\n';

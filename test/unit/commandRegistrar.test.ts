@@ -102,8 +102,92 @@ function createMockDeps(): { deps: CommandRegistrarDeps; registeredCommands: Map
     return { deps, registeredCommands, subscriptions };
 }
 
+/**
+ * vscode.workspace.fs のモック用ヘルパー
+ * VS Code v1.109+ では vscode.workspace.fs のメソッドが configurable: false のため、
+ * 個々のメソッドを Object.defineProperty で差し替えることができない。
+ * 代わりに vscode.workspace の fs プロパティ自体を差し替える。
+ */
+const originalFs = vscode.workspace.fs;
+const originalFsDescriptor = Object.getOwnPropertyDescriptor(vscode.workspace, 'fs');
+
+/**
+ * writeFile / readFile をモック関数に差し替えた fs オブジェクトを workspace にセットする
+ * Proxy のターゲットを空オブジェクトにして non-configurable プロパティの
+ * invariant check を回避し、指定メソッドのみインターセプトし他はオリジナルに委譲する
+ */
+function mockFs(overrides: { readFile?: Function; writeFile?: Function }): void {
+    const fakeFs = new Proxy({} as typeof originalFs, {
+        get(_target, prop, _receiver) {
+            if (prop === 'readFile' && overrides.readFile) {
+                return overrides.readFile;
+            }
+            if (prop === 'writeFile' && overrides.writeFile) {
+                return overrides.writeFile;
+            }
+            return (originalFs as any)[prop];
+        }
+    });
+    Object.defineProperty(vscode.workspace, 'fs', {
+        value: fakeFs,
+        writable: true,
+        configurable: true
+    });
+}
+
+/** モックした fs を元に戻す */
+function restoreFs(): void {
+    if (originalFsDescriptor) {
+        Object.defineProperty(vscode.workspace, 'fs', originalFsDescriptor);
+    } else {
+        Object.defineProperty(vscode.workspace, 'fs', {
+            value: originalFs,
+            writable: true,
+            configurable: true
+        });
+    }
+}
+
+/**
+ * vscode.workspace.openTextDocument のモック用ヘルパー
+ * テスト環境では存在しないファイル URI を使うと例外が発生するため、
+ * 偽のドキュメントを返すようにモックする。
+ */
+const originalOpenTextDocument = vscode.workspace.openTextDocument;
+const originalOpenTextDocumentDescriptor = Object.getOwnPropertyDescriptor(vscode.workspace, 'openTextDocument');
+
+/** openTextDocument を偽ドキュメントを返すモックに差し替える */
+function mockOpenTextDocument(content: string = '| Col1 |\n| --- |\n| val1 |'): void {
+    const lines = content.split('\n');
+    Object.defineProperty(vscode.workspace, 'openTextDocument', {
+        value: async () => ({
+            getText: () => content,
+            uri: vscode.Uri.parse('file:///test/sample.md'),
+            lineCount: lines.length,
+            lineAt: (n: number) => ({ text: lines[n] || '' })
+        }),
+        writable: true,
+        configurable: true
+    });
+}
+
+/** モックした openTextDocument を元に戻す */
+function restoreOpenTextDocument(): void {
+    if (originalOpenTextDocumentDescriptor) {
+        Object.defineProperty(vscode.workspace, 'openTextDocument', originalOpenTextDocumentDescriptor);
+    } else {
+        Object.defineProperty(vscode.workspace, 'openTextDocument', {
+            value: originalOpenTextDocument,
+            writable: true,
+            configurable: true
+        });
+    }
+}
+
 suite('CommandRegistrar Test Suite', () => {
     let origRegister: any;
+
+    const activeTextEditorDescriptor = Object.getOwnPropertyDescriptor(vscode.window, 'activeTextEditor');
 
     setup(() => {
         origRegister = vscode.commands.registerCommand;
@@ -111,6 +195,12 @@ suite('CommandRegistrar Test Suite', () => {
 
     teardown(() => {
         (vscode.commands as any).registerCommand = origRegister;
+        restoreFs();
+        restoreOpenTextDocument();
+        // activeTextEditor を復元
+        if (activeTextEditorDescriptor) {
+            Object.defineProperty(vscode.window, 'activeTextEditor', activeTextEditorDescriptor);
+        }
     });
 
     test('should construct without errors', () => {
@@ -160,6 +250,13 @@ suite('CommandRegistrar Test Suite', () => {
         let errorShown = false;
         const origShowError = vscode.window.showErrorMessage;
         (vscode.window as any).showErrorMessage = (msg: string) => { errorShown = true; };
+
+        // テスト環境では先に実行される vscode-tests で Markdown ファイルが開かれ、
+        // activeTextEditor が存在する可能性があるため、明示的に undefined にモックする
+        Object.defineProperty(vscode.window, 'activeTextEditor', {
+            get: () => undefined,
+            configurable: true
+        });
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -258,6 +355,9 @@ suite('CommandRegistrar Test Suite', () => {
 
     test('requestTableData with valid uri but no panel returns early', async () => {
         const { deps, registeredCommands } = createMockDeps();
+        // openTextDocument をモックして存在しないファイルの例外を回避
+        mockOpenTextDocument();
+
         const registrar = new CommandRegistrar(deps);
         registrar.register();
 
@@ -277,6 +377,9 @@ suite('CommandRegistrar Test Suite', () => {
         (deps.markdownParser as any).findTablesInDocument = () => [
             { headers: ['Col1'], rows: [['val1']], startLine: 0, endLine: 2 }
         ];
+
+        // openTextDocument をモックして存在しないファイルの例外を回避
+        mockOpenTextDocument();
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -1067,6 +1170,9 @@ suite('CommandRegistrar Test Suite', () => {
 
         (deps.markdownParser as any).findTablesInDocument = () => [];
 
+        // openTextDocument をモックして存在しないファイルの例外を回避
+        mockOpenTextDocument();
+
         const registrar = new CommandRegistrar(deps);
         registrar.register();
 
@@ -1328,8 +1434,7 @@ suite('CommandRegistrar Test Suite', () => {
         const saveUri = vscode.Uri.file('/tmp/test-export.csv');
         (vscode.window as any).showSaveDialog = async () => saveUri;
 
-        const origWriteFile = (vscode.workspace as any).fs.writeFile;
-        (vscode.workspace as any).fs.writeFile = async (uri: any) => { writtenUri = uri; };
+        mockFs({ writeFile: async (uri: any) => { writtenUri = uri; } });
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -1341,7 +1446,7 @@ suite('CommandRegistrar Test Suite', () => {
         assert.ok(writtenUri);
 
         (vscode.window as any).showSaveDialog = origShowSave;
-        (vscode.workspace as any).fs.writeFile = origWriteFile;
+        restoreFs();
     });
 
     test('exportCSV with sjis encoding', async () => {
@@ -1359,8 +1464,7 @@ suite('CommandRegistrar Test Suite', () => {
         (vscode.window as any).showSaveDialog = async () => vscode.Uri.file('/tmp/sjis.csv');
         const origShowWarning = vscode.window.showWarningMessage;
         // No replacements → no warning shown, just save
-        const origWriteFile = (vscode.workspace as any).fs.writeFile;
-        (vscode.workspace as any).fs.writeFile = async () => {};
+        mockFs({ writeFile: async () => {} });
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -1371,7 +1475,7 @@ suite('CommandRegistrar Test Suite', () => {
         assert.ok(successSent);
 
         (vscode.window as any).showSaveDialog = origShowSave;
-        (vscode.workspace as any).fs.writeFile = origWriteFile;
+        restoreFs();
     });
 
     test('exportCSV error is caught and sent to panel', async () => {
@@ -2050,6 +2154,9 @@ suite('CommandRegistrar Test Suite', () => {
             { headers: ['Col1'], rows: [['val1']], startLine: 0, endLine: 2 }
         ];
 
+        // openTextDocument をモックして存在しないファイルの例外を回避
+        mockOpenTextDocument();
+
         const registrar = new CommandRegistrar(deps);
         registrar.register();
         await registeredCommands.get('markdownTableEditor.internal.requestTableData')!({ uri: 'file:///test/sample.md', panelId: null, forceRefresh: false });
@@ -2068,6 +2175,9 @@ suite('CommandRegistrar Test Suite', () => {
         (deps.markdownParser as any).findTablesInDocument = () => [
             { headers: ['Col1'], rows: [['val1']], startLine: 0, endLine: 2 }
         ];
+
+        // openTextDocument をモックして存在しないファイルの例外を回避
+        mockOpenTextDocument();
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -2089,6 +2199,9 @@ suite('CommandRegistrar Test Suite', () => {
             { headers: ['Col1'], rows: [['val1']], startLine: 0, endLine: 2 }
         ];
 
+        // openTextDocument をモックして存在しないファイルの例外を回避
+        mockOpenTextDocument();
+
         const registrar = new CommandRegistrar(deps);
         registrar.register();
         await registeredCommands.get('markdownTableEditor.internal.requestTableData')!({ uri: 'file:///test/sample.md', panelId: null });
@@ -2105,6 +2218,9 @@ suite('CommandRegistrar Test Suite', () => {
         (deps.webviewManager as any).getPanel = () => mockPanel;
         (deps.webviewManager as any).sendError = () => { errorSent = true; };
         (deps.markdownParser as any).findTablesInDocument = () => [];
+
+        // openTextDocument をモックして存在しないファイルの例外を回避
+        mockOpenTextDocument();
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -2852,8 +2968,7 @@ suite('CommandRegistrar Test Suite', () => {
         (vscode.window as any).showSaveDialog = async () => vscode.Uri.file('/tmp/sjis.csv');
         const origShowWarning = vscode.window.showWarningMessage;
         (vscode.window as any).showWarningMessage = async () => 'csv.convertAndSave';
-        const origWriteFile = (vscode.workspace as any).fs.writeFile;
-        (vscode.workspace as any).fs.writeFile = async () => {};
+        mockFs({ writeFile: async () => {} });
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -2864,7 +2979,7 @@ suite('CommandRegistrar Test Suite', () => {
         (encodingNormalizer as any).normalizeForShiftJisExport = origNormalize;
         (vscode.window as any).showSaveDialog = origShowSave;
         (vscode.window as any).showWarningMessage = origShowWarning;
-        (vscode.workspace as any).fs.writeFile = origWriteFile;
+        restoreFs();
     });
 
     test('exportCSV sjis with replacements user selects doNotConvert', async () => {
@@ -2888,8 +3003,7 @@ suite('CommandRegistrar Test Suite', () => {
         (vscode.window as any).showSaveDialog = async () => vscode.Uri.file('/tmp/sjis-no.csv');
         const origShowWarning = vscode.window.showWarningMessage;
         (vscode.window as any).showWarningMessage = async () => 'csv.doNotConvert';
-        const origWriteFile = (vscode.workspace as any).fs.writeFile;
-        (vscode.workspace as any).fs.writeFile = async () => {};
+        mockFs({ writeFile: async () => {} });
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -2900,7 +3014,7 @@ suite('CommandRegistrar Test Suite', () => {
         (encodingNormalizer as any).normalizeForShiftJisExport = origNormalize;
         (vscode.window as any).showSaveDialog = origShowSave;
         (vscode.window as any).showWarningMessage = origShowWarning;
-        (vscode.workspace as any).fs.writeFile = origWriteFile;
+        restoreFs();
     });
 
     test('exportCSV sjis with replacements user cancels warning dialog', async () => {
@@ -2949,8 +3063,7 @@ suite('CommandRegistrar Test Suite', () => {
 
         const origShowSave = vscode.window.showSaveDialog;
         (vscode.window as any).showSaveDialog = async () => vscode.Uri.file('/tmp/sjis-direct.csv');
-        const origWriteFile = (vscode.workspace as any).fs.writeFile;
-        (vscode.workspace as any).fs.writeFile = async () => {};
+        mockFs({ writeFile: async () => {} });
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -2960,7 +3073,7 @@ suite('CommandRegistrar Test Suite', () => {
         assert.ok(successSent);
 
         (vscode.window as any).showSaveDialog = origShowSave;
-        (vscode.workspace as any).fs.writeFile = origWriteFile;
+        restoreFs();
     });
 
     test('exportCSV error sends error to panel', async () => {
@@ -3031,8 +3144,7 @@ suite('CommandRegistrar Test Suite', () => {
 
         const origShowOpen = vscode.window.showOpenDialog;
         (vscode.window as any).showOpenDialog = async () => [vscode.Uri.file('/tmp/import.csv')];
-        const origReadFile = (vscode.workspace as any).fs.readFile;
-        (vscode.workspace as any).fs.readFile = async () => Buffer.from('A,B\n1,2\n3,4');
+        mockFs({ readFile: async () => Buffer.from('A,B\n1,2\n3,4') });
         const origShowWarning = vscode.window.showWarningMessage;
         (vscode.window as any).showWarningMessage = async () => 'csv.yes';
 
@@ -3045,7 +3157,7 @@ suite('CommandRegistrar Test Suite', () => {
         assert.ok(successSent);
 
         (vscode.window as any).showOpenDialog = origShowOpen;
-        (vscode.workspace as any).fs.readFile = origReadFile;
+        restoreFs();
         (vscode.window as any).showWarningMessage = origShowWarning;
     });
 
@@ -3068,8 +3180,7 @@ suite('CommandRegistrar Test Suite', () => {
 
         const origShowOpen = vscode.window.showOpenDialog;
         (vscode.window as any).showOpenDialog = async () => [vscode.Uri.file('/tmp/import.csv')];
-        const origReadFile = (vscode.workspace as any).fs.readFile;
-        (vscode.workspace as any).fs.readFile = async () => Buffer.from('A\n1');
+        mockFs({ readFile: async () => Buffer.from('A\n1') });
         const origShowWarning = vscode.window.showWarningMessage;
         (vscode.window as any).showWarningMessage = async () => 'No';
 
@@ -3080,7 +3191,7 @@ suite('CommandRegistrar Test Suite', () => {
         assert.strictEqual(replaceContentsCalled, false);
 
         (vscode.window as any).showOpenDialog = origShowOpen;
-        (vscode.workspace as any).fs.readFile = origReadFile;
+        restoreFs();
         (vscode.window as any).showWarningMessage = origShowWarning;
     });
 
@@ -3103,8 +3214,7 @@ suite('CommandRegistrar Test Suite', () => {
 
         const origShowOpen = vscode.window.showOpenDialog;
         (vscode.window as any).showOpenDialog = async () => [vscode.Uri.file('/tmp/empty.csv')];
-        const origReadFile = (vscode.workspace as any).fs.readFile;
-        (vscode.workspace as any).fs.readFile = async () => Buffer.from('');
+        mockFs({ readFile: async () => Buffer.from('') });
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -3113,7 +3223,7 @@ suite('CommandRegistrar Test Suite', () => {
         assert.ok(errorSent);
 
         (vscode.window as any).showOpenDialog = origShowOpen;
-        (vscode.workspace as any).fs.readFile = origReadFile;
+        restoreFs();
     });
 
     // ============================================================
@@ -3338,9 +3448,8 @@ suite('CommandRegistrar Test Suite', () => {
 
         const origShowOpen = vscode.window.showOpenDialog;
         (vscode.window as any).showOpenDialog = async () => [vscode.Uri.file('/tmp/whitespace.csv')];
-        const origReadFile = (vscode.workspace as any).fs.readFile;
         // 空白のみのCSVデータを返す
-        (vscode.workspace as any).fs.readFile = async () => Buffer.from(',  ,\n  , ,  \n');
+        mockFs({ readFile: async () => Buffer.from(',  ,\n  , ,  \n') });
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -3349,7 +3458,7 @@ suite('CommandRegistrar Test Suite', () => {
         assert.ok(errorSent, 'csvNoValues error should be sent for all-whitespace CSV');
 
         (vscode.window as any).showOpenDialog = origShowOpen;
-        (vscode.workspace as any).fs.readFile = origReadFile;
+        restoreFs();
     });
 
     test('exportCSV SJIS encoding with iconv-lite failure falls back to UTF-8', async () => {
@@ -3368,8 +3477,7 @@ suite('CommandRegistrar Test Suite', () => {
 
         const origShowSave = vscode.window.showSaveDialog;
         (vscode.window as any).showSaveDialog = async () => vscode.Uri.file('/tmp/export-sjis.csv');
-        const origWriteFile = (vscode.workspace as any).fs.writeFile;
-        (vscode.workspace as any).fs.writeFile = async (_uri: any, buf: any) => { writtenBuffer = Buffer.from(buf); };
+        mockFs({ writeFile: async (_uri: any, buf: any) => { writtenBuffer = Buffer.from(buf); } });
 
         // iconv-lite の require を壊すのは難しいので、
         // 代わりに正常な SJIS エクスポートパスをテストする
@@ -3383,7 +3491,7 @@ suite('CommandRegistrar Test Suite', () => {
         assert.ok(successSent, 'Success message should be sent');
 
         (vscode.window as any).showSaveDialog = origShowSave;
-        (vscode.workspace as any).fs.writeFile = origWriteFile;
+        restoreFs();
     });
 
     test('forceFileSave no panel still saves and clears dirty', async () => {
@@ -3455,8 +3563,7 @@ suite('CommandRegistrar Test Suite', () => {
         const origShowSave = (vscode.window as any).showSaveDialog;
         (vscode.window as any).showSaveDialog = async () => vscode.Uri.file('/test/output.csv');
         // writeFileでバッファをキャプチャ
-        const origWriteFile = (vscode.workspace.fs as any).writeFile;
-        (vscode.workspace.fs as any).writeFile = async (_uri: any, data: Buffer) => { writtenBuffer = data; };
+        mockFs({ writeFile: async (_uri: any, data: Buffer) => { writtenBuffer = data; } });
         (deps.webviewManager as any).sendSuccess = () => {};
 
         const registrar = new CommandRegistrar(deps);
@@ -3465,13 +3572,13 @@ suite('CommandRegistrar Test Suite', () => {
         // テスト環境で iconv-lite がインストールされていれば成功するかもしれない
         // iconv-liteがある場合はsjisで書き込まれ、ない場合はUTF-8フォールバック
         // どちらにしてもエラーにならないことを確認
-        await registeredCommands.get('markdownTableEditor.internal.exportCSV')!({ 
-            uri: 'file:///test/sample.md', 
+        await registeredCommands.get('markdownTableEditor.internal.exportCSV')!({
+            uri: 'file:///test/sample.md',
             data: { csvContent: 'A\n1', encoding: 'sjis' }
         });
 
         (vscode.window as any).showSaveDialog = origShowSave;
-        (vscode.workspace.fs as any).writeFile = origWriteFile;
+        restoreFs();
         // iconv-liteがある場合はsjisで書き込まれ、ない場合はUTF-8フォールバック
         // どちらにしてもエラーにならない
         assert.ok(true);
@@ -3482,16 +3589,13 @@ suite('CommandRegistrar Test Suite', () => {
         const { deps, registeredCommands } = createMockDeps();
         let saveCount = 0;
         const mockPanel = { webview: { postMessage: () => {} } };
-        (deps.panelSessionManager as any).resolvePanelContext = () => ({
-            uri: vscode.Uri.file('/test/sample.md'),
-            uriString: 'file:///test/sample.md',
-            panel: mockPanel,
-            panelKey: 'k',
-            tableManagersMap: new Map([[0, {
-                serializeToMarkdown: () => '| A |',
-                getTableData: () => ({ headers: ['A'], rows: [['1']], metadata: { tableIndex: 0 } })
-            }]])
-        });
+        // handleForceFileSave は getManagers(panelId) を直接呼ぶため、
+        // resolvePanelContext ではなく getManagers をモックする必要がある
+        const mockManagersMap = new Map([[0, {
+            serializeToMarkdown: () => '| A |',
+            getTableData: () => ({ headers: ['A'], rows: [['1']], metadata: { tableIndex: 0 } })
+        }]]);
+        (deps.panelSessionManager as any).getManagers = () => mockManagersMap;
         (deps.webviewManager as any).getPanel = () => mockPanel;
         (deps.webviewManager as any).setDirtyState = () => {};
         (deps.webviewManager as any).sendOperationSuccess = () => {};
@@ -3519,12 +3623,15 @@ suite('CommandRegistrar Test Suite', () => {
 
         // activeTextEditor をモック
         const origActiveEditor = (vscode.window as any).activeTextEditor;
-        (vscode.window as any).activeTextEditor = {
-            document: {
-                uri: testUri,
-                languageId: 'markdown'
-            }
-        };
+        Object.defineProperty(vscode.window, 'activeTextEditor', {
+            get: () => ({
+                document: {
+                    uri: testUri,
+                    languageId: 'markdown'
+                }
+            }),
+            configurable: true
+        });
 
         (deps.markdownParser as any).findTablesInDocument = () => [
             { headers: ['Col1'], rows: [['val1']], startLine: 0, endLine: 2 }
@@ -3542,7 +3649,7 @@ suite('CommandRegistrar Test Suite', () => {
         await handler();
 
         assert.ok(panelCreated);
-        (vscode.window as any).activeTextEditor = origActiveEditor;
+        Object.defineProperty(vscode.window, "activeTextEditor", { get: () => (origActiveEditor), configurable: true });
     });
 
     // JS L185: activeEditor.document.uri が falsy の場合 throw
@@ -3552,12 +3659,15 @@ suite('CommandRegistrar Test Suite', () => {
 
         // activeTextEditor をモック（uriがnull）
         const origActiveEditor = (vscode.window as any).activeTextEditor;
-        (vscode.window as any).activeTextEditor = {
-            document: {
-                uri: null, // uri が falsy
-                languageId: 'markdown'
-            }
-        };
+        Object.defineProperty(vscode.window, 'activeTextEditor', {
+            get: () => ({
+                document: {
+                    uri: null, // uri が falsy
+                    languageId: 'markdown'
+                }
+            }),
+            configurable: true
+        });
 
         const origShowError = vscode.window.showErrorMessage;
         (vscode.window as any).showErrorMessage = () => { errorShown = true; };
@@ -3569,7 +3679,7 @@ suite('CommandRegistrar Test Suite', () => {
         await handler(); // uriなしで呼ぶ → activeEditor.document.uriがnull → throw
 
         assert.ok(errorShown);
-        (vscode.window as any).activeTextEditor = origActiveEditor;
+        Object.defineProperty(vscode.window, "activeTextEditor", { get: () => (origActiveEditor), configurable: true });
         (vscode.window as any).showErrorMessage = origShowError;
     });
 
@@ -3611,6 +3721,9 @@ suite('CommandRegistrar Test Suite', () => {
         (deps.markdownParser as any).findTablesInDocument = () => [
             { headers: ['Col1'], rows: [['val1']], startLine: 0, endLine: 2 }
         ];
+
+        // openTextDocument をモックして存在しないファイルの例外を回避
+        mockOpenTextDocument();
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -4102,8 +4215,7 @@ suite('CommandRegistrar Test Suite', () => {
 
         const origShowSave = vscode.window.showSaveDialog;
         (vscode.window as any).showSaveDialog = async () => vscode.Uri.file('/tmp/iconv-fail.csv');
-        const origWriteFile = (vscode.workspace as any).fs.writeFile;
-        (vscode.workspace as any).fs.writeFile = async (_uri: any, buf: any) => { writtenBuffer = Buffer.from(buf); };
+        mockFs({ writeFile: async (_uri: any, buf: any) => { writtenBuffer = Buffer.from(buf); } });
 
         // require('iconv-lite') が失敗するようにモック
         // Module._cache を操作して iconv-lite が例外を投げるようにする
@@ -4129,7 +4241,7 @@ suite('CommandRegistrar Test Suite', () => {
 
         Module._resolveFilename = origResolve;
         (vscode.window as any).showSaveDialog = origShowSave;
-        (vscode.workspace as any).fs.writeFile = origWriteFile;
+        restoreFs();
     });
 
     // ============================================================
@@ -4178,12 +4290,15 @@ suite('CommandRegistrar Test Suite', () => {
     test('openEditor: activeEditor fallback to document.uri (JS L182)', async () => {
         const { deps, registeredCommands } = createMockDeps();
         const origActiveEditor = (vscode.window as any).activeTextEditor;
-        (vscode.window as any).activeTextEditor = {
-            document: {
-                uri: vscode.Uri.file('/test/from-editor.md'),
-                languageId: 'markdown'
-            }
-        };
+        Object.defineProperty(vscode.window, 'activeTextEditor', {
+            get: () => ({
+                document: {
+                    uri: vscode.Uri.file('/test/from-editor.md'),
+                    languageId: 'markdown'
+                }
+            }),
+            configurable: true
+        });
         // readMarkdownFile がテーブルを含むmdを返す
         (deps.fileHandler as any).readMarkdownFile = async () => '| A |\n|---|\n| 1 |\n';
         (deps.markdownParser as any).parseDocument = (c: string) => ({ type: 'root', children: [], tokens: [] });
@@ -4196,20 +4311,20 @@ suite('CommandRegistrar Test Suite', () => {
         // uri 引数なしで呼ぶ → activeEditor.document.uri にフォールバック
         await registeredCommands.get('markdownTableEditor.openEditor')!(undefined);
 
-        (vscode.window as any).activeTextEditor = origActiveEditor;
+        Object.defineProperty(vscode.window, "activeTextEditor", { get: () => (origActiveEditor), configurable: true });
     });
 
     test('openEditor: targetUri null throws (JS L185)', async () => {
         const { deps, registeredCommands } = createMockDeps();
         const origActiveEditor = (vscode.window as any).activeTextEditor;
         // activeEditor があるがdocumentのlanguageIdがmarkdownでない→ showErrorMessage
-        (vscode.window as any).activeTextEditor = null;
+        Object.defineProperty(vscode.window, "activeTextEditor", { get: () => (null), configurable: true });
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
         // uri引数なし + activeEditor null → throw → catch → showErrorMessage
         await registeredCommands.get('markdownTableEditor.openEditor')!(undefined);
-        (vscode.window as any).activeTextEditor = origActiveEditor;
+        Object.defineProperty(vscode.window, "activeTextEditor", { get: () => (origActiveEditor), configurable: true });
     });
 
     // ============================================================

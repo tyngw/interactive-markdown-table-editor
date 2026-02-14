@@ -15,10 +15,12 @@ export interface InstalledThemeInfo {
 
 /**
  * インストール済みのカラーテーマ一覧を取得
+ * @param extensionList テスト用の拡張機能リスト（省略時は vscode.extensions.all を使用）
  */
-export function getInstalledColorThemes(): InstalledThemeInfo[] {
+export function getInstalledColorThemes(extensionList?: readonly vscode.Extension<any>[]): InstalledThemeInfo[] {
   const themes: InstalledThemeInfo[] = [];
-  for (const ext of vscode.extensions.all) {
+  const extensions = extensionList ?? vscode.extensions.all;
+  for (const ext of extensions) {
     const contributes = (ext.packageJSON && ext.packageJSON.contributes) || {};
     const themeEntries = contributes.themes as Array<any> | undefined;
     if (!Array.isArray(themeEntries)) {continue;}
@@ -42,11 +44,13 @@ export function getInstalledColorThemes(): InstalledThemeInfo[] {
 
 /**
  * 指定テーマIDからテーマファイルを探す
+ * @param extensionList テスト用の拡張機能リスト（省略時は vscode.extensions.all を使用）
  */
-export function findThemeById(themeId: string): InstalledThemeInfo | undefined {
+export function findThemeById(themeId: string, extensionList?: readonly vscode.Extension<any>[]): InstalledThemeInfo | undefined {
   const [extId, ...rest] = themeId.split(':');
   const relPath = rest.join(':');
-  for (const ext of vscode.extensions.all) {
+  const extensions = extensionList ?? vscode.extensions.all;
+  for (const ext of extensions) {
     if (ext.id !== extId) {continue;}
     const contributes = (ext.packageJSON && ext.packageJSON.contributes) || {};
     const themeEntries = contributes.themes as Array<any> | undefined;
@@ -152,8 +156,9 @@ async function buildCssFromThemeColors(themeUri: vscode.Uri): Promise<string> {
 
 /**
  * 選択テーマID（または inherit）からWebviewに注入するCSSを構築
+ * @param extensionList テスト用の拡張機能リスト（省略時は vscode.extensions.all を使用）
  */
-export async function buildThemeVariablesCss(selectedThemeId: string | undefined): Promise<ThemeVariables> {
+export async function buildThemeVariablesCss(selectedThemeId: string | undefined, extensionList?: readonly vscode.Extension<any>[]): Promise<ThemeVariables> {
   const choice = selectedThemeId ?? 'inherit';
   debug(`[themeUtils] buildThemeVariablesCss called with selectedThemeId: "${selectedThemeId}" (choice: "${choice}")`);
   
@@ -162,7 +167,7 @@ export async function buildThemeVariablesCss(selectedThemeId: string | undefined
     return { cssText: '' };
   }
   
-  const theme = findThemeById(choice);
+  const theme = findThemeById(choice, extensionList);
   if (!theme) {
     warn(`[themeUtils] Theme not found for id: ${choice}, returning empty cssText`);
     return { cssText: '' };

@@ -12,13 +12,11 @@ async function main() {
 
         // Minimal launch args for testing
         const launchArgs = ['--disable-extensions'];
-        const nycWrapPath = path.resolve(__dirname, '../../node_modules/nyc/lib/wrap.js');
-        const extensionTestsEnv = process.env.NYC_CONFIG
-            ? {
-                  NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require ${nycWrapPath}`]
-                      .filter(Boolean)
-                      .join(' ')
-              }
+        
+        // If NODE_OPTIONS contains NYC, pass the environment through
+        // This enables coverage measurement when running under NYC instrumentation
+        const extensionTestsEnv = process.env.NODE_OPTIONS && process.env.NODE_OPTIONS.includes('nyc')
+            ? { NODE_OPTIONS: process.env.NODE_OPTIONS }
             : undefined;
 
         // Download VS Code, unzip it and run the integration test
