@@ -41,6 +41,39 @@ suite('encodingNormalizer Test Suite', () => {
             assert.ok(typeof result.normalized === 'string');
             assert.ok(Array.isArray(result.replacements));
         });
+
+        test('should handle case when jaconv.normalize has length < 2', () => {
+            // jaconv.normalize.length が 2 未満の場合のカバレッジ
+            const jaconv = require('jaconv');
+            const origNormalize = jaconv.normalize;
+            
+            // Mock: normalize.length を 0 に設定
+            jaconv.normalize = function(content: any) {
+                return origNormalize(content);
+            };
+            Object.defineProperty(jaconv.normalize, 'length', { value: 0 });
+            
+            try {
+                const result = normalizeForShiftJisExport('Hello');
+                assert.ok(typeof result.normalized === 'string');
+            } finally {
+                jaconv.normalize = origNormalize;
+            }
+        });
+
+        test('should handle case when jaconv.normalize is not a function', () => {
+            // jaconv.normalize が function でない場合のカバレッジ
+            const jaconv = require('jaconv');
+            const origNormalize = jaconv.normalize;
+            
+            jaconv.normalize = null;
+            try {
+                const result = normalizeForShiftJisExport('Hello');
+                assert.strictEqual(result.normalized, 'Hello');
+            } finally {
+                jaconv.normalize = origNormalize;
+            }
+        });
     });
 
     suite('normalizeForImport', () => {
@@ -67,6 +100,38 @@ suite('encodingNormalizer Test Suite', () => {
             const result = normalizeForImport('');
             assert.strictEqual(result.normalized, '');
             assert.deepStrictEqual(result.replacements, []);
+        });
+
+        test('should handle case when jaconv.normalize has length < 2', () => {
+            // jaconv.normalize.length が 2 未満の場合のカバレッジ
+            const jaconv = require('jaconv');
+            const origNormalize = jaconv.normalize;
+            
+            jaconv.normalize = function(content: any) {
+                return origNormalize(content);
+            };
+            Object.defineProperty(jaconv.normalize, 'length', { value: 0 });
+            
+            try {
+                const result = normalizeForImport('Hello');
+                assert.ok(typeof result.normalized === 'string');
+            } finally {
+                jaconv.normalize = origNormalize;
+            }
+        });
+
+        test('should handle case when jaconv.normalize is not a function', () => {
+            // jaconv.normalize が function でない場合のカバレッジ
+            const jaconv = require('jaconv');
+            const origNormalize = jaconv.normalize;
+            
+            jaconv.normalize = null;
+            try {
+                const result = normalizeForImport('Hello');
+                assert.strictEqual(result.normalized, 'Hello');
+            } finally {
+                jaconv.normalize = origNormalize;
+            }
         });
     });
 });
