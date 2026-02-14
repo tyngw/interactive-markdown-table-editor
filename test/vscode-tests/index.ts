@@ -27,23 +27,82 @@ export function run(): Promise<void> {
         console.log('[vscode-tests] NODE_OPTIONS value (length=' + nodeOptions.length + '):', nodeOptions);
     }
     
+    // Try to load NYC instrumentation - check environment variables that NYC sets
+    // NYC sets NODE_PRELOAD_* variables when using node-preload
+    const nycPreloadKeys = Object.keys(process.env).filter(k => k.startsWith('NODE_PRELOAD_'));
+    if (isCI) {
+        console.log('[vscode-tests] NODE_PRELOAD_* env vars found:', nycPreloadKeys);
+    }
+    
+    let nycLoaded = false;
+    
+    // Attempt 1: Try loading from NODE_OPTIONS
     if (hasnycInNodeOptions) {
         try {
             const nycWrap = require.resolve('nyc/lib/wrap.js');
             if (isCI) {
-                console.log('[vscode-tests] Loading NYC from:', nycWrap);
+                console.log('[vscode-tests] Loading NYC from NODE_OPTIONS at:', nycWrap);
             }
             require(nycWrap);
+            nycLoaded = true;
             if (isCI) {
-                console.log('[vscode-tests] NYC instrumentation loaded successfully');
+                console.log('[vscode-tests] NYC instrumentation loaded successfully from NODE_OPTIONS');
             }
         } catch (err) {
             if (isCI) {
-                console.error('[vscode-tests] Failed to load NYC wrap:', err);
+                console.error('[vscode-tests] Failed to load NYC wrap from NODE_OPTIONS:', err);
             }
         }
-    } else if (isCI) {
-        console.log('[vscode-tests] NODE_OPTIONS does not include NYC');
+    }
+    
+    // Attempt 2: Try loading directly if NYC preload env vars are set
+    // This is the fallback when extensionTestsEnv NODE_OPTIONS is lost in Electron
+    if (!nycLoaded && nycPreloadKeys.length > 0) {
+        try {
+            if (isCI) {
+                console.log('[vscode-tests] Attempting direct NYC load (Attempt 2)');
+            }
+            const nycWrap = require.resolve('nyc/lib/wrap.js');
+            if (isCI) {
+                console.log('[vscode-tests] Loading NYC directly at:', nycWrap);
+            }
+            require(nycWrap);
+            nycLoaded = true;
+            if (isCI) {
+                console.log('[vscode-tests] NYC instrumentation loaded successfully (direct)');
+            }
+        } catch (err) {
+            if (isCI) {
+                console.error('[vscode-tests] Failed to load NYC wrap (direct):', err);
+            }
+        }
+    }
+    
+    // Attempt 3: If we're in CI but no NYC signals, try unconditionally
+    // This ensures we get coverage even if NYC setup is different
+    if (!nycLoaded && isCI) {
+        try {
+            if (isCI) {
+                console.log('[vscode-tests] Attempting unconditional NYC load (Attempt 3)');
+            }
+            const nycWrap = require.resolve('nyc/lib/wrap.js');
+            if (isCI) {
+                console.log('[vscode-tests] Loading NYC unconditionally at:', nycWrap);
+            }
+            require(nycWrap);
+            nycLoaded = true;
+            if (isCI) {
+                console.log('[vscode-tests] NYC instrumentation loaded successfully (unconditional)');
+            }
+        } catch (err) {
+            if (isCI) {
+                console.error('[vscode-tests] Failed to load NYC wrap (unconditional):', err);
+            }
+        }
+    }
+    
+    if (isCI) {
+        console.log('[vscode-tests] NYC loading complete, nycLoaded:', nycLoaded);
     }
     
     // Create the mocha test
