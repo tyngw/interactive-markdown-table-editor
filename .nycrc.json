@@ -24,5 +24,6 @@
   "instrument": true,
   "cache": false,
   "report-on-exit": true,
-  "per-file": true
+  "per-file": true,
+  "require": []
 }

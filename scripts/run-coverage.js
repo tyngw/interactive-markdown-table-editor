@@ -16,6 +16,7 @@ try {
         env: env
     });
 } catch (error) {
+    // preserve exit code and surface it for CI
     process.exit(error.status || 1);
 }
 
