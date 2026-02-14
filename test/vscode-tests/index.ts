@@ -15,12 +15,23 @@ export function run(): Promise<void> {
     }
     
     // Try to load NYC instrumentation if running under coverage
-    if (process.env.NODE_OPTIONS && process.env.NODE_OPTIONS.includes('wrap.js')) {
+    // First, check NODE_OPTIONS environment variable
+    const nodeOptions = process.env.NODE_OPTIONS || '';
+    const hasnycInNodeOptions = nodeOptions.includes('wrap.js') || nodeOptions.includes('nyc');
+    
+    if (isCI) {
+        console.log('[vscode-tests] NODE_OPTIONS contains wrap.js:', hasnycInNodeOptions);
+    }
+    
+    if (hasnycInNodeOptions) {
         try {
             const nycWrap = require.resolve('nyc/lib/wrap.js');
+            if (isCI) {
+                console.log('[vscode-tests] Loading NYC from:', nycWrap);
+            }
             require(nycWrap);
             if (isCI) {
-                console.log('[vscode-tests] NYC instrumentation loaded from require.resolve');
+                console.log('[vscode-tests] NYC instrumentation loaded successfully');
             }
         } catch (err) {
             if (isCI) {
@@ -28,7 +39,7 @@ export function run(): Promise<void> {
             }
         }
     } else if (isCI) {
-        console.log('[vscode-tests] NODE_OPTIONS does not include wrap.js');
+        console.log('[vscode-tests] NODE_OPTIONS does not include NYC');
     }
     
     // Create the mocha test
