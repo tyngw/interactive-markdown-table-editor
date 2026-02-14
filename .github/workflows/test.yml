@@ -29,7 +29,11 @@ jobs:
       - name: Install Playwright browsers and deps
         run: npx playwright install --with-deps
 
+      - name: Compile and build
+        run: npm run compile
+
       - name: Run tests (exclude Playwright)
         run: xvfb-run -a npm run test
         env:
           CI: true
+
