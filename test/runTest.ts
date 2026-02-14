@@ -5,31 +5,38 @@ import { runTests } from '@vscode/test-electron';
 
 async function main() {
     try {
-
-
         // The folder containing the Extension Manifest package.json
         const extensionDevelopmentPath = path.resolve(__dirname, '../');
 
         // Minimal launch args for testing
         const launchArgs = ['--disable-extensions'];
         
-        // If NODE_OPTIONS contains NYC, pass the environment through
-        // This enables coverage measurement when running under NYC instrumentation
-        // Also pass NODE_PATH if set to ensure module resolution works correctly
-        const extensionTestsEnv = process.env.NODE_OPTIONS && (
+        // Check if we're running under NYC coverage instrumentation
+        const isNYCEnabled = process.env.NODE_OPTIONS && (
             process.env.NODE_OPTIONS.includes('nyc') || 
             process.env.NODE_OPTIONS.includes('wrap.js')
-        )
-            ? { 
-                NODE_OPTIONS: process.env.NODE_OPTIONS,
-                ...(process.env.NODE_PATH && { NODE_PATH: process.env.NODE_PATH })
-            }
-            : undefined;
+        );
         
         // Debug: Log coverage instrumentation status
         if (process.env.CI === 'true' || process.env.CI === 'github') {
-            console.log('[runTest] Coverage enabled:', !!extensionTestsEnv);
+            console.log('[runTest] NYC coverage enabled:', isNYCEnabled);
             console.log('[runTest] NODE_OPTIONS:', process.env.NODE_OPTIONS);
+        }
+        
+        // If NYC is enabled, we need to ensure the Electron extension-host
+        // inherits the coverage instrumentation by keeping NODE_OPTIONS in the parent process
+        // The Electron process will spawn child processes that inherit from this process's environment
+        const extensionTestsEnv = isNYCEnabled
+            ? { 
+                NODE_OPTIONS: process.env.NODE_OPTIONS,
+                ...(process.env.NODE_PATH && { NODE_PATH: process.env.NODE_PATH }),
+                // Pass CI flag to extension tests so they know coverage is being measured
+                CI: process.env.CI,
+            }
+            : undefined;
+        
+        if (process.env.CI === 'true' || process.env.CI === 'github') {
+            console.log('[runTest] extensionTestsEnv:', extensionTestsEnv);
         }
 
         // Download VS Code, unzip it and run the integration test

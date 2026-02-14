@@ -5,6 +5,24 @@ import * as path from 'path';
 import Mocha from 'mocha';
 import { GlobSync } from 'glob';
 
+// NYC coverage instrumentation hook
+// If running under NYC coverage, require the NYC wrap module to instrument this process
+// This is necessary because Electron doesn't inherit NODE_OPTIONS from the parent process
+if (process.env.NODE_OPTIONS && process.env.NODE_OPTIONS.includes('wrap.js')) {
+    try {
+        // Try to require NYC wrap module - this will instrument the current process
+        const nycWrap = require.resolve('nyc/lib/wrap.js');
+        require(nycWrap);
+        if (process.env.CI === 'true' || process.env.CI === 'github') {
+            console.log('[vscode-tests] NYC instrumentation hook loaded');
+        }
+    } catch (err) {
+        if (process.env.CI === 'true' || process.env.CI === 'github') {
+            console.error('[vscode-tests] Failed to load NYC wrap:', err);
+        }
+    }
+}
+
 export function run(): Promise<void> {
     // Create the mocha test
     const mocha = new Mocha({
