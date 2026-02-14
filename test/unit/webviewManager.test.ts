@@ -952,14 +952,16 @@ suite('WebviewManager Test Suite', () => {
             // Source code does not await executeCommand, so must throw synchronously
             (vscode.commands as any).executeCommand = () => { throw new Error('test'); };
 
-            const mockPanel = {
-                webview: { postMessage: (msg: any) => { if (msg.command === 'error') { errorSent = true; } } }
-            } as any;
-            const uri = vscode.Uri.file('/test/move-err.md');
-            await (webviewManager as any).handleMoveRow({ fromIndex: 0, toIndex: 1, indices: [0] }, mockPanel, uri);
-            assert.strictEqual(errorSent, true);
-
-            (vscode.commands as any).executeCommand = original;
+            try {
+                const mockPanel = {
+                    webview: { postMessage: (msg: any) => { if (msg.command === 'error') { errorSent = true; } } }
+                } as any;
+                const uri = vscode.Uri.file('/test/move-err.md');
+                await (webviewManager as any).handleMoveRow({ fromIndex: 0, toIndex: 1, indices: [0] }, mockPanel, uri);
+                assert.strictEqual(errorSent, true);
+            } finally {
+                (vscode.commands as any).executeCommand = original;
+            }
         });
     });
 
@@ -994,14 +996,16 @@ suite('WebviewManager Test Suite', () => {
             // Source code does not await executeCommand, so must throw synchronously
             (vscode.commands as any).executeCommand = () => { throw new Error('col-err'); };
 
-            const mockPanel = {
-                webview: { postMessage: (msg: any) => { if (msg.command === 'error') { errorSent = true; } } }
-            } as any;
-            const uri = vscode.Uri.file('/test/move-col-err.md');
-            await (webviewManager as any).handleMoveColumn({ fromIndex: 0, toIndex: 1, indices: [0] }, mockPanel, uri);
-            assert.strictEqual(errorSent, true);
-
-            (vscode.commands as any).executeCommand = original;
+            try {
+                const mockPanel = {
+                    webview: { postMessage: (msg: any) => { if (msg.command === 'error') { errorSent = true; } } }
+                } as any;
+                const uri = vscode.Uri.file('/test/move-col-err.md');
+                await (webviewManager as any).handleMoveColumn({ fromIndex: 0, toIndex: 1, indices: [0] }, mockPanel, uri);
+                assert.strictEqual(errorSent, true);
+            } finally {
+                (vscode.commands as any).executeCommand = original;
+            }
         });
     });
 
@@ -2492,14 +2496,16 @@ suite('WebviewManager Test Suite', () => {
             const original = (vscode.commands as any).executeCommand;
             (vscode.commands as any).executeCommand = () => { throw new Error('test'); };
 
-            const mockPanel = {
-                webview: { postMessage: (msg: any) => { if (msg.command === 'error') { errorSent = true; } } }
-            } as any;
-            const uri = vscode.Uri.file('/test/move-err.md');
-            await (webviewManager as any).handleMoveRow({ fromIndex: 0, toIndex: 1, indices: [0] }, mockPanel, uri);
-            assert.strictEqual(errorSent, true);
-
-            (vscode.commands as any).executeCommand = original;
+            try {
+                const mockPanel = {
+                    webview: { postMessage: (msg: any) => { if (msg.command === 'error') { errorSent = true; } } }
+                } as any;
+                const uri = vscode.Uri.file('/test/move-err.md');
+                await (webviewManager as any).handleMoveRow({ fromIndex: 0, toIndex: 1, indices: [0] }, mockPanel, uri);
+                assert.strictEqual(errorSent, true);
+            } finally {
+                (vscode.commands as any).executeCommand = original;
+            }
         });
     });
 
@@ -2509,14 +2515,16 @@ suite('WebviewManager Test Suite', () => {
             const original = (vscode.commands as any).executeCommand;
             (vscode.commands as any).executeCommand = () => { throw new Error('col-err'); };
 
-            const mockPanel = {
-                webview: { postMessage: (msg: any) => { if (msg.command === 'error') { errorSent = true; } } }
-            } as any;
-            const uri = vscode.Uri.file('/test/move-col-err.md');
-            await (webviewManager as any).handleMoveColumn({ fromIndex: 0, toIndex: 1, indices: [0] }, mockPanel, uri);
-            assert.strictEqual(errorSent, true);
-
-            (vscode.commands as any).executeCommand = original;
+            try {
+                const mockPanel = {
+                    webview: { postMessage: (msg: any) => { if (msg.command === 'error') { errorSent = true; } } }
+                } as any;
+                const uri = vscode.Uri.file('/test/move-col-err.md');
+                await (webviewManager as any).handleMoveColumn({ fromIndex: 0, toIndex: 1, indices: [0] }, mockPanel, uri);
+                assert.strictEqual(errorSent, true);
+            } finally {
+                (vscode.commands as any).executeCommand = original;
+            }
         });
     });
 
@@ -2699,13 +2707,12 @@ suite('WebviewManager Test Suite', () => {
         });
     });
 
-    // --- getSafeUriString: Uri.fromも失敗し、最終フォールバックも失敗 (JS L73-74) ---
-    suite('getSafeUriString final fallback failure', () => {
-        test('should return empty when Uri.from throws and Uri.file also throws', () => {
-            // Note: vscode.Uri.from and vscode.Uri.file are read-only properties and cannot be overridden
-            // This test can only verify behavior with a mock Uri that throws on toString
-            // The actual Uri.from and Uri.file fallback logic cannot be tested by direct override
-            
+// --- getSafeUriString: Uri.fromも失敗し、最終フォールバックも失敗 (JS L73-74) ---
+    // Note: Directly mocking vscode.Uri APIs in unit tests can destabilize the test harness.
+    // We rely on other tests to cover fallback behavior. A conservative smoke test is
+    // provided below to ensure getSafeUriString handles a toString thrower without crashing.
+    suite('getSafeUriString final fallback smoke', () => {
+        test('does not throw when uri.toString throws', () => {
             const fakeUri = {
                 scheme: 'file',
                 path: '/final/fail.md',
@@ -2714,14 +2721,9 @@ suite('WebviewManager Test Suite', () => {
                 fsPath: '/final/fail.md',
                 toString: () => { throw new Error('toString failed'); }
             } as any;
-            
-            // This will enter the catch block but use the real Uri.from/Uri.file which should work
-            // So we expect a valid URI string, not empty string
+
             const result = (webviewManager as any).getSafeUriString(fakeUri);
-            
-            // The real fallback should reconstruct the URI successfully
             assert.ok(typeof result === 'string');
-            // Empty string is also acceptable if all fallbacks fail
         });
     });
 
@@ -3162,13 +3164,15 @@ suite('WebviewManager Test Suite', () => {
             const panelId = 'apply-state-fail';
             (webviewManager as any).panels.set(panelId, mockPanel);
 
-            const uri = vscode.Uri.file('/test/apply-fail.md');
-            await assert.rejects(async () => {
-                await (webviewManager as any).applyTableState('| A |\n|---|\n| 1 |', 0, uri, mockPanel);
-            }, /directFileUpdate failed/);
-
-            (vscode.commands as any).executeCommand = original;
-            (webviewManager as any).panels.delete(panelId);
+            try {
+                const uri = vscode.Uri.file('/test/apply-fail.md');
+                await assert.rejects(async () => {
+                    await (webviewManager as any).applyTableState('| A |\n|---|\n| 1 |', 0, uri, mockPanel);
+                }, /directFileUpdate failed/);
+            } finally {
+                (vscode.commands as any).executeCommand = original;
+                (webviewManager as any).panels.delete(panelId);
+            }
         });
     });
 
@@ -3264,18 +3268,20 @@ suite('WebviewManager Test Suite', () => {
                 throw new Error('Panel creation failed');
             };
 
-            const tableData: TableData = {
-                id: 'create-fail',
-                headers: ['A'],
-                rows: [['1']],
-                metadata: { sourceUri: testUri.toString(), startLine: 0, endLine: 2, tableIndex: 0, lastModified: new Date(), columnCount: 1, rowCount: 1, isValid: true, validationIssues: [] }
-            };
+            try {
+                const tableData: TableData = {
+                    id: 'create-fail',
+                    headers: ['A'],
+                    rows: [['1']],
+                    metadata: { sourceUri: testUri.toString(), startLine: 0, endLine: 2, tableIndex: 0, lastModified: new Date(), columnCount: 1, rowCount: 1, isValid: true, validationIssues: [] }
+                };
 
-            await assert.rejects(async () => {
-                await webviewManager.createTableEditorPanel(tableData, vscode.Uri.file('/test/create-fail.md'));
-            }, /Failed to create webview panel/);
-
-            (vscode.window as any).createWebviewPanel = originalCreate;
+                await assert.rejects(async () => {
+                    await webviewManager.createTableEditorPanel(tableData, vscode.Uri.file('/test/create-fail.md'));
+                }, /Failed to create webview panel/);
+            } finally {
+                (vscode.window as any).createWebviewPanel = originalCreate;
+            }
         });
     });
 
@@ -3729,20 +3735,22 @@ suite('WebviewManager Test Suite', () => {
             const origFrom = vscode.Uri.from;
             (vscode.Uri as any).from = () => { throw new Error('from failed'); };
 
-            const fakeUri = {
-                scheme: 'file',
-                path: '/uri-file-fallback/test.md',
-                query: '',
-                fragment: '',
-                fsPath: '/uri-file-fallback/test.md',
-                toString: () => { throw new Error('toString failed'); }
-            } as any;
-            const result = (webviewManager as any).getSafeUriString(fakeUri);
-            assert.ok(typeof result === 'string');
-            assert.ok(result.length > 0);
-            assert.ok(result.includes('uri-file-fallback'));
-
-            (vscode.Uri as any).from = origFrom;
+            try {
+                const fakeUri = {
+                    scheme: 'file',
+                    path: '/uri-file-fallback/test.md',
+                    query: '',
+                    fragment: '',
+                    fsPath: '/uri-file-fallback/test.md',
+                    toString: () => { throw new Error('toString failed'); }
+                } as any;
+                const result = (webviewManager as any).getSafeUriString(fakeUri);
+                assert.ok(typeof result === 'string');
+                assert.ok(result.length > 0);
+                assert.ok(result.includes('uri-file-fallback'));
+            } finally {
+                (vscode.Uri as any).from = origFrom;
+            }
         });
     });
 
@@ -3752,18 +3760,20 @@ suite('WebviewManager Test Suite', () => {
             const origFrom = vscode.Uri.from;
             (vscode.Uri as any).from = () => { throw new Error('from failed'); };
 
-            const fakeUri = {
-                scheme: 'file',
-                path: '', // 空パス
-                query: '',
-                fragment: '',
-                fsPath: '',
-                toString: () => { throw new Error('toString failed'); }
-            } as any;
-            const result = (webviewManager as any).getSafeUriString(fakeUri);
-            assert.strictEqual(result, '');
-
-            (vscode.Uri as any).from = origFrom;
+            try {
+                const fakeUri = {
+                    scheme: 'file',
+                    path: '', // 空パス
+                    query: '',
+                    fragment: '',
+                    fsPath: '',
+                    toString: () => { throw new Error('toString failed'); }
+                } as any;
+                const result = (webviewManager as any).getSafeUriString(fakeUri);
+                assert.strictEqual(result, '');
+            } finally {
+                (vscode.Uri as any).from = origFrom;
+            }
         });
     });
 
@@ -3780,12 +3790,14 @@ suite('WebviewManager Test Suite', () => {
             const panelId = 'parse-fail-panel';
             (webviewManager as any).panels.set(panelId, mockPanel);
 
-            assert.doesNotThrow(() => {
-                webviewManager.setDirtyState(panelId, true);
-            });
-
-            (vscode.Uri as any).parse = origParse;
-            (webviewManager as any).panels.delete(panelId);
+            try {
+                assert.doesNotThrow(() => {
+                    webviewManager.setDirtyState(panelId, true);
+                });
+            } finally {
+                (vscode.Uri as any).parse = origParse;
+                (webviewManager as any).panels.delete(panelId);
+            }
         });
     });
 
@@ -3885,16 +3897,19 @@ suite('WebviewManager Test Suite', () => {
             const origJoinPath = vscode.Uri.joinPath;
             (vscode.Uri as any).joinPath = () => { throw new Error('joinPath completely failed'); };
 
-            const mgr = WebviewManager.getInstance(mockContext);
-            await (mgr as any).initializationPromise;
+            try {
+                const mgr = WebviewManager.getInstance(mockContext);
+                await (mgr as any).initializationPromise;
 
-            // 外側のcatchに到達し、isInitializedがfalseのまま（L129がカバーされる）
-            assert.strictEqual((mgr as any).isInitialized, false);
+                // 外側のcatchに到達し、isInitializedがfalseのまま（L129がカバーされる）
+                assert.strictEqual((mgr as any).isInitialized, false);
 
-            (vscode.Uri as any).joinPath = origJoinPath;
-            mgr.dispose();
-            (WebviewManager as any).instance = null;
-            webviewManager = WebviewManager.getInstance(mockContext);
+                mgr.dispose();
+                (WebviewManager as any).instance = null;
+                webviewManager = WebviewManager.getInstance(mockContext);
+            } finally {
+                (vscode.Uri as any).joinPath = origJoinPath;
+            }
         });
     });
 

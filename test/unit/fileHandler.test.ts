@@ -616,6 +616,25 @@ Final paragraph.`;
     });
 
     suite('showErrorNotification', () => {
+        let origShowError: any;
+        let origShowSaveDialog: any;
+
+        setup(() => {
+            origShowError = vscode.window.showErrorMessage;
+            origShowSaveDialog = vscode.window.showSaveDialog;
+            (vscode.window as any).showErrorMessage = async (message: string, ...items: any[]) => {
+                return undefined;
+            };
+            (vscode.window as any).showSaveDialog = async (options: any) => {
+                return undefined;
+            };
+        });
+
+        teardown(() => {
+            (vscode.window as any).showErrorMessage = origShowError;
+            (vscode.window as any).showSaveDialog = origShowSaveDialog;
+        });
+
         test('should handle read operation error notification', () => {
             const handler = fileHandler as any;
             const error = new FileSystemError('Test read error', 'read', testFile);
@@ -904,7 +923,13 @@ Final paragraph.`;
                 uri: { fsPath: inMemFile.fsPath, toString: () => inMemFile.toString() },
                 getText: () => inMemoryContent
             };
-            defineProperty(vscode.workspace, 'textDocuments', [fakeDoc]);
+            // Replace workspace.textDocuments with a fake array in a way that works across Node/V8 versions
+            Object.defineProperty(vscode.workspace, 'textDocuments', {
+                value: [fakeDoc],
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
 
             try {
                 const result = await fileHandler.readMarkdownFile(inMemFile);
@@ -1181,6 +1206,7 @@ Final paragraph.`;
             const notifyFile = vscode.Uri.file(path.join(testDir, 'notify-visible.md'));
             fs.writeFileSync(notifyFile.fsPath, 'visible editor test', 'utf8');
 
+            // Replace visibleTextEditors with a controlled getter
             const origVisibleEditorsDescriptor = Object.getOwnPropertyDescriptor(vscode.window, 'visibleTextEditors');
             defineGetter(vscode.window, 'visibleTextEditors', () => [
                 { document: { uri: notifyFile } }

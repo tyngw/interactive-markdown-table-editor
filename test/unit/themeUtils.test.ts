@@ -77,6 +77,7 @@ suite('themeUtils Test Suite', () => {
     // Instead, we pass mock extension lists directly to the functions.
 
     teardown(() => {
+        // Restore workspace.fs to original descriptor if possible
         restoreFs();
     });
 

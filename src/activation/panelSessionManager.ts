@@ -28,6 +28,8 @@ export class PanelSessionManager {
             try {
                 const parsed = vscode.Uri.parse(value);
                 // URI が妥当か確認（スキーム＆パスの存在を判定）
+                // file:// スキームでパスが空（path が空文字列）の場合は無効とする
+                // ただし path='/' の場合は有効とする（file:// は path='/' として解釈される）
                 if (!parsed.scheme || (parsed.scheme === 'file' && !parsed.path) || value.includes('::')) {
                     return { uri: null, uriString: value };
                 }
@@ -40,6 +42,8 @@ export class PanelSessionManager {
         if (value instanceof vscode.Uri) {
             const uriString = value.toString();
             // URI インスタンスも妥当性チェック
+            // file:// スキームでパスが空（path が空文字列）の場合は無効とする
+            // ただし path='/' の場合は有効とする（file:// は path='/' として解釈される）
             if (!value.scheme || (value.scheme === 'file' && !value.path) || uriString.includes('::')) {
                 return { uri: null, uriString };
             }
@@ -50,6 +54,8 @@ export class PanelSessionManager {
             const uriString = (value as any).toString();
             try {
                 const parsed = vscode.Uri.parse(uriString);
+                // file:// スキームでパスが空（path が空文字列）の場合は無効とする
+                // ただし path='/' の場合は有効とする（file:// は path='/' として解釈される）
                 if (!parsed.scheme || (parsed.scheme === 'file' && !parsed.path) || uriString.includes('::')) {
                     return { uri: null, uriString };
                 }

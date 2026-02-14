@@ -32,7 +32,7 @@ suite('ThemeApplier Test Suite', () => {
         (vscode.window as any).showQuickPick = originalShowQuickPick;
         (vscode.workspace as any).getConfiguration = originalGetConfiguration;
         (vscode.window as any).showInformationMessage = originalShowInformationMessage;
-        // Note: vscode.extensions.all is read-only and cannot be restored
+        // vscode.extensions.all is read-only in many environments; no reliable restore available
     });
 
     test('should construct without errors', () => {
