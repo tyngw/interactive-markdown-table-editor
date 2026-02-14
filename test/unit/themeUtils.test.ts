@@ -39,7 +39,12 @@ suite('themeUtils Test Suite', () => {
     });
 
     teardown(() => {
-        (vscode.extensions as any).all = originalExtensionsAll;
+        Object.defineProperty(vscode.extensions, 'all', {
+            value: originalExtensionsAll,
+            writable: true,
+            enumerable: true,
+            configurable: true
+        });
         (vscode.workspace as any).fs.readFile = originalReadFile;
     });
 

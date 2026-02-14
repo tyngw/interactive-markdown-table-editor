@@ -34,7 +34,12 @@ suite('ThemeApplier Test Suite', () => {
         (vscode.window as any).showQuickPick = originalShowQuickPick;
         (vscode.workspace as any).getConfiguration = originalGetConfiguration;
         (vscode.window as any).showInformationMessage = originalShowInformationMessage;
-        (vscode.extensions as any).all = originalExtensionsAll;
+        Object.defineProperty(vscode.extensions, 'all', {
+            value: originalExtensionsAll,
+            writable: true,
+            enumerable: true,
+            configurable: true
+        });
     });
 
     test('should construct without errors', () => {

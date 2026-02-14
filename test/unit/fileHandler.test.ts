@@ -597,6 +597,25 @@ Final paragraph.`;
     });
 
     suite('showErrorNotification', () => {
+        let origShowError: any;
+        let origShowSaveDialog: any;
+
+        setup(() => {
+            origShowError = vscode.window.showErrorMessage;
+            origShowSaveDialog = vscode.window.showSaveDialog;
+            (vscode.window as any).showErrorMessage = async (message: string, ...items: any[]) => {
+                return undefined;
+            };
+            (vscode.window as any).showSaveDialog = async (options: any) => {
+                return undefined;
+            };
+        });
+
+        teardown(() => {
+            (vscode.window as any).showErrorMessage = origShowError;
+            (vscode.window as any).showSaveDialog = origShowSaveDialog;
+        });
+
         test('should handle read operation error notification', () => {
             const handler = fileHandler as any;
             const error = new FileSystemError('Test read error', 'read', testFile);
@@ -885,14 +904,24 @@ Final paragraph.`;
                 uri: { fsPath: inMemFile.fsPath, toString: () => inMemFile.toString() },
                 getText: () => inMemoryContent
             };
-            (vscode.workspace as any).textDocuments = [fakeDoc];
+            Object.defineProperty(vscode.workspace, 'textDocuments', {
+                value: [fakeDoc],
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
 
             try {
                 const result = await fileHandler.readMarkdownFile(inMemFile);
                 // インメモリの内容が返されること（ディスクの内容ではない）
                 assert.strictEqual(result, inMemoryContent);
             } finally {
-                (vscode.workspace as any).textDocuments = origTextDocs;
+                Object.defineProperty(vscode.workspace, 'textDocuments', {
+                    value: origTextDocs,
+                    writable: false,
+                    enumerable: true,
+                    configurable: true
+                });
             }
 
             fs.unlinkSync(inMemFile.fsPath);
@@ -1161,14 +1190,24 @@ Final paragraph.`;
             fs.writeFileSync(notifyFile.fsPath, 'visible editor test', 'utf8');
 
             const origVisibleEditors = vscode.window.visibleTextEditors;
-            (vscode.window as any).visibleTextEditors = [
-                { document: { uri: notifyFile } }
-            ];
+            Object.defineProperty(vscode.window, 'visibleTextEditors', {
+                value: [
+                    { document: { uri: notifyFile } }
+                ],
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
 
             try {
                 await handler.notifyFileChange(notifyFile);
             } finally {
-                (vscode.window as any).visibleTextEditors = origVisibleEditors;
+                Object.defineProperty(vscode.window, 'visibleTextEditors', {
+                    value: origVisibleEditors,
+                    writable: false,
+                    enumerable: true,
+                    configurable: true
+                });
             }
 
             fs.unlinkSync(notifyFile.fsPath);
