@@ -122,7 +122,7 @@
     "@vscode/l10n": "^0.0.18",
     "iconv-lite": "^0.6.3",
     "jaconv": "^1.1.2",
-    "markdown-it": "^13.0.1",
+    "markdown-it": "^14.1.1",
     "tslib": "^2.8.1"
   }
 }
