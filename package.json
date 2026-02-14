@@ -93,6 +93,7 @@
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
     "test": "npm run compile && npm run lint && node ./out/test/runTest.js",
+    "test:ci": "npm run compile && rm -rf ./.nyc_output && npx nyc --nycrc-path .nycrc.json node ./scripts/run-coverage.js",
     "test:coverage": "npm run compile && cp test/unit/register-vscode-mock.js out/test/unit/ && npx nyc --nycrc-path .nycrc.json mocha --require $PWD/test/unit/register-vscode-mock.js --ui tdd --recursive --timeout 10000 'out/test/unit/**/*.test.js' 'out/test/gitDiffUtils.test.js'",
     "test:unit": "npm run compile && node -e \"require('./out/test/unit/index.js').run().then(() => process.exit(0), err => { console.error(err); process.exit(1); })\"",
     "coverage:extension": "npm run compile && rm -rf ./.nyc_output && npx nyc --nycrc-path .nycrc.json node ./scripts/run-coverage.js",

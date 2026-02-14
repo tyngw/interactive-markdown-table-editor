@@ -15,9 +15,22 @@ async function main() {
         
         // If NODE_OPTIONS contains NYC, pass the environment through
         // This enables coverage measurement when running under NYC instrumentation
-        const extensionTestsEnv = process.env.NODE_OPTIONS && process.env.NODE_OPTIONS.includes('nyc')
-            ? { NODE_OPTIONS: process.env.NODE_OPTIONS }
+        // Also pass NODE_PATH if set to ensure module resolution works correctly
+        const extensionTestsEnv = process.env.NODE_OPTIONS && (
+            process.env.NODE_OPTIONS.includes('nyc') || 
+            process.env.NODE_OPTIONS.includes('wrap.js')
+        )
+            ? { 
+                NODE_OPTIONS: process.env.NODE_OPTIONS,
+                ...(process.env.NODE_PATH && { NODE_PATH: process.env.NODE_PATH })
+            }
             : undefined;
+        
+        // Debug: Log coverage instrumentation status
+        if (process.env.CI === 'true' || process.env.CI === 'github') {
+            console.log('[runTest] Coverage enabled:', !!extensionTestsEnv);
+            console.log('[runTest] NODE_OPTIONS:', process.env.NODE_OPTIONS);
+        }
 
         // Download VS Code, unzip it and run the integration test
         // Note: VS Code test runtime will be cached in ~/.vscode-test/ by default

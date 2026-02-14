@@ -36,8 +36,8 @@ jobs:
       - name: Install Playwright browsers and deps
         run: npx playwright install --with-deps
 
-      - name: Run tests (exclude Playwright)
-        run: xvfb-run -a npm run test
+      - name: Run tests with coverage (exclude Playwright)
+        run: xvfb-run -a npm run test:ci
         env:
           CI: true
 
