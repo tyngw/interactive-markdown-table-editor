@@ -5,39 +5,32 @@ import * as path from 'path';
 import Mocha from 'mocha';
 import { GlobSync } from 'glob';
 
-// Debug: Check what environment variables we have at the start
-const isCI = process.env.CI === 'true' || process.env.CI === 'github';
-if (isCI) {
-    console.log('[vscode-tests] Starting test runner');
-    console.log('[vscode-tests] NODE_OPTIONS:', process.env.NODE_OPTIONS);
-    console.log('[vscode-tests] NODE_PATH:', process.env.NODE_PATH);
-    console.log('[vscode-tests] CI:', process.env.CI);
-}
-
-// NYC coverage instrumentation hook
-// If running under NYC coverage, require the NYC wrap module to instrument this process
-// This is necessary because Electron doesn't inherit NODE_OPTIONS from the parent process
-if (process.env.NODE_OPTIONS && process.env.NODE_OPTIONS.includes('wrap.js')) {
-    try {
-        // Try to require NYC wrap module - this will instrument the current process
-        const nycWrap = require.resolve('nyc/lib/wrap.js');
-        require(nycWrap);
-        if (isCI) {
-            console.log('[vscode-tests] NYC instrumentation hook loaded');
-        }
-    }
-    catch (err) {
-        if (isCI) {
-            console.error('[vscode-tests] Failed to load NYC wrap:', err);
-        }
-    }
-} else {
-    if (isCI) {
-        console.log('[vscode-tests] NODE_OPTIONS does not contain wrap.js, skipping NYC hook');
-    }
-}
-
 export function run(): Promise<void> {
+    // NYC coverage instrumentation hook
+    // Load NYC's wrap module to instrument code coverage for the extension tests
+    const isCI = process.env.CI === 'true' || process.env.CI === 'github';
+    if (isCI) {
+        console.log('[vscode-tests] Starting test runner, CI env detected');
+        console.log('[vscode-tests] NODE_OPTIONS:', process.env.NODE_OPTIONS);
+    }
+    
+    // Try to load NYC instrumentation if running under coverage
+    if (process.env.NODE_OPTIONS && process.env.NODE_OPTIONS.includes('wrap.js')) {
+        try {
+            const nycWrap = require.resolve('nyc/lib/wrap.js');
+            require(nycWrap);
+            if (isCI) {
+                console.log('[vscode-tests] NYC instrumentation loaded from require.resolve');
+            }
+        } catch (err) {
+            if (isCI) {
+                console.error('[vscode-tests] Failed to load NYC wrap:', err);
+            }
+        }
+    } else if (isCI) {
+        console.log('[vscode-tests] NODE_OPTIONS does not include wrap.js');
+    }
+    
     // Create the mocha test
     const mocha = new Mocha({
         ui: 'tdd',
