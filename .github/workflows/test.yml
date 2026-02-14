@@ -7,8 +7,6 @@ permissions:
   issues: write
   pull-requests: write
 on:
-  push:
-    branches: [ main ]
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [ main ]
