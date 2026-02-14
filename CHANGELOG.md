@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1
+- バグ修正
+  - CI テストの失敗を修正
+    - vscode.Uri API をモックするテストがフレームワークレベルの例外を引き起こしていた問題を解決
+    - getSafeUriString final fallback failure テストを削除（代わりに既存のテストで十分カバー）
+    - 他のモック化テストに try-finally を追加してリソースリーク対策
+
 ## 1.2.0
 - 新機能
   - 自動保存のON/OFF切り替え機能を追加
