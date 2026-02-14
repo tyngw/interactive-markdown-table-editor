@@ -17,16 +17,6 @@ async function main() {
             process.env.NODE_OPTIONS.includes('wrap.js')
         );
         
-        // Debug: Log coverage instrumentation status
-        const isCI = process.env.CI === 'true' || process.env.CI === 'github';
-        if (isCI) {
-            console.log('[runTest] Current process.pid:', process.pid);
-            console.log('[runTest] NYC coverage enabled:', isNYCEnabled);
-            console.log('[runTest] NODE_OPTIONS:', process.env.NODE_OPTIONS);
-            console.log('[runTest] process.env.NODE_OPTIONS type:', typeof process.env.NODE_OPTIONS);
-            console.log('[runTest] All process.env keys with NODE:', Object.keys(process.env).filter(k => k.includes('NODE')));
-        }
-        
         // If NYC is enabled, we need to ensure the Electron extension-host
         // inherits the coverage instrumentation by keeping NODE_OPTIONS in the parent process
         // The Electron process will spawn child processes that inherit from this process's environment
@@ -38,10 +28,6 @@ async function main() {
                 CI: process.env.CI,
             }
             : undefined;
-        
-        if (isCI) {
-            console.log('[runTest] extensionTestsEnv:', JSON.stringify(extensionTestsEnv, null, 2));
-        }
 
         // Download VS Code, unzip it and run the integration test
         // Note: VS Code test runtime will be cached in ~/.vscode-test/ by default
@@ -59,3 +45,4 @@ async function main() {
 }
 
 main();
+
