@@ -59,5 +59,10 @@
   "config.theme.description": "Table Editor theme. Use 'inherit' to follow VS Code's current theme. Others use 'extensionId:path' format. You can select from 'Markdown Table Editor: Select Table Editor Theme' command.",
   "config.fontFamily.description": "Font family to use in the table editor. Leave empty to use VS Code's editor font setting.",
   "config.fontSize.description": "Font size (in pixels) to use in the table editor. Set to 0 to use VS Code's editor font size setting.",
-  "config.language.description": "Display language for the Markdown Table Editor. Requires reload to take effect."
+  "config.language.description": "Display language for the Markdown Table Editor. Requires reload to take effect.",
+  "noTables.createTablePrompt": "No tables found in this Markdown file. Would you like to create a new empty table?",
+  "noTables.createTable": "Create Table",
+  "noTables.enterColumns": "Enter the number of columns (1-100)",
+  "noTables.enterRows": "Enter the number of rows (1-1000)",
+  "noTables.invalidNumber": "Please enter a number between {0} and {1}"
 }

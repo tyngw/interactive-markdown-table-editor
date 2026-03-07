@@ -14,6 +14,7 @@ import { GitDiffCoordinator } from './gitDiffCoordinator';
 import { PanelSessionManager } from './panelSessionManager';
 import { TableEditRunner } from './tableEditRunner';
 import { ThemeApplier } from './themeApplier';
+import { LocalizationHelper } from '../localizationHelper';
 import { debug, warn } from '../logging';
 
 export interface CommandRegistrarDeps {
@@ -38,6 +39,7 @@ export class CommandRegistrar {
     private readonly gitDiffCoordinator: GitDiffCoordinator;
     private readonly tableEditRunner: TableEditRunner;
     private readonly themeApplier: ThemeApplier;
+    private readonly localizationHelper: LocalizationHelper;
 
     constructor(deps: CommandRegistrarDeps) {
         this.context = deps.context;
@@ -49,6 +51,7 @@ export class CommandRegistrar {
         this.gitDiffCoordinator = deps.gitDiffCoordinator;
         this.tableEditRunner = deps.tableEditRunner;
         this.themeApplier = deps.themeApplier;
+        this.localizationHelper = new LocalizationHelper(this.context.extensionPath);
     }
 
     public register(): void {
@@ -257,11 +260,23 @@ export class CommandRegistrar {
 
             const content = await this.fileHandler.readMarkdownFile(targetUri);
             const ast = this.markdownParser.parseDocument(content);
-            const tables = this.markdownParser.findTablesInDocument(ast);
+            let tables = this.markdownParser.findTablesInDocument(ast);
 
             if (tables.length === 0) {
-                vscode.window.showInformationMessage(vscode.l10n.t('error.noTables'));
-                return;
+                // テーブルが存在しない場合、空テーブルの作成をユーザーに確認する
+                const inserted = await this.promptAndInsertEmptyTable(targetUri);
+                if (!inserted) {
+                    return;
+                }
+                // 挿入後にファイルを再読み込みしてテーブルを再検出する
+                const updatedContent = await this.fileHandler.readMarkdownFile(targetUri);
+                const updatedAst = this.markdownParser.parseDocument(updatedContent);
+                tables = this.markdownParser.findTablesInDocument(updatedAst);
+                if (tables.length === 0) {
+                    // 通常は到達しないが、念のためフォールバック
+                    vscode.window.showErrorMessage(this.localizationHelper.t('error.noTables'));
+                    return;
+                }
             }
 
             const allTableData: TableData[] = [];
@@ -296,6 +311,96 @@ export class CommandRegistrar {
             console.error('Error opening table editor:', error);
             vscode.window.showErrorMessage(vscode.l10n.t(forceNewPanel ? 'error.openTableEditorNewPanel' : 'error.openTableEditor', error instanceof Error ? error.message : 'Unknown error'));
         }
+    }
+
+    /**
+     * テーブルが存在しない場合にユーザーへ確認し、空テーブルをファイルに挿入する。
+     * 挿入に成功した場合は true を返す。ユーザーがキャンセルした場合は false を返す。
+     */
+    private async promptAndInsertEmptyTable(targetUri: vscode.Uri): Promise<boolean> {
+        // 作成確認ダイアログを表示する
+        const createLabel = this.localizationHelper.t('noTables.createTable');
+        const answer = await vscode.window.showInformationMessage(
+            this.localizationHelper.t('noTables.createTablePrompt'),
+            createLabel
+        );
+        if (answer !== createLabel) {
+            return false;
+        }
+
+        // 列数を入力させる
+        const colsInput = await vscode.window.showInputBox({
+            prompt: this.localizationHelper.t('noTables.enterColumns'),
+            value: '3',
+            validateInput: (val) => {
+                const n = parseInt(val, 10);
+                if (isNaN(n) || n < 1 || n > 100) {
+                    return this.localizationHelper.t('noTables.invalidNumber', '1', '100');
+                }
+                return null;
+            }
+        });
+        if (colsInput === undefined) {
+            return false;
+        }
+
+        // 行数を入力させる
+        const rowsInput = await vscode.window.showInputBox({
+            prompt: this.localizationHelper.t('noTables.enterRows'),
+            value: '3',
+            validateInput: (val) => {
+                const n = parseInt(val, 10);
+                if (isNaN(n) || n < 1 || n > 1000) {
+                    return this.localizationHelper.t('noTables.invalidNumber', '1', '1000');
+                }
+                return null;
+            }
+        });
+        if (rowsInput === undefined) {
+            return false;
+        }
+
+        const cols = parseInt(colsInput, 10);
+        const rows = parseInt(rowsInput, 10);
+        const tableText = this.generateEmptyTable(cols, rows);
+
+        // アクティブエディターが対象ファイルであればカーソル位置に挿入する
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor && activeEditor.document.uri.toString() === targetUri.toString()) {
+            const cursorLine = activeEditor.selection.active.line;
+            const currentLine = activeEditor.document.lineAt(cursorLine);
+            // 空行ならその位置から、非空行なら次行の先頭に挿入する
+            const insertLine = currentLine.isEmptyOrWhitespace ? cursorLine : cursorLine + 1;
+            const insertPosition = new vscode.Position(insertLine, 0);
+
+            // 挿入前後に空行を付加してMarkdownとして適切に区切る
+            const prefix = insertLine > 0 ? '\n' : '';
+            const suffix = '\n';
+            await activeEditor.edit((editBuilder) => {
+                editBuilder.insert(insertPosition, prefix + tableText + suffix);
+            });
+            await activeEditor.document.save();
+        } else {
+            // アクティブエディターが異なる場合はファイル末尾に追記する
+            const existingContent = await this.fileHandler.readMarkdownFile(targetUri);
+            const separator = existingContent.length > 0 && !existingContent.endsWith('\n') ? '\n' : '';
+            const newContent = existingContent + separator + '\n' + tableText + '\n';
+            await this.fileHandler.writeMarkdownFile(targetUri, newContent);
+        }
+
+        return true;
+    }
+
+    /**
+     * 指定した列数・行数の空のMarkdownテーブル文字列を生成する。
+     * ヘッダーセルには "Col1", "Col2" ... のプレースホルダーを使用する。
+     */
+    private generateEmptyTable(cols: number, rows: number): string {
+        const headers = Array.from({ length: cols }, (_, i) => `Col${i + 1}`);
+        const headerRow = '| ' + headers.join(' | ') + ' |';
+        const separatorRow = '| ' + Array(cols).fill('---').join(' | ') + ' |';
+        const dataRows = Array.from({ length: rows }, () => '| ' + Array(cols).fill('   ').join(' | ') + ' |');
+        return [headerRow, separatorRow, ...dataRows].join('\n');
     }
 
     private async handleRequestTableData(data: any): Promise<void> {

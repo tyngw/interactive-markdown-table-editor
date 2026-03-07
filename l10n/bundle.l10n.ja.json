@@ -59,5 +59,10 @@
   "config.theme.description": "テーブルエディターのテーマ。'inherit' でVS Codeの現在のテーマに追従。その他は 'extensionId:path' 形式のテーマID。コマンド 'Markdown Table Editor: Select Table Editor Theme' から選択できます。",
   "config.fontFamily.description": "テーブルエディターで使用するフォントファミリー。空の場合はVS Codeのエディターフォント設定を使用します。",
   "config.fontSize.description": "テーブルエディターで使用するフォントサイズ（px）。0の場合はVS Codeのエディターフォントサイズ設定を使用します。",
-  "config.language.description": "Markdown Table Editorの表示言語。反映には再読み込みが必要です。"
+  "config.language.description": "Markdown Table Editorの表示言語。反映には再読み込みが必要です。",
+  "noTables.createTablePrompt": "このMarkdownファイルにテーブルが見つかりません。新しい空のテーブルを作成しますか？",
+  "noTables.createTable": "テーブルを作成",
+  "noTables.enterColumns": "列数を入力してください (1〜100)",
+  "noTables.enterRows": "行数を入力してください (1〜1000)",
+  "noTables.invalidNumber": "{0}〜{1}の数値を入力してください"
 }

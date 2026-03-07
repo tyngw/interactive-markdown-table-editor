@@ -268,11 +268,15 @@ suite('CommandRegistrar Test Suite', () => {
         (vscode.window as any).showErrorMessage = origShowError;
     });
 
-    test('openEditor command with URI and no tables shows info message', async () => {
+    test('openEditor command with URI and no tables - user dismisses dialog', async () => {
         const { deps, registeredCommands } = createMockDeps();
         let infoShown = false;
         const origShowInfo = vscode.window.showInformationMessage;
-        (vscode.window as any).showInformationMessage = (msg: string) => { infoShown = true; };
+        // ユーザーがダイアログを閉じた場合 (undefined を返す)
+        (vscode.window as any).showInformationMessage = async (_msg: string) => {
+            infoShown = true;
+            return undefined;
+        };
 
         const registrar = new CommandRegistrar(deps);
         registrar.register();
@@ -280,8 +284,311 @@ suite('CommandRegistrar Test Suite', () => {
         const handler = registeredCommands.get('markdownTableEditor.openEditor')!;
         await handler(vscode.Uri.file('/test/sample.md'));
 
-        assert.ok(infoShown);
+        assert.ok(infoShown, 'showInformationMessage が呼ばれること');
         (vscode.window as any).showInformationMessage = origShowInfo;
+    });
+
+    test('openEditor command with URI and no tables - user cancels column input', async () => {
+        const { deps, registeredCommands } = createMockDeps();
+        const origShowInfo = vscode.window.showInformationMessage;
+        const origShowInput = vscode.window.showInputBox;
+        // "テーブルを作成" ボタンを選択したが、列数入力をキャンセル
+        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        (vscode.window as any).showInputBox = async () => undefined;
+
+        let panelCreated = false;
+        (deps.webviewManager as any).createTableEditorPanel = async () => { panelCreated = true; return {}; };
+
+        const registrar = new CommandRegistrar(deps);
+        registrar.register();
+
+        const handler = registeredCommands.get('markdownTableEditor.openEditor')!;
+        await handler(vscode.Uri.file('/test/sample.md'));
+
+        assert.strictEqual(panelCreated, false, 'パネルは作成されないこと');
+        (vscode.window as any).showInformationMessage = origShowInfo;
+        (vscode.window as any).showInputBox = origShowInput;
+    });
+
+    test('openEditor command with URI and no tables - user cancels row input', async () => {
+        const { deps, registeredCommands } = createMockDeps();
+        const origShowInfo = vscode.window.showInformationMessage;
+        const origShowInput = vscode.window.showInputBox;
+        // 列数は入力するが行数でキャンセル
+        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        let inputCallCount = 0;
+        (vscode.window as any).showInputBox = async () => {
+            inputCallCount++;
+            return inputCallCount === 1 ? '3' : undefined;
+        };
+
+        let panelCreated = false;
+        (deps.webviewManager as any).createTableEditorPanel = async () => { panelCreated = true; return {}; };
+
+        const registrar = new CommandRegistrar(deps);
+        registrar.register();
+
+        const handler = registeredCommands.get('markdownTableEditor.openEditor')!;
+        await handler(vscode.Uri.file('/test/sample.md'));
+
+        assert.strictEqual(panelCreated, false, 'パネルは作成されないこと');
+        (vscode.window as any).showInformationMessage = origShowInfo;
+        (vscode.window as any).showInputBox = origShowInput;
+    });
+
+    test('openEditor command with URI and no tables - inserts via writeMarkdownFile (no active editor)', async () => {
+        const { deps, registeredCommands } = createMockDeps();
+        const origShowInfo = vscode.window.showInformationMessage;
+        const origShowInput = vscode.window.showInputBox;
+
+        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        let inputCallCount = 0;
+        (vscode.window as any).showInputBox = async () => {
+            inputCallCount++;
+            return inputCallCount === 1 ? '3' : '2';
+        };
+
+        // アクティブエディターを null にしてファイル書き込みパスを通す
+        Object.defineProperty(vscode.window, 'activeTextEditor', { value: null, configurable: true });
+
+        let writtenContent = '';
+        (deps.fileHandler as any).writeMarkdownFile = async (_uri: any, content: string) => {
+            writtenContent = content;
+        };
+
+        // 2回目の readMarkdownFile でテーブルありのコンテンツを返す
+        let readCount = 0;
+        (deps.fileHandler as any).readMarkdownFile = async () => {
+            readCount++;
+            if (readCount === 1) { return ''; }
+            return '| Col1 | Col2 | Col3 |\n| --- | --- | --- |\n|   |   |   |\n|   |   |   |';
+        };
+
+        // 2回目の findTablesInDocument でテーブルを返す
+        let findCount = 0;
+        (deps.markdownParser as any).findTablesInDocument = () => {
+            findCount++;
+            if (findCount === 1) { return []; }
+            return [{ headers: ['Col1', 'Col2', 'Col3'], rows: [['', '', ''], ['', '', '']], startLine: 0, endLine: 3 }];
+        };
+
+        let panelCreated = false;
+        (deps.webviewManager as any).createTableEditorPanel = async () => { panelCreated = true; return {}; };
+
+        const registrar = new CommandRegistrar(deps);
+        registrar.register();
+
+        const handler = registeredCommands.get('markdownTableEditor.openEditor')!;
+        await handler(vscode.Uri.file('/test/sample.md'));
+
+        assert.ok(writtenContent.includes('| Col1 | Col2 | Col3 |'), 'テーブルヘッダーが書き込まれること');
+        assert.ok(writtenContent.includes('| --- | --- | --- |'), 'セパレーターが書き込まれること');
+        assert.ok(panelCreated, 'テーブル挿入後にパネルが作成されること');
+
+        (vscode.window as any).showInformationMessage = origShowInfo;
+        (vscode.window as any).showInputBox = origShowInput;
+    });
+
+    test('openEditor command with URI and no tables - inserts via writeMarkdownFile (existing content without newline)', async () => {
+        const { deps, registeredCommands } = createMockDeps();
+        const origShowInfo = vscode.window.showInformationMessage;
+        const origShowInput = vscode.window.showInputBox;
+
+        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        let inputCallCount2 = 0;
+        (vscode.window as any).showInputBox = async () => {
+            inputCallCount2++;
+            return inputCallCount2 === 1 ? '2' : '1';
+        };
+
+        Object.defineProperty(vscode.window, 'activeTextEditor', { value: null, configurable: true });
+
+        let writtenContent = '';
+        (deps.fileHandler as any).writeMarkdownFile = async (_uri: any, content: string) => {
+            writtenContent = content;
+        };
+
+        // 1回目・2回目の readMarkdownFile で末尾改行なしのコンテンツを返し、
+        // 3回目（挿入後の再読み込み）でテーブルありのコンテンツを返す
+        let readCount2 = 0;
+        (deps.fileHandler as any).readMarkdownFile = async () => {
+            readCount2++;
+            if (readCount2 <= 2) { return 'existing content'; } // 末尾に改行なし
+            return '| Col1 | Col2 |\n| --- | --- |\n|   |   |';
+        };
+
+        let findCount2 = 0;
+        (deps.markdownParser as any).findTablesInDocument = () => {
+            findCount2++;
+            if (findCount2 === 1) { return []; }
+            return [{ headers: ['Col1', 'Col2'], rows: [['', '']], startLine: 0, endLine: 2 }];
+        };
+
+        (deps.webviewManager as any).createTableEditorPanel = async () => ({});
+
+        const registrar = new CommandRegistrar(deps);
+        registrar.register();
+
+        await registeredCommands.get('markdownTableEditor.openEditor')!(vscode.Uri.file('/test/sample.md'));
+
+        // 既存コンテンツの後に \n が付いてからテーブルが挿入されること
+        assert.ok(writtenContent.startsWith('existing content\n'), '既存コンテンツ後に改行が追加されること');
+
+        (vscode.window as any).showInformationMessage = origShowInfo;
+        (vscode.window as any).showInputBox = origShowInput;
+    });
+
+    test('openEditor command with URI and no tables - inserts via editor.edit when active editor matches (empty line at line 0)', async () => {
+        const { deps, registeredCommands } = createMockDeps();
+        const origShowInfo = vscode.window.showInformationMessage;
+        const origShowInput = vscode.window.showInputBox;
+
+        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        let inputCallCount3 = 0;
+        (vscode.window as any).showInputBox = async () => {
+            inputCallCount3++;
+            return inputCallCount3 === 1 ? '2' : '1';
+        };
+
+        // アクティブエディターが対象ファイルと一致。カーソルが行0の空行にある
+        let editCalled = false;
+        const targetUri3 = vscode.Uri.file('/test/sample.md');
+        const mockEditor3: any = {
+            document: {
+                uri: targetUri3,
+                save: async () => {},
+                lineAt: (_n: number) => ({ isEmptyOrWhitespace: true })
+            },
+            selection: { active: { line: 0 } },
+            edit: async (callback: (eb: any) => void) => {
+                const eb = { insert: (_pos: any, _text: string) => { editCalled = true; } };
+                callback(eb);
+                return true;
+            }
+        };
+        Object.defineProperty(vscode.window, 'activeTextEditor', { value: mockEditor3, configurable: true });
+
+        let readCount3 = 0;
+        (deps.fileHandler as any).readMarkdownFile = async () => {
+            readCount3++;
+            if (readCount3 === 1) { return ''; }
+            return '| Col1 | Col2 |\n| --- | --- |\n|   |   |';
+        };
+
+        let findCount3 = 0;
+        (deps.markdownParser as any).findTablesInDocument = () => {
+            findCount3++;
+            if (findCount3 === 1) { return []; }
+            return [{ headers: ['Col1', 'Col2'], rows: [['', '']], startLine: 0, endLine: 2 }];
+        };
+
+        let panelCreated3 = false;
+        (deps.webviewManager as any).createTableEditorPanel = async () => { panelCreated3 = true; return {}; };
+
+        const registrar = new CommandRegistrar(deps);
+        registrar.register();
+
+        const handler = registeredCommands.get('markdownTableEditor.openEditor')!;
+        await handler(targetUri3);
+
+        assert.ok(editCalled, 'editor.edit が呼ばれること');
+        assert.ok(panelCreated3, 'パネルが作成されること');
+
+        (vscode.window as any).showInformationMessage = origShowInfo;
+        (vscode.window as any).showInputBox = origShowInput;
+    });
+
+    test('openEditor command with URI and no tables - inserts via editor.edit (non-empty line at line 0, prefix added)', async () => {
+        const { deps, registeredCommands } = createMockDeps();
+        const origShowInfo = vscode.window.showInformationMessage;
+        const origShowInput = vscode.window.showInputBox;
+
+        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        let inputCallCount4 = 0;
+        (vscode.window as any).showInputBox = async () => {
+            inputCallCount4++;
+            return inputCallCount4 === 1 ? '2' : '1';
+        };
+
+        // カーソルが行0の非空行にある → insertLine = 1 → prefix = '\n'
+        let insertedText = '';
+        const targetUri4 = vscode.Uri.file('/test/sample.md');
+        const mockEditor4: any = {
+            document: {
+                uri: targetUri4,
+                save: async () => {},
+                lineAt: (_n: number) => ({ isEmptyOrWhitespace: false })
+            },
+            selection: { active: { line: 0 } },
+            edit: async (callback: (eb: any) => void) => {
+                const eb = { insert: (_pos: any, text: string) => { insertedText = text; } };
+                callback(eb);
+                return true;
+            }
+        };
+        Object.defineProperty(vscode.window, 'activeTextEditor', { value: mockEditor4, configurable: true });
+
+        let readCount4 = 0;
+        (deps.fileHandler as any).readMarkdownFile = async () => {
+            readCount4++;
+            if (readCount4 === 1) { return ''; }
+            return '| Col1 | Col2 |\n| --- | --- |\n|   |   |';
+        };
+
+        let findCount4 = 0;
+        (deps.markdownParser as any).findTablesInDocument = () => {
+            findCount4++;
+            if (findCount4 === 1) { return []; }
+            return [{ headers: ['Col1', 'Col2'], rows: [['', '']], startLine: 0, endLine: 2 }];
+        };
+
+        (deps.webviewManager as any).createTableEditorPanel = async () => ({});
+
+        const registrar = new CommandRegistrar(deps);
+        registrar.register();
+
+        await registeredCommands.get('markdownTableEditor.openEditor')!(targetUri4);
+
+        // 非空行のため挿入テキストは '\n' で始まること
+        assert.ok(insertedText.startsWith('\n'), '非空行への挿入は改行で始まること');
+
+        (vscode.window as any).showInformationMessage = origShowInfo;
+        (vscode.window as any).showInputBox = origShowInput;
+    });
+
+    test('openEditor command with URI and no tables - re-read still empty shows error', async () => {
+        const { deps, registeredCommands } = createMockDeps();
+        const origShowInfo = vscode.window.showInformationMessage;
+        const origShowInput = vscode.window.showInputBox;
+        const origShowError = vscode.window.showErrorMessage;
+
+        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        let inputCallCount5 = 0;
+        (vscode.window as any).showInputBox = async () => {
+            inputCallCount5++;
+            return inputCallCount5 === 1 ? '2' : '1';
+        };
+
+        Object.defineProperty(vscode.window, 'activeTextEditor', { value: null, configurable: true });
+        (deps.fileHandler as any).writeMarkdownFile = async () => {};
+        (deps.fileHandler as any).readMarkdownFile = async () => '';
+
+        // 常にテーブルなしを返すことで再検出後も空になるケースを再現
+        (deps.markdownParser as any).findTablesInDocument = () => [];
+
+        let errorShown5 = false;
+        (vscode.window as any).showErrorMessage = (msg: string) => { errorShown5 = true; };
+
+        const registrar = new CommandRegistrar(deps);
+        registrar.register();
+
+        await registeredCommands.get('markdownTableEditor.openEditor')!(vscode.Uri.file('/test/sample.md'));
+
+        assert.ok(errorShown5, '再検出後もテーブルが空の場合はエラーメッセージが表示されること');
+
+        (vscode.window as any).showInformationMessage = origShowInfo;
+        (vscode.window as any).showInputBox = origShowInput;
+        (vscode.window as any).showErrorMessage = origShowError;
     });
 
     test('openEditor command with tables creates panel', async () => {
