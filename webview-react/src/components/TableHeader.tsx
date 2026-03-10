@@ -178,7 +178,7 @@ const TableHeader: React.FC<TableHeaderProps> = ({
     const minWidth = 80
     const maxWidth = 400
     // ヘッダーとセル内容の最大文字数を比較
-    const headerLength = headers[col]?.length || 0
+    const headerLength = headers[col].length
     const contentLength = getColumnMaxContentLength(rows, col)
     const maxLength = Math.max(headerLength, contentLength)
     const estimatedWidth = Math.min(maxWidth, Math.max(minWidth, maxLength * 8 + 40))

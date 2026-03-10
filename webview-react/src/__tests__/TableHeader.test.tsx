@@ -18,6 +18,11 @@ import { isImeConfirmingEnter } from '../utils/imeUtils'
 
 describe('TableHeader', () => {
   const defaultHeaders = ['Name', 'Age', 'City']
+  const defaultRows: string[][] = [
+    ['Alice', '30', 'Tokyo'],
+    ['Bob', '25', 'Osaka'],
+    ['Charlie', '35', 'Kyoto'],
+  ]
   const defaultColumnWidths: ColumnWidths = {}
   const defaultSortState: SortState = { column: -1, direction: 'none' }
 
@@ -34,6 +39,7 @@ describe('TableHeader', () => {
 
   const defaultProps = {
     headers: defaultHeaders,
+    rows: defaultRows,
     columnWidths: defaultColumnWidths,
     sortState: defaultSortState,
     onHeaderUpdate: mockOnHeaderUpdate,
@@ -307,7 +313,7 @@ describe('TableHeader', () => {
 
       // リサイズ中（document上のmousemove）
       act(() => {
-        fireEvent.mouseMove(document, { clientX: 150 })
+        fireEvent.mouseMove(document, { clientX: 150, buttons: 1 })
       })
       expect(mockOnColumnResize).toHaveBeenCalledWith(0, 200) // 150 + (150-100)
 
@@ -322,7 +328,7 @@ describe('TableHeader', () => {
       const handles = document.querySelectorAll('.resize-handle')
       fireEvent.mouseDown(handles[0], { clientX: 200 })
       act(() => {
-        fireEvent.mouseMove(document, { clientX: 10 }) // 大きく左に移動
+        fireEvent.mouseMove(document, { clientX: 10, buttons: 1 }) // 大きく左に移動
       })
       // 最小幅は50
       expect(mockOnColumnResize).toHaveBeenCalledWith(0, 50)
@@ -337,12 +343,25 @@ describe('TableHeader', () => {
       // handleColumnHeaderClickのresizeハンドルチェックにより無視される
     })
 
+    it('パネル外でマウスボタンが離された場合、リサイズが終了される', () => {
+      renderInTable()
+      const handles = document.querySelectorAll('.resize-handle')
+      fireEvent.mouseDown(handles[0], { clientX: 100 })
+      // パネル外でマウスボタンが離される (buttons = 0)
+      act(() => {
+        fireEvent.mouseMove(document, { clientX: 150, buttons: 0 })
+      })
+      // リサイズコールバックは呼ばれない（resizing状態がクリアされる）
+      expect(mockOnColumnResize).not.toHaveBeenCalled()
+    })
+
     it('リサイズハンドルのダブルクリックでauto-fitが実行される', () => {
       renderInTable()
       const handles = document.querySelectorAll('.resize-handle')
       fireEvent.doubleClick(handles[0])
-      // auto-fit: Math.min(400, Math.max(80, 'Name'.length * 8 + 40)) = Math.min(400, Math.max(80, 72)) = 80
-      expect(mockOnColumnResize).toHaveBeenCalledWith(0, 80)
+      // auto-fit: maxLength = max('Name'=4, 'Alice'=5, 'Bob'=3, 'Charlie'=7) = 7
+      // Math.min(400, Math.max(80, 7 * 8 + 40)) = Math.min(400, Math.max(80, 96)) = 96
+      expect(mockOnColumnResize).toHaveBeenCalledWith(0, 96)
     })
 
     it('カスタム列幅が設定されている場合にリサイズが正しく動作する', () => {
@@ -350,7 +369,7 @@ describe('TableHeader', () => {
       const handles = document.querySelectorAll('.resize-handle')
       fireEvent.mouseDown(handles[0], { clientX: 100 })
       act(() => {
-        fireEvent.mouseMove(document, { clientX: 150 })
+        fireEvent.mouseMove(document, { clientX: 150, buttons: 1 })
       })
       // startWidth=200, delta=50 → newWidth=250
       expect(mockOnColumnResize).toHaveBeenCalledWith(0, 250)
@@ -703,6 +722,10 @@ describe('TableHeader', () => {
       }
       renderInTable({
         headers: ['Name', 'Age'],
+        rows: [
+          ['Alice', '30'],
+          ['Bob', '25'],
+        ],
         columnDiff: simpleDiff,
       })
       const handles = document.querySelectorAll('.resize-handle')
@@ -714,7 +737,7 @@ describe('TableHeader', () => {
       expect(mockOnColumnResize).toHaveBeenCalled()
       // mouseDown（リサイズ開始）
       fireEvent.mouseDown(handles[0], { clientX: 100 })
-      act(() => { fireEvent.mouseMove(document, { clientX: 150 }) })
+      act(() => { fireEvent.mouseMove(document, { clientX: 150, buttons: 1 }) })
       expect(mockOnColumnResize).toHaveBeenCalledTimes(2)
       act(() => { fireEvent.mouseUp(document) })
     })
@@ -987,7 +1010,7 @@ describe('TableHeader', () => {
       unmount()
       // mousemoveしてもエラーにならない
       act(() => {
-        fireEvent.mouseMove(document, { clientX: 200 })
+        fireEvent.mouseMove(document, { clientX: 200, buttons: 1 })
       })
     })
   })

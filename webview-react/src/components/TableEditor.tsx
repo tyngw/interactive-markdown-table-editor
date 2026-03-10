@@ -167,7 +167,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
     autoFitAllColumnsRef.current = true
 
     for (let col = 0; col < displayedTableData.headers.length; col++) {
-      const headerLength = displayedTableData.headers[col]?.length || 0
+      const headerLength = displayedTableData.headers[col].length
       const contentLength = getColumnMaxContentLength(displayedTableData.rows, col)
       const maxLength = Math.max(headerLength, contentLength)
       const minWidth = 80

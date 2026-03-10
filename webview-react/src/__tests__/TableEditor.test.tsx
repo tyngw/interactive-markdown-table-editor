@@ -317,6 +317,21 @@ describe('TableEditor (mocked hooks)', () => {
     expect(screen.getByText('Alice')).toBeInTheDocument()
   })
 
+  test('handles empty headers gracefully', () => {
+    // Setup the editor to have no headers in initial state
+    useTableEditorReturn = {
+      ...useTableEditorReturn,
+      tableData: { headers: [], rows: [] },
+      modelTableData: { headers: [], rows: [] }
+    }
+    renderEditor({
+      tableData: { headers: [], rows: [] }
+    })
+    // Should render without errors even with empty table
+    const table = document.querySelector('table')
+    expect(table).toBeInTheDocument()
+  })
+
   test('renders with external sortState and headerConfig', () => {
     const setSortState = jest.fn()
     const setHeaderConfig = jest.fn()
