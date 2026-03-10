@@ -6,6 +6,7 @@ import {
   markCellAsTemporarilyEmpty,
   queryCellElement
 } from '../utils/cellDomUtils'
+import { getColumnMaxContentLength } from '../utils/tableUtils'
 import { useTableEditor } from '../hooks/useTableEditor'
 import { useClipboard } from '../hooks/useClipboard'
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation'
@@ -143,6 +144,38 @@ const TableEditor: React.FC<TableEditorProps> = ({
       window.removeEventListener('mouseup', handleGlobalMouseUp)
     }
   }, [onDragEnd])
+
+  // 初期化時の列幅自動調整
+  const autoFitAllColumnsRef = useRef(false)
+  useEffect(() => {
+    // 初回ロード時のみ実行（複数回実行を防ぐ）
+    if (autoFitAllColumnsRef.current) {
+      return
+    }
+
+    // ヘッダーまたはデータが無い場合はスキップ
+    if (displayedTableData.headers.length === 0) {
+      return
+    }
+
+    // 既に列幅が設定されている場合はスキップ
+    if (Object.keys(editorState.columnWidths).length > 0) {
+      autoFitAllColumnsRef.current = true
+      return
+    }
+
+    autoFitAllColumnsRef.current = true
+
+    for (let col = 0; col < displayedTableData.headers.length; col++) {
+      const headerLength = displayedTableData.headers[col]?.length || 0
+      const contentLength = getColumnMaxContentLength(displayedTableData.rows, col)
+      const maxLength = Math.max(headerLength, contentLength)
+      const minWidth = 80
+      const maxWidth = 400
+      const estimatedWidth = Math.min(maxWidth, Math.max(minWidth, maxLength * 8 + 40))
+      setColumnWidth(col, estimatedWidth)
+    }
+  }, [displayedTableData.headers, displayedTableData.rows, setColumnWidth, editorState.columnWidths])
 
   // initialCellInput を遅延クリアするためのタイムアウト参照
   const clearInitialInputTimeoutRef = useRef<number | null>(null)
@@ -986,6 +1019,7 @@ const TableEditor: React.FC<TableEditorProps> = ({
         <table className="table-editor">
           <TableHeader
             headers={displayedTableData.headers}
+            rows={displayedTableData.rows}
             columnWidths={editorState.columnWidths}
             sortState={effectiveSortState}
             onHeaderUpdate={handleHeaderUpdate}

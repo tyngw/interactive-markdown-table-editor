@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from 'react'
 import { SortState, ColumnWidths, HeaderConfig, ColumnDiffInfo } from '../types'
-import { getColumnLetter } from '../utils/tableUtils'
+import { getColumnLetter, getColumnMaxContentLength } from '../utils/tableUtils'
 import { isImeConfirmingEnter } from '../utils/imeUtils'
 
 interface TableHeaderProps {
   headers: string[]
+  rows: string[][]
   columnWidths: ColumnWidths
   sortState: SortState
   onHeaderUpdate: (col: number, value: string) => void
@@ -26,6 +27,7 @@ interface TableHeaderProps {
 
 const TableHeader: React.FC<TableHeaderProps> = ({
   headers,
+  rows,
   columnWidths,
   sortState,
   onHeaderUpdate,
@@ -167,12 +169,15 @@ const TableHeader: React.FC<TableHeaderProps> = ({
 
   // Auto-fit column width to content (Excel-like double-click behavior)
   const handleAutoFit = useCallback((col: number) => {
-    // Simple auto-fit implementation - can be enhanced
     const minWidth = 80
     const maxWidth = 400
-    const estimatedWidth = Math.min(maxWidth, Math.max(minWidth, headers[col].length * 8 + 40))
+    // ヘッダーとセル内容の最大文字数を比較
+    const headerLength = headers[col]?.length || 0
+    const contentLength = getColumnMaxContentLength(rows, col)
+    const maxLength = Math.max(headerLength, contentLength)
+    const estimatedWidth = Math.min(maxWidth, Math.max(minWidth, maxLength * 8 + 40))
     onColumnResize(col, estimatedWidth)
-  }, [headers, onColumnResize])
+  }, [headers, rows, onColumnResize])
 
   // Handle column header click (selection vs sorting)
   const handleColumnHeaderClick = useCallback((col: number, event: React.MouseEvent) => {
