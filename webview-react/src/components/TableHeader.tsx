@@ -134,6 +134,12 @@ const TableHeader: React.FC<TableHeaderProps> = ({
     /* istanbul ignore if -- resizing null 時はリスナー未登録のため到達不能 */
     if (!resizing) return
 
+    // マウスボタンが押されていない場合は終了（パネル外でのマウスアップをキャッチ）
+    if ((e as any).buttons === 0) {
+      setResizing(null)
+      return
+    }
+
     const deltaX = e.clientX - resizing.startX
     const newWidth = Math.max(50, resizing.startWidth + deltaX)
     onColumnResize(resizing.col, newWidth)
