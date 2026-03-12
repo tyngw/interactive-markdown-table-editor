@@ -283,6 +283,9 @@ export const GlobalStyles: React.FC<GlobalStylesProps> = ({ theme }) => {
           display: table;
           position: relative;
           z-index: 1;
+          /* 末尾のセルの後ろに余白を設定 */
+          margin-right: 100px;
+          margin-bottom: 100px;
         }
 
         table.table-editor thead {
