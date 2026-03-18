@@ -775,8 +775,11 @@ describe('mapTableRowsToGitDiff - 複雑な混合ケース', () => {
     });
 
     it('離れた複数hunkでの独立した変更', () => {
+        // tableStartLine=1: header at 1-indexed line 2, sep at line 3, data row 0 at line 4
+        // hunk1: Alice (data row 0) at old line 4, net +1 (1 deleted, 2 added)
+        // hunk2: Carol (data row 3) at old line 7 → new line 8 (shifted by +1 from hunk1)
         const diffOutput = [
-            '@@ -3,1 +3,2 @@',
+            '@@ -4,1 +4,2 @@',
             '-| Alice | 25 |',
             '+| Alice | 25 | New |',
             '+| Bob | 30 | Col |',
@@ -789,12 +792,12 @@ describe('mapTableRowsToGitDiff - 複雑な混合ケース', () => {
         const lineDiffs = parseGitDiff(diffOutput, tableStartLine, tableEndLine);
         const result = mapTableRowsToGitDiff(lineDiffs, tableStartLine, 5);
 
-        // hunk 1: 行0
-        const hunk1Rows = result.filter(r => r.row === 0 || (result.indexOf(r) < 4 && r.row !== 2));
+        // hunk 1: Alice at row 0, Bob (pure add) at row 1
+        const hunk1Rows = result.filter(r => r.row >= 0 && r.row <= 1);
         assert.ok(hunk1Rows.length >= 2);
 
-        // hunk 2: 行2
-        const hunk2Rows = result.filter(r => r.row === 2 && result.indexOf(r) >= 4);
+        // hunk 2: Carol at row 4 (new file position: 8 - 1 - 3 = 4)
+        const hunk2Rows = result.filter(r => r.row === 4);
         assert.ok(hunk2Rows.length >= 2);
     });
 });
@@ -834,13 +837,15 @@ describe('calculateSimilarity - より詳細なケース', () => {
     });
 
     it('1文字削除', () => {
+        // 'testing' vs 'test': distance=3, max=7, sim≈0.571
         const sim = calculateSimilarity('testing', 'test');
-        assert.ok(sim > 0.7);
+        assert.ok(sim > 0.5);
     });
 
     it('1文字挿入', () => {
+        // 'test' vs 'testing': distance=3, max=7, sim≈0.571
         const sim = calculateSimilarity('test', 'testing');
-        assert.ok(sim > 0.7);
+        assert.ok(sim > 0.5);
     });
 
     it('複数の変更', () => {
@@ -849,9 +854,10 @@ describe('calculateSimilarity - より詳細なケース', () => {
     });
 
     it('大文字小文字が異なる文字列', () => {
+        // 'Test' vs 'TEST': T=T match, e≠E, s≠S, t≠T → distance=3, max=4, sim=0.25
+        // 大文字小文字はcase-sensitiveとして別文字扱い → 類似度は低い
         const sim = calculateSimilarity('Test', 'TEST');
-        // 異なる文字としてカウントされる
-        assert.ok(sim > 0.5);
+        assert.ok(sim >= 0.0 && sim < 0.5);
     });
 
     it('非常に短い文字列', () => {
@@ -1120,6 +1126,48 @@ describe('parseGitDiff - unchanged lines and edge cases', () => {
         assert.strictEqual(result.length, 2);
         assert.strictEqual(result[0].status, GitDiffStatus.DELETED);
         assert.strictEqual(result[1].status, GitDiffStatus.ADDED);
+    });
+
+    it('should correctly count blank context lines (space-only lines representing empty file lines)', () => {
+        // Regression test: a context line for an empty line in the file is ' ' (space only).
+        // With unified=3, if an empty line appears in the 3 context lines before the first
+        // deleted data row, it must increment line counters or subsequent row positions are off.
+        //
+        // File structure (1-indexed):
+        //   line 1: (empty)       <- blank context ' '
+        //   line 2: | header |    <- tableStartLine=1 (0-indexed)
+        //   line 3: | --- |
+        //   line 4: | R001 |      <- data row 0: expected toTableRow = 4-1-3 = 0
+        //   line 5: | R002 |      <- data row 1: expected toTableRow = 5-1-3 = 1
+        //
+        // Hunk starts at line 1 (= 3 context lines before data row 0 at line 4).
+        const tableStartLine = 1;
+        const diffOutput = [
+            '@@ -1,5 +1,5 @@',
+            ' ',            // blank context line (' ') for empty line at file line 1
+            ' | header |',  // context: line 2 (header)
+            ' | --- |',     // context: line 3 (separator)
+            '-| R001 |',    // deleted: line 4 (data row 0)
+            '-| R002 |',    // deleted: line 5 (data row 1)
+            '+| R001a |',   // added: new line 4
+            '+| R002b |',   // added: new line 5
+            ''
+        ].join('\n');
+
+        const lineDiffs = parseGitDiff(diffOutput, tableStartLine, 10);
+        const result = mapTableRowsToGitDiff(lineDiffs, tableStartLine, 3);
+
+        // Both deleted rows must map to data rows 0 and 1 (not -1 and 0)
+        const deletedRows = result.filter(r => r.status === GitDiffStatus.DELETED && r.isDeletedRow);
+        assert.strictEqual(deletedRows.length, 2, 'both phantom deleted rows should appear');
+        assert.strictEqual(deletedRows[0].row, 0, 'R001 phantom should be at row 0');
+        assert.strictEqual(deletedRows[1].row, 1, 'R002 phantom should be at row 1');
+
+        // Both added rows must also be at rows 0 and 1
+        const addedRows = result.filter(r => r.status === GitDiffStatus.ADDED);
+        assert.strictEqual(addedRows.length, 2, 'both added rows should appear');
+        assert.strictEqual(addedRows[0].row, 0);
+        assert.strictEqual(addedRows[1].row, 1);
     });
 });
 

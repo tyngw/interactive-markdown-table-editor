@@ -418,7 +418,7 @@ function parseGitDiff(
             continue;
         }
 
-        if (line.startsWith('\\') || line.trim() === '') {
+        if (line.startsWith('\\') || line === '') {
             continue;
         }
 
