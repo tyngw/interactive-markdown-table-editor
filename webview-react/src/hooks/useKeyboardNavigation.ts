@@ -293,6 +293,19 @@ export function useKeyboardNavigation({
       const cell = document.querySelector(`td[data-row="${row}"][data-col="${col}"]`) as HTMLElement | null
       if (!cell) return
 
+      // 先頭行への移動時はコンテナを scrollTop=0 に戻す
+      // これにより gitDiff で先頭行の前に挿入された削除行が見えるようになる
+      const topRow = (headerConfig?.hasColumnHeaders === false) ? -1 : 0
+      if (row === topRow) {
+        const container = document.querySelector('.table-container') as HTMLElement | null
+        if (container) {
+          container.scrollTop = 0
+        }
+        // 垂直方向はすでに先頭なので水平方向のみ調整
+        cell.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'nearest' })
+        return
+      }
+
       // scrollIntoView を使用して、セルをビューポート内に収める
       // block: 'nearest' で最小限のスクロールを行う
       // inline: 'nearest' で水平スクロールも最小限に
