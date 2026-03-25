@@ -2,7 +2,7 @@
   "name": "interactive-markdown-table-editor",
   "displayName": "Interactive Markdown Table Editor",
   "description": "Edit Markdown tables with an intuitive interface",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "publisher": "tyngw",
   "repository": {
     "type": "git",
@@ -35,11 +35,6 @@
         "category": "Markdown Table Editor"
       },
       {
-        "command": "markdownTableEditor.openEditorNewPanel",
-        "title": "%openEditorNewPanel.title%",
-        "category": "Markdown Table Editor"
-      },
-      {
         "command": "markdownTableEditor.selectTheme",
         "title": "%selectTheme.title%",
         "category": "Markdown Table Editor"
@@ -49,11 +44,6 @@
       "editor/context": [
         {
           "command": "markdownTableEditor.openEditor",
-          "when": "editorLangId == markdown",
-          "group": "navigation"
-        },
-        {
-          "command": "markdownTableEditor.openEditorNewPanel",
           "when": "editorLangId == markdown",
           "group": "navigation"
         }
@@ -78,6 +68,21 @@
           "minimum": 0,
           "maximum": 100,
           "markdownDescription": "%config.fontSize.description%"
+        },
+        "markdownTableEditor.openInNewPanel": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%config.openInNewPanel.description%"
+        },
+        "markdownTableEditor.panelPosition": {
+          "type": "string",
+          "default": "beside",
+          "enum": ["beside", "active"],
+          "enumDescriptions": [
+            "%config.panelPosition.beside.description%",
+            "%config.panelPosition.active.description%"
+          ],
+          "markdownDescription": "%config.panelPosition.description%"
         }
       }
     }

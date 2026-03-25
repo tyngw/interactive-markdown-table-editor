@@ -1,8 +1,11 @@
 {
   "openEditor.title": "打开表格编辑器",
-  "openEditorNewPanel.title": "打开表格编辑器（新面板）",
   "selectTheme.title": "选择表格编辑器主题",
   "config.theme.description": "表格编辑器主题。使用 'inherit' 跟随 VS Code 当前主题。其他格式为 'extensionId:path'。可以从 'Markdown Table Editor: Select Table Editor Theme' 命令中选择。",
   "config.fontFamily.description": "表格编辑器中使用的字体系列。留空则使用 VS Code 的编辑器字体设置。",
-  "config.fontSize.description": "表格编辑器中使用的字体大小（像素）。设置为0则使用 VS Code 的编辑器字体大小设置。"
+  "config.fontSize.description": "表格编辑器中使用的字体大小（像素）。设置为0则使用 VS Code 的编辑器字体大小设置。",
+  "config.openInNewPanel.description": "启用后，将始终在新面板中打开表格编辑器，而不是复用现有面板。",
+  "config.panelPosition.description": "表格编辑器面板的显示位置。'beside' 在当前编辑器旁边分屏显示；'active' 在活动编辑器列中全屏显示。",
+  "config.panelPosition.beside.description": "在当前编辑器旁边分屏打开。",
+  "config.panelPosition.active.description": "在活动编辑器列中全屏打开。"
 }

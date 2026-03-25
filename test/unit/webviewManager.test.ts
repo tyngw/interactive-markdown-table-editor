@@ -659,6 +659,39 @@ suite('WebviewManager Test Suite', () => {
             assert.ok(result.panel);
             assert.ok(result.panelId);
         });
+        test('should create panel with ViewColumn.Active when panelPosition is active', async () => {
+            const fakeHtml = '<html><head></head><body><div id="root"></div></body></html>';
+            setupTestBuildFiles(fakeHtml);
+            (webviewManager as any).context.extensionUri = vscode.Uri.file(TEST_BUILD_DIR);
+
+            const tableData: TableData = {
+                id: 'test',
+                headers: ['A'],
+                rows: [['1']],
+                metadata: { sourceUri: testUri.toString(), startLine: 0, endLine: 2, tableIndex: 0, lastModified: new Date(), columnCount: 1, rowCount: 1, isValid: true, validationIssues: [] }
+            };
+
+            let capturedViewColumn: vscode.ViewColumn | undefined;
+            const origCreate = vscode.window.createWebviewPanel;
+            (vscode.window as any).createWebviewPanel = (_viewType: string, _title: string, viewColumn: vscode.ViewColumn, options: any) => {
+                capturedViewColumn = viewColumn;
+                return origCreate(_viewType, _title, viewColumn, options);
+            };
+
+            const origGetConfig = (vscode.workspace as any).getConfiguration;
+            (vscode.workspace as any).getConfiguration = () => ({
+                get: (key: string, defaultValue?: any) => key === 'panelPosition' ? 'active' : defaultValue,
+                update: async () => {}, has: () => false, inspect: () => undefined
+            });
+
+            try {
+                await webviewManager.createTableEditorPanel(tableData, testUri);
+                assert.strictEqual(capturedViewColumn, vscode.ViewColumn.Active);
+            } finally {
+                (vscode.window as any).createWebviewPanel = origCreate;
+                (vscode.workspace as any).getConfiguration = origGetConfig;
+            }
+        });
     });
 
     // --- updatePanelTitle テスト ---
