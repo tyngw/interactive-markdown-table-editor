@@ -465,10 +465,17 @@ export class WebviewManager {
         // Create new panel with safe URI handling
         let panel: vscode.WebviewPanel;
         try {
+            // 設定 panelPosition に従って表示列を決定する
+            const config = vscode.workspace.getConfiguration('markdownTableEditor');
+            const panelPosition = config.get<string>('panelPosition', 'beside');
+            const viewColumn = panelPosition === 'active'
+                ? vscode.ViewColumn.Active
+                : vscode.ViewColumn.Two;
+
             panel = vscode.window.createWebviewPanel(
                 'markdownTableEditor',
                 panelTitle,
-                vscode.ViewColumn.Two,
+                viewColumn,
                 {
                     enableScripts: true,
                     retainContextWhenHidden: true,

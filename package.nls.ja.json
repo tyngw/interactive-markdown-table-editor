@@ -1,8 +1,11 @@
 {
   "openEditor.title": "テーブルエディターを開く",
-  "openEditorNewPanel.title": "テーブルエディターを開く（新しいパネル）",
   "selectTheme.title": "テーブルエディターのテーマを選択",
   "config.theme.description": "テーブルエディターのテーマ。'inherit' でVS Codeの現在のテーマに追従。その他は 'extensionId:path' 形式のテーマID。コマンド 'Markdown Table Editor: Select Table Editor Theme' から選択できます。",
   "config.fontFamily.description": "テーブルエディターで使用するフォントファミリー。空の場合はVS Codeのエディターフォント設定を使用します。",
-  "config.fontSize.description": "テーブルエディターで使用するフォントサイズ（px）。0の場合はVS Codeのエディターフォントサイズ設定を使用します。"
+  "config.fontSize.description": "テーブルエディターで使用するフォントサイズ（px）。0の場合はVS Codeのエディターフォントサイズ設定を使用します。",
+  "config.openInNewPanel.description": "有効にすると、既存のパネルを再利用せず、常に新しいパネルでテーブルエディターを開きます。",
+  "config.panelPosition.description": "テーブルエディターパネルの表示位置。'beside' は現在のエディターの横に分割表示、'active' はアクティブなエディター列に全面表示します。",
+  "config.panelPosition.beside.description": "現在のエディターの横に分割して開く。",
+  "config.panelPosition.active.description": "アクティブなエディター列に全面で開く。"
 }

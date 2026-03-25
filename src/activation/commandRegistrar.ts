@@ -62,18 +62,17 @@ export class CommandRegistrar {
 
     private registerExternalCommands(): void {
         const openEditorCommand = vscode.commands.registerCommand('markdownTableEditor.openEditor', async (uri?: vscode.Uri) => {
-            await this.handleOpenEditor(uri, false);
-        });
-
-        const openEditorNewPanelCommand = vscode.commands.registerCommand('markdownTableEditor.openEditorNewPanel', async (uri?: vscode.Uri) => {
-            await this.handleOpenEditor(uri, true);
+            // 設定 openInNewPanel を参照してパネル開き方を決定する
+            const config = vscode.workspace.getConfiguration('markdownTableEditor');
+            const openInNewPanel = config.get<boolean>('openInNewPanel', false);
+            await this.handleOpenEditor(uri, openInNewPanel);
         });
 
         const selectThemeCommand = vscode.commands.registerCommand('markdownTableEditor.selectTheme', async () => {
             await this.themeApplier.showThemePicker();
         });
 
-        this.context.subscriptions.push(openEditorCommand, openEditorNewPanelCommand, selectThemeCommand);
+        this.context.subscriptions.push(openEditorCommand, selectThemeCommand);
     }
 
     private registerInternalCommands(): void {

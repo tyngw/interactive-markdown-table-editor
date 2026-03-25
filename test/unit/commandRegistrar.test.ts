@@ -216,7 +216,6 @@ suite('CommandRegistrar Test Suite', () => {
 
         // 外部コマンド
         assert.ok(registeredCommands.has('markdownTableEditor.openEditor'));
-        assert.ok(registeredCommands.has('markdownTableEditor.openEditorNewPanel'));
         assert.ok(registeredCommands.has('markdownTableEditor.selectTheme'));
 
         // 内部コマンド
@@ -614,7 +613,7 @@ suite('CommandRegistrar Test Suite', () => {
         assert.ok(panelCreated);
     });
 
-    test('openEditorNewPanel creates new panel with unique ID', async () => {
+    test('openEditor with openInNewPanel=true creates new panel', async () => {
         const { deps, registeredCommands } = createMockDeps();
         let newPanelCreated = false;
 
@@ -627,13 +626,23 @@ suite('CommandRegistrar Test Suite', () => {
             return { panel: {}, panelId: 'unique-id' };
         };
 
+        // openInNewPanel=true を返すように getConfiguration をモックする
+        const origGetConfig = (vscode.workspace as any).getConfiguration;
+        (vscode.workspace as any).getConfiguration = () => ({
+            get: (key: string, defaultValue?: any) => key === 'openInNewPanel' ? true : defaultValue,
+            update: async () => {}, has: () => false, inspect: () => undefined
+        });
+
         const registrar = new CommandRegistrar(deps);
         registrar.register();
 
-        const handler = registeredCommands.get('markdownTableEditor.openEditorNewPanel')!;
-        await handler(vscode.Uri.file('/test/sample.md'));
-
-        assert.ok(newPanelCreated);
+        try {
+            const handler = registeredCommands.get('markdownTableEditor.openEditor')!;
+            await handler(vscode.Uri.file('/test/sample.md'));
+            assert.ok(newPanelCreated);
+        } finally {
+            (vscode.workspace as any).getConfiguration = origGetConfig;
+        }
     });
 
     test('selectTheme calls themeApplier.showThemePicker', async () => {
@@ -2193,9 +2202,9 @@ suite('CommandRegistrar Test Suite', () => {
     });
 
     // ============================================================
-    // openEditorNewPanel with tables
+    // openEditor with openInNewPanel=true (テーブルあり)
     // ============================================================
-    test('openEditorNewPanel with tables creates new panel', async () => {
+    test('openEditor with openInNewPanel=true and tables creates new panel', async () => {
         const { deps, registeredCommands } = createMockDeps();
         let newPanelCreated = false;
         (deps.markdownParser as any).findTablesInDocument = () => [
@@ -2206,13 +2215,22 @@ suite('CommandRegistrar Test Suite', () => {
             return { panel: {}, panelId: 'new-panel' };
         };
 
+        const origGetConfig = (vscode.workspace as any).getConfiguration;
+        (vscode.workspace as any).getConfiguration = () => ({
+            get: (key: string, defaultValue?: any) => key === 'openInNewPanel' ? true : defaultValue,
+            update: async () => {}, has: () => false, inspect: () => undefined
+        });
+
         const registrar = new CommandRegistrar(deps);
         registrar.register();
 
-        const handler = registeredCommands.get('markdownTableEditor.openEditorNewPanel')!;
-        await handler(vscode.Uri.file('/test/sample.md'));
-
-        assert.ok(newPanelCreated);
+        try {
+            const handler = registeredCommands.get('markdownTableEditor.openEditor')!;
+            await handler(vscode.Uri.file('/test/sample.md'));
+            assert.ok(newPanelCreated);
+        } finally {
+            (vscode.workspace as any).getConfiguration = origGetConfig;
+        }
     });
 
     // ============================================================
@@ -2407,10 +2425,10 @@ suite('CommandRegistrar Test Suite', () => {
     });
 
     // ============================================================
-    // handleOpenEditor: forceNewPanel path (lines 283-288)
+    // handleOpenEditor: forceNewPanel path (openInNewPanel=true)
     // ============================================================
 
-    test('openEditorNewPanel sets managers with unique panelId', async () => {
+    test('openEditor with openInNewPanel=true sets managers with unique panelId', async () => {
         const { deps, registeredCommands } = createMockDeps();
         let setManagersKey: string | undefined;
         (deps.markdownParser as any).findTablesInDocument = () => [
@@ -2421,11 +2439,21 @@ suite('CommandRegistrar Test Suite', () => {
         };
         (deps.panelSessionManager as any).setManagers = (key: string) => { setManagersKey = key; };
 
+        const origGetConfig = (vscode.workspace as any).getConfiguration;
+        (vscode.workspace as any).getConfiguration = () => ({
+            get: (key: string, defaultValue?: any) => key === 'openInNewPanel' ? true : defaultValue,
+            update: async () => {}, has: () => false, inspect: () => undefined
+        });
+
         const registrar = new CommandRegistrar(deps);
         registrar.register();
-        await registeredCommands.get('markdownTableEditor.openEditorNewPanel')!(vscode.Uri.file('/test/sample.md'));
 
-        assert.strictEqual(setManagersKey, 'unique-panel-42');
+        try {
+            await registeredCommands.get('markdownTableEditor.openEditor')!(vscode.Uri.file('/test/sample.md'));
+            assert.strictEqual(setManagersKey, 'unique-panel-42');
+        } finally {
+            (vscode.workspace as any).getConfiguration = origGetConfig;
+        }
     });
 
     // ============================================================
