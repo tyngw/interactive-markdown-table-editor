@@ -471,7 +471,10 @@ const TableBody: React.FC<TableBodyProps> = ({
                 const currentColumnCount = headers.length
                 
                 // 対応する追加行のセルを取得（内容比較用）
-                const addedCells = rowIndex >= 0 ? cells : []
+                // targetRow が指定されている場合はその行のセルを使用（複数行連続差分の場合）
+                const compareRowIndex = diff.targetRow !== undefined ? diff.targetRow : rowIndex
+                const compareRowCells = allRows.find(r => r.rowIndex === compareRowIndex)?.cells ?? cells
+                const addedCells = rowIndex >= 0 ? compareRowCells : []
                 
                 // positions/mapping ベースで表示セル配列を構築
                 const displayCells: Array<JSX.Element | null> = []

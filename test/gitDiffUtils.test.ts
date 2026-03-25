@@ -54,8 +54,8 @@ describe('mapTableRowsToGitDiff - 複数行の差分ペアリング', () => {
 
         assert.deepStrictEqual(summarize(result), [
             { row: 0, status: GitDiffStatus.DELETED, oldContent: '| a |', newContent: undefined, isDeletedRow: true },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| b |', newContent: undefined, isDeletedRow: true },
             { row: 0, status: GitDiffStatus.ADDED, oldContent: undefined, newContent: '| a2 |', isDeletedRow: false },
-            { row: 1, status: GitDiffStatus.DELETED, oldContent: '| b |', newContent: undefined, isDeletedRow: true },
             { row: 1, status: GitDiffStatus.ADDED, oldContent: undefined, newContent: '| b2 |', isDeletedRow: false }
         ]);
     });
@@ -76,10 +76,10 @@ describe('mapTableRowsToGitDiff - 複数行の差分ペアリング', () => {
 
         assert.deepStrictEqual(summarize(result), [
             { row: 0, status: GitDiffStatus.DELETED, oldContent: '| a |', newContent: undefined, isDeletedRow: true },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| b |', newContent: undefined, isDeletedRow: true },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| c |', newContent: undefined, isDeletedRow: true },
             { row: 0, status: GitDiffStatus.ADDED, oldContent: undefined, newContent: '| a2 |', isDeletedRow: false },
-            { row: 1, status: GitDiffStatus.DELETED, oldContent: '| b |', newContent: undefined, isDeletedRow: true },
-            { row: 1, status: GitDiffStatus.ADDED, oldContent: undefined, newContent: '| b2 |', isDeletedRow: false },
-            { row: 2, status: GitDiffStatus.DELETED, oldContent: '| c |', newContent: undefined, isDeletedRow: true }
+            { row: 1, status: GitDiffStatus.ADDED, oldContent: undefined, newContent: '| b2 |', isDeletedRow: false }
         ]);
     });
 
@@ -99,8 +99,8 @@ describe('mapTableRowsToGitDiff - 複数行の差分ペアリング', () => {
 
         assert.deepStrictEqual(summarize(result), [
             { row: 0, status: GitDiffStatus.DELETED, oldContent: '| a |', newContent: undefined, isDeletedRow: true },
+            { row: 0, status: GitDiffStatus.DELETED, oldContent: '| b |', newContent: undefined, isDeletedRow: true },
             { row: 0, status: GitDiffStatus.ADDED, oldContent: undefined, newContent: '| a2 |', isDeletedRow: false },
-            { row: 1, status: GitDiffStatus.DELETED, oldContent: '| b |', newContent: undefined, isDeletedRow: true },
             { row: 1, status: GitDiffStatus.ADDED, oldContent: undefined, newContent: '| b2 |', isDeletedRow: false },
             { row: 2, status: GitDiffStatus.ADDED, oldContent: undefined, newContent: '| c3 |', isDeletedRow: false }
         ]);
@@ -470,14 +470,14 @@ describe('mapTableRowsToGitDiff - データセル値の編集', () => {
         const result = mapTableRowsToGitDiff(lineDiffs, tableStartLine, rowCount + 1);
 
         assert.strictEqual(result.length, 4);
-        // 1行目の削除と追加
+        // 全削除行が先に来る
         assert.strictEqual(result[0].status, GitDiffStatus.DELETED);
         assert.strictEqual(result[0].row, 0);
-        assert.strictEqual(result[1].status, GitDiffStatus.ADDED);
-        assert.strictEqual(result[1].row, 0);
-        // 2行目の削除と追加
-        assert.strictEqual(result[2].status, GitDiffStatus.DELETED);
-        assert.strictEqual(result[2].row, 1);
+        assert.strictEqual(result[1].status, GitDiffStatus.DELETED);
+        assert.strictEqual(result[1].row, 0); // 全削除行は最初の追加行の前に表示
+        // 追加行が後に来る
+        assert.strictEqual(result[2].status, GitDiffStatus.ADDED);
+        assert.strictEqual(result[2].row, 0);
         assert.strictEqual(result[3].status, GitDiffStatus.ADDED);
         assert.strictEqual(result[3].row, 1);
     });
@@ -1157,11 +1157,11 @@ describe('parseGitDiff - unchanged lines and edge cases', () => {
         const lineDiffs = parseGitDiff(diffOutput, tableStartLine, 10);
         const result = mapTableRowsToGitDiff(lineDiffs, tableStartLine, 3);
 
-        // Both deleted rows must map to data rows 0 and 1 (not -1 and 0)
+        // Both deleted rows must appear before the first added row (row 0)
         const deletedRows = result.filter(r => r.status === GitDiffStatus.DELETED && r.isDeletedRow);
         assert.strictEqual(deletedRows.length, 2, 'both phantom deleted rows should appear');
         assert.strictEqual(deletedRows[0].row, 0, 'R001 phantom should be at row 0');
-        assert.strictEqual(deletedRows[1].row, 1, 'R002 phantom should be at row 1');
+        assert.strictEqual(deletedRows[1].row, 0, 'R002 phantom should be at row 0 (all deletions anchored before first addition)');
 
         // Both added rows must also be at rows 0 and 1
         const addedRows = result.filter(r => r.status === GitDiffStatus.ADDED);

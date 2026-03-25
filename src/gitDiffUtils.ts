@@ -27,6 +27,7 @@ export interface RowGitDiff {
     oldContent?: string;  // 削除された行の内容（変更前の行を表示するため）
     newContent?: string;  // 追加された行の内容（列差分検出用）
     isDeletedRow?: boolean;  // 削除行の表示用フラグ（実データ行ではない）
+    targetRow?: number;  // 削除行のセル比較対象となる追加行のテーブル行番号
 }
 
 /**
@@ -528,30 +529,34 @@ function appendHunkDiffs(
     tableStartLine: number,
     rowCount: number
 ): void {
-    const pairCount = Math.min(deleted.length, added.length);
+    // 全削除行の表示位置：最初の追加行の位置に統一（gitの差分表示と同じ順序にするため）
+    const firstAddedTableRow = added.length > 0
+        ? toTableRow(added[0], tableStartLine)
+        : (deleted.length > 0 ? toTableRow(deleted[0], tableStartLine) : 0);
 
-    // 1. 削除行と対応する追加行をペアで出力（削除行が先）
-    for (let i = 0; i < pairCount; i++) {
+    // 1. 全削除行を最初の追加行の前に出力
+    // targetRow には対応するペアの追加行を設定してセル比較に使用
+    for (let i = 0; i < deleted.length; i++) {
         const deletedDiff = deleted[i];
-        const addedDiff = added[i];
-        const tableRow = toTableRow(addedDiff, tableStartLine);
+        const targetRow = i < added.length
+            ? toTableRow(added[i], tableStartLine)
+            : firstAddedTableRow;
 
-        pushDeletedRow(accumulator, tableRow, rowCount, deletedDiff);
-        pushAddedRow(accumulator, tableRow, rowCount, addedDiff);
+        if (shouldIncludeRow(firstAddedTableRow, rowCount)) {
+            accumulator.push({
+                row: firstAddedTableRow,
+                targetRow,
+                status: GitDiffStatus.DELETED,
+                oldContent: deletedDiff.oldContent,
+                isDeletedRow: true
+            });
+        }
     }
 
-    // 2. 純粋な新規追加行を出力
-    for (let i = pairCount; i < added.length; i++) {
-        const addedDiff = added[i];
+    // 2. 全追加行を出力
+    for (const addedDiff of added) {
         const tableRow = toTableRow(addedDiff, tableStartLine);
         pushAddedRow(accumulator, tableRow, rowCount, addedDiff);
-    }
-
-    // 3. 残りの削除行（対応する追加行がないもの）を出力
-    for (let i = pairCount; i < deleted.length; i++) {
-        const deletedDiff = deleted[i];
-        const tableRow = toTableRow(deletedDiff, tableStartLine);
-        pushDeletedRow(accumulator, tableRow, rowCount, deletedDiff);
     }
 }
 
@@ -564,24 +569,6 @@ function toTableRow(diff: LineDiff, tableStartLine: number): number {
 
 function shouldIncludeRow(tableRow: number, rowCount: number): boolean {
     return tableRow >= -2 && tableRow < rowCount;
-}
-
-function pushDeletedRow(
-    accumulator: RowGitDiff[],
-    tableRow: number,
-    rowCount: number,
-    diff: LineDiff
-): void {
-    if (!shouldIncludeRow(tableRow, rowCount)) {
-        return;
-    }
-
-    accumulator.push({
-        row: tableRow,
-        status: GitDiffStatus.DELETED,
-        oldContent: diff.oldContent,
-        isDeletedRow: true
-    });
 }
 
 function pushAddedRow(
