@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { WebviewCommunicationManager } from '../communication/WebviewCommunicationManager';
-import { ExtensionCommand, TableData as ProtocolTableData } from '../../../src/communication/protocol';
+import { ExtensionCommand } from '../../../src/communication/protocol';
 import { ensureVsCodeApi } from '../vscodeApi';
 import { TableData } from '../types';
 

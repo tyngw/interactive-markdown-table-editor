@@ -285,7 +285,7 @@ export const elevation = (level: 1 | 2 | 3 | 4 = 1): SerializedStyles => {
 /**
  * ヘッダー・行番号の基本スタイル
  */
-export const baseHeaderRowStyles = (theme: VSCodeTheme): SerializedStyles => css`
+export const baseHeaderRowStyles = (_theme: VSCodeTheme): SerializedStyles => css`
   background-color: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-sideBar-background, var(--vscode-activityBar-background)));
   border: 1px solid var(--vscode-panel-border);
   color: var(--vscode-sideBar-foreground, var(--vscode-foreground));

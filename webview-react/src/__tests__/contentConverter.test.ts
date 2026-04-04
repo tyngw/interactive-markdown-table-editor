@@ -58,6 +58,10 @@ describe('Markdown decoration conversion', () => {
       expect(result).not.toContain('<script>')
       expect(result).toContain('&lt;script&gt;')
     })
+
+    test('should return empty string for empty input', () => {
+      expect(convertMarkdownToHtml('')).toBe('')
+    })
   })
 
   describe('processCellContent', () => {

@@ -7,7 +7,7 @@
 import { render, screen, act } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { DynamicThemeProvider, useDynamicTheme } from '../../contexts/DynamicThemeContext'
-import { getVSCodeTheme, VSCodeTheme } from '../../styles/theme'
+import { getVSCodeTheme } from '../../styles/theme'
 
 // テスト用のコンシューマーコンポーネント
 const ThemeConsumer: React.FC = () => {

@@ -63,7 +63,7 @@ describe('ContextMenu', () => {
 
   describe('メニュー表示の動作', () => {
     it('type=null の場合は何もレンダリングされない', () => {
-      const menuState = { type: null as const, index: -1, position: { x: 100, y: 100 } }
+      const menuState: { type: null; index: number; position: { x: number; y: number } } = { type: null, index: -1, position: { x: 100, y: 100 } }
       const { container } = render(
         <DynamicThemeProvider>
           <ContextMenu menuState={menuState} {...defaultProps()} />

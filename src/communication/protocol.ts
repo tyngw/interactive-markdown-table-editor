@@ -174,7 +174,7 @@ export type WebviewCommandDataMap = {
   [WebviewCommand.REQUEST_FONT_SETTINGS]: void;
   [WebviewCommand.UNDO]: void;
   [WebviewCommand.REDO]: void;
-  [WebviewCommand.PONG]: { timestamp: number };
+  [WebviewCommand.PONG]: { timestamp: number; responseTime?: number };
   [WebviewCommand.REQUEST_SYNC]: void;
   [WebviewCommand.STATE_UPDATE]: any;
   [WebviewCommand.TOGGLE_AUTO_SAVE]: { enabled: boolean };
