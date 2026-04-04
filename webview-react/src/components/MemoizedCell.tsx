@@ -170,7 +170,6 @@ const MemoizedCell: React.FC<MemoizedCellProps> = ({
           onCancel={handleCancel}
           rowIndex={rowIndex}
           colIndex={colIndex}
-          originalHeight={savedHeight?.original}
           rowMaxHeight={savedHeight?.rowMax}
         />
       ) : (

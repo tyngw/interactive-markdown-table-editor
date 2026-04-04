@@ -35,7 +35,7 @@ jobs:
         run: npm ci
 
       - name: Install webview dependencies
-        run: npm ci --prefix webview-react
+        run: npm ci --prefix webview-react --legacy-peer-deps
 
       - name: Install Playwright browsers and deps
         run: npx playwright install --with-deps

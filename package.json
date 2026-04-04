@@ -16,7 +16,7 @@
     "editor"
   ],
   "engines": {
-    "vscode": "^1.70.0"
+    "vscode": "1.70.0"
   },
   "categories": [
     "Other"
@@ -93,8 +93,8 @@
     "compile:debug": "npm run lint && MTE_KEEP_CONSOLE=1 tsc -p ./ && npm run build-webview:debug && npm run copy-mock && npm run copy-l10n",
     "copy-l10n": "mkdir -p out/l10n && cp l10n/*.json out/l10n/",
     "dev": "cd webview-react && vite",
-    "build-webview": "cd webview-react && npm install && npm run build",
-    "build-webview:debug": "cd webview-react && npm install && npm run build:debug",
+    "build-webview": "cd webview-react && npm install --legacy-peer-deps && npm run build",
+    "build-webview:debug": "cd webview-react && npm install --legacy-peer-deps && npm run build:debug",
     "copy-mock": "mkdir -p out/src/mock out/mock && cp test/mock/* out/src/mock/ && cp test/mock/* out/mock/",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
@@ -108,27 +108,27 @@
     "test:playwright:debug": "playwright test --debug"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0",
-    "@types/glob": "^8.1.0",
-    "@types/mocha": "^9.1.1",
-    "@types/node": "^16.18.126",
-    "@types/vscode": "^1.70.0",
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
-    "@vscode/l10n-dev": "^0.0.35",
-    "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.7.1",
-    "eslint": "^8.57.1",
-    "glob": "^8.1.0",
-    "mocha": "^10.8.2",
-    "nyc": "^15.1.0",
-    "typescript": "^4.9.5"
+    "@playwright/test": "1.57.0",
+    "@types/glob": "8.1.0",
+    "@types/mocha": "9.1.1",
+    "@types/node": "16.18.126",
+    "@types/vscode": "1.107.0",
+    "@typescript-eslint/eslint-plugin": "5.62.0",
+    "@typescript-eslint/parser": "5.62.0",
+    "@vscode/l10n-dev": "0.0.35",
+    "@vscode/test-electron": "2.5.2",
+    "@vscode/vsce": "3.7.1",
+    "eslint": "8.57.1",
+    "glob": "8.1.0",
+    "mocha": "10.8.2",
+    "nyc": "15.1.0",
+    "typescript": "4.9.5"
   },
   "dependencies": {
-    "@vscode/l10n": "^0.0.18",
-    "iconv-lite": "^0.6.3",
-    "jaconv": "^1.1.2",
-    "markdown-it": "^14.1.1",
-    "tslib": "^2.8.1"
+    "@vscode/l10n": "0.0.18",
+    "iconv-lite": "0.6.3",
+    "jaconv": "1.1.2",
+    "markdown-it": "14.1.1",
+    "tslib": "2.8.1"
   }
 }

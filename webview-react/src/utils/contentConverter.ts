@@ -190,5 +190,6 @@ export const ContentConverter = {
   processForEditing: processCellContentForEditing,
   processForStorage: processCellContentForStorage,
   brTagsToNewlines: convertBrTagsToNewlines,
-  convertMarkdownToHtml: convertMarkdownToHtml
+  convertMarkdownToHtml: convertMarkdownToHtml,
+  escapeHtml: escapeHtml
 }

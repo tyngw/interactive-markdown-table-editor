@@ -15,7 +15,9 @@ jest.mock('../utils/contentConverter', () => ({
     processForEditing: (val: string) => val.replace(/<br\s*\/?>/gi, '\n'),
     processForStorage: (val: string) => val.replace(/\n/g, '<br/>'),
     brTagsToNewlines: (val: string) => val.replace(/<br\s*\/?>/gi, '\n'),
-  }
+    convertMarkdownToHtml: (val: string) => val,
+  },
+  escapeHtml: (val: string) => val,
 }))
 
 import TableCell from '../components/TableCell'
