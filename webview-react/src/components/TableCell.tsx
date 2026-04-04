@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { ContentConverter } from '../utils/contentConverter'
+import { ContentConverter, escapeHtml } from '../utils/contentConverter'
 
 interface TableCellProps {
   value: string
@@ -187,7 +187,7 @@ const TableCell: React.FC<TableCellProps> = ({
           wordBreak: 'break-word'
         }}
         dangerouslySetInnerHTML={{
-          __html: value ? ContentConverter.brTagsToNewlines(value).replace(/\n/g, '<br/>') : '\u00A0'
+          __html: value ? ContentConverter.convertMarkdownToHtml(escapeHtml(ContentConverter.brTagsToNewlines(value))).replace(/\n/g, '<br/>') : '\u00A0'
         }}
       />
     </td>
