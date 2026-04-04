@@ -19,6 +19,13 @@ A VS Code extension that provides an intuitive interface for editing Markdown ta
 - Ctrl+C/Ctrl+V for copying and pasting cell content (non-editing mode)
 - Ctrl+X/Ctrl+V for cutting and pasting cell content (non-editing mode)
 
+### Markdown Formatting
+- Cell content supports Markdown formatting syntax that is rendered with visual styling in the table editor
+  - **Bold**: Use `**bold text**` or `__bold text__`
+  - *Italic*: Use `*italic text*` or `_italic text_`
+  - ~~Strikethrough~~: Use `~~strikethrough text~~`
+  - Line breaks: Use `<br/>` tags to insert line breaks within cells
+
 ### Table Operations
 - Add/Delete Rows & Columns: Right-click on headers to add and delete rows and columns
 - Drag & Drop: Reorder rows and columns by dragging

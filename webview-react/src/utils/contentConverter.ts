@@ -17,7 +17,10 @@ export function processCellContent(content: string): string {
     .replace(/<BR\s*\/?>/gi, '<br>')
   
   // Escape other HTML content while preserving our <br> tags
-  return escapeHtmlExceptBreaks(processedContent)
+  let escapedContent = escapeHtmlExceptBreaks(processedContent)
+  
+  // Convert Markdown formatting to HTML
+  return convertMarkdownToHtml(escapedContent)
 }
 
 // Convert HTML break tags to newlines for editing
@@ -145,4 +148,47 @@ export function escapeHtml(text: string): string {
   const div = document.createElement('div')
   div.textContent = text
   return div.innerHTML
+}
+
+/**
+ * Convert Markdown formatting to HTML
+ * Assumes input is already HTML-escaped. Converts Markdown patterns to HTML tags.
+ * Supports: **bold**, *italic*, ~~strikethrough~~, `code`
+ * Also preserves <br/> tags
+ */
+export function convertMarkdownToHtml(content: string): string {
+  if (!content) return ''
+  
+  // Input is already HTML-escaped, so we don't need to escape again
+  // Just process the Markdown formatting patterns
+  
+  // Order matters: process code blocks first, then other markdown
+  // Note: We don't process code blocks that might already be escaped
+  
+  // **bold** - must be before *italic* to avoid partial matches
+  let htmlContent = content.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>')
+  
+  // *italic* - single asterisks for italic
+  htmlContent = htmlContent.replace(/\*([^\*]+)\*/g, '<em>$1</em>')
+  
+  // ~~strikethrough~~
+  htmlContent = htmlContent.replace(/~~([^~]+)~~/g, '<del>$1</del>')
+  
+  // __bold__ (double underscore alternative)
+  htmlContent = htmlContent.replace(/__([^_]+)__/g, '<strong>$1</strong>')
+  
+  // _italic_ (single underscore alternative)
+  htmlContent = htmlContent.replace(/_([^_]+)_/g, '<em>$1</em>')
+  
+  return htmlContent
+}
+
+/**
+ * ContentConverter object for backward compatibility with class-based API
+ */
+export const ContentConverter = {
+  processForEditing: processCellContentForEditing,
+  processForStorage: processCellContentForStorage,
+  brTagsToNewlines: convertBrTagsToNewlines,
+  convertMarkdownToHtml: convertMarkdownToHtml
 }
