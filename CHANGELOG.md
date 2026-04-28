@@ -1,9 +1,18 @@
 # Changelog
 
 ## 1.3.2
+- 新機能
+  - テーブルセル内の Markdown 装飾表示に対応
+    - `**太字**` / `__太字__`、`*イタリック*` / `_イタリック_`、`~~打ち消し~~` を Webview 上で視覚的に表示
+    - `<br/>` による改行を維持したまま、安全に HTML エスケープしてレンダリング
 - 改善
   - Cursor 対応のため、拡張機能のベース VS Code バージョンを `1.83.1` に調整
   - `engines.vscode` と `@types/vscode` のバージョン整合性を取り、`vsce package` エラーを解消
+  - 依存関係のバージョンを固定し、再現性とサプライチェーン耐性を改善
+  - Webview のビルドと CI の依存関係解決に `--legacy-peer-deps` を適用し、互換性を改善
+- テスト・CI
+  - Webview テスト不整合を解消し、contentConverter の単体テストを追加
+  - Vite、lodash、picomatch、yaml などの依存関係を更新
 
 ## 1.3.1
 - 改善
