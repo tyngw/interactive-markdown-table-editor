@@ -5,6 +5,10 @@ import { buildThemeVariablesCss, getInstalledColorThemes } from '../themeUtils';
 import { WebviewManager } from '../webviewManager';
 import { error, info } from '../logging';
 
+// vscode.l10n は VS Code 1.73.0 以降の API。@types/vscode@1.70.0 では型定義がないため any キャストを使用する。
+const l10nT = (key: string, ...args: unknown[]): string =>
+    ((vscode as any).l10n?.t(key, ...args) ?? key) as string;
+
 export class ThemeApplier {
     constructor(private readonly webviewManager: WebviewManager) {}
 
@@ -39,18 +43,18 @@ export class ThemeApplier {
     public async showThemePicker(): Promise<void> {
         const themes = getInstalledColorThemes();
         const items: vscode.QuickPickItem[] = [
-            { label: `$(color-mode) ${vscode.l10n.t('selectTheme.inherit')}`, description: 'inherit' }
+            { label: `$(color-mode) ${l10nT('selectTheme.inherit')}`, description: 'inherit' }
         ].concat(
             themes.map(t => ({ label: t.label, description: t.id }))
         );
         const picked = await vscode.window.showQuickPick(items, {
-            placeHolder: vscode.l10n.t('selectTheme.placeholder'),
+            placeHolder: l10nT('selectTheme.placeholder'),
             matchOnDescription: true
         });
         if (!picked) {return;}
         const themeId = picked.description === 'inherit' ? 'inherit' : picked.description || 'inherit';
         await vscode.workspace.getConfiguration('markdownTableEditor').update('theme', themeId, true);
         await this.applyConfiguredThemeToPanels();
-        vscode.window.showInformationMessage(vscode.l10n.t('selectTheme.updated'));
+        vscode.window.showInformationMessage(l10nT('selectTheme.updated'));
     }
 }
