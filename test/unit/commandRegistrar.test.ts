@@ -292,7 +292,7 @@ suite('CommandRegistrar Test Suite', () => {
         const origShowInfo = vscode.window.showInformationMessage;
         const origShowInput = vscode.window.showInputBox;
         // "テーブルを作成" ボタンを選択したが、列数入力をキャンセル
-        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        (vscode.window as any).showInformationMessage = async () => (vscode as any).l10n.t('noTables.createTable');
         (vscode.window as any).showInputBox = async () => undefined;
 
         let panelCreated = false;
@@ -314,7 +314,7 @@ suite('CommandRegistrar Test Suite', () => {
         const origShowInfo = vscode.window.showInformationMessage;
         const origShowInput = vscode.window.showInputBox;
         // 列数は入力するが行数でキャンセル
-        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        (vscode.window as any).showInformationMessage = async () => (vscode as any).l10n.t('noTables.createTable');
         let inputCallCount = 0;
         (vscode.window as any).showInputBox = async () => {
             inputCallCount++;
@@ -340,7 +340,7 @@ suite('CommandRegistrar Test Suite', () => {
         const origShowInfo = vscode.window.showInformationMessage;
         const origShowInput = vscode.window.showInputBox;
 
-        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        (vscode.window as any).showInformationMessage = async () => (vscode as any).l10n.t('noTables.createTable');
         let inputCallCount = 0;
         (vscode.window as any).showInputBox = async () => {
             inputCallCount++;
@@ -393,7 +393,7 @@ suite('CommandRegistrar Test Suite', () => {
         const origShowInfo = vscode.window.showInformationMessage;
         const origShowInput = vscode.window.showInputBox;
 
-        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        (vscode.window as any).showInformationMessage = async () => (vscode as any).l10n.t('noTables.createTable');
         let inputCallCount2 = 0;
         (vscode.window as any).showInputBox = async () => {
             inputCallCount2++;
@@ -442,7 +442,7 @@ suite('CommandRegistrar Test Suite', () => {
         const origShowInfo = vscode.window.showInformationMessage;
         const origShowInput = vscode.window.showInputBox;
 
-        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        (vscode.window as any).showInformationMessage = async () => (vscode as any).l10n.t('noTables.createTable');
         let inputCallCount3 = 0;
         (vscode.window as any).showInputBox = async () => {
             inputCallCount3++;
@@ -502,7 +502,7 @@ suite('CommandRegistrar Test Suite', () => {
         const origShowInfo = vscode.window.showInformationMessage;
         const origShowInput = vscode.window.showInputBox;
 
-        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        (vscode.window as any).showInformationMessage = async () => (vscode as any).l10n.t('noTables.createTable');
         let inputCallCount4 = 0;
         (vscode.window as any).showInputBox = async () => {
             inputCallCount4++;
@@ -561,7 +561,7 @@ suite('CommandRegistrar Test Suite', () => {
         const origShowInput = vscode.window.showInputBox;
         const origShowError = vscode.window.showErrorMessage;
 
-        (vscode.window as any).showInformationMessage = async () => vscode.l10n.t('noTables.createTable');
+        (vscode.window as any).showInformationMessage = async () => (vscode as any).l10n.t('noTables.createTable');
         let inputCallCount5 = 0;
         (vscode.window as any).showInputBox = async () => {
             inputCallCount5++;

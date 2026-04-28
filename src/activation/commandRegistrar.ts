@@ -247,14 +247,14 @@ export class CommandRegistrar {
             if (!targetUri) {
                 const activeEditor = vscode.window.activeTextEditor;
                 if (!activeEditor || activeEditor.document.languageId !== 'markdown') {
-                    vscode.window.showErrorMessage(vscode.l10n.t('error.noMarkdownFile'));
+                    vscode.window.showErrorMessage(this.localizationHelper.t('error.noMarkdownFile'));
                     return;
                 }
                 targetUri = activeEditor.document.uri;
             }
 
             if (!targetUri) {
-                throw new Error(vscode.l10n.t('error.noValidUri'));
+                throw new Error(this.localizationHelper.t('error.noValidUri'));
             }
 
             const content = await this.fileHandler.readMarkdownFile(targetUri);
@@ -308,7 +308,7 @@ export class CommandRegistrar {
             await this.themeApplier.applyConfiguredThemeToPanels();
         } catch (error) {
             console.error('Error opening table editor:', error);
-            vscode.window.showErrorMessage(vscode.l10n.t(forceNewPanel ? 'error.openTableEditorNewPanel' : 'error.openTableEditor', error instanceof Error ? error.message : 'Unknown error'));
+            vscode.window.showErrorMessage(this.localizationHelper.t(forceNewPanel ? 'error.openTableEditorNewPanel' : 'error.openTableEditor', error instanceof Error ? error.message : 'Unknown error'));
         }
     }
 
@@ -1107,17 +1107,17 @@ export class CommandRegistrar {
                         const examples = Array.from(new Set(replacements.map(r => `${r.from}→${r.to}`))).slice(0, 5).join('、');
                         const examplesStr = `${examples}${replacements.length > 5 ? '、他' : ''}`;
                         const confirm = await vscode.window.showWarningMessage(
-                            vscode.l10n.t('csv.shiftJisWarning', examplesStr),
+                            this.localizationHelper.t('csv.shiftJisWarning', examplesStr),
                             { modal: true },
-                            vscode.l10n.t('csv.convertAndSave'),
-                            vscode.l10n.t('csv.doNotConvert')
+                            this.localizationHelper.t('csv.convertAndSave'),
+                            this.localizationHelper.t('csv.doNotConvert')
                         );
                         if (confirm === undefined) {
                             return;
                         }
-                        if (confirm === vscode.l10n.t('csv.convertAndSave')) {
+                        if (confirm === this.localizationHelper.t('csv.convertAndSave')) {
                             contentToWrite = normalized;
-                        } else if (confirm === vscode.l10n.t('csv.doNotConvert')) {
+                        } else if (confirm === this.localizationHelper.t('csv.doNotConvert')) {
                             contentToWrite = csvContent;
                         }
                     }
@@ -1136,8 +1136,8 @@ export class CommandRegistrar {
 
                 await vscode.workspace.fs.writeFile(saveUri, buffer);
 
-                const encodingLabel = encoding === 'sjis' ? vscode.l10n.t('csv.encoding.sjis') : vscode.l10n.t('csv.encoding.utf8');
-                this.webviewManager.sendSuccess(panel, vscode.l10n.t('success.csvExported', saveUri.fsPath, encodingLabel));
+                const encodingLabel = encoding === 'sjis' ? this.localizationHelper.t('csv.encoding.sjis') : this.localizationHelper.t('csv.encoding.utf8');
+                this.webviewManager.sendSuccess(panel, this.localizationHelper.t('success.csvExported', saveUri.fsPath, encodingLabel));
             }
         } catch (error) {
             console.error('Error in exportCSV:', error);
@@ -1160,14 +1160,14 @@ export class CommandRegistrar {
                 return;
             }
             if (!tableManagersMap) {
-                this.webviewManager.sendError(panel, vscode.l10n.t('error.tableManagersNotFound'));
+                this.webviewManager.sendError(panel, this.localizationHelper.t('error.tableManagersNotFound'));
                 return;
             }
 
             const targetTableIndex = typeof tableIndex === 'number' ? tableIndex : 0;
             const tableDataManager = tableManagersMap.get(targetTableIndex);
             if (!tableDataManager) {
-                this.webviewManager.sendError(panel, vscode.l10n.t('error.tableManagerNotFoundForIndex', targetTableIndex));
+                this.webviewManager.sendError(panel, this.localizationHelper.t('error.tableManagerNotFoundForIndex', targetTableIndex));
                 return;
             }
 
@@ -1179,7 +1179,7 @@ export class CommandRegistrar {
                     'CSV Files': ['csv'],
                     'All Files': ['*']
                 },
-                title: vscode.l10n.t('csv.selectFileTitle')
+                title: this.localizationHelper.t('csv.selectFileTitle')
             });
             if (!openUris || openUris.length === 0) {
                 return;
@@ -1193,12 +1193,12 @@ export class CommandRegistrar {
 
             const rows = parseCsv(text);
             if (!rows || rows.length === 0) {
-                this.webviewManager.sendError(panel, vscode.l10n.t('error.csvEmpty'));
+                this.webviewManager.sendError(panel, this.localizationHelper.t('error.csvEmpty'));
                 return;
             }
             const hasAnyValue = rows.some(r => r.some(c => (c || '').trim().length > 0));
             if (!hasAnyValue) {
-                this.webviewManager.sendError(panel, vscode.l10n.t('error.csvNoValues'));
+                this.webviewManager.sendError(panel, this.localizationHelper.t('error.csvNoValues'));
                 return;
             }
             const rectangular = toRectangular(rows);
@@ -1207,11 +1207,11 @@ export class CommandRegistrar {
             const rowsNormalized = rectangular.rows.map(r => r.map(c => (c ?? '').replace(/\n/g, '<br/>')));
 
             const confirm = await vscode.window.showWarningMessage(
-                vscode.l10n.t('csv.importConfirm'),
+                this.localizationHelper.t('csv.importConfirm'),
                 { modal: true },
-                vscode.l10n.t('csv.yes')
+                this.localizationHelper.t('csv.yes')
             );
-            if (confirm !== vscode.l10n.t('csv.yes')) {
+            if (confirm !== this.localizationHelper.t('csv.yes')) {
                 return;
             }
 
@@ -1250,8 +1250,8 @@ export class CommandRegistrar {
 
             this.webviewManager.updateTableData(panel, tablesWithGitDiff, uri);
 
-            const label = enc === 'sjis' ? vscode.l10n.t('csv.encoding.sjis') : vscode.l10n.t('csv.encoding.utf8');
-            this.webviewManager.sendSuccess(panel, vscode.l10n.t('success.csvImported', csvUri.fsPath, label));
+            const label = enc === 'sjis' ? this.localizationHelper.t('csv.encoding.sjis') : this.localizationHelper.t('csv.encoding.utf8');
+            this.webviewManager.sendSuccess(panel, this.localizationHelper.t('success.csvImported', csvUri.fsPath, label));
         } catch (error) {
             console.error('Error in importCSV:', error);
             const { panel } = this.panelSessionManager.resolvePanelContext(data?.uri, data?.panelId);

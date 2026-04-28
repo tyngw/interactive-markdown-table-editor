@@ -16,9 +16,14 @@ export class LocalizationHelper {
     }
 
     public t(key: string, ...args: Array<string | number>): string {
-        const resolvedByVsCode = vscode.l10n.t(key, ...args);
-        if (resolvedByVsCode !== key) {
-            return resolvedByVsCode;
+        // vscode.l10n は 1.73.0 以降の API。@types/vscode@1.70.0 では型定義がないため
+        // any キャストでアクセスし、API が存在しない場合はバンドルへフォールバックする。
+        const l10nApi = (vscode as any).l10n as { t?: (...a: unknown[]) => string } | undefined;
+        if (l10nApi?.t) {
+            const resolvedByVsCode = l10nApi.t(key, ...args);
+            if (resolvedByVsCode !== key) {
+                return resolvedByVsCode;
+            }
         }
 
         const template = this.languageBundle[key] ?? this.defaultBundle[key];
