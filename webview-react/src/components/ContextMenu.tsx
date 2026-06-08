@@ -1,15 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { useDynamicTheme } from '../contexts/DynamicThemeContext'
+import type { HeaderConfig } from '../types'
 
 interface ContextMenuState {
   type: 'row' | 'column' | 'editor' | null
   index: number
   position: { x: number; y: number }
-}
-
-interface HeaderConfig {
-  hasColumnHeaders: boolean
-  hasRowHeaders: boolean
 }
 
 interface ContextMenuProps {
@@ -71,43 +67,31 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   
   if (!menuState.type) return null
 
-  const handleAddRowAbove = () => {
-    const selectedRows = getSelectedRows()
-    const isCurrentRowFullySelected = isRowFullySelected(menuState.index)
+  const handleAddAt = (
+    type: 'row' | 'column',
+    direction: 'before' | 'after'
+  ) => {
+    const getSelected = type === 'row' ? getSelectedRows : getSelectedColumns
+    const isFullySelected = type === 'row' ? isRowFullySelected : isColumnFullySelected
+    const onAdd = type === 'row' ? onAddRow : onAddColumn
 
-    if (selectedRows.size > 1 && isCurrentRowFullySelected) {
-      // Multiple rows selected - add the same number of rows above the first selected row
-      const selectedRowArray = Array.from(selectedRows).sort((a, b) => a - b)
-      const firstRowIndex = selectedRowArray[0]
-      const selectedRowCount = selectedRows.size
-
-      // Add multiple rows at once using count parameter
-      onAddRow(firstRowIndex, selectedRowCount)
+    const selected = getSelected()
+    if (selected.size > 1 && isFullySelected(menuState.index)) {
+      if (direction === 'before') {
+        const first = Array.from(selected).sort((a, b) => a - b)[0]
+        onAdd(first, selected.size)
+      } else {
+        const last = Array.from(selected).sort((a, b) => b - a)[0]
+        onAdd(last + 1, selected.size)
+      }
     } else {
-      // Single row - add one row above
-      onAddRow(menuState.index)
+      onAdd(direction === 'before' ? menuState.index : menuState.index + 1)
     }
     onClose()
   }
 
-  const handleAddRowBelow = () => {
-    const selectedRows = getSelectedRows()
-    const isCurrentRowFullySelected = isRowFullySelected(menuState.index)
-
-    if (selectedRows.size > 1 && isCurrentRowFullySelected) {
-      // Multiple rows selected - add the same number of rows below the last selected row
-      const selectedRowArray = Array.from(selectedRows).sort((a, b) => b - a) // Sort descending
-      const lastRowIndex = selectedRowArray[0] // Highest index
-      const selectedRowCount = selectedRows.size
-
-      // Add multiple rows at once using count parameter
-      onAddRow(lastRowIndex + 1, selectedRowCount)
-    } else {
-      // Single row - add one row below
-      onAddRow(menuState.index + 1)
-    }
-    onClose()
-  }
+  const handleAddRowAbove = () => handleAddAt('row', 'before')
+  const handleAddRowBelow = () => handleAddAt('row', 'after')
 
   // Get selected rows
   const getSelectedRows = () => {
@@ -168,43 +152,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     onClose()
   }
 
-  const handleAddColumnLeft = () => {
-    const selectedColumns = getSelectedColumns()
-    const isCurrentColumnFullySelected = isColumnFullySelected(menuState.index)
-
-    if (selectedColumns.size > 1 && isCurrentColumnFullySelected) {
-      // Multiple columns selected - add the same number of columns to the left of the first selected column
-      const selectedColumnArray = Array.from(selectedColumns).sort((a, b) => a - b)
-      const firstColumnIndex = selectedColumnArray[0]
-      const selectedColumnCount = selectedColumns.size
-
-      // Add multiple columns at once using count parameter
-      onAddColumn(firstColumnIndex, selectedColumnCount)
-    } else {
-      // Single column - add one column to the left
-      onAddColumn(menuState.index)
-    }
-    onClose()
-  }
-
-  const handleAddColumnRight = () => {
-    const selectedColumns = getSelectedColumns()
-    const isCurrentColumnFullySelected = isColumnFullySelected(menuState.index)
-
-    if (selectedColumns.size > 1 && isCurrentColumnFullySelected) {
-      // Multiple columns selected - add the same number of columns to the right of the last selected column
-      const selectedColumnArray = Array.from(selectedColumns).sort((a, b) => b - a) // Sort descending
-      const lastColumnIndex = selectedColumnArray[0] // Highest index
-      const selectedColumnCount = selectedColumns.size
-
-      // Add multiple columns at once using count parameter
-      onAddColumn(lastColumnIndex + 1, selectedColumnCount)
-    } else {
-      // Single column - add one column to the right
-      onAddColumn(menuState.index + 1)
-    }
-    onClose()
-  }
+  const handleAddColumnLeft = () => handleAddAt('column', 'before')
+  const handleAddColumnRight = () => handleAddAt('column', 'after')
 
   const handleDeleteColumn = () => {
     const selectedColumns = getSelectedColumns()

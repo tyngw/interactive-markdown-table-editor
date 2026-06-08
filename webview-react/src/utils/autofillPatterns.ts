@@ -96,6 +96,12 @@ function detectNumericSeries(values: string[]): PatternInfo | null {
   return null
 }
 
+function calcConstantDiff(diffs: number[], epsilon = 0): { avgDiff: number; isConstant: boolean } {
+  const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length
+  const isConstant = diffs.every(d => Math.abs(d - avgDiff) <= epsilon)
+  return { avgDiff, isConstant }
+}
+
 /**
  * 日付パターンを検出（YYYY/MM/DD, YYYY-MM-DD, M/D, YYYY年M月D日 など）
  */
@@ -148,16 +154,13 @@ function detectDatePattern(values: string[]): PatternInfo | null {
     return null
   }
 
-  // 日数の差分を計算
   const diffs = []
   for (let i = 1; i < dates.length; i++) {
     const diff = (dates[i]!.getTime() - dates[i - 1]!.getTime()) / (1000 * 60 * 60 * 24)
     diffs.push(Math.round(diff))
   }
 
-  // 差分が一定かチェック
-  const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length
-  const isConstant = diffs.every(d => d === avgDiff)
+  const { avgDiff, isConstant } = calcConstantDiff(diffs)
 
   if (isConstant) {
     return {
@@ -172,83 +175,69 @@ function detectDatePattern(values: string[]): PatternInfo | null {
 }
 
 /**
- * 曜日パターンを検出
+ * 循環シーケンス（曜日・月など）の共通パターン検出
+ * nameLists[0] は完全一致、それ以降は大文字小文字を無視して照合する
  */
-function detectWeekdayPattern(values: string[]): PatternInfo | null {
-  const weekdays = ['日', '月', '火', '水', '木', '金', '土']
-  const weekdaysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  const weekdaysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
+function detectCyclicSequence(
+  values: string[],
+  nameLists: string[][],
+  cycle: number,
+  type: FillPattern
+): PatternInfo | null {
   const indices = values.map(v => {
     const trimmed = v.trim()
-    let idx = weekdays.indexOf(trimmed)
-    if (idx === -1) idx = weekdaysEn.findIndex(w => w.toLowerCase() === trimmed.toLowerCase())
-    if (idx === -1) idx = weekdaysShort.findIndex(w => w.toLowerCase() === trimmed.toLowerCase())
+    let idx = nameLists[0].indexOf(trimmed)
+    for (let i = 1; i < nameLists.length && idx === -1; i++) {
+      idx = nameLists[i].findIndex(item => item.toLowerCase() === trimmed.toLowerCase())
+    }
     return idx
   })
 
-  if (indices.some(i => i === -1)) {
-    return null
-  }
+  if (indices.some(i => i === -1)) return null
 
-  // 連続しているかチェック
-  const diffs = []
+  const diffs: number[] = []
   for (let i = 1; i < indices.length; i++) {
-    diffs.push((indices[i] - indices[i - 1] + 7) % 7)
+    diffs.push((indices[i] - indices[i - 1] + cycle) % cycle)
   }
 
   const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length
-  const isConstant = diffs.every(d => d === avgDiff)
-
-  if (isConstant && avgDiff > 0) {
-    return {
-      type: 'weekday',
-      increment: avgDiff,
-      startValue: indices[indices.length - 1]
-    }
+  if (diffs.every(d => d === avgDiff) && avgDiff > 0) {
+    return { type, increment: avgDiff, startValue: indices[indices.length - 1] }
   }
 
   return null
 }
 
 /**
+ * 曜日パターンを検出
+ */
+function detectWeekdayPattern(values: string[]): PatternInfo | null {
+  return detectCyclicSequence(
+    values,
+    [
+      ['日', '月', '火', '水', '木', '金', '土'],
+      ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    ],
+    7,
+    'weekday'
+  )
+}
+
+/**
  * 月パターンを検出
  */
 function detectMonthPattern(values: string[]): PatternInfo | null {
-  const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
-  const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-  const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-  const indices = values.map(v => {
-    const trimmed = v.trim()
-    let idx = months.indexOf(trimmed)
-    if (idx === -1) idx = monthsEn.findIndex(m => m.toLowerCase() === trimmed.toLowerCase())
-    if (idx === -1) idx = monthsShort.findIndex(m => m.toLowerCase() === trimmed.toLowerCase())
-    return idx
-  })
-
-  if (indices.some(i => i === -1)) {
-    return null
-  }
-
-  // 連続しているかチェック
-  const diffs = []
-  for (let i = 1; i < indices.length; i++) {
-    diffs.push((indices[i] - indices[i - 1] + 12) % 12)
-  }
-
-  const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length
-  const isConstant = diffs.every(d => d === avgDiff)
-
-  if (isConstant && avgDiff > 0) {
-    return {
-      type: 'month',
-      increment: avgDiff,
-      startValue: indices[indices.length - 1]
-    }
-  }
-
-  return null
+  return detectCyclicSequence(
+    values,
+    [
+      ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+      ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    ],
+    12,
+    'month'
+  )
 }
 
 /**
@@ -373,15 +362,12 @@ function detectTextWithNumber(values: string[]): PatternInfo | null {
     return null // パターンが一致しない
   }
 
-  // 数値の差分を計算
   const diffs = []
   for (let i = 1; i < patterns.length; i++) {
     diffs.push(patterns[i].number - patterns[i - 1].number)
   }
 
-  // 差分が一定かチェック
-  const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length
-  const isConstant = diffs.every(d => Math.abs(d - avgDiff) < 0.0001)
+  const { avgDiff, isConstant } = calcConstantDiff(diffs, 0.0001)
 
   if (isConstant) {
     // 最後のパターンから数値の形式を判定
