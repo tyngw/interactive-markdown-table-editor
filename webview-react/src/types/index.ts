@@ -1,48 +1,11 @@
+import type { RowGitDiff, ColumnDiffInfo } from '../../../src/gitDiffTypes';
+
+export { GitDiffStatus, type RowGitDiff, type ColumnPositionChange, type ColumnDiffInfo } from '../../../src/gitDiffTypes';
+
 // ヘッダー設定
 export interface HeaderConfig {
   hasColumnHeaders: boolean  // 一番上の行を列ヘッダーとして扱う
   hasRowHeaders: boolean     // 一番左の列を行ヘッダーとして扱う
-}
-
-// Git差分状態
-export enum GitDiffStatus {
-  UNCHANGED = 'unchanged',
-  ADDED = 'added',
-  MODIFIED = 'modified',
-  DELETED = 'deleted'
-}
-
-// 行のGit差分情報
-export interface RowGitDiff {
-  row: number
-  status: GitDiffStatus
-  oldContent?: string  // 削除された行の内容（変更前の行を表示するため）
-  isDeletedRow?: boolean  // 削除行の表示用フラグ（実データ行ではない）
-  targetRow?: number  // 削除行のセル比較対象となる追加行のテーブル行番号
-}
-
-// 列の位置変更情報
-export interface ColumnPositionChange {
-  index: number              // 変更位置（追加の場合は新しい列番号、削除の場合は旧列番号）
-  type: 'added' | 'removed' | 'renamed'
-  header?: string            // ヘッダ名（わかる場合）
-  confidence: number         // 検出信頼度（0.0〜1.0）
-  oldIndex?: number          // renamed時の旧インデックス
-  newIndex?: number          // renamed時の新インデックス
-}
-
-// テーブルの列差分情報
-export interface ColumnDiffInfo {
-  oldColumnCount: number      // 変更前の列数
-  newColumnCount: number      // 変更後の列数
-  addedColumns: number[]      // 追加された列のインデックス（変更後の列番号）
-  deletedColumns: number[]    // 削除された列のインデックス（変更前の列番号）
-  oldHeaders?: string[]       // 変更前のヘッダ（削除列表示用）
-  newHeaders?: string[]       // 変更後のヘッダ
-  changeType?: 'added' | 'removed' | 'mixed' | 'none'  // 変更種別
-  positions?: ColumnPositionChange[]  // 各位置の変更詳細
-  mapping?: number[]          // 旧インデックス→新インデックスのマッピング（-1は削除）
-  heuristics?: string[]       // 適用した検出手法のメモ
 }
 
 // テーブルデータの型定義

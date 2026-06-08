@@ -6,67 +6,9 @@
 
 import * as vscode from 'vscode';
 import { debug, warn, error } from './logging';
+import { GitDiffStatus, type RowGitDiff, type ColumnDiffInfo } from './gitDiffTypes';
 
-/**
- * セルのGit差分状態
- * MODIFIED は廃止。変更は DELETED + ADDED で表現し、oldContent で変更前の内容を保持
- */
-export enum GitDiffStatus {
-    UNCHANGED = 'unchanged',
-    ADDED = 'added',
-    DELETED = 'deleted'
-}
-
-
-/**
- * 行のGit差分情報
- */
-export interface RowGitDiff {
-    row: number;
-    status: GitDiffStatus;
-    oldContent?: string;  // 削除された行の内容（変更前の行を表示するため）
-    newContent?: string;  // 追加された行の内容（列差分検出用）
-    isDeletedRow?: boolean;  // 削除行の表示用フラグ（実データ行ではない）
-    targetRow?: number;  // 削除行のセル比較対象となる追加行のテーブル行番号
-}
-
-/**
- * テーブルのGit差分情報
- */
-export interface TableGitDiff {
-    tableIndex: number;
-    rows: RowGitDiff[];
-}
-
-/**
- * 列の位置変更情報
- * 中間列の追加・削除を検知した際の詳細情報
- */
-export interface ColumnPositionChange {
-    index: number;              // 変更位置（追加の場合は新しい列番号、削除の場合は旧列番号）
-    type: 'added' | 'removed' | 'renamed';
-    header?: string;            // ヘッダ名（わかる場合）
-    confidence: number;         // 検出信頼度（0.0〜1.0）
-    oldIndex?: number;          // renamed時の旧インデックス
-    newIndex?: number;          // renamed時の新インデックス
-}
-
-/**
- * 列の差分情報
- * 変更前と変更後の列数を比較して、追加・削除された列を検出
- */
-export interface ColumnDiffInfo {
-    oldColumnCount: number;      // 変更前の列数
-    newColumnCount: number;      // 変更後の列数
-    addedColumns: number[];      // 追加された列のインデックス（変更後の列番号）
-    deletedColumns: number[];    // 削除された列のインデックス（変更前の列番号）
-    oldHeaders?: string[];       // 変更前のヘッダ（削除列表示用）
-    newHeaders?: string[];       // 変更後のヘッダ
-    changeType?: 'added' | 'removed' | 'mixed' | 'none';  // 変更種別
-    positions?: ColumnPositionChange[];  // 各位置の変更詳細
-    mapping?: number[];          // 旧インデックス→新インデックスのマッピング（-1は削除）
-    heuristics?: string[];       // 適用した検出手法のメモ
-}
+export { GitDiffStatus, type RowGitDiff, type TableGitDiff, type ColumnPositionChange, type ColumnDiffInfo } from './gitDiffTypes';
 
 /**
  * VS Code Git APIを使用してリポジトリを取得し、状態を更新する
