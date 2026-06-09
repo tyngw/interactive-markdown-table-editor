@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { TableData } from '../types'
+import { useDynamicTheme } from '../contexts/DynamicThemeContext'
 import {
   TabsContainer,
   TabsScrollArea,
@@ -31,6 +32,7 @@ const TableTabs: React.FC<TableTabsProps> = ({
   tabLabelMode = 'number'
 }) => {
   const { t } = useTranslation()
+  const { theme } = useDynamicTheme()
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPos, setMenuPos] = useState<MenuPos>({ top: 0, left: 0 })
   const [tooltip, setTooltip] = useState<{ label: string; pos: FixedPos } | null>(null)
@@ -89,7 +91,6 @@ const TableTabs: React.FC<TableTabsProps> = ({
     setTooltip(null)
   }, [])
 
-  // アンマウント時にタイマーをクリア
   useEffect(() => () => {
     if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
   }, [])
@@ -99,7 +100,13 @@ const TableTabs: React.FC<TableTabsProps> = ({
   }
 
   return (
-    <TabsContainer data-testid="mte-table-tabs">
+    <TabsContainer
+      data-testid="mte-table-tabs"
+      style={{
+        backgroundColor: theme.panelBackground,
+        borderTop: `1px solid ${theme.panelBorder}`,
+      }}
+    >
       <HamburgerButton
         ref={hamburgerRef}
         data-testid="mte-tab-menu-button"
@@ -107,6 +114,7 @@ const TableTabs: React.FC<TableTabsProps> = ({
         title={t('tableTabs.menuTitle', 'Table list')}
         aria-haspopup="listbox"
         aria-expanded={menuOpen}
+        style={{ color: theme.editorForeground }}
       >
         ☰
       </HamburgerButton>
@@ -114,15 +122,21 @@ const TableTabs: React.FC<TableTabsProps> = ({
       <TabsScrollArea>
         {tables.map((table, index) => {
           const label = getTabLabel(table, index)
+          const active = index === currentTableIndex
           return (
             <TabButton
               key={index}
               data-testid={`mte-tab-button-${index}`}
-              active={index === currentTableIndex}
+              active={active}
               data-tooltip={label}
               onClick={() => onTabChange(index)}
               onMouseEnter={e => handleTabMouseEnter(e, label)}
               onMouseLeave={handleTabMouseLeave}
+              style={{
+                backgroundColor: active ? theme.tabActiveBackground : theme.tabInactiveBackground,
+                color: active ? theme.tabActiveForeground : theme.tabInactiveForeground,
+                borderBottom: `2px solid ${active ? theme.tabActiveBorderTop : 'transparent'}`,
+              }}
             >
               {label}
             </TabButton>
@@ -136,6 +150,11 @@ const TableTabs: React.FC<TableTabsProps> = ({
           role="listbox"
           data-testid="mte-tab-menu"
           {...menuPos}
+          style={{
+            backgroundColor: theme.menuBackground,
+            color: theme.menuForeground,
+            border: `1px solid ${theme.menuBorder}`,
+          }}
         >
           {tables.map((table, index) => {
             const label = getTabLabel(table, index)
@@ -160,7 +179,15 @@ const TableTabs: React.FC<TableTabsProps> = ({
       )}
 
       {tooltip && createPortal(
-        <Tooltip top={tooltip.pos.top} left={tooltip.pos.left}>
+        <Tooltip
+          top={tooltip.pos.top}
+          left={tooltip.pos.left}
+          style={{
+            backgroundColor: theme.editorWidgetBackground,
+            color: theme.editorForeground,
+            border: `1px solid ${theme.editorWidgetBorder}`,
+          }}
+        >
           {tooltip.label}
         </Tooltip>,
         document.body
