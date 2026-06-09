@@ -1233,4 +1233,88 @@ suite('MarkdownParser Additional Coverage', () => {
             (parser as any).parseTableToken = origParseTable;
         }
     });
+
+    suite('headingLabel extraction', () => {
+        test('should set headingLabel from heading immediately before table', () => {
+            const markdown = `## My Section
+
+| A | B |
+|---|---|
+| 1 | 2 |`;
+            const ast = parser.parseDocument(markdown);
+            const tables = parser.findTablesInDocument(ast);
+            assert.strictEqual(tables.length, 1);
+            assert.strictEqual(tables[0].headingLabel, 'My Section');
+        });
+
+        test('should set headingLabel to undefined when no heading precedes table', () => {
+            const markdown = `| A | B |
+|---|---|
+| 1 | 2 |`;
+            const ast = parser.parseDocument(markdown);
+            const tables = parser.findTablesInDocument(ast);
+            assert.strictEqual(tables.length, 1);
+            assert.strictEqual(tables[0].headingLabel, undefined);
+        });
+
+        test('should add (1) (2) suffix when multiple tables share the same heading', () => {
+            const markdown = `## Shared Heading
+
+| A | B |
+|---|---|
+| 1 | 2 |
+
+| X | Y |
+|---|---|
+| 3 | 4 |`;
+            const ast = parser.parseDocument(markdown);
+            const tables = parser.findTablesInDocument(ast);
+            assert.strictEqual(tables.length, 2);
+            assert.strictEqual(tables[0].headingLabel, 'Shared Heading (1)');
+            assert.strictEqual(tables[1].headingLabel, 'Shared Heading (2)');
+        });
+
+        test('should not add suffix when each heading has only one table', () => {
+            const markdown = `## First
+
+| A | B |
+|---|---|
+| 1 | 2 |
+
+## Second
+
+| X | Y |
+|---|---|
+| 3 | 4 |`;
+            const ast = parser.parseDocument(markdown);
+            const tables = parser.findTablesInDocument(ast);
+            assert.strictEqual(tables.length, 2);
+            assert.strictEqual(tables[0].headingLabel, 'First');
+            assert.strictEqual(tables[1].headingLabel, 'Second');
+        });
+
+        test('should use the most recent heading when headings change between tables', () => {
+            const markdown = `## Section A
+
+| A | B |
+|---|---|
+| 1 | 2 |
+
+## Section B
+
+| X | Y |
+|---|---|
+| 3 | 4 |
+
+| P | Q |
+|---|---|
+| 5 | 6 |`;
+            const ast = parser.parseDocument(markdown);
+            const tables = parser.findTablesInDocument(ast);
+            assert.strictEqual(tables.length, 3);
+            assert.strictEqual(tables[0].headingLabel, 'Section A');
+            assert.strictEqual(tables[1].headingLabel, 'Section B (1)');
+            assert.strictEqual(tables[2].headingLabel, 'Section B (2)');
+        });
+    });
 });

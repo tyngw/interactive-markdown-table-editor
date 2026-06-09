@@ -23,13 +23,14 @@ describe('TableTabs', () => {
     jest.clearAllMocks()
   })
 
-  const renderTableTabs = (tables: TableData[], currentTableIndex: number = 0) => {
+  const renderTableTabs = (tables: TableData[], currentTableIndex: number = 0, tabLabelMode: string = 'number') => {
     return render(
       <DynamicThemeProvider>
         <TableTabs
           tables={tables}
           currentTableIndex={currentTableIndex}
           onTabChange={mockOnTabChange}
+          tabLabelMode={tabLabelMode}
         />
       </DynamicThemeProvider>
     )
@@ -82,15 +83,146 @@ describe('TableTabs', () => {
   it('現在選択中のタブにactive属性が設定される', () => {
     const tables = [createTable(), createTable(), createTable()]
     renderTableTabs(tables, 1)
-    // TabButtonはstyled componentでactive propを受け取る
-    // data-testidで取得してDOMを確認
     const tab0 = screen.getByTestId('mte-tab-button-0')
     const tab1 = screen.getByTestId('mte-tab-button-1')
     const tab2 = screen.getByTestId('mte-tab-button-2')
-    // active propはstyled componentが処理するため、DOM上では直接確認できないが
-    // コンポーネントが正しくレンダリングされていることを確認
     expect(tab0).toBeInTheDocument()
     expect(tab1).toBeInTheDocument()
     expect(tab2).toBeInTheDocument()
+  })
+
+  describe('ラベルの省略表示とツールチップ', () => {
+    it('タブにはdata-tooltip属性でフルラベルが設定される', () => {
+      const label = 'My Section'
+      const tables = [
+        { headers: ['H'], rows: [], headingLabel: label },
+        { headers: ['H'], rows: [] }
+      ]
+      renderTableTabs(tables, 0, 'heading')
+      expect(screen.getByTestId('mte-tab-button-0')).toHaveAttribute('data-tooltip', label)
+    })
+
+    it('長いラベルでもdata-tooltip属性にフルラベルが設定される', () => {
+      const long = 'This Is A Very Long Heading Label That Should Be Truncated By CSS'
+      const tables = [
+        { headers: ['H'], rows: [], headingLabel: long },
+        { headers: ['H'], rows: [] }
+      ]
+      renderTableTabs(tables, 0, 'heading')
+      expect(screen.getByTestId('mte-tab-button-0')).toHaveAttribute('data-tooltip', long)
+    })
+
+    it('番号モードでもdata-tooltip属性が設定される', () => {
+      const tables = [createTable(), createTable()]
+      renderTableTabs(tables)
+      expect(screen.getByTestId('mte-tab-button-0')).toHaveAttribute('data-tooltip')
+      expect(screen.getByTestId('mte-tab-button-1')).toHaveAttribute('data-tooltip')
+    })
+  })
+
+  describe('ハンバーガーメニュー', () => {
+    it('ハンバーガーボタンが表示される', () => {
+      const tables = [createTable(), createTable()]
+      renderTableTabs(tables)
+      expect(screen.getByTestId('mte-tab-menu-button')).toBeInTheDocument()
+    })
+
+    it('初期状態でドロップダウンは非表示', () => {
+      const tables = [createTable(), createTable()]
+      renderTableTabs(tables)
+      expect(screen.queryByTestId('mte-tab-menu')).not.toBeInTheDocument()
+    })
+
+    it('ハンバーガーボタンクリックでドロップダウンが表示される', async () => {
+      const user = userEvent.setup()
+      const tables = [createTable(), createTable()]
+      renderTableTabs(tables)
+
+      await user.click(screen.getByTestId('mte-tab-menu-button'))
+      expect(screen.getByTestId('mte-tab-menu')).toBeInTheDocument()
+    })
+
+    it('ドロップダウンに全テーブルのアイテムが表示される', async () => {
+      const user = userEvent.setup()
+      const tables = [createTable(), createTable(), createTable()]
+      renderTableTabs(tables)
+
+      await user.click(screen.getByTestId('mte-tab-menu-button'))
+      expect(screen.getByTestId('mte-tab-menu-item-0')).toBeInTheDocument()
+      expect(screen.getByTestId('mte-tab-menu-item-1')).toBeInTheDocument()
+      expect(screen.getByTestId('mte-tab-menu-item-2')).toBeInTheDocument()
+    })
+
+    it('ドロップダウンのアイテムをクリックするとonTabChangeが呼ばれドロップダウンが閉じる', async () => {
+      const user = userEvent.setup()
+      const tables = [createTable(), createTable(), createTable()]
+      renderTableTabs(tables, 0)
+
+      await user.click(screen.getByTestId('mte-tab-menu-button'))
+      await user.click(screen.getByTestId('mte-tab-menu-item-2'))
+
+      expect(mockOnTabChange).toHaveBeenCalledWith(2)
+      expect(screen.queryByTestId('mte-tab-menu')).not.toBeInTheDocument()
+    })
+
+    it('再度ハンバーガーボタンクリックでドロップダウンが閉じる', async () => {
+      const user = userEvent.setup()
+      const tables = [createTable(), createTable()]
+      renderTableTabs(tables)
+
+      await user.click(screen.getByTestId('mte-tab-menu-button'))
+      expect(screen.getByTestId('mte-tab-menu')).toBeInTheDocument()
+
+      await user.click(screen.getByTestId('mte-tab-menu-button'))
+      expect(screen.queryByTestId('mte-tab-menu')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('tabLabelMode=heading', () => {
+    const createTableWithHeading = (headingLabel: string): TableData => ({
+      headers: ['H1'],
+      rows: [['a']],
+      headingLabel
+    })
+
+    it('headingラベルがある場合はheadingラベルを表示する', () => {
+      const tables = [
+        createTableWithHeading('Introduction'),
+        createTableWithHeading('Summary')
+      ]
+      renderTableTabs(tables, 0, 'heading')
+      expect(screen.getByText('Introduction')).toBeInTheDocument()
+      expect(screen.getByText('Summary')).toBeInTheDocument()
+    })
+
+    it('headingラベルがない場合は番号ラベルにフォールバックする', () => {
+      const tables = [createTable(), createTable()]
+      renderTableTabs(tables, 0, 'heading')
+      expect(screen.getByText('表 1')).toBeInTheDocument()
+      expect(screen.getByText('表 2')).toBeInTheDocument()
+    })
+
+    it('headingラベルがあってもtabLabelMode=numberなら番号ラベルを使う', () => {
+      const tables = [
+        createTableWithHeading('Introduction'),
+        createTableWithHeading('Summary')
+      ]
+      renderTableTabs(tables, 0, 'number')
+      expect(screen.queryByText('Introduction')).not.toBeInTheDocument()
+      expect(screen.getByText('表 1')).toBeInTheDocument()
+      expect(screen.getByText('表 2')).toBeInTheDocument()
+    })
+
+    it('ドロップダウンにもheadingラベルが表示される', async () => {
+      const user = userEvent.setup()
+      const tables = [
+        createTableWithHeading('Introduction'),
+        createTableWithHeading('Summary')
+      ]
+      renderTableTabs(tables, 0, 'heading')
+      await user.click(screen.getByTestId('mte-tab-menu-button'))
+      expect(screen.getByTestId('mte-tab-menu-item-0')).toHaveTextContent('Introduction')
+      expect(screen.getByTestId('mte-tab-menu-item-1')).toHaveTextContent('Summary')
+    })
   })
 })

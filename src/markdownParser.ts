@@ -35,6 +35,7 @@ export interface TableNode {
     rows: string[][];
     separatorLine?: string; // オリジナルの区切り線を保持
     rawLines?: string[]; // 元のテーブル行を保持（ヘッダーと各データ行）
+    headingLabel?: string; // テーブル直前の見出しテキスト（複数テーブル時は "(1)" "(2)" 付き）
 }
 
 export interface MarkdownAST {
@@ -104,12 +105,18 @@ export class MarkdownParser {
                 );
             }
 
-            const tables: TableNode[] = [];
             const tokens = ast.tokens;
+            let currentHeading: string | undefined;
+            const collected: Array<{ node: TableNode; heading: string | undefined }> = [];
 
             for (let i = 0; i < tokens.length; i++) {
                 try {
                     const token = tokens[i];
+
+                    if (token?.type === 'heading_open') {
+                        const inlineToken = tokens[i + 1];
+                        currentHeading = inlineToken?.type === 'inline' ? inlineToken.content : undefined;
+                    }
 
                     if (token?.type === 'table_open') {
                         const tableNode = this.parseTableToken(tokens, i, ast.content);
@@ -120,7 +127,7 @@ export class MarkdownParser {
                                 console.warn(`Table at line ${tableNode.startLine} has validation issues:`, validation.issues);
                                 // Still include the table but log warnings
                             }
-                            tables.push(tableNode);
+                            collected.push({ node: tableNode, heading: currentHeading });
                         }
                     }
                 } catch (error) {
@@ -128,6 +135,30 @@ export class MarkdownParser {
                     // Continue parsing other tables even if one fails
                     continue;
                 }
+            }
+
+            // Count tables per heading to determine if suffix is needed
+            const headingCounts = new Map<string, number>();
+            for (const { heading } of collected) {
+                if (heading !== undefined) {
+                    headingCounts.set(heading, (headingCounts.get(heading) ?? 0) + 1);
+                }
+            }
+
+            const headingUsage = new Map<string, number>();
+            const tables: TableNode[] = [];
+            for (const { node, heading } of collected) {
+                if (heading !== undefined) {
+                    const total = headingCounts.get(heading) ?? 0;
+                    if (total > 1) {
+                        const used = (headingUsage.get(heading) ?? 0) + 1;
+                        headingUsage.set(heading, used);
+                        node.headingLabel = `${heading} (${used})`;
+                    } else {
+                        node.headingLabel = heading;
+                    }
+                }
+                tables.push(node);
             }
 
             return tables;

@@ -56,7 +56,8 @@
     "toggleAutoSave": "自動保存を切り替え"
   },
   "tableTabs": {
-    "tableLabel": "表 {{index}}"
+    "tableLabel": "表 {{index}}",
+    "menuTitle": "テーブル一覧"
   },
   "searchBar": {
     "searchPlaceholder": "検索...",

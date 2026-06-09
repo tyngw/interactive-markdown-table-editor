@@ -691,6 +691,14 @@ export class WebviewManager {
             };
         }
 
+        // Include tab label mode setting
+        try {
+            const config = vscode.workspace.getConfiguration('markdownTableEditor');
+            message.tabLabelMode = config.get<string>('tabLabelMode', 'number');
+        } catch (error) {
+            warn('[WebviewManager] Failed to get tabLabelMode config:', error);
+        }
+
         // Include Git theme colors for diff visualization
         try {
             const { getGitThemeColors } = require('./gitDiffUtils');

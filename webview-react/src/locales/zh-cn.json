@@ -56,7 +56,8 @@
     "toggleAutoSave": "切换自动保存"
   },
   "tableTabs": {
-    "tableLabel": "表 {{index}}"
+    "tableLabel": "表 {{index}}",
+    "menuTitle": "表格列表"
   },
   "searchBar": {
     "searchPlaceholder": "搜索...",

@@ -86,6 +86,19 @@
             "%config.panelPosition.active.description%"
           ],
           "markdownDescription": "%config.panelPosition.description%"
+        },
+        "markdownTableEditor.tabLabelMode": {
+          "type": "string",
+          "default": "number",
+          "enum": [
+            "number",
+            "heading"
+          ],
+          "enumDescriptions": [
+            "%config.tabLabelMode.number.description%",
+            "%config.tabLabelMode.heading.description%"
+          ],
+          "markdownDescription": "%config.tabLabelMode.description%"
         }
       }
     }

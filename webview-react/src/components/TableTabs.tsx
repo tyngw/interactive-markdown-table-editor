@@ -1,19 +1,98 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { TableData } from '../types'
-import { TabsContainer, TabButton } from './TableTabs.styles'
+import {
+  TabsContainer,
+  TabsScrollArea,
+  TabButton,
+  HamburgerButton,
+  DropdownMenu,
+  DropdownItem,
+  Tooltip
+} from './TableTabs.styles'
 
 interface TableTabsProps {
   tables: TableData[]
   currentTableIndex: number
   onTabChange: (index: number) => void
+  tabLabelMode?: string
 }
+
+interface FixedPos { top: number; left: number }
+interface MenuPos { top?: number; bottom?: number; left: number }
+
+const TOOLTIP_DELAY_MS = 1000
 
 const TableTabs: React.FC<TableTabsProps> = ({
   tables,
   currentTableIndex,
-  onTabChange
+  onTabChange,
+  tabLabelMode = 'number'
 }) => {
   const { t } = useTranslation()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState<MenuPos>({ top: 0, left: 0 })
+  const [tooltip, setTooltip] = useState<{ label: string; pos: FixedPos } | null>(null)
+  const hamburgerRef = useRef<HTMLButtonElement>(null)
+  const dropdownMenuRef = useRef<HTMLUListElement>(null)
+  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const getTabLabel = useCallback((table: TableData, index: number): string => {
+    if (tabLabelMode === 'heading' && table.headingLabel) {
+      return table.headingLabel
+    }
+    return t('tableTabs.tableLabel', { index: index + 1 })
+  }, [tabLabelMode, t])
+
+  const handleHamburgerClick = useCallback(() => {
+    if (!hamburgerRef.current) return
+    const rect = hamburgerRef.current.getBoundingClientRect()
+    const DROPDOWN_MAX_HEIGHT = 320
+    const GAP = 4
+    const spaceBelow = window.innerHeight - rect.bottom - GAP
+    const spaceAbove = rect.top - GAP
+    const openUpward = spaceBelow < DROPDOWN_MAX_HEIGHT && spaceAbove > spaceBelow
+    const pos: MenuPos = openUpward
+      ? { bottom: window.innerHeight - rect.top + GAP, left: rect.left }
+      : { top: rect.bottom + GAP, left: rect.left }
+    setMenuPos(pos)
+    setMenuOpen(prev => !prev)
+  }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (hamburgerRef.current && hamburgerRef.current.contains(target)) return
+      if (dropdownMenuRef.current && dropdownMenuRef.current.contains(target)) return
+      setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [menuOpen])
+
+  const handleTabMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>, label: string) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const pos = { top: rect.top - 32, left: rect.left + rect.width / 2 }
+    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
+    tooltipTimerRef.current = setTimeout(() => {
+      setTooltip({ label, pos })
+    }, TOOLTIP_DELAY_MS)
+  }, [])
+
+  const handleTabMouseLeave = useCallback(() => {
+    if (tooltipTimerRef.current) {
+      clearTimeout(tooltipTimerRef.current)
+      tooltipTimerRef.current = null
+    }
+    setTooltip(null)
+  }, [])
+
+  // アンマウント時にタイマーをクリア
+  useEffect(() => () => {
+    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
+  }, [])
 
   if (tables.length <= 1) {
     return null
@@ -21,18 +100,71 @@ const TableTabs: React.FC<TableTabsProps> = ({
 
   return (
     <TabsContainer data-testid="mte-table-tabs">
-      {tables.map((_, index) => (
-        <TabButton
-          key={index}
-          data-testid={`mte-tab-button-${index}`}
-          active={index === currentTableIndex}
-          onClick={() => {
-            onTabChange(index)
-          }}
+      <HamburgerButton
+        ref={hamburgerRef}
+        data-testid="mte-tab-menu-button"
+        onClick={handleHamburgerClick}
+        title={t('tableTabs.menuTitle', 'Table list')}
+        aria-haspopup="listbox"
+        aria-expanded={menuOpen}
+      >
+        ☰
+      </HamburgerButton>
+
+      <TabsScrollArea>
+        {tables.map((table, index) => {
+          const label = getTabLabel(table, index)
+          return (
+            <TabButton
+              key={index}
+              data-testid={`mte-tab-button-${index}`}
+              active={index === currentTableIndex}
+              data-tooltip={label}
+              onClick={() => onTabChange(index)}
+              onMouseEnter={e => handleTabMouseEnter(e, label)}
+              onMouseLeave={handleTabMouseLeave}
+            >
+              {label}
+            </TabButton>
+          )
+        })}
+      </TabsScrollArea>
+
+      {menuOpen && createPortal(
+        <DropdownMenu
+          ref={dropdownMenuRef}
+          role="listbox"
+          data-testid="mte-tab-menu"
+          {...menuPos}
         >
-          {t('tableTabs.tableLabel', { index: index + 1 })}
-        </TabButton>
-      ))}
+          {tables.map((table, index) => {
+            const label = getTabLabel(table, index)
+            return (
+              <DropdownItem
+                key={index}
+                role="option"
+                active={index === currentTableIndex}
+                data-testid={`mte-tab-menu-item-${index}`}
+                title={label}
+                onClick={() => {
+                  onTabChange(index)
+                  setMenuOpen(false)
+                }}
+              >
+                {label}
+              </DropdownItem>
+            )
+          })}
+        </DropdownMenu>,
+        document.body
+      )}
+
+      {tooltip && createPortal(
+        <Tooltip top={tooltip.pos.top} left={tooltip.pos.left}>
+          {tooltip.label}
+        </Tooltip>,
+        document.body
+      )}
     </TabsContainer>
   )
 }

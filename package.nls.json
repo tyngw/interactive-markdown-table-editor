@@ -7,5 +7,8 @@
   "config.openInNewPanel.description": "When enabled, always open the table editor in a new panel instead of reusing an existing one.",
   "config.panelPosition.description": "Where to display the table editor panel. 'beside' opens it in a split view next to the current editor; 'active' opens it in the active editor column.",
   "config.panelPosition.beside.description": "Open beside the current editor in a split view.",
-  "config.panelPosition.active.description": "Open in the active editor column (full width)."
+  "config.panelPosition.active.description": "Open in the active editor column (full width).",
+  "config.tabLabelMode.description": "Display mode for table tabs. 'number' shows 'Table 1', 'Table 2', etc. 'heading' uses the Markdown heading immediately above each table as the tab label.",
+  "config.tabLabelMode.number.description": "Show tabs as 'Table 1', 'Table 2', etc.",
+  "config.tabLabelMode.heading.description": "Use the Markdown heading immediately above each table as the tab label. Falls back to number if no heading is found."
 }

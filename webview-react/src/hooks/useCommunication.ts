@@ -18,10 +18,11 @@ interface CommunicationCallbacks {
   onSetActiveTable?: (index: number) => void;
   onAutoSaveStateChanged?: (enabled: boolean) => void;
   onDirtyStateChanged?: (isDirty: boolean) => void;
+  onTabLabelMode?: (mode: string) => void;
 }
 
 export function useCommunication(callbacks: CommunicationCallbacks) {
-  const { onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable, onAutoSaveStateChanged, onDirtyStateChanged } = callbacks;
+  const { onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable, onAutoSaveStateChanged, onDirtyStateChanged, onTabLabelMode } = callbacks;
   const commManagerRef = useRef<WebviewCommunicationManager | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   
@@ -39,9 +40,10 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
       onFontSettings,
       onSetActiveTable,
       onAutoSaveStateChanged,
-      onDirtyStateChanged
+      onDirtyStateChanged,
+      onTabLabelMode
     };
-  }, [onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable, onAutoSaveStateChanged, onDirtyStateChanged]);
+  }, [onTableData, onGitDiffData, onError, onSuccess, onThemeVariables, onFontSettings, onSetActiveTable, onAutoSaveStateChanged, onDirtyStateChanged, onTabLabelMode]);
 
   // 通信マネージャーの初期化
   useEffect(() => {
@@ -58,6 +60,9 @@ export function useCommunication(callbacks: CommunicationCallbacks) {
     manager.registerNotificationHandler(ExtensionCommand.UPDATE_TABLE_DATA, (data) => {
       console.log('[useCommunication] Received table data update:', data);
       const cb = callbacksRef.current;
+      if (cb.onTabLabelMode && typeof data.tabLabelMode === 'string') {
+        cb.onTabLabelMode(data.tabLabelMode);
+      }
       if (cb.onTableData) {
         if (data.data) {
           cb.onTableData(data.data);

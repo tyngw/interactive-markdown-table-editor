@@ -19,6 +19,7 @@ export interface TableData {
   headerConfig?: HeaderConfig
   gitDiff?: RowGitDiff[]  // Git差分情報
   columnDiff?: ColumnDiffInfo  // 列の差分情報
+  headingLabel?: string  // テーブル直前の見出しテキスト
 }
 
 // 複数テーブル対応
