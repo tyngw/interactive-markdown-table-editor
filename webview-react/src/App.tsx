@@ -40,6 +40,8 @@ function AppContent() {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true)
   // 未保存の変更があるかどうか
   const [isDirty, setIsDirty] = useState(false)
+  // タブラベル表示モード
+  const [tabLabelMode, setTabLabelMode] = useState<string>('number')
 
   // refを最新の値で同期
   useEffect(() => {
@@ -314,6 +316,9 @@ function AppContent() {
         // Clear any pending tab switch since this is authoritative
         pendingTabSwitchRef.current = null
       }
+    }, []),
+    onTabLabelMode: useCallback((mode: string) => {
+      setTabLabelMode(mode)
     }, [])
   })
 
@@ -501,6 +506,7 @@ function AppContent() {
           tables={allTables}
           currentTableIndex={currentTableIndex}
           onTabChange={handleTabChange}
+          tabLabelMode={tabLabelMode}
         />
         <StatusBar 
           showGitDiff={showGitDiff} 

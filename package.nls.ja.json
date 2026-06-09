@@ -7,5 +7,8 @@
   "config.openInNewPanel.description": "有効にすると、既存のパネルを再利用せず、常に新しいパネルでテーブルエディターを開きます。",
   "config.panelPosition.description": "テーブルエディターパネルの表示位置。'beside' は現在のエディターの横に分割表示、'active' はアクティブなエディター列に全面表示します。",
   "config.panelPosition.beside.description": "現在のエディターの横に分割して開く。",
-  "config.panelPosition.active.description": "アクティブなエディター列に全面で開く。"
+  "config.panelPosition.active.description": "アクティブなエディター列に全面で開く。",
+  "config.tabLabelMode.description": "テーブルタブの表示モード。'number' は「テーブル 1」「テーブル 2」形式、'heading' は各テーブル直前のMarkdown見出しをラベルとして使用します。",
+  "config.tabLabelMode.number.description": "「テーブル 1」「テーブル 2」等の番号形式で表示します。",
+  "config.tabLabelMode.heading.description": "各テーブルの直前にあるMarkdown見出しをタブラベルとして使用します。見出しがない場合は番号で表示します。"
 }

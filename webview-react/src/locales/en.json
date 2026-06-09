@@ -56,7 +56,8 @@
     "toggleAutoSave": "Toggle Auto Save"
   },
   "tableTabs": {
-    "tableLabel": "Table {{index}}"
+    "tableLabel": "Table {{index}}",
+    "menuTitle": "Table list"
   },
   "searchBar": {
     "searchPlaceholder": "Search...",

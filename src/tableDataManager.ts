@@ -10,6 +10,7 @@ export interface TableData {
     separatorLine?: string; // オリジナルの区切り線を保持
     rawLines?: string[]; // 元のテーブル行（ヘッダー＋区切り線＋データ行）
     editedCells?: Set<string>; // 編集されたセルの位置 ("row,col" 形式)
+    headingLabel?: string; // テーブル直前の見出しテキスト
     metadata: TableMetadata;
 }
 
@@ -62,6 +63,7 @@ export class TableDataManager {
             separatorLine: tableNode.separatorLine, // オリジナルの区切り線を保持
             rawLines: tableNode.rawLines ? [...tableNode.rawLines] : undefined, // 元のテーブル行を保持
             editedCells: new Set(), // 初期状態では編集なし
+            headingLabel: tableNode.headingLabel,
             metadata: {
                 sourceUri,
                 startLine: tableNode.startLine,

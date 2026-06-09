@@ -7,5 +7,8 @@
   "config.openInNewPanel.description": "启用后，将始终在新面板中打开表格编辑器，而不是复用现有面板。",
   "config.panelPosition.description": "表格编辑器面板的显示位置。'beside' 在当前编辑器旁边分屏显示；'active' 在活动编辑器列中全屏显示。",
   "config.panelPosition.beside.description": "在当前编辑器旁边分屏打开。",
-  "config.panelPosition.active.description": "在活动编辑器列中全屏打开。"
+  "config.panelPosition.active.description": "在活动编辑器列中全屏打开。",
+  "config.tabLabelMode.description": "表格标签的显示模式。'number' 显示「表格 1」「表格 2」，'heading' 使用各表格上方的 Markdown 标题作为标签。",
+  "config.tabLabelMode.number.description": "以「表格 1」「表格 2」等编号格式显示。",
+  "config.tabLabelMode.heading.description": "使用各表格直接上方的 Markdown 标题作为标签，没有标题时回退到数字显示。"
 }
