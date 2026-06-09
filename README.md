@@ -50,6 +50,9 @@ A VS Code extension that provides an intuitive interface for editing Markdown ta
 
 ### Multiple Tables
 - Manage and edit multiple tables within a single document using tab interface. Accurately tracks and updates each table with index management
+- Heading-based tab labels: Use the Markdown heading immediately above each table as the tab name. Configure with `markdownTableEditor.tabLabelMode` (`"number"` for "Table 1, 2…" or `"heading"` for heading names). Multiple tables under the same heading are distinguished with `(1)`, `(2)` suffixes
+- Hamburger menu (☰): Click the button at the left edge of the tab bar to open a dropdown list of all tables for quick navigation. Automatically opens upward when there is insufficient space below
+- Tab tooltips: Long tab labels are truncated with `…`; hovering for 1 second shows the full label in a tooltip
 
 ### Git Diff Display
 - Uses the VS Code Git extension and the system `git` command to fetch per-row diffs (added/deleted) for tables in the open Markdown file and display them in the table editor.
@@ -97,6 +100,7 @@ A VS Code extension that provides an intuitive interface for editing Markdown ta
 This extension provides the following settings:
 
 * `markdownTableEditor.theme`: Choose a dedicated theme for the editor. Set to `inherit` to follow VS Code's current theme
+* `markdownTableEditor.tabLabelMode`: Display mode for table tabs. `"number"` shows "Table 1, 2…" (default); `"heading"` uses the Markdown heading immediately above each table
 
 ## Supported Languages
 
