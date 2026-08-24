@@ -31,10 +31,15 @@ export class Uri {
     static parse(value: string): Uri {
         // 簡易パーサー
         if (value.startsWith('file://')) {
-            return new Uri('file', '', value.substring(7), '', '');
+            const parsedPath = value.substring(7) || '/';
+            return new Uri('file', '', parsedPath, '', '');
         }
         if (value.startsWith('file:')) {
             return new Uri('file', '', value.substring(5), '', '');
+        }
+        const schemeMatch = value.match(/^([A-Za-z][A-Za-z0-9+.-]*):\/\/([^/]*)(.*)$/);
+        if (schemeMatch) {
+            return new Uri(schemeMatch[1], schemeMatch[2], schemeMatch[3] || '/', '', '');
         }
         return new Uri('file', '', value, '', '');
     }
@@ -62,7 +67,8 @@ export class Uri {
     }
 
     toString(): string {
-        return `${this.scheme}://${this.authority}${this.path}`;
+        const encodedPath = this.scheme === 'file' ? this.path.replace(/:/g, '%3A') : this.path;
+        return `${this.scheme}://${this.authority}${encodedPath}`;
     }
 
     with(change: { scheme?: string; authority?: string; path?: string; query?: string; fragment?: string }): Uri {
